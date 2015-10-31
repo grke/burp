@@ -1,9 +1,27 @@
+2015-10-31 Changes in burp-2.0.26:
+  * Paid for by an anonymous user: add a new screen to the Windows installer
+    for choosing 'include' directories.
   * Upgrade Windows depkgs to openssl-1.0.2d.
   * Upgrade Windows depkgs to librsync-1.0.0.
   * Add internal CRL revocation feature based on a patch from Sebastien
     Couppey (as opposed to using the old ssl_extra_checks_script server pre
     script).
-
+  * Fix protocol2 bug where rblk wasn't initialised.
+  * Add linux i386 machine to automatic tests.
+  * Use -Werror when build utests.
+  * Delete unused protocol2 data files.
+  * Eliminate compile warnings from the Windows build and add  -Werror
+    to the Windows CFLAGS.
+  * Change dhfile.pem generation command to use -dsaparam and 2048 bits.
+  * Fix memory leak in protocol2 restore.
+  * Fix protocol2 problem where new candidates wouldn't be loaded during
+    backups.
+  * Make sure split/strip_vss don't break protocol 2.
+  * Unit test client/auth.c by overriding asfd function pointers.
+  * Fix iobuf_free() bug.
+  * Code coverage report for all files.
+  * Start unit testing client restore.
+  * Preparation for fixing restore interrupt for protocol 2
 
 2015-09-30 Changes in burp-2.0.24:
   * Another fix for sigchld handling.

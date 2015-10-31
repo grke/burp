@@ -67,11 +67,11 @@ int VSSInit(void)
 	{
 		switch(g_MinorVersion)
 		{
-			case 1: 
+			case 1:
 				g_pVSSClient=new VSSClientXP();
 				atexit(VSSCleanup);
 				return 0;
-			case 2: 
+			case 2:
 				g_pVSSClient=new VSSClient2003();
 				atexit(VSSCleanup);
 				return 0;
@@ -99,7 +99,7 @@ BOOL VSSPathConvert(const char *szFilePath,
 
 BOOL VSSPathConvertW(const wchar_t *szFilePath,
 	wchar_t *szShadowPath, int nBuflen)
-{ 
+{
 	return g_pVSSClient->GetShadowPathW(szFilePath, szShadowPath, nBuflen);
 }
 
@@ -120,7 +120,7 @@ VSSClient::VSSClient(void)
 
 VSSClient::~VSSClient(void)
 {
-	// Release the IVssBackupComponents interface 
+	// Release the IVssBackupComponents interface
 	// WARNING: this must be done BEFORE calling CoUninitialize()
 	if(m_pVssObject)
 	{
@@ -160,7 +160,7 @@ BOOL VSSClient::GetShadowPath(const char *szFilePath,
 	bIsValidName=strlen(szFilePath)>3;
 	if(bIsValidName)
 		bIsValidName &= isalpha(szFilePath[0]) &&
-			szFilePath[1]==':' && 
+			szFilePath[1]==':' &&
 			szFilePath[2]=='\\';
 
 	if(bIsValidName)
@@ -182,7 +182,7 @@ BOOL VSSClient::GetShadowPath(const char *szFilePath,
 
 	snprintf(szShadowPath, nBuflen, "%s", szFilePath);
 	errno=EINVAL;
-	return FALSE;   
+	return FALSE;
 }
 
 BOOL VSSClient::GetShadowPathW(const wchar_t *szFilePath,
@@ -196,7 +196,7 @@ BOOL VSSClient::GetShadowPathW(const wchar_t *szFilePath,
 	bIsValidName=wcslen(szFilePath)>3;
 	if(bIsValidName)
 		bIsValidName &= iswalpha(szFilePath[0]) &&
-			szFilePath[1]==':' && 
+			szFilePath[1]==':' &&
 			szFilePath[2] == '\\';
 
 	if(bIsValidName)
@@ -214,7 +214,7 @@ BOOL VSSClient::GetShadowPathW(const wchar_t *szFilePath,
 
 	wcsncpy(szShadowPath, szFilePath, nBuflen);
 	errno=EINVAL;
-	return FALSE;   
+	return FALSE;
 }
 
 
@@ -232,7 +232,7 @@ const char* VSSClient::GetWriterInfo(int nIndex)
 
 const int VSSClient::GetWriterState(int nIndex)
 {
-	alist *pV=(alist *)m_pAlistWriterState;   
+	alist *pV=(alist *)m_pAlistWriterState;
 	return (intptr_t)pV->get(nIndex);
 }
 
@@ -242,7 +242,7 @@ void VSSClient::AppendWriterInfo(int nState, const char *pszInfo)
 	alist *pS=(alist *)m_pAlistWriterState;
 
 	pT->push(strdup(pszInfo));
-	pS->push((void*)(intptr_t)nState);   
+	pS->push((void*)(intptr_t)nState);
 }
 
 void VSSClient::DestroyWriterInfo(void)
@@ -251,7 +251,7 @@ void VSSClient::DestroyWriterInfo(void)
 	alist *pS=(alist *)m_pAlistWriterState;
 
 	while(!pT->empty()) free(pT->pop());
-	while(!pS->empty()) pS->pop();      
+	while(!pS->empty()) pS->pop();
 }
 
 #endif

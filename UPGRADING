@@ -1,6 +1,6 @@
 Things to watch out for when upgrading.
 
-2.0.24
+2.0.26
 ------
 The dhfile generation command in burp_ca has changed from 'openssl dhparam -out
 "$dhfile" 1024' to 'openssl dhparam -dsaparam -out "$dhfile" 2048' in order

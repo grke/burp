@@ -175,9 +175,17 @@ static int do_bu_get_list(struct sdirs *sdirs,
 	char realfinishing[32]="";
 	char realcurrent[32]="";
 	struct dirent **dp=NULL;
-	const char *dir=sdirs->client;
+	const char *dir=NULL;
 	uint16_t flags=0;
 	struct stat statp;
+
+	if(!sdirs)
+	{
+		logp("%s() called with NULL sdirs\n");
+		goto end;
+	}
+
+	dir=sdirs->client;
 
 	if(get_link(dir, "working", realwork, sizeof(realwork))
 	  || get_link(dir, "finishing", realfinishing, sizeof(realfinishing))

@@ -38,6 +38,7 @@ SRCS = \
 	server/protocol2/test_dpth.c \
 	server/test_bu_get.c \
 	server/test_delete.c \
+	server/test_list.c \
 	server/test_manio.c \
 	server/test_resume.c \
 	server/test_sdirs.c \

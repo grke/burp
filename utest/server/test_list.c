@@ -12,7 +12,6 @@ static void tear_down(struct asfd **asfd)
 {
 	asfd_free(asfd);
 	asfd_mock_teardown(&reads, &writes);
-printf("%lu %lu\n", alloc_count, free_count);
 	alloc_check();
 }
 

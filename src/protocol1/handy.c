@@ -437,9 +437,10 @@ int send_whole_filel(struct asfd *asfd,
 			ReadEncryptedFileRaw((PFE_EXPORT_FUNC)write_efs,
 				&mybuf, bfd->pvContext);
 		}
+		else
 #endif
 
-		if(!ret && cmd!=CMD_EFS_FILE)
+		if(!ret)
 		{
 #ifdef HAVE_WIN32
 		  int do_known_byte_count=0;

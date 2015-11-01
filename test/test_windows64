@@ -98,6 +98,9 @@ cat >> windowsscript << EOF
 rm -rf "/cygdrive/c/Program Files/Burp" || exit 1
 ./$installer /S || exit 1
 tar -xjf build.tar.bz2 -C "$clientburpdir" || exit 1
+# EFStest folder created by hand on the Windows machine. Copied into the
+# build directory so that the EFS code can have a bit of exercise.
+cp -a /cygdrive/c/EFStest "$clientburpdir/build" || exit 1
 EOF
 
 scp $ssh_opts windowsscript "$user@$client:" || fail

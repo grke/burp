@@ -141,6 +141,18 @@ enum ofr_e open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 		}
 #endif
 	}
+
+#ifdef HAVE_WIN32
+	// Some massive hacks to work around times that winattr was not
+	// getting set correctly inside server side backups.
+	// The EFS one will stop burp segfaulting when restoring affected
+	// EFS files.
+	if(sb->path.cmd==CMD_EFS_FILE)
+		sb->winattr |= FILE_ATTRIBUTE_ENCRYPTED;
+	if(S_ISDIR(sb->statp.st_mode))
+		sb->winattr |= FILE_ATTRIBUTE_DIRECTORY;
+#endif
+
 	bfile_init(bfd, sb->winattr, cntr);
 #ifdef HAVE_WIN32
 	bfd->set_win32_api(bfd, vss_restore);

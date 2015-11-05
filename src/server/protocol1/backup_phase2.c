@@ -243,6 +243,7 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	iobuf_move(&p1b->protocol1->datapth, &cb->protocol1->datapth);
 	iobuf_move(&p1b->endfile, &cb->endfile);
 	p1b->compression=cb->compression;
+	p1b->winattr=cb->winattr;
 	if(attribs_encode(p1b))
 		return -1;
 	if(manio_write_sbuf(ucmanio, p1b))

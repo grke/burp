@@ -118,6 +118,7 @@ static int do_to_server(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	if(split_vss
 	  && !strip_vss
+	  && cmd!=CMD_EFS_FILE
 	  && maybe_send_extrameta(asfd, ff->fname,
 		cmd, sb, protocol, cntr, metasymbol))
 			return -1;
@@ -131,6 +132,7 @@ static int do_to_server(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	if(split_vss
 	  && !strip_vss
+	  && cmd!=CMD_EFS_FILE
 	// FIX THIS: May have to check that it is not a directory here.
 	  && !S_ISDIR(sb->statp.st_mode) // does this work?
 	  && maybe_send_extrameta(asfd,

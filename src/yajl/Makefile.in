@@ -25,14 +25,7 @@ SRCS = \
 
 OBJS = $(SRCS:.c=.o)
 
-all: Makefile yajl.a
-	@echo "==== Make of yajl.a is good ===="
-	@echo " "
-
-yajl.a: $(OBJS)
-	@echo "Making $@ ..."
-	$(AR) rc  $@ $(OBJS)
-	$(RANLIB) $@
+all: Makefile $(OBJS)
 
 @MCOMMON2@
 

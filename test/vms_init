@@ -4,15 +4,17 @@
 
 prog=$(basename $0)
 
-linuxid=i-be250362
+ubuntuid=i-be250362
 windowsid=i-c021071c
+freebsdid=i-0b62f4d4
 
 usage()
 {
 	echo "usage: $prog [stop|start|restart|status] [instanceid ...]" 1>&2
 	echo "No instanceids restarts all AWS machines" 1>&2
-	echo "'linux' maps to instanceid $linux" 1>&2
-	echo "'windows' maps to instanceid $windowsid" 1>&2
+	echo "'ubuntu' maps to instanceid $ubuntu" 1>&2
+	echo "'freebsd' maps to instanceid $windowsid" 1>&2
+	echo "'windows' maps to instanceid $freebsdid" 1>&2
 	exit 1
 }
 
@@ -22,8 +24,9 @@ usage()
 
 instanceids="$2"
 if [ -n "$instanceids" ] ; then
-	[ "$instanceids" = "linux" ] && instanceids=$linuxid
+	[ "$instanceids" = "ubuntu" ] && instanceids=$ubuntuid
 	[ "$instanceids" = "windows" ] && instanceids=$windowsid
+	[ "$instanceids" = "freebsd" ] && instanceids=$freebsdid
 else
 	instanceids=$(get_all_instanceids)
 fi

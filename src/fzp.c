@@ -133,12 +133,12 @@ int fzp_close(struct fzp **fzp)
 	return ret;
 }
 
-size_t fzp_read(struct fzp *fzp, void *ptr, size_t nmemb)
+int fzp_read(struct fzp *fzp, void *ptr, size_t nmemb)
 {
 	if(fzp) switch(fzp->type)
 	{
 		case FZP_FILE:
-			return fread(ptr, 1, nmemb, fzp->fp);
+			return (int)fread(ptr, 1, nmemb, fzp->fp);
 		case FZP_COMPRESSED:
 			return gzread(fzp->zp, ptr, (unsigned)nmemb);
 		default:
@@ -448,7 +448,7 @@ static void pass_msg(size_t nmemb, size_t got, int pass)
 int fzp_read_ensure(struct fzp *fzp, void *ptr, size_t nmemb, const char *func)
 {
 	static int f;
-	static size_t r;
+	static int r;
 	static size_t got;
 	static int pass;
 	for(r=0, got=0, pass=0; got!=nmemb; pass++)

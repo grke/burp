@@ -591,7 +591,7 @@ static int get_fqdn(struct conf **c)
 	int ret=-1;
 	int gai_result;
 	struct addrinfo hints;
-	struct addrinfo *info;
+	struct addrinfo *info=NULL;
 	char hostname[1024]="";
 	hostname[1023] = '\0';
 	if(gethostname(hostname, 1023))
@@ -626,7 +626,7 @@ static int get_fqdn(struct conf **c)
 
 	ret=0;
 end:
-	freeaddrinfo(info);
+	if(info) freeaddrinfo(info);
 	return ret;
 }
 

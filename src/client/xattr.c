@@ -329,7 +329,7 @@ int get_xattr(struct asfd *asfd, struct sbuf *sb,
 	for(i=0; i<(int)(sizeof(namespaces)/sizeof(int)); i++)
 	{
 		int j=0;
-		size_t len=0;
+		ssize_t len=0;
 		int have_acl=0;
 		char *xattrlist=NULL;
 		char *cnamespace=NULL;
@@ -378,7 +378,7 @@ int get_xattr(struct asfd *asfd, struct sbuf *sb,
 			char tmp1[9];
 			char tmp2[9];
 			size_t zlen=0;
-			size_t vlen=0;
+			ssize_t vlen=0;
 			char *val=NULL;
 			cnt=xattrlist[j];
 			if(cnt>((int)sizeof(cattrname)-1))

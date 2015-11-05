@@ -39,11 +39,11 @@ get_state()
 		|| fail "getting state for $instanceid"
 }
 
-get_platform()
+get_tags()
 {
 	local instanceid="$1"
-	describe "$instanceid" Platform \
-		|| fail "getting platform for $instanceid"
+	describe "$instanceid" Tags \
+		|| fail "getting tags for $instanceid"
 }
 
 wait_for_state()
@@ -131,8 +131,8 @@ get_details()
 	local instanceids="$1"
 	details=$(echo "$instanceids" | while read i ; do
 		ip_address=$(get_address $i)
-		platform=$(get_platform $i)
-		echo $i $ip_address $platform
+		tags=$(get_tags $i)
+		echo $i $ip_address $tags
 	done)
 	echo "$details"
 }
@@ -142,8 +142,10 @@ get_summary()
 	local instanceids="$1"
 	details=$(get_details "$instanceids")
         windows=$(echo "$details" | grep windows | cut -f 2 -d " ")
-        linux=$(echo "$details" | grep -v windows | cut -f 2 -d " ")
-        echo "  linux: $linux"
+        freebsd=$(echo "$details" | grep freebsd | cut -f 2 -d " ")
+        ubuntu=$(echo "$details" | grep ubuntu | cut -f 2 -d " ")
+        echo "freebsd: $freebsd"
+        echo " ubuntu: $ubuntu"
         echo "windows: $windows"
 }
 

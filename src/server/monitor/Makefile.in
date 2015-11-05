@@ -21,13 +21,6 @@ SRCS = \
 
 OBJS = $(SRCS:.c=.o)
 
-all: Makefile server_monitor.a
-	@echo "==== Make of server_monitor.a is good ===="
-	@echo " "
-
-server_monitor.a: $(OBJS)
-	@echo "Making $@ ..."
-	$(AR) rc  $@ $(OBJS)
-	$(RANLIB) $@
+all: Makefile $(OBJS)
 
 @MCOMMON2@

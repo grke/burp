@@ -38,16 +38,8 @@ SRCS = \
 	sdirs.c \
 	timestamp.c \
 
-all: Makefile server.a
-	@echo "==== Make of server.a is good ===="
-	@echo " "
-
 OBJS = $(SRCS:.c=.o)
 
-server.a: $(OBJS)
-	@echo "Making $@ ..."
-	$(AR) rc  $@ $(OBJS)
-	$(RANLIB) $@
+all: Makefile $(OBJS)
 
 @MCOMMON2@
-

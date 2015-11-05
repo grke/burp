@@ -24,19 +24,12 @@ SRCS = \
 	restore.c \
 	zlibio.c \
 
-OBJS = $(SRCS:.c=.o)
-
-all: Makefile server_protocol1.a vss_strip
-	@echo "==== Make of server_protocol1.a is good ===="
-	@echo " "
-
-server_protocol1.a: $(OBJS)
-	@echo "Making $@ ..."
-	$(AR) rc  $@ $(OBJS)
-	$(RANLIB) $@
-
 vss_strip: Makefile vss_strip.o
 	@echo "Linking $@ ..."
 	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ vss_strip.o
+
+OBJS = $(SRCS:.c=.o)
+
+all: Makefile $(OBJS)
 
 @MCOMMON2@

@@ -25,13 +25,6 @@ SRCS = \
 
 OBJS = $(SRCS:.c=.o)
 
-all: Makefile champ_chooser.a
-	@echo "==== Make of champ_chooser.a is good ===="
-	@echo " "
-
-champ_chooser.a: $(OBJS)
-	@echo "Making $@ ..."
-	$(AR) rc  $@ $(OBJS)
-	$(RANLIB) $@
+all: Makefile $(OBJS)
 
 @MCOMMON2@

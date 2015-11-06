@@ -179,8 +179,6 @@
 #endif
 #ifdef HAVE_FREEBSD_OS
 	#include <sys/endian.h>
-	#define be64toh(x) betoh64(x)
-	#define le64toh(x) letoh64(x)
 #endif
 #ifdef HAVE_NETBSD_OS
 	#include <sys/endian.h>

@@ -306,7 +306,7 @@ void free_incexcs(struct conf **confs)
 	int i=0;
 	if(!confs) return;
 	for(i=0; i<OPT_MAX; i++)
-		if(confs[i]->flags && CONF_FLAG_INCEXC)
+		if(confs[i]->flags & CONF_FLAG_INCEXC)
 			conf_free_content(confs[i]);
 }
 

@@ -47,7 +47,7 @@ int sparse_add_candidate(uint64_t *fingerprint, struct candidate *candidate)
 	{
 		// Do not add it to the list if it has already been added.
 		for(s=0; s<sparse->size; s++)
-			if((sparse->candidates[s]==candidate))
+			if(sparse->candidates[s]==candidate)
 				return 0;
 	}
 

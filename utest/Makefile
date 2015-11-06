@@ -1,6 +1,6 @@
 
 LIBS = -lcheck -lpthread -lm -lssl -lcrypto -lrt -lacl -lcrypt
-CFLAGS+=-Wall -Werror -g -fprofile-arcs -ftest-coverage
+CFLAGS+=-Wall -Werror -g -fprofile-arcs -ftest-coverage -x c++
 
 SRCS = \
 	builders/build_attribs.c \
@@ -179,8 +179,7 @@ BURP_SRCS = \
 	../src/yajl/yajl_version.c \
 	../src/yajl_gen_w.c
 
-
-	OBJS = $(SRCS:.c=.o)
+OBJS = $(SRCS:.c=.o)
 BURP_OBJS = $(BURP_SRCS:.c=.o)
 #BURP_STRIP = $(subst ../src/,,${BURP_OBJS})
 

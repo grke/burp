@@ -640,3 +640,44 @@ error:
 	asfd_free(&asfd);
 	return NULL;
 }
+
+
+// Want to make sure that we are listening for reads too - this will let us
+// exit promptly if the client was killed.
+static int read_and_write(struct asfd *asfd)
+{
+	if(asfd->as->read_write(asfd->as)) return -1;
+	if(!asfd->rbuf->buf) return 0;
+	iobuf_log_unexpected(asfd->rbuf, __func__);
+	return -1;
+}
+
+int asfd_flush_asio(struct asfd *asfd)
+{
+	while(asfd->writebuflen>0)
+		if(read_and_write(asfd)) return -1;
+	return 0;
+}
+
+int asfd_write_wrapper(struct asfd *asfd, struct iobuf *wbuf)
+{
+	while(1)
+	{
+		switch(asfd->append_all_to_write_buffer(asfd, wbuf))
+		{
+			case APPEND_OK: return 0;
+			case APPEND_BLOCKED: break;
+			default: return -1;
+		}
+		if(read_and_write(asfd)) return -1;
+	}
+	return 0;
+}
+
+int asfd_write_wrapper_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
+{
+	static struct iobuf wbuf;
+	iobuf_from_str(&wbuf, wcmd, (char *)wsrc);
+	return asfd_write_wrapper(asfd, &wbuf);
+}
+

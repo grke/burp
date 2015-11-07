@@ -92,7 +92,7 @@ int strlist_add_sorted(struct strlist **strlist,
 int strlist_compile_regexes(struct strlist *strlist)
 {
         struct strlist *l;
-        for(l=strlist; l; l=l->next) compile_regex(&l->re, l->path);
+        for(l=strlist; l; l=l->next) l->re=regex_compile(l->path);
 	return 0;
 }
 

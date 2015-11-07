@@ -69,7 +69,7 @@ int want_to_restore(int srestore, struct sbuf *sb,
 	regex_t *regex, struct conf **cconfs)
 {
 	return (!srestore || check_srestore(cconfs, sb->path.buf))
-	  && check_regex(regex, sb->path.buf);
+	  && regex_check(regex, sb->path.buf);
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
@@ -599,7 +599,9 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 
 	logp("in do_restore\n");
 
-	if(compile_regex(&regex, get_string(confs[OPT_REGEX]))) return -1;
+	if(get_string(confs[OPT_REGEX])
+	  && !(regex=regex_compile(get_string(confs[OPT_REGEX]))))
+		return -1;
 
 	if(bu_get_list(sdirs, &bu_list))
 	{

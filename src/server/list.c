@@ -49,9 +49,7 @@ static int write_wrapper(struct asfd *asfd, struct iobuf *wbuf)
 static int write_wrapper_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
 {
 	static struct iobuf wbuf;
-	wbuf.cmd=wcmd;
-	wbuf.buf=(char *)wsrc;
-	wbuf.len=strlen(wsrc);
+	iobuf_from_str(&wbuf, wcmd, (char *)wsrc);
 	return write_wrapper(asfd, &wbuf);
 }
 
@@ -171,7 +169,7 @@ static int list_manifest(struct asfd *asfd,
 		}
 		else
 		{
-			if(check_regex(regex, sb->path.buf))
+			if(regex_check(regex, sb->path.buf))
 				show++;
 		}
 		if(show)
@@ -220,7 +218,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
 
 	//logp("in do_list_server\n");
 
-	if(compile_regex(&regex, listregex)
+	if((listregex && !(regex=regex_compile(listregex)))
 	  || bu_get_list(sdirs, &bu_list)
 	  || write_status(CNTR_STATUS_LISTING, NULL, cntr))
 		goto end;
@@ -273,7 +271,7 @@ int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
 	
 	ret=0;
 end:
-	if(regex) { regfree(regex); free(regex); }
-	bu_list_free(&bu);
+	regex_free(&regex);
+	bu_list_free(&bu_list);
 	return ret;
 }

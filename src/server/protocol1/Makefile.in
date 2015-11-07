@@ -30,6 +30,6 @@ vss_strip: Makefile vss_strip.o
 
 OBJS = $(SRCS:.c=.o)
 
-all: Makefile $(OBJS)
+all: Makefile $(OBJS) vss_strip
 
 @MCOMMON2@

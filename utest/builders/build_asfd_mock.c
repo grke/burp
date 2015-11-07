@@ -40,12 +40,19 @@ static int mock_asfd_write_str(struct asfd *asfd,
 	enum cmd wcmd, const char *wsrc)
 {
 	struct ioevent *w;
-	w=&writes->ioevent[writes->cursor++];
 	struct iobuf *expected;
+	w=&writes->ioevent[writes->cursor++];
 	expected=&w->iobuf;
 	fail_unless(wcmd==expected->cmd);
 	ck_assert_str_eq(expected->buf, wsrc);
 	return w->ret;
+}
+
+static enum append_ret mock_asfd_append_all_to_write_buffer(struct asfd *asfd,
+	struct iobuf *wbuf)
+{
+	return (enum append_ret)
+		mock_asfd_write_str(asfd, wbuf->cmd, wbuf->buf);
 }
 
 struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
@@ -61,6 +68,7 @@ struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
 	asfd->read=mock_asfd_read;
 	asfd->read_expect=mock_asfd_read_expect;
 	asfd->write_str=mock_asfd_write_str;
+	asfd->append_all_to_write_buffer=mock_asfd_append_all_to_write_buffer;
 	ioevent_list_init(reads, r_size);
 	ioevent_list_init(writes, w_size);
 	return asfd;

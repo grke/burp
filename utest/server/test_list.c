@@ -50,6 +50,24 @@ static struct sd sd123[] = {
 	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_CURRENT }
 };
 
+static struct sd fp1[] = {
+	{ "0000001 1970-01-01 00:00:00", 0, 0, 0 }
+};
+
+static struct sd fp2[] = {
+	{ "0000002 1970-01-02 00:00:00", 0, 0, 0 }
+};
+
+static struct sd fp3[] = {
+	{ "0000003 1970-01-03 00:00:00", 0, 0, 0 }
+};
+
+static struct sd fp123[] = {
+	{ "0000001 1970-01-01 00:00:00", 0, 0, 0 },
+	{ "0000002 1970-01-02 00:00:00", 0, 0, 0 },
+	{ "0000003 1970-01-03 00:00:00", 0, 0, 0 }
+};
+
 static void setup_asfd_bu_failure(void)
 {
 }
@@ -119,9 +137,22 @@ static void setup_asfd_1del_write_failure(void)
 
 static int list_server_callback_count=0;
 static int list_server_callback_ret=0;
+static struct sd *list_server_callback_sd=NULL;
+static char *list_server_callback_fp_prefix=NULL;
 
 static int list_server_callback_mock(const char *fullpath)
 {
+	if(list_server_callback_sd)
+	{
+		char expected_path[256]="";
+		snprintf(expected_path, sizeof(expected_path), "%s/%s",
+			list_server_callback_fp_prefix,
+			list_server_callback_sd[
+				list_server_callback_count].timestamp);
+		ck_assert_str_eq(expected_path, fullpath);
+	}
+	else fail_unless(fullpath==NULL);
+
 	list_server_callback_count++;
 	return list_server_callback_ret;
 }
@@ -134,7 +165,8 @@ static void run_test(int expected_init_ret,
 	const char *regex_str,
 	struct sd *s,
 	int slen,
-	void setup_callback(void))
+	struct sd *fp,
+	void setup_asfd_callback(void))
 {
 	struct asfd *asfd;
 	struct sdirs *sdirs=NULL;
@@ -142,9 +174,11 @@ static void run_test(int expected_init_ret,
 
 	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
 
-	setup_callback();
+	setup_asfd_callback();
 
 	list_server_callback_count=0;
+	list_server_callback_sd=fp;
+	if(sdirs) list_server_callback_fp_prefix=sdirs->client;
 	fail_unless(list_server_init(asfd,
 		sdirs,
 		NULL /*cntr*/,
@@ -165,119 +199,170 @@ START_TEST(test_do_server_list)
 	list_server_callback_ret=0;
 
 	// No backups.
-	run_test(-1,  0, 0, PROTO_1, NULL, NULL,
-		NULL, 0,            setup_asfd_bu_failure);
-	run_test(-1,  0, 0, PROTO_2, NULL, NULL,
-		NULL, 0,            setup_asfd_bu_failure);
+	run_test(-1, 0, 0, PROTO_1, NULL, NULL,
+		NULL, 0, NULL,
+		setup_asfd_bu_failure);
+	run_test(-1, 0, 0, PROTO_2, NULL, NULL,
+		NULL, 0, NULL,
+		setup_asfd_bu_failure);
 
-	// Backup not specified.
-	run_test( 0,  0, 0, PROTO_1, NULL, NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del);
-	run_test( 0,  0, 0, PROTO_1, NULL, NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_1del_2_3);
-	run_test( 0,  0, 0, PROTO_2, NULL, NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1);
-	run_test( 0,  0, 0, PROTO_2, NULL, NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_1_2_3);
+	// Backup not specified. burp -a l
+	run_test(0, 0, 0, PROTO_1, NULL, NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1del);
+	run_test(0, 0, 0, PROTO_1, NULL, NULL,
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1del_2_3);
+	run_test(0, 0, 0, PROTO_2, NULL, NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1);
+	run_test(0, 0, 0, PROTO_2, NULL, NULL,
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1_2_3);
 
-	// Have backups, protocol 1
-	run_test( 0,  0, 1, PROTO_1, "1", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del);
-	run_test( 0,  0, 1, PROTO_1, "all", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del);
-	run_test( 0,  0, 1, PROTO_1, "current", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del);
-	run_test( 0,  0, 1, PROTO_1, "1", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_1del);
-	run_test( 0,  0, 1, PROTO_1, "2", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_2);
-	run_test( 0,  0, 1, PROTO_1, "3", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_3);
-	run_test( 0,  0, 3, PROTO_1, "all", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_1del_2_3);
-	run_test( 0,  0, 1, PROTO_1, "current", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_3);
+	// Have backups, protocol 1. burp -a l -b x
+	run_test(0, 0, 1, PROTO_1, "1", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1del);
+	run_test(0, 0, 1, PROTO_1, "all", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1del);
+	run_test(0, 0, 1, PROTO_1, "current", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1del);
+	run_test(0, 0, 1, PROTO_1, "1", NULL,
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1del);
+	run_test(0, 0, 1, PROTO_1, "2", NULL,
+		sd123, ARR_LEN(sd123), fp2,
+		setup_asfd_2);
+	run_test(0, 0, 1, PROTO_1, "3", NULL,
+		sd123, ARR_LEN(sd123), fp3,
+		setup_asfd_3);
+	run_test(0, 0, 3, PROTO_1, "all", NULL,
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1del_2_3);
+	run_test(0, 0, 1, PROTO_1, "current", NULL,
+		sd123, ARR_LEN(sd123), fp3,
+		setup_asfd_3);
 
-	// Have backups, protocol 2
-	run_test( 0,  0, 1, PROTO_2, "1", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1);
-	run_test( 0,  0, 1, PROTO_2, "all", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1);
-	run_test( 0,  0, 1, PROTO_2, "current", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1);
-	run_test( 0,  0, 1, PROTO_2, "1", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_1);
-	run_test( 0,  0, 1, PROTO_2, "2", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_2);
-	run_test( 0,  0, 1, PROTO_2, "3", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_3);
-	run_test( 0,  0, 3, PROTO_2, "all", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_1_2_3);
-	run_test( 0,  0, 1, PROTO_2, "current", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_3);
+	// Have backups, protocol 2. burp -a l -b x
+	run_test(0, 0, 1, PROTO_2, "1", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1);
+	run_test(0, 0, 1, PROTO_2, "all", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1);
+	run_test(0, 0, 1, PROTO_2, "current", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1);
+	run_test(0, 0, 1, PROTO_2, "1", NULL,
+		sd123, ARR_LEN(sd123), fp1,
+		setup_asfd_1);
+	run_test(0, 0, 1, PROTO_2, "2", NULL,
+		sd123, ARR_LEN(sd123), fp2,
+		setup_asfd_2);
+	run_test(0, 0, 1, PROTO_2, "3", NULL,
+		sd123, ARR_LEN(sd123), fp3,
+		setup_asfd_3);
+	run_test(0, 0, 3, PROTO_2, "all", NULL,
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1_2_3);
+	run_test(0, 0, 1, PROTO_2, "current", NULL,
+		sd123, ARR_LEN(sd123), fp3,
+		setup_asfd_3);
 
 	// Add regex.
-	run_test( 0,  0, 3, PROTO_1, NULL, "someregex",
-		sd123,  ARR_LEN(sd123), setup_asfd_1del_2_3);
-	run_test( 0,  0, 3, PROTO_1, "all", "someregex",
-		sd123,  ARR_LEN(sd123), setup_asfd_1del_2_3);
-	run_test( 0,  0, 1, PROTO_1, "1", "someregex",
-		sd123,  ARR_LEN(sd123), setup_asfd_1del);
-	run_test( 0,  0, 1, PROTO_1, "current", "someregex",
-		sd123,  ARR_LEN(sd123), setup_asfd_3);
-	run_test( 0,  0, 3, PROTO_2, NULL, "someregex",
-		sd123,  ARR_LEN(sd123), setup_asfd_1_2_3);
-	run_test( 0,  0, 3, PROTO_2, "all", "someregex",
-		sd123,  ARR_LEN(sd123), setup_asfd_1_2_3);
-	run_test( 0,  0, 1, PROTO_2, "1", "someregex",
-		sd123,  ARR_LEN(sd123), setup_asfd_1);
-	run_test( 0,  0, 1, PROTO_2, "current", "someregex",
-		sd123,  ARR_LEN(sd123), setup_asfd_3);
+	// burp -a l -r someregex
+	run_test(0, 0, 3, PROTO_1, NULL, "someregex",
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1del_2_3);
+	run_test(0, 0, 3, PROTO_2, NULL, "someregex",
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1_2_3);
+	// burp -a l -b x -r someregex
+	run_test(0, 0, 3, PROTO_1, "all", "someregex",
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1del_2_3);
+	run_test(0, 0, 1, PROTO_1, "1", "someregex",
+		sd123, ARR_LEN(sd123), fp1,
+		setup_asfd_1del);
+	run_test(0, 0, 1, PROTO_1, "current", "someregex",
+		sd123, ARR_LEN(sd123), fp3,
+		setup_asfd_3);
+	run_test(0, 0, 3, PROTO_2, "all", "someregex",
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1_2_3);
+	run_test(0, 0, 1, PROTO_2, "1", "someregex",
+		sd123, ARR_LEN(sd123), fp1,
+		setup_asfd_1);
+	run_test(0, 0, 1, PROTO_2, "current", "someregex",
+		sd123, ARR_LEN(sd123), fp3,
+		setup_asfd_3);
 
-	// Not found
-	run_test( 0,  -1, 0, PROTO_1, "4", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_2, "4", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_1, "0", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_2, "0", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_1, "junk", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_2, "junk", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_1, "-1", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_2, "-1", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_1, "", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
-	run_test( 0,  -1, 0, PROTO_2, "", NULL,
-		sd123,  ARR_LEN(sd123), setup_asfd_not_found);
+	// Not found. burp -a l -b y
+	run_test(0, -1, 0, PROTO_1, "4", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_2, "4", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_1, "0", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_2, "0", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_1, "junk", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_2, "junk", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_1, "-1", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_2, "-1", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_1, "", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
+	run_test(0, -1, 0, PROTO_2, "", NULL,
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_not_found);
 
 	// Error from the list_server_callback.
 	list_server_callback_ret=-1;
-	run_test( 0,  -1, 1, PROTO_1, "1", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del);
-	run_test( 0,  -1, 1, PROTO_1, "all", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del);
-	run_test( 0,  -1, 1, PROTO_2, "1", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1);
-	run_test( 0,  -1, 1, PROTO_2, "all", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1);
+	run_test(0, -1, 1, PROTO_1, "1", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1del);
+	run_test(0, -1, 1, PROTO_1, "all", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1del);
+	run_test(0, -1, 1, PROTO_2, "1", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1);
+	run_test(0, -1, 1, PROTO_2, "all", NULL,
+		sd1, ARR_LEN(sd1), fp1,
+		setup_asfd_1);
 
 	// Write failure.
-	run_test( 0,  -1, 0, PROTO_1, NULL, NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del_write_failure);
-	run_test( 0,  -1, 0, PROTO_1, "1", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del_write_failure);
-	run_test( 0,  -1, 0, PROTO_1, "all", NULL,
-		sd1,  ARR_LEN(sd1), setup_asfd_1del_write_failure);
+	run_test(0, -1, 0, PROTO_1, NULL, NULL,
+		sd1, ARR_LEN(sd1), NULL,
+		setup_asfd_1del_write_failure);
+	run_test(0, -1, 0, PROTO_1, "1", NULL,
+		sd1, ARR_LEN(sd1), NULL,
+		setup_asfd_1del_write_failure);
+	run_test(0, -1, 0, PROTO_1, "all", NULL,
+		sd1, ARR_LEN(sd1), NULL,
+		setup_asfd_1del_write_failure);
 
 	// Bad regex.
-	run_test(-1,  0, 0, PROTO_1, "1", "*",
-		sd123,  ARR_LEN(sd123), setup_asfd_1);
+	// burp -a l -b x -r '*'
+	run_test(-1, 0, 0, PROTO_1, "1", "*",
+		sd123, ARR_LEN(sd123), NULL,
+		setup_asfd_1);
 }
 END_TEST
 

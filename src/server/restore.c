@@ -69,7 +69,7 @@ int want_to_restore(int srestore, struct sbuf *sb,
 	regex_t *regex, struct conf **cconfs)
 {
 	return (!srestore || check_srestore(cconfs, sb->path.buf))
-	  && check_regex(regex, sb->path.buf);
+	  && regex_check(regex, sb->path.buf);
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
@@ -595,15 +595,19 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	struct bu *bu_list=NULL;
 	unsigned long bno=0;
 	regex_t *regex=NULL;
+	const char *regexstr=get_string(confs[OPT_REGEX]);
 	const char *backup=get_string(confs[OPT_BACKUP]);
 
 	logp("in do_restore\n");
 
-	if(compile_regex(&regex, get_string(confs[OPT_REGEX]))) return -1;
+	if(regexstr
+	  && *regexstr
+	  && !(regex=regex_compile(get_string(confs[OPT_REGEX]))))
+		return -1;
 
 	if(bu_get_list(sdirs, &bu_list))
 	{
-		if(regex) { regfree(regex); free(regex); }
+		regex_free(&regex);
 		return -1;
 	}
 
@@ -640,10 +644,6 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		asfd->write_str(asfd, CMD_ERROR, "backup not found");
 		ret=-1;
 	}
-	if(regex)
-	{
-		regfree(regex);
-		free(regex);
-	}
+	regex_free(&regex);
 	return ret;
 }

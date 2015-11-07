@@ -159,7 +159,7 @@ int in_include_regex(struct strlist *increg, const char *fname)
 	// If not doing include_regex, let the file get backed up.
 	if(!increg) return 1;
 	for(; increg; increg=increg->next)
-		if(check_regex(increg->re, fname))
+		if(regex_check(increg->re, fname))
 			return 1;
 	return 0;
 }
@@ -169,7 +169,7 @@ int in_exclude_regex(struct strlist *excreg, const char *fname)
 {
 	// If not doing exclude_regex, let the file get backed up.
 	for(; excreg; excreg=excreg->next)
-		if(check_regex(excreg->re, fname))
+		if(regex_check(excreg->re, fname))
 			return 1;
 	return 0;
 }

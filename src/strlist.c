@@ -10,9 +10,8 @@
 static void strlist_free(struct strlist *strlist)
 {
 	if(!strlist) return;
-	if(strlist->path) free_w(&strlist->path);
-	if(strlist->re) regfree(strlist->re);
-	free_v((void **)&strlist->re);
+	regex_free(&strlist->re);
+	free_w(&strlist->path);
 	free_v((void **)&strlist);
 }
 
@@ -92,7 +91,7 @@ int strlist_add_sorted(struct strlist **strlist,
 int strlist_compile_regexes(struct strlist *strlist)
 {
         struct strlist *l;
-        for(l=strlist; l; l=l->next) compile_regex(&l->re, l->path);
+        for(l=strlist; l; l=l->next) l->re=regex_compile(l->path);
 	return 0;
 }
 

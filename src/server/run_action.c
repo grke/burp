@@ -278,12 +278,15 @@ static int run_list(struct asfd *asfd,
 
 	iobuf_free_content(asfd->rbuf);
 
-	ret=do_list_server(asfd, sdirs, get_cntr(cconfs),
-		get_protocol(cconfs), backupno, listregex, browsedir);
+	if(list_server_init(asfd, sdirs, get_cntr(cconfs),
+		get_protocol(cconfs), backupno, listregex, browsedir))
+			goto end;
+	ret=do_list_server();
 end:
 	free_w(&backupno);
 	free_w(&browsedir);
 	free_w(&listregex);
+	list_server_free();
 	return ret;
 }
 

@@ -121,4 +121,9 @@ extern struct asfd *setup_asfd(struct async *as,
 	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
 	pid_t pid, struct conf **conf);
 
+extern int asfd_flush_asio(struct asfd *asfd);
+extern int asfd_write_wrapper(struct asfd *asfd, struct iobuf *wbuf);
+extern int asfd_write_wrapper_str(struct asfd *asfd,
+	enum cmd wcmd, const char *wsrc);
+
 #endif

@@ -11,46 +11,70 @@
 #include "../regexp.h"
 #include "bu_get.h"
 #include "child.h"
+#include "list.h"
 #include "manio.h"
 
-// Want to make sure that we are listening for reads too - this will let us
-// exit promptly if the client was killed.
-// FIX THIS: Maybe some of this should go in async.c/asfd.c.
-static int read_and_write(struct asfd *asfd)
+enum list_mode
 {
-	if(asfd->as->read_write(asfd->as)) return -1;
-	if(!asfd->rbuf->buf) return 0;
-	iobuf_log_unexpected(asfd->rbuf, __func__);
+	LIST_MODE_BACKUPS=0,
+	LIST_MODE_CONTENTS_ONE,
+	LIST_MODE_CONTENTS_MANY,
+};
+
+static struct asfd *asfd;
+static struct cntr *cntr;
+static enum protocol protocol;
+static const char *backup;
+static regex_t *regex=NULL;
+static const char *browsedir;
+static struct bu *bu_list=NULL;
+static enum list_mode list_mode;
+static unsigned long bno=0;
+
+int list_server_init(
+	struct asfd *a,
+	struct sdirs *s,
+	struct cntr *c,
+	enum protocol p,
+	const char *backup_str,
+	const char *regex_str,
+	const char *browsedir_str)
+{
+	asfd=a;
+	cntr=c;
+	protocol=p;
+	backup=backup_str;
+	browsedir=browsedir_str;
+	if(bu_get_list(s, &bu_list))
+		goto error;
+	if(regex_str
+	  && *regex_str
+	  && !(regex=regex_compile(regex_str)))
+		goto error;
+	list_mode=LIST_MODE_BACKUPS;
+	if(regex)
+		list_mode=LIST_MODE_CONTENTS_MANY;
+	if(backup)
+	{
+		if((bno=strtoul(backup, NULL, 10))>0)
+			list_mode=LIST_MODE_CONTENTS_ONE;
+		else if(*backup=='c')
+			list_mode=LIST_MODE_CONTENTS_ONE;
+		else if(*backup=='a')
+			list_mode=LIST_MODE_CONTENTS_MANY;
+		else
+			list_mode=LIST_MODE_CONTENTS_ONE;
+	}
+	return 0;
+error:
+	list_server_free();
 	return -1;
 }
 
-static int flush_asio(struct asfd *asfd)
+void list_server_free(void)
 {
-	while(asfd->writebuflen>0)
-		if(read_and_write(asfd)) return -1;
-	return 0;
-}
-
-static int write_wrapper(struct asfd *asfd, struct iobuf *wbuf)
-{
-	while(1)
-	{
-		switch(asfd->append_all_to_write_buffer(asfd, wbuf))
-		{
-			case APPEND_OK: return 0;
-			case APPEND_BLOCKED: break;
-			default: return -1;
-		}
-		if(read_and_write(asfd)) return -1;
-	}
-	return 0;
-}
-
-static int write_wrapper_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
-{
-	static struct iobuf wbuf;
-	iobuf_from_str(&wbuf, wcmd, (char *)wsrc);
-	return write_wrapper(asfd, &wbuf);
+	bu_list_free(&bu_list);
+	regex_free(&regex);
 }
 
 int check_browsedir(const char *browsedir,
@@ -73,7 +97,7 @@ int check_browsedir(const char *browsedir,
 		}
 	}
 	if(*cp=='\0') cp=(char *)".";
-	if(!(copy=strdup_w(cp, __func__))) goto err;
+	if(!(copy=strdup_w(cp, __func__))) goto error;
 	if((cp=strchr(copy, '/')))
 	{
 		if(bdlen==0) cp++;
@@ -97,25 +121,23 @@ int check_browsedir(const char *browsedir,
 		if(!strcmp(*last_bd_match, copy))
 		{
 			// Got a duplicate match.
-			free(copy);
+			free_w(&copy);
 			return 0;
 		}
 		free(*last_bd_match);
 	}
-	free(mb->path.buf);
+	free_w(&mb->path.buf);
 	mb->path.buf=copy;
 	if(!(*last_bd_match=strdup_w(copy, __func__)))
-		goto err;
+		goto error;
 	return 1;
-err:
-	if(copy) free(copy);
+error:
+	free_w(&copy);
 	log_out_of_memory(__func__);
 	return -1;
 }
 
-static int list_manifest(struct asfd *asfd,
-	const char *fullpath, regex_t *regex,
-	const char *browsedir, struct cntr *cntr, enum protocol protocol)
+static int list_manifest(const char *fullpath)
 {
 	int ret=0;
 	struct sbuf *sb=NULL;
@@ -144,7 +166,8 @@ static int list_manifest(struct asfd *asfd,
 		{
 			case 0: break;
 			case 1: if(browsedir && *browsedir && !last_bd_match)
-					write_wrapper_str(asfd, CMD_ERROR,
+					asfd_write_wrapper_str(asfd,
+						CMD_ERROR,
 						"directory not found");
 				goto end; // Finished OK.
 			default: goto error;
@@ -174,11 +197,11 @@ static int list_manifest(struct asfd *asfd,
 		}
 		if(show)
 		{
-			if(write_wrapper(asfd, &sb->attr)
-			  || write_wrapper(asfd, &sb->path))
+			if(asfd_write_wrapper(asfd, &sb->attr)
+			  || asfd_write_wrapper(asfd, &sb->path))
 				goto error;
 			if(sbuf_is_link(sb)
-			  && write_wrapper(asfd, &sb->link))
+			  && asfd_write_wrapper(asfd, &sb->link))
 				goto error;
 		}
 	}
@@ -193,8 +216,7 @@ end:
 	return ret;
 }
 
-static int send_backup_name_to_client(struct asfd *asfd,
-	struct bu *bu, enum protocol protocol)
+static int send_backup_name_to_client(struct bu *bu)
 {
 	char msg[64]="";
 	snprintf(msg, sizeof(msg), "%s%s",
@@ -202,78 +224,101 @@ static int send_backup_name_to_client(struct asfd *asfd,
 		// Protocol2 backups are all deletable, so do not mention it.
 		protocol==PROTO_1
 		&& (bu->flags & BU_DELETABLE)?" (deletable)":"");
-	return write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
+	return asfd_write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
 }
 
-int do_list_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
-	enum protocol protocol,
-	const char *backup, const char *listregex, const char *browsedir)
+static int list_all_backups(void)
+{
+	int found=0;
+	struct bu *bu=NULL;
+	for(bu=bu_list; bu; bu=bu->next)
+	{
+		found=1;
+		if(send_backup_name_to_client(bu))
+			return -1;
+	}
+	return found;
+}
+
+static int list_contents_one(
+	int list_server_callback(const char *fullpath))
+{
+	struct bu *bu=NULL;
+	for(bu=bu_list; bu; bu=bu->next)
+	{
+		if(!strcmp(bu->timestamp, backup)
+		  || bu->bno==bno
+		  || (*backup=='c' && (bu->flags & BU_CURRENT)))
+		{
+			if(send_backup_name_to_client(bu)
+			  || list_server_callback(bu->path))
+				return -1;
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int list_contents_many(
+	int list_server_callback(const char *fullpath))
+{
+	int found=0;
+	struct bu *bu=NULL;
+	for(bu=bu_list; bu; bu=bu->next)
+	{
+		found=1;
+		if(send_backup_name_to_client(bu)
+		  || list_server_callback(bu->path))
+			return -1;
+	}
+	return found;
+}
+
+#ifndef UTEST
+static
+#endif
+int do_list_server_work(
+	int list_server_callback(const char *fullpath))
 {
 	int ret=-1;
-	uint8_t found=0;
-	unsigned long bno=0;
-	regex_t *regex=NULL;
-	struct bu *bu=NULL;
-	struct bu *bu_list=NULL;
+	int found=0;
 
 	//logp("in do_list_server\n");
 
-	if((listregex
-		&& *listregex
-		&& !(regex=regex_compile(listregex)))
-	  || bu_get_list(sdirs, &bu_list)
-	  || write_status(CNTR_STATUS_LISTING, NULL, cntr))
+	if(write_status(CNTR_STATUS_LISTING, NULL, cntr))
 		goto end;
 
-	if(backup && *backup) bno=strtoul(backup, NULL, 10);
-
-	for(bu=bu_list; bu; bu=bu->next)
+	switch(list_mode)
 	{
-		// Search all backups for things matching the regex.
-		if(listregex && backup && *backup=='a')
-		{
-			found=1;
-			if(write_wrapper_str(asfd,
-				CMD_TIMESTAMP, bu->timestamp)
-			  || list_manifest(asfd, bu->path,
-				regex, browsedir, cntr, protocol)) goto end;
-		}
-		// Search or list a particular backup.
-		else if(backup && *backup)
-		{
-			if(!found
-			  && (!strcmp(bu->timestamp, backup)
-				|| bu->bno==bno
-				|| (*backup=='c' && (bu->flags & BU_CURRENT))))
-			{
-				found=1;
-				if(send_backup_name_to_client(asfd,
-					bu, protocol)
-				  || list_manifest(asfd, bu->path, regex,
-					browsedir, cntr, protocol)) goto end;
-			}
-		}
-		// List the backups.
-		else
-		{
-			found=1;
-			if(send_backup_name_to_client(asfd, bu, protocol))
+		case LIST_MODE_BACKUPS:
+			if((found=list_all_backups())<0)
 				goto end;
-		}
+			break;
+		case LIST_MODE_CONTENTS_ONE:
+			if((found=list_contents_one(list_server_callback))<0)
+				goto end;
+			break;
+		case LIST_MODE_CONTENTS_MANY:
+			if((found=list_contents_many(list_server_callback))<0)
+				goto end;
+			break;
 	}
 
-	if(backup && *backup && !found)
+	if(!found)
 	{
-		write_wrapper_str(asfd, CMD_ERROR, "backup not found");
-		flush_asio(asfd);
+		asfd_write_wrapper_str(asfd, CMD_ERROR, "backup not found");
+		asfd_flush_asio(asfd);
 		goto end;
 	}
 
-	if(flush_asio(asfd)) goto end;
+	if(asfd_flush_asio(asfd)) goto end;
 
 	ret=0;
 end:
-	regex_free(&regex);
-	bu_list_free(&bu_list);
 	return ret;
+}
+
+int do_list_server(void)
+{
+	return do_list_server_work(list_manifest);
 }

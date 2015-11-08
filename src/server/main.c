@@ -730,8 +730,7 @@ int server(struct conf **confs, const char *conffile,
 			if(reload(confs, conffile,
 				0, // Not first time.
 				get_int(confs[OPT_MAX_CHILDREN]),
-				get_int(confs[OPT_MAX_STATUS_CHILDREN]),
-				0)) // Not JSON output.
+				get_int(confs[OPT_MAX_STATUS_CHILDREN])))
 					goto error;
 		}
 		hupreload=0;

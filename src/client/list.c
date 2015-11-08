@@ -5,18 +5,6 @@
 #include "../attribs.h"
 #include "../cmd.h"
 #include "../log.h"
-#include "../yajl_gen_w.h"
-
-static int items_open=0;
-
-static void json_write_all(void)
-{
-	size_t len;  
-	const unsigned char *buf;  
-	yajl_gen_get_buf(yajl, &buf, &len);  
-	fwrite(buf, 1, len, stdout);  
-	yajl_gen_clear(yajl);  
-}
 
 /* Note: The chars in this function are not the same as in the CMD_ set.
    These are for printing to the screen only. */
@@ -98,93 +86,24 @@ static void ls_long_output(struct sbuf *sb)
 	printf("\n");
 }
 
-static void ls_long_output_json(struct sbuf *sb)
-{
-	struct stat *statp=&sb->statp;
-
-	yajl_map_open_w();
-	yajl_gen_str_pair_w("name", sb->path.buf?sb->path.buf:"");
-	yajl_gen_str_pair_w("link", sb->link.buf?sb->link.buf:"");
-	yajl_gen_int_pair_w("st_dev", (long long)statp->st_dev);
-	yajl_gen_int_pair_w("st_ino", (long long)statp->st_ino);
-	yajl_gen_int_pair_w("st_mode", (long long)statp->st_mode);
-	yajl_gen_int_pair_w("st_nlink", (long long)statp->st_nlink);
-	yajl_gen_int_pair_w("st_uid", (long long)statp->st_uid);
-	yajl_gen_int_pair_w("st_gid", (long long)statp->st_gid);
-	yajl_gen_int_pair_w("st_rdev", (long long)statp->st_rdev);
-	yajl_gen_int_pair_w("st_size", (long long)statp->st_size);
-	yajl_gen_int_pair_w("st_atime", (long long)statp->st_atime);
-	yajl_gen_int_pair_w("st_mtime", (long long)statp->st_mtime);
-	yajl_gen_int_pair_w("st_ctime", (long long)statp->st_ctime);
-	yajl_map_close_w();
-}
-
-static void json_backup(char *statbuf, struct conf **confs)
-{
-	char *cp=NULL;
-	if((cp=strstr(statbuf, " (deletable)")))
-	{
-		*cp='\0';
-		cp++;
-	}
-
-	if(items_open)
-	{
-		yajl_array_close_w();
-		yajl_map_close_w();
-		items_open=0;
-	}
-
-	yajl_map_open_w();
-	yajl_gen_str_pair_w("timestamp", statbuf);
-	yajl_gen_int_pair_w("deletable", cp?(long long)1:(long long)0);
-
-	if(get_string(confs[OPT_BACKUP]))
-	{
-		const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
-		const char *regex=get_string(confs[OPT_REGEX]);
-		yajl_gen_str_pair_w("directory", 
-			browsedir?browsedir:"");
-		yajl_gen_str_pair_w("regex", 
-			regex?regex:"");
-		yajl_gen_str_w("items");
-		yajl_array_open_w();
-		items_open=1;
-	}
-	else
-		yajl_map_close_w();
-	json_write_all();
-}
-
 static void ls_short_output(struct sbuf *sb)
 {
 	printf("%s\n", sb->path.buf);
 }
 
-static void ls_short_output_json(struct sbuf *sb)
-{
-	yajl_map_open_w();
-	yajl_gen_str_pair_w("name",  sb->path.buf);
-	yajl_map_close_w();
-}
-
-static void list_item(int json, enum action act, struct sbuf *sb)
+static void list_item(enum action act, struct sbuf *sb)
 {
 	if(act==ACTION_LIST_LONG)
 	{
-		if(json) ls_long_output_json(sb);
-		else ls_long_output(sb);
+		ls_long_output(sb);
 	}
 	else
 	{
-		if(json) ls_short_output_json(sb);
-		else ls_short_output(sb);
+		ls_short_output(sb);
 	}
-	if(json) json_write_all();
 }
 
-int do_list_client(struct asfd *asfd,
-	enum action act, int json, struct conf **confs)
+int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 {
 	int ret=-1;
 	char msg[512]="";
@@ -211,17 +130,6 @@ int do_list_client(struct asfd *asfd,
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->attr);
 
-	if(json)
-	{
-		if(!(yajl=yajl_gen_alloc(NULL)))
-			goto end;
-		yajl_gen_config(yajl, yajl_gen_beautify, 1);
-		if(yajl_map_open_w()
-		  || yajl_gen_str_w("backups")
-		  || yajl_array_open_w())
-			goto end;
-	}
-
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
@@ -232,17 +140,13 @@ int do_list_client(struct asfd *asfd,
 		if(rbuf->cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			if(json) json_backup(rbuf->buf, confs);
-			else
-			{
-				printf("Backup: %s\n", rbuf->buf);
-				if(browsedir)
-					printf("Listing directory: %s\n",
-					       browsedir);
-				if(regex)
-					printf("With regex: %s\n",
-					       regex);
-			}
+			printf("Backup: %s\n", rbuf->buf);
+			if(browsedir)
+				printf("Listing directory: %s\n",
+				       browsedir);
+			if(regex)
+				printf("With regex: %s\n",
+				       regex);
 			continue;
 		}
 		else if(rbuf->cmd!=CMD_ATTRIBS)
@@ -269,7 +173,7 @@ int do_list_client(struct asfd *asfd,
 			|| sb->path.cmd==CMD_EFS_FILE
 			|| sb->path.cmd==CMD_SPECIAL)
 		{
-			list_item(json, act, sb);
+			list_item(act, sb);
 		}
 		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{
@@ -282,7 +186,7 @@ int do_list_client(struct asfd *asfd,
 			}
 			iobuf_copy(&sb->link, rbuf);
 			iobuf_init(rbuf);
-			list_item(json, act, sb);
+			list_item(act, sb);
 		}
 		else
 		{
@@ -293,21 +197,6 @@ int do_list_client(struct asfd *asfd,
 
 	ret=0;
 end:
-	if(json && yajl)
-	{
-		if(items_open)
-		{
-			yajl_array_close_w();
-			yajl_map_close_w();
-			items_open=0;
-		}
-		yajl_array_close_w();
-		yajl_map_close_w();
-		json_write_all();
-		yajl_gen_free(yajl);
-		yajl=NULL;
-	}
-
 	if(sb)
 	{
 		iobuf_free_content(&sb->path);

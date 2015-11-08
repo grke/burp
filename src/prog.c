@@ -91,7 +91,6 @@ static void usage_client(void)
 	printf("  -q <max secs>  Randomised delay of starting a timed backup.\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
-	printf("  -j             Format long list as JSON.\n");
 	printf("  -t             Dry-run to test config file syntax.\n");
 	printf("  -v             Print version and exit.\n");
 #ifndef HAVE_WIN32
@@ -113,7 +112,7 @@ static void usage_client(void)
 }
 
 int reload(struct conf **confs, const char *conffile, bool firsttime,
-	int oldmax_children, int oldmax_status_children, int json)
+	int oldmax_children, int oldmax_status_children)
 {
 	if(!firsttime) logp("Reloading config\n");
 
@@ -122,9 +121,6 @@ int reload(struct conf **confs, const char *conffile, bool firsttime,
 	if(conf_load_global_only(conffile, confs)) return -1;
 
 	umask(get_mode_t(confs[OPT_UMASK]));
-
-        // Try to make JSON output clean.
-        if(json) set_int(confs[OPT_STDOUT], 0);
 
 	// This will turn on syslogging which could not be turned on before
 	// conf_load.
@@ -292,9 +288,6 @@ int real_main(int argc, char *argv[])
 	int generate_ca_only=0;
 #endif
 	int vss_restore=1;
-	// FIX THIS: Since the client can now connect to the status port,
-	// this json option is no longer needed.
-	int json=0;
 	int test_confs=0;
 	enum burp_mode mode;
 
@@ -366,9 +359,6 @@ int real_main(int argc, char *argv[])
 			case 'x':
 				vss_restore=0;
 				break;
-			case 'j':
-				json=1;
-				break;
 			case 't':
 				test_confs=1;
 				break;
@@ -405,8 +395,8 @@ int real_main(int argc, char *argv[])
 	if(reload(confs, conffile,
 	  1 /* first time */,
 	  0 /* no oldmax_children setting */,
-	  0 /* no oldmax_status_children setting */,
-	  json)) goto end;
+	  0 /* no oldmax_status_children setting */))
+		goto end;
 
 	// Dry run to test config file syntax.
 	if(test_confs)
@@ -525,7 +515,7 @@ int real_main(int argc, char *argv[])
 	}
 	else
 	{
-		ret=client(confs, act, vss_restore, json);
+		ret=client(confs, act, vss_restore);
 	}
 
 end:

@@ -47,24 +47,24 @@ struct tchk
 };
 
 static enum asl_ret maybe_check_timer_func(struct asfd *asfd,
-        struct conf **confs, void *param)
+	struct conf **confs, void *param)
 {
 	int complen=0;
 	struct tchk *tchk=(struct tchk *)param;
 
 	if(!strcmp(asfd->rbuf->buf, "timer conditions not met"))
 	{
-                logp("Timer conditions on the server were not met\n");
+		logp("Timer conditions on the server were not met\n");
 		tchk->ret=CLIENT_SERVER_TIMER_NOT_MET;
 		return ASL_END_OK;
 	}
-        else if(!strcmp(asfd->rbuf->buf, "timer conditions met"))
-        {
+	else if(!strcmp(asfd->rbuf->buf, "timer conditions met"))
+	{
 		// Only happens on 'timer check only'.
-                logp("Timer conditions on the server were met\n");
+		logp("Timer conditions on the server were met\n");
 		tchk->ret=CLIENT_OK;
 		return ASL_END_OK;
-        }
+	}
 
 	if(!strncmp_w(asfd->rbuf->buf, "ok"))
 		complen=3;
@@ -95,7 +95,7 @@ static enum cliret maybe_check_timer(struct asfd *asfd,
 {
 	struct tchk tchk;
 	memset(&tchk, 0, sizeof(tchk));
-        if(asfd->write_str(asfd, CMD_GEN, phase1str))
+	if(asfd->write_str(asfd, CMD_GEN, phase1str))
 		return CLIENT_ERROR;
 
 	if(asfd->simple_loop(asfd, confs, &tchk,
@@ -136,7 +136,7 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 		default:
 			goto error;
 	}
-		
+
 	if(b_script_pre)
 	{
 		int a=0;
@@ -351,7 +351,7 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 }
 
 static enum cliret do_client(struct conf **confs,
-	enum action action, int vss_restore, int json)
+	enum action action, int vss_restore)
 {
 	enum cliret ret=CLIENT_OK;
 	int rfd=-1;
@@ -443,7 +443,7 @@ static enum cliret do_client(struct conf **confs,
 					"backupphase1diff", incexc, confs);
 			else
 				// Diff two backups that already exist.
-				if(do_diff_client(asfd, act, json, confs))
+				if(do_diff_client(asfd, act, confs))
 					goto error;
 			break;
 		case ACTION_MONITOR:
@@ -452,7 +452,7 @@ static enum cliret do_client(struct conf **confs,
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:
 		default:
-			if(do_list_client(asfd, act, json, confs)) goto error;
+			if(do_list_client(asfd, act, confs)) goto error;
 			break;
 	}
 
@@ -470,29 +470,29 @@ end:
 	set_cntr(confs[OPT_CNTR], NULL);
 	if(cntr) cntr_free(&cntr);
 
-        //logp("end client\n");
+	//logp("end client\n");
 	return ret;
 }
 
-int client(struct conf **confs, enum action action, int vss_restore, int json)
+int client(struct conf **confs, enum action action, int vss_restore)
 {
 	enum cliret ret=CLIENT_OK;
-	
+
 #ifdef HAVE_WIN32
 	// prevent sleep when idle
 	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
 #endif
-	
-	switch((ret=do_client(confs, action, vss_restore, json)))
+
+	switch((ret=do_client(confs, action, vss_restore)))
 	{
 		case CLIENT_RECONNECT:
 			logp("Re-opening connection to server\n");
 			sleep(5);
-			ret=do_client(confs, action, vss_restore, json);
+			ret=do_client(confs, action, vss_restore);
 		default:
 			break;
 	}
-	
+
 #ifdef HAVE_WIN32
 	// allow sleep when idle
 	SetThreadExecutionState(ES_CONTINUOUS);

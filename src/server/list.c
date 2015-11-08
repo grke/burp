@@ -54,7 +54,7 @@ int list_server_init(
 	list_mode=LIST_MODE_BACKUPS;
 	if(regex)
 		list_mode=LIST_MODE_CONTENTS_MANY;
-	if(backup)
+	if(backup && *backup)
 	{
 		if((bno=strtoul(backup, NULL, 10))>0)
 			list_mode=LIST_MODE_CONTENTS_ONE;

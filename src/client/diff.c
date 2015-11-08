@@ -86,175 +86,30 @@ static void diff_long_output(struct sbuf *sb)
 	printf("\n");
 }
 
-static char *json_escape(const char *str)
-{
-	int i;
-	int j;
-	int n=0;
-	char *estr=NULL;
-	const char echars[]="\\\"";
-
-	if(!str) return NULL;
-
-	n=strlen(str);
-	if(!(estr=(char *)malloc_w(2*n*sizeof(char), __func__)))
-		return NULL;
-	for(i=0, j=0; i<n; i++, j++)
-	{
-		int k=sizeof(echars);
-		for(; k && str[i]!=echars[k-1]; k--);
-		if(k) estr[j++]='\\';
-		estr[j]=str[i];
-	}
-	estr[j]='\0';
-	return estr;
-}
-
-static int current_tag=-1;
-
-static void print_spaces(int count)
-{
-	static int i;
-	for(i=0; i<count; i++) printf(" ");
-}
-
-static void close_tag(int level)
-{
-	for(; current_tag>=level; current_tag--)
-	{
-		printf("\n");
-		print_spaces(current_tag);
-		printf("%c", current_tag%2?']':'}');
-	}
-}
-
-static void open_tag(int level, const char *tag)
-{
-	if(current_tag>level)
-	{
-		close_tag(level);
-		printf(",\n");
-	}
-	if(current_tag==level)
-	{
-		printf("\n");
-		print_spaces(current_tag);
-		printf("},\n");
-		print_spaces(current_tag);
-		printf("{\n");
-	}
-	for(; current_tag<level; current_tag++)
-	{
-		if(tag)
-		{
-			print_spaces(current_tag+1);
-			printf("\"%s\":\n", tag);
-		}
-		print_spaces(current_tag+1);
-		printf("%c\n", current_tag%2?'{':'[');
-	}
-}
-
-static void diff_long_output_json(struct sbuf *sb)
-{
-	static char buf[2048];
-	char *esc_fname=NULL;
-	char *esc_lname=NULL;
-	char *fname=sb->path.buf;
-	char *lname=sb->link.buf;
-	struct stat *statp=&sb->statp;
-	*buf='\0';
-
-	if(fname) esc_fname=json_escape(fname);
-	if(lname) esc_lname=json_escape(lname);
-	open_tag(4, NULL);
-	printf( "     \"name\": \"%s\",\n"
-		"     \"link\": \"%s\",\n"
-		"     \"st_dev\": %lu,\n"
-		"     \"st_ino\": %lu,\n"
-		"     \"st_mode\": %u,\n"
-		"     \"st_nlink\": %lu,\n"
-		"     \"st_uid\": %u,\n"
-		"     \"st_gid\": %u,\n"
-		"     \"st_rdev\": %lu,\n"
-		"     \"st_size\": %ld,\n"
-		"     \"st_atime\": %ld,\n"
-		"     \"st_mtime\": %ld,\n"
-		"     \"st_ctime\": %ld",
-		esc_fname?esc_fname:"",
-		esc_lname?esc_lname:"",
-		(long unsigned int)statp->st_dev,
-		(long unsigned int)statp->st_ino,
-		(unsigned int)statp->st_mode,
-		(long unsigned int)statp->st_nlink,
-		(unsigned int)statp->st_uid,
-		(unsigned int)statp->st_gid,
-		(long unsigned int)statp->st_rdev,
-		(long int)statp->st_size,
-		(long int)statp->st_atime,
-		(long int)statp->st_mtime,
-		(long int)statp->st_ctime);
-	if(esc_fname) free(esc_fname);
-	if(esc_lname) free(esc_lname);
-}
-
-static void json_backup(char *statbuf, struct conf **confs)
-{
-	char *cp=NULL;
-	if((cp=strstr(statbuf, " (deletable)")))
-	{
-		*cp='\0';
-		cp++;
-	}
-
-	open_tag(2, NULL);
-	printf("   \"timestamp\": \"%s\",\n", statbuf);
-	printf("   \"deletable\": \"%s\"", cp?"true":"false");
-
-	if(get_string(confs[OPT_BACKUP]))
-	{
-		const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
-		const char *regex=get_string(confs[OPT_REGEX]);
-		printf(",\n");
-		printf("   \"directory\": \"%s\",\n", browsedir?browsedir:"");
-		printf("   \"regex\": \"%s\",\n", regex?regex:"");
-		open_tag(3, "items");
-	}
-}
-
 static void diff_short_output(struct sbuf *sb)
 {
 	printf("%s\n", sb->path.buf);
 }
 
-static void diff_short_output_json(struct sbuf *sb)
-{
-	open_tag(4, NULL);
-	printf("     \"%s\"", sb->path.buf);
-}
-
-static void diff_item(int json, enum action act, struct sbuf *sb)
+static void diff_item(enum action act, struct sbuf *sb)
 {
 	if(act==ACTION_LIST_LONG)
 	{
-		if(json) diff_long_output_json(sb);
-		else diff_long_output(sb);
+		diff_long_output(sb);
 	}
 	else
 	{
-		if(json) diff_short_output_json(sb);
-		else diff_short_output(sb);
+		diff_short_output(sb);
 	}
 }
 
 int do_diff_client(struct asfd *asfd,
-	enum action act, int json, struct conf **confs)
+	enum action act, struct conf **confs)
 {
 	int ret=-1;
 	char msg[512]="";
 	char *dpth=NULL;
 	struct sbuf *sb=NULL;
-	int json_started=0;
 	struct iobuf *rbuf=asfd->rbuf;
 	const char *backup=get_string(confs[OPT_BACKUP]);
 	const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
@@ -271,13 +126,6 @@ int do_diff_client(struct asfd *asfd,
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->attr);
 
-	if(json)
-	{
-		open_tag(0, NULL);
-		open_tag(1, "backups");
-		json_started++;
-	}
-
 	// This should probably should use the sbuf stuff.
 	while(1)
 	{
@@ -288,17 +136,13 @@ int do_diff_client(struct asfd *asfd,
 		if(rbuf->cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
-			if(json) json_backup(rbuf->buf, confs);
-			else
-			{
-				printf("Backup: %s\n", rbuf->buf);
-				if(browsedir)
-					printf("Listing directory: %s\n",
-					       browsedir);
-				if(regex)
-					printf("With regex: %s\n",
-					       regex);
-			}
+			printf("Backup: %s\n", rbuf->buf);
+			if(browsedir)
+				printf("Listing directory: %s\n",
+				       browsedir);
+			if(regex)
+				printf("With regex: %s\n",
+				       regex);
 			continue;
 		}
 		else if(rbuf->cmd!=CMD_ATTRIBS)
@@ -325,7 +169,7 @@ int do_diff_client(struct asfd *asfd,
 			|| sb->path.cmd==CMD_EFS_FILE
 			|| sb->path.cmd==CMD_SPECIAL)
 		{
-			diff_item(json, act, sb);
+			diff_item(act, sb);
 		}
 		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{
@@ -338,7 +182,7 @@ int do_diff_client(struct asfd *asfd,
 			}
 			iobuf_copy(&sb->link, rbuf);
 			iobuf_init(rbuf);
-			diff_item(json, act, sb);
+			diff_item(act, sb);
 		}
 		else
 		{
@@ -349,7 +193,6 @@ int do_diff_client(struct asfd *asfd,
 
 	ret=0;
 end:
-	if(json && json_started) close_tag(0);
 	printf("\n");
 	iobuf_free_content(&sb->path);
 	iobuf_free_content(&sb->link);

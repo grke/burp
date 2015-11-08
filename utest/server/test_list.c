@@ -219,6 +219,12 @@ START_TEST(test_do_server_list)
 	run_test(0, 0, 0, PROTO_2, NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1_2_3);
+	run_test(0, 0, 0, PROTO_1, "", NULL,
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1del_2_3);
+	run_test(0, 0, 0, PROTO_2, "", NULL,
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1_2_3);
 
 	// Have backups, protocol 1. burp -a l -b x
 	run_test(0, 0, 1, PROTO_1, "1", NULL,
@@ -323,12 +329,6 @@ START_TEST(test_do_server_list)
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
 	run_test(0, -1, 0, PROTO_2, "-1", NULL,
-		sd123, ARR_LEN(sd123), NULL,
-		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_1, "", NULL,
-		sd123, ARR_LEN(sd123), NULL,
-		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "", NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
 

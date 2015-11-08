@@ -28,6 +28,7 @@ SRCS = \
 	client/test_auth.c \
 	client/test_find.c \
 	client/test_restore.c \
+	server/monitor/test_cstat.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/champ_chooser/test_candidate.c \
@@ -226,6 +227,7 @@ clean:
 	rm -f protocol2/rabin/*.gcda protocol2/rabin/*.gcno
 	rm -f client/*.gcda client/*.gcno
 	rm -f server/*.gcda server/*.gcno
+	rm -f server/monitor/*.gcda server/monitor/*.gcno
 	rm -f server/protocol1/*.gcda server/protocol1/*.gcno
 	rm -f server/protocol2/*.gcda server/protocol2/*.gcno
 	rm -f server/protocol2/champ_chooser/*.gcda

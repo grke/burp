@@ -63,6 +63,7 @@ Suite *suite_server_bu_get(void);
 Suite *suite_server_delete(void);
 Suite *suite_server_list(void);
 Suite *suite_server_manio(void);
+Suite *suite_server_monitor_cstat(void);
 Suite *suite_server_resume(void);
 Suite *suite_server_sdirs(void);
 Suite *suite_server_protocol1_dpth(void);

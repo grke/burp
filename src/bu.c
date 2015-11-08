@@ -47,9 +47,17 @@ void bu_list_free(struct bu **bu_list)
 {
 	struct bu *bu;
 	struct bu *next;
+	struct bu *prev=NULL;
+	if(*bu_list) prev=(*bu_list)->prev;
 	for(bu=*bu_list; bu; bu=next)
 	{
 		next=bu->next;
+		bu_free(&bu);
+	}
+	// Do it in both directions.
+	for(bu=prev; bu; bu=prev)
+	{
+		prev=bu->prev;
 		bu_free(&bu);
 	}
 	*bu_list=NULL;

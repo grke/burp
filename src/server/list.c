@@ -315,6 +315,7 @@ int do_list_server_work(
 
 	ret=0;
 end:
+	bu_list_free(&bu_list);
 	return ret;
 }
 

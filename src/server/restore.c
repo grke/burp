@@ -602,7 +602,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(regexstr
 	  && *regexstr
-	  && !(regex=regex_compile(get_string(confs[OPT_REGEX]))))
+	  && !(regex=regex_compile(regexstr)))
 		return -1;
 
 	if(bu_get_list(sdirs, &bu_list))

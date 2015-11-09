@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "../../test.h"
 #include "../../builders/build.h"
+#include "../../builders/build_file.h"
 #include "../../../src/alloc.h"
 #include "../../../src/bu.h"
 #include "../../../src/cstat.h"
@@ -112,21 +113,11 @@ START_TEST(test_cstat_set_backup_list)
 }
 END_TEST
 
-static void do_create_file(const char *path, const char *content)
-{
-	FILE *fp;
-	fail_unless(!build_path_w(path));
-	fail_unless((fp=fopen(path, "wb"))!=NULL);
-	if(content)
-		fail_unless(fprintf(fp, "%s", content)==(int)strlen(content));
-	fail_unless(!fclose(fp));
-}
-
 static void create_clientconfdir_file(const char *file)
 {
 	char path[256]="";
 	snprintf(path, sizeof(path), CLIENTCONFDIR "/%s", file);
-	do_create_file(path, NULL);
+	build_file(path, NULL);
 }
 
 static void create_clientconfdir_files(const char *cnames[])
@@ -203,7 +194,7 @@ START_TEST(test_cstat_reload_from_client_confs)
 	fail_unless((globalcs=confs_alloc())!=NULL);
 	fail_unless((cconfs=confs_alloc())!=NULL);
 	fail_unless(!confs_init(globalcs));
-	do_create_file(GLOBAL_CONF, MIN_SERVER_CONF);
+	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
 
 	// FIX THIS: Does not do much, as clist is NULL.

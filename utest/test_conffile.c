@@ -2,9 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "test.h"
+#include "builders/build_file.h"
 #include "../src/alloc.h"
 #include "../src/conf.h"
 #include "../src/conffile.h"
+#include "../src/fsops.h"
+
+#define BASE		"utest_conffile"
+#define CONFFILE	BASE "/burp.conf"
 
 static struct conf **setup_conf(void)
 {
@@ -16,6 +21,7 @@ static struct conf **setup_conf(void)
 
 static void setup(struct conf ***globalcs, struct conf ***cconfs)
 {
+	fail_unless(recursive_delete(BASE)==0);
 	alloc_counters_reset();
 	if(globalcs) *globalcs=setup_conf();
 	if(cconfs) *cconfs=setup_conf();
@@ -23,6 +29,7 @@ static void setup(struct conf ***globalcs, struct conf ***cconfs)
 
 static void tear_down(struct conf ***globalcs, struct conf ***confs)
 {
+	fail_unless(recursive_delete(BASE)==0);
 	confs_free(confs);
 	confs_free(globalcs);
 	alloc_check();
@@ -78,7 +85,8 @@ START_TEST(test_client_conf)
 {
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	fail_unless(!conf_load_global_only_buf(MIN_CLIENT_CONF, confs));
+	build_file(CONFFILE, MIN_CLIENT_CONF);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
 	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_CLIENT);
 	ck_assert_str_eq(get_string(confs[OPT_SERVER]), "4.5.6.7");
 	ck_assert_str_eq(get_string(confs[OPT_PORT]), "1234");
@@ -130,7 +138,8 @@ START_TEST(test_client_includes_excludes)
 	struct strlist *s;
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	fail_unless(!conf_load_global_only_buf(buf, confs));
+	build_file(CONFFILE, buf);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
 	s=get_strlist(confs[OPT_INCLUDE]);
 	assert_include(&s, "/a");
 	assert_include(&s, "/a/b/c");
@@ -176,8 +185,8 @@ START_TEST(test_client_include_failures)
 	FOREACH(include_failures)
 	{
 		setup(&confs, NULL);
-		fail_unless(conf_load_global_only_buf(include_failures[i],
-			confs)==-1);
+		build_file(CONFFILE, include_failures[i]);
+		fail_unless(conf_load_global_only(CONFFILE, confs)==-1);
 		tear_down(NULL, &confs);
 	}
 }
@@ -188,7 +197,8 @@ START_TEST(test_server_conf)
 	struct strlist *s;
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, confs));
+	build_file(CONFFILE, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
 	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER);
 	ck_assert_str_eq(get_string(confs[OPT_PORT]), "1234");
 	ck_assert_str_eq(get_string(confs[OPT_STATUS_PORT]), "12345");
@@ -197,7 +207,7 @@ START_TEST(test_server_conf)
 	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT_CA]), "/cert_ca/path");
 	ck_assert_str_eq(get_string(confs[OPT_DIRECTORY]), "/a/directory");
 	ck_assert_str_eq(get_string(confs[OPT_DEDUP_GROUP]), "a_group");
-	ck_assert_str_eq(get_string(confs[OPT_CLIENTCONFDIR]), "/a/ccdir");
+	ck_assert_str_eq(get_string(confs[OPT_CLIENTCONFDIR]), "clientconfdir");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_DHFILE]), "/a/dhfile");
 	s=get_strlist(confs[OPT_KEEP]);
 	assert_strlist(&s, "10", 10);
@@ -242,7 +252,8 @@ static void pre_post_checks(const char *buf, const char *pre_path,
 {
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	fail_unless(!conf_load_global_only_buf(buf, confs));
+	build_file(CONFFILE, buf);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
 	pre_post_assertions(confs, pre_path, post_path, pre_arg1, pre_arg2,
 		post_arg1, post_arg2,
 		o_script_pre, o_script_post,
@@ -392,10 +403,13 @@ END_TEST
 static void clientconfdir_setup(struct conf ***globalcs, struct conf ***cconfs,
 	const char *gbuf, const char *buf)
 {
+	const char *global_path=BASE "/burp-server.conf";
 	setup(globalcs, cconfs);
-	fail_unless(!conf_load_global_only_buf(gbuf, *globalcs));
+	build_file(CONFFILE, gbuf);
+	fail_unless(!conf_load_global_only(CONFFILE, *globalcs));
 	set_string((*cconfs)[OPT_CNAME], "utestclient");
-        fail_unless(!conf_load_overrides_buf(*globalcs, *cconfs, buf));
+	build_file(global_path, buf);
+	fail_unless(!conf_load_overrides(*globalcs, *cconfs, global_path));
 	ck_assert_str_eq(get_string((*cconfs)[OPT_CNAME]), "utestclient");
 }
 
@@ -573,40 +587,51 @@ START_TEST(test_clientconfdir_server_script)
 }
 END_TEST
 
-START_TEST(test_conf_switch_to_orig_client_fail)
+static void switch_test(int expected_ret, const char *gbuf)
 {
+	char orig_client_conf[256]="";
+	const char *clientconfdir;
 	struct conf **globalcs=NULL;
 	struct conf **cconfs=NULL;
-	const char *gbuf=MIN_SERVER_CONF
-		"restore_client=non-matching1"
-		"restore_client=non-matching2";
 	const char *buf=MIN_CLIENTCONFDIR_BUF;
 	const char *orig_client_buf=MIN_CLIENTCONFDIR_BUF;
 
 	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
-	fail_unless(conf_switch_to_orig_client_buf(globalcs, cconfs,
-		"orig_client", orig_client_buf)==-1);
+	clientconfdir=get_string(globalcs[OPT_CLIENTCONFDIR]);
+	fail_unless(!recursive_delete(clientconfdir));
+	snprintf(orig_client_conf, sizeof(orig_client_conf),
+		"%s/orig_client", clientconfdir);
+	build_file(orig_client_conf, orig_client_buf);
+	fail_unless(conf_switch_to_orig_client(globalcs, cconfs,
+		"orig_client")==expected_ret);
+	if(!expected_ret)
+	{
+		ck_assert_str_eq(get_string(cconfs[OPT_CNAME]),
+			"orig_client");
+		ck_assert_str_eq(get_string(cconfs[OPT_RESTORE_CLIENT]),
+			"orig_client");
+		ck_assert_str_eq(get_string(cconfs[OPT_ORIG_CLIENT]),
+			"orig_client");
+	}
+	fail_unless(!recursive_delete(clientconfdir));
 	tear_down(&globalcs, &cconfs);
+}
+
+START_TEST(test_conf_switch_to_orig_client_fail)
+{
+	const char *gbuf=MIN_SERVER_CONF
+		"restore_client=non-matching1\n"
+		"restore_client=non-matching2\n";
+	switch_test(-1, gbuf);
 }
 END_TEST
 
 START_TEST(test_conf_switch_to_orig_client_ok)
 {
-	struct conf **globalcs=NULL;
-	struct conf **cconfs=NULL;
 	const char *gbuf=MIN_SERVER_CONF
 		"restore_client=non-matching1\n"
 		"restore_client=utestclient\n";
-	const char *buf=MIN_CLIENTCONFDIR_BUF;
-	const char *orig_client_buf=MIN_CLIENTCONFDIR_BUF;
-
-	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
-	fail_unless(conf_switch_to_orig_client_buf(globalcs, cconfs,
-		"orig_client", orig_client_buf)==0);
-	ck_assert_str_eq(get_string(cconfs[OPT_CNAME]), "orig_client");
-	ck_assert_str_eq(get_string(cconfs[OPT_RESTORE_CLIENT]), "orig_client");
-	ck_assert_str_eq(get_string(cconfs[OPT_ORIG_CLIENT]), "orig_client");
-	tear_down(&globalcs, &cconfs);
+	switch_test(0, gbuf);
 }
 END_TEST
 

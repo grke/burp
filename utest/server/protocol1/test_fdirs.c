@@ -1,18 +1,23 @@
-#include <check.h>
-#include <stdio.h>
 #include "../../test.h"
+#include "../../builders/build_file.h"
 #include "../../../src/alloc.h"
 #include "../../../src/conf.h"
 #include "../../../src/conffile.h"
+#include "../../../src/fsops.h"
 #include "../../../src/server/protocol1/fdirs.h"
 #include "../../../src/server/sdirs.h"
+
+#define BASE	"utest_server_protocol1_fdirs"
 
 static struct conf **setup_confs(void)
 {
 	struct conf **confs;
+	const char *conffile=BASE "/burp.conf";
 	confs=confs_alloc();
 	confs_init(confs);
-	fail_unless(!conf_load_global_only_buf(MIN_SERVER_CONF, confs));
+	fail_unless(!recursive_delete(BASE));
+	build_file(conffile, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(conffile, confs));
 	set_string(confs[OPT_CNAME], "utestclient");
 	set_protocol(confs, PROTO_1);
 	return confs;
@@ -36,6 +41,7 @@ static struct fdirs *setup(struct sdirs *sdirs)
 static void tear_down(struct fdirs **fdirs,
 	struct sdirs **sdirs, struct conf ***confs)
 {
+	fail_unless(!recursive_delete(BASE));
 	fdirs_free(fdirs);
 	sdirs_free(sdirs);
 	confs_free(confs);

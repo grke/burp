@@ -3,15 +3,8 @@
 #include "../../../src/fsops.h"
 #include "../../../src/server/sdirs.h"
 #include "../../../src/server/timestamp.h"
+#include "../build_file.h"
 #include "build_storage_dirs.h"
-
-static void do_create_file(const char *path)
-{
-	FILE *fp;
-	fail_unless(!build_path_w(path));
-	fail_unless((fp=fopen(path, "wb"))!=NULL);
-	fail_unless(!fclose(fp));
-}
 
 static void create_file(const char *backup,
 	const char *file, int compressed_logs)
@@ -21,7 +14,7 @@ static void create_file(const char *backup,
 		snprintf(path, sizeof(path), "%s/%s.gz", backup, file);
 	else
 		snprintf(path, sizeof(path), "%s/%s", backup, file);
-	do_create_file(path);
+	build_file(path, NULL);
 }
 
 static void do_build_storage_dirs(struct sdirs *sdirs, struct sd *s, int len,
@@ -59,7 +52,7 @@ static void do_build_storage_dirs(struct sdirs *sdirs, struct sd *s, int len,
 		if(s[i].flags & BU_HARDLINKED)
 			create_file(backup, "hardlinked", 0);
 		if(sdirs->global_sparse)
-			do_create_file(sdirs->global_sparse);
+			build_file(sdirs->global_sparse, NULL);
 
 		t+=60*60*24; // Add one day.
 	}

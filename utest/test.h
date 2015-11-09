@@ -17,7 +17,7 @@
 	"ssl_cert_ca=/cert_ca/path\n"		\
 	"directory=/a/directory\n"		\
 	"dedup_group=a_group\n"			\
-	"clientconfdir=/a/ccdir\n"		\
+	"clientconfdir=clientconfdir\n"		\
 	"ssl_dhfile=/a/dhfile\n"		\
 	"keep=10\n"				\
 

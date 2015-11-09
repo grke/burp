@@ -1,15 +1,16 @@
 
 LIBS = -lcheck -lpthread -lm -lssl -lcrypto -lrt -lacl -lcrypt
-CFLAGS+=-Wall -g -fprofile-arcs -ftest-coverage -x c++
+CFLAGS+=-Wall -Werror -g -fprofile-arcs -ftest-coverage -x c++
 
 SRCS = \
 	builders/build_attribs.c \
 	builders/build_asfd_mock.c \
+	builders/build_file.c \
+	builders/build_paths.c \
 	builders/protocol2/build_blist.c \
 	builders/server/build_manifest.c \
 	builders/server/build_storage_dirs.c \
 	builders/server/protocol2/champ_chooser/build_dindex.c \
-	builders/build_paths.c \
 	main.c \
 	prng.c \
 	test_alloc.c \

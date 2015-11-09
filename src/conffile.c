@@ -916,6 +916,9 @@ static int setup_script_arg_overrides(struct conf *c,
 	  || setup_script_arg_override(c, post_args);
 }
 
+#ifndef UTEST
+static
+#endif
 int conf_finalise(struct conf **c)
 {
 	int s_script_notify=0;
@@ -1025,6 +1028,9 @@ static int conf_load_lines_from_file(const char *conf_path, struct conf **confs)
 	return ret;
 }
 
+#ifndef UTEST
+static
+#endif
 int conf_load_lines_from_buf(const char *buf, struct conf **c)
 {
 	int ret=0;
@@ -1209,19 +1215,14 @@ static int do_conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
 	return 0;
 }
 
-static int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
+#ifndef UTEST
+static
+#endif
+int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
 	const char *path)
 {
 	return do_conf_load_overrides(globalcs, cconfs, path, NULL);
 }
-
-#ifdef UTEST
-int conf_load_overrides_buf(struct conf **globalcs, struct conf **cconfs,
-	const char *buf)
-{
-	return do_conf_load_overrides(globalcs, cconfs, "test buf", buf);
-}
-#endif
 
 int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 {
@@ -1263,13 +1264,6 @@ int conf_load_global_only(const char *path, struct conf **globalcs)
 	return do_load_global_only(globalcs, path, NULL);
 }
 
-#ifdef UTEST
-int conf_load_global_only_buf(const char *buf, struct conf **globalcs)
-{
-	return do_load_global_only(globalcs, "test buf", buf);
-}
-#endif
-
 static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
 {
 	struct strlist *r;
@@ -1282,11 +1276,10 @@ static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
 }
 
 // FIX THIS: need to unit test this.
-static int do_conf_switch_to_orig_client(struct conf **globalcs,
-	struct conf **cconfs, const char *orig_client, const char *buf)
+int conf_switch_to_orig_client(struct conf **globalcs,
+	struct conf **cconfs, const char *orig_client)
 {
 	int ret=-1;
-	int loadrc;
 	struct conf **sconfs=NULL;
 	if(!(sconfs=confs_alloc())
 	  || confs_init(sconfs)) goto end;
@@ -1295,13 +1288,7 @@ static int do_conf_switch_to_orig_client(struct conf **globalcs,
 	logp("Client wants to switch to client: %s\n",
 		get_string(sconfs[OPT_CNAME]));
 
-	// Allow unit testing using a buffer.
-#ifdef UTEST
-	if(buf) loadrc=conf_load_overrides_buf(globalcs, sconfs, buf);
-	else
-#endif
-		loadrc=conf_load_clientconfdir(globalcs, sconfs);
-	if(loadrc)
+	if(conf_load_clientconfdir(globalcs, sconfs))
 	{
 		logp("Could not load alternate config: %s",
 			get_string(sconfs[OPT_CNAME]));
@@ -1335,19 +1322,3 @@ end:
 	confs_free(&sconfs);
 	return ret;
 }
-
-int conf_switch_to_orig_client(struct conf **globalcs, struct conf **cconfs,
-	const char *orig_client)
-{
-	return do_conf_switch_to_orig_client(globalcs,
-		cconfs, orig_client, NULL);
-}
-
-#ifdef UTEST
-int conf_switch_to_orig_client_buf(struct conf **globalcs,
-	struct conf **cconfs, const char *orig_client, const char *buf)
-{
-	return do_conf_switch_to_orig_client(globalcs,
-		cconfs, orig_client, buf);
-}
-#endif

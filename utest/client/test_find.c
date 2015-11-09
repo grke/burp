@@ -1,4 +1,5 @@
 #include "../test.h"
+#include "../builders/build_file.h"
 #include "../../src/alloc.h"
 #include "../../src/config.h"
 #include "../../src/client/find.h"
@@ -7,8 +8,10 @@
 #include "../../src/prepend.h"
 #include "../../src/server/protocol1/link.h"
 
-static const char *rootpath="utest_find";
-static char fullpath[4096]; // absolute path to rootpath
+#define BASE		"utest_find"
+#define CONFBASE	"utest_find_conf"
+
+static char fullpath[4096]; // absolute path to base
 static struct strlist *e=NULL;
 static struct strlist *expected=NULL;
 
@@ -49,14 +52,14 @@ static struct conf **setup_conf(void)
 static FF_PKT *setup(struct conf ***confs)
 {
 	FF_PKT *ff;
-	fail_unless(!recursive_delete(rootpath));
+	fail_unless(!recursive_delete(BASE));
 
 	// Create the root directory, so that we can figure out the absolute
 	// path to it, then delete it so that the root directory can be
 	// included when setting up the expected file system.
-	fail_unless(!mkdir(rootpath, 0777));
-	fail_unless(realpath(rootpath, fullpath)!=NULL);
-	fail_unless(!recursive_delete(rootpath));
+	fail_unless(!mkdir(BASE, 0777));
+	fail_unless(realpath(BASE, fullpath)!=NULL);
+	fail_unless(!recursive_delete(BASE));
 
 	fail_unless((ff=find_files_init(send_file_callback))!=NULL);
 	*confs=setup_conf();
@@ -69,7 +72,7 @@ static void tear_down(FF_PKT **ff, struct conf ***confs)
 	find_files_free(ff);
 	confs_free(confs);
 	strlists_free(&expected);
-	fail_unless(recursive_delete(rootpath)==0);
+	fail_unless(recursive_delete(BASE)==0);
 	alloc_check();
 }
 
@@ -179,9 +182,13 @@ static void add_fifo_special(int find, const char *path)
 static void run_find(const char *buf, FF_PKT *ff, struct conf **confs)
 {
 	struct strlist *l;
-	fail_unless(!conf_load_global_only_buf(buf, confs));
+	const char *conffile=CONFBASE "/burp.conf";
+	fail_unless(!recursive_delete(CONFBASE));
+	build_file(conffile, buf);
+	fail_unless(!conf_load_global_only(conffile, confs));
 	for(l=get_strlist(confs[OPT_STARTDIR]); l; l=l->next) if(l->flag)
                 fail_unless(!find_files_begin(NULL, ff, confs, l->path));
+	fail_unless(!recursive_delete(CONFBASE));
 }
 
 static char extra_config[1024]="";

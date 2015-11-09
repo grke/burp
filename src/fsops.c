@@ -341,6 +341,8 @@ int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
 	struct dirent *entry=NULL;
 	struct dirent *result=NULL;
 
+	*count=0;
+
 	// This here is doing a funky kind of scandir/alphasort
 	// that can also run on Windows.
 	while(1)

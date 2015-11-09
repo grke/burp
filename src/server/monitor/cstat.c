@@ -45,15 +45,17 @@ static int set_cstat_from_conf(struct cstat *cstat,
 	return 0;
 }
 
-static int get_client_names(struct cstat **clist, struct conf **confs)
+#ifndef UTEST
+static
+#endif
+int cstat_get_client_names(struct cstat **clist, const char *clientconfdir)
 {
 	int i=0;
-	int n=-1;
+	int n=0;
 	int ret=-1;
 	struct cstat *c;
 	struct cstat *cnew;
 	struct dirent **dir=NULL;
-	const char *clientconfdir=get_string(confs[OPT_CLIENTCONFDIR]);
 
 	if(entries_in_directory_no_sort(clientconfdir, &dir, &n, 1 /*atime*/))
 	{
@@ -268,7 +270,8 @@ error:
 
 int cstat_load_data_from_disk(struct cstat **clist, struct conf **globalcs)
 {
-	return get_client_names(clist, globalcs)
+	return cstat_get_client_names(clist,
+		get_string(globalcs[OPT_CLIENTCONFDIR]))
 	  || reload_from_client_confs(clist, globalcs)
 	  || reload_from_clientdir(clist, globalcs);
 }
@@ -277,10 +280,10 @@ int cstat_set_backup_list(struct cstat *cstat)
 {
 	struct bu *bu=NULL;
 
-	if(!cstat->permitted) return 0;
-
 	// Free any previous list.
 	bu_list_free(&cstat->bu);
+
+	if(!cstat->permitted) return 0;
 
 	if(bu_get_list_with_working((struct sdirs *)cstat->sdirs, &bu, cstat))
 	{

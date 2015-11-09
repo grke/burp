@@ -228,6 +228,7 @@ clean:
 	rm -f client/*.gcda client/*.gcno
 	rm -f server/*.gcda server/*.gcno
 	rm -f server/monitor/*.gcda server/monitor/*.gcno
+	rm -f server/monitor/*.o
 	rm -f server/protocol1/*.gcda server/protocol1/*.gcno
 	rm -f server/protocol2/*.gcda server/protocol2/*.gcno
 	rm -f server/protocol2/champ_chooser/*.gcda

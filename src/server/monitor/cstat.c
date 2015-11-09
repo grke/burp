@@ -77,11 +77,9 @@ int cstat_get_client_names(struct cstat **clist, const char *clientconfdir)
 		if(c) continue;
 
 		// We do not have this client yet. Add it.
-		if(!(cnew=cstat_alloc()))
-			goto end;
-		if(cstat_init_with_cntr(cnew, dir[i]->d_name, clientconfdir))
-			goto end;
-		if(cstat_add_to_list(clist, cnew))
+		if(!(cnew=cstat_alloc())
+		  || cstat_init_with_cntr(cnew, dir[i]->d_name, clientconfdir)
+		  || cstat_add_to_list(clist, cnew))
 			goto end;
 	}
 
@@ -101,7 +99,7 @@ static void cstat_free_w(struct cstat **cstat)
 	cstat_free(cstat);
 }
 
-static void cstat_remove(struct cstat **clist, struct cstat **cstat)
+void cstat_remove(struct cstat **clist, struct cstat **cstat)
 {
 	struct cstat *c;
 	struct cstat *clast=NULL;
@@ -129,17 +127,19 @@ static void cstat_remove(struct cstat **clist, struct cstat **cstat)
 	}
 }
 
-static int reload_from_client_confs(struct cstat **clist,
-	struct conf **globalcs)
+#ifndef UTEST
+static
+#endif
+int cstat_reload_from_client_confs(struct cstat **clist,
+	struct conf **globalcs, struct conf **cconfs)
 {
 	struct cstat *c;
 	struct stat statp;
-	static struct conf **cconfs=NULL;
 	static time_t global_mtime=0;
 	time_t global_mtime_new=0;
-	const char *globalconffile=get_string(globalcs[OPT_CONFFILE]);
+	const char *globalconffile;
 
-	if(!cconfs && !(cconfs=confs_alloc())) goto error;
+	globalconffile=get_string(globalcs[OPT_CONFFILE]);
 
 	if(stat(globalconffile, &statp)
 	  || !S_ISREG(statp.st_mode))
@@ -272,9 +272,12 @@ error:
 
 int cstat_load_data_from_disk(struct cstat **clist, struct conf **globalcs)
 {
+	static struct conf **cconfs=NULL;
+	if(!cconfs && !(cconfs=confs_alloc())) return -1;
+
 	return cstat_get_client_names(clist,
 		get_string(globalcs[OPT_CLIENTCONFDIR]))
-	  || reload_from_client_confs(clist, globalcs)
+	  || cstat_reload_from_client_confs(clist, globalcs, cconfs)
 	  || reload_from_clientdir(clist, globalcs);
 }
 

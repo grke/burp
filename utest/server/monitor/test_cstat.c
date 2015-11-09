@@ -7,18 +7,22 @@
 #include "../../../src/alloc.h"
 #include "../../../src/bu.h"
 #include "../../../src/cstat.h"
+#include "../../../src/conf.h"
+#include "../../../src/conffile.h"
 #include "../../../src/fsops.h"
 #include "../../../src/server/monitor/cstat.h"
 #include "../../../src/server/sdirs.h"
 
 #define BASE		"utest_server_monitor_cstat"
 #define CLIENTCONFDIR	BASE "_clientconfdir"
+#define GLOBAL_CONF	BASE "/burp-server.conf"
 #define CNAME		"utestclient"
 
 static void clean(void)
 {
 	fail_unless(recursive_delete(BASE)==0);
 	fail_unless(recursive_delete(CLIENTCONFDIR)==0);
+	fail_unless(recursive_delete(GLOBAL_CONF)==0);
 }
 
 static struct sdirs *setup_sdirs(enum protocol protocol)
@@ -108,11 +112,13 @@ START_TEST(test_cstat_set_backup_list)
 }
 END_TEST
 
-static void do_create_file(const char *path)
+static void do_create_file(const char *path, const char *content)
 {
 	FILE *fp;
 	fail_unless(!build_path_w(path));
 	fail_unless((fp=fopen(path, "wb"))!=NULL);
+	if(content)
+		fail_unless(fprintf(fp, "%s", content)==(int)strlen(content));
 	fail_unless(!fclose(fp));
 }
 
@@ -120,28 +126,93 @@ static void create_clientconfdir_file(const char *file)
 {
 	char path[256]="";
 	snprintf(path, sizeof(path), CLIENTCONFDIR "/%s", file);
-	do_create_file(path);
+	do_create_file(path, NULL);
 }
 
+static void create_clientconfdir_files(const char *cnames[])
+{
+	int i=0;
+	for(i=0; cnames[i]; i++)
+		create_clientconfdir_file(cnames[i]);
+}
+
+static void check_clist(struct cstat *clist, const char *cnames[])
+{
+	int i;
+	struct cstat *c=NULL;
+	for(i=0, c=clist; cnames && cnames[i]; c=c->next, i++)
+		ck_assert_str_eq(cnames[i], c->name);
+if(c) printf("%s\n", c->name);
+	fail_unless(c==NULL);
+}
 
 START_TEST(test_cstat_get_client_names)
 {
-	struct cstat *c=NULL;
 	struct cstat *clist=NULL;
+	const char *cnames[] =
+		{"cli1", "cli2", "cli3", NULL};
+	const char *cnames_add[] =
+		{"cli0", "cli1", "cli2", "cli2a", "cli3", "cli4", NULL};
+	const char *cnames_rm[] =
+		{"cli2", NULL};
+	const char *tmp_files[] =
+		{".abc", "xyz~", NULL };
+
 	clean();
-	create_clientconfdir_file("client1");
-	create_clientconfdir_file("client2");
-	create_clientconfdir_file("client3");
+	create_clientconfdir_files(cnames);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	c=clist;
-	ck_assert_str_eq("client1", c->name);
-	c=c->next;
-	ck_assert_str_eq("client2", c->name);
-	c=c->next;
-	ck_assert_str_eq("client3", c->name);
-	fail_unless(c->next==NULL);
+	check_clist(clist, cnames);
+
+	// Call again with the same clientconfdir files.
 	clean();
+	create_clientconfdir_files(cnames);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	check_clist(clist, cnames);
+
+	// Call again with extra clientconfdir files.
+	clean();
+	create_clientconfdir_files(cnames_add);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	check_clist(clist, cnames_add);
+
+	// Call again with fewer clientconfdir files.
+	// The list will not be shorter.
+	clean();
+	create_clientconfdir_files(cnames_rm);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	check_clist(clist, cnames_add);
+
+	// Temporary files should be missed.
+	clean();
+	create_clientconfdir_files(tmp_files);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	check_clist(clist, cnames_add);
+
 	cstat_list_free(&clist);
+	clean();
+	alloc_check();
+}
+END_TEST
+
+START_TEST(test_cstat_reload_from_client_confs)
+{
+	struct cstat *clist=NULL;
+	struct conf **globalcs;
+	struct conf **cconfs;
+	clean();
+	fail_unless((globalcs=confs_alloc())!=NULL);
+	fail_unless((cconfs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(globalcs));
+	do_create_file(GLOBAL_CONF, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
+
+	// FIX THIS: Does not do much, as clist is NULL.
+	fail_unless(!cstat_reload_from_client_confs(&clist, globalcs, cconfs));
+
+	confs_free(&globalcs);
+	confs_free(&cconfs);
+	cstat_list_free(&clist);
+	clean();
 	alloc_check();
 }
 END_TEST
@@ -157,6 +228,7 @@ Suite *suite_server_monitor_cstat(void)
 
 	tcase_add_test(tc_core, test_cstat_set_backup_list);
 	tcase_add_test(tc_core, test_cstat_get_client_names);
+	tcase_add_test(tc_core, test_cstat_reload_from_client_confs);
 	suite_add_tcase(s, tc_core);
 
 	return s;

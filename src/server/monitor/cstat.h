@@ -9,6 +9,8 @@ extern int cstat_set_backup_list(struct cstat *cstat);
 #ifdef UTEST
 extern int cstat_get_client_names(struct cstat **clist,
 	const char *clientconfdir);
+extern int cstat_reload_from_client_confs(struct cstat **clist,
+	struct conf **globalcs, struct conf **cconfs);
 #endif
 
 #endif

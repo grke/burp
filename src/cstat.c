@@ -74,6 +74,26 @@ int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 	return 0;
 }
 
+void cstat_list_free(struct cstat **clist)
+{
+        struct cstat *c;
+        struct cstat *next;
+        struct cstat *prev=NULL;
+        if(*clist) prev=(*clist)->prev;
+        for(c=*clist; c; c=next)
+        {
+                next=c->next;
+                cstat_free(&c);
+        }
+        // Do it in both directions.
+        for(c=prev; c; c=prev)
+        {
+                prev=c->prev;
+                cstat_free(&c);
+        }
+        *clist=NULL;
+}
+
 const char *run_status_to_str(struct cstat *cstat)
 {
 	switch(cstat->run_status)

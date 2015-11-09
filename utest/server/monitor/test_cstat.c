@@ -134,13 +134,15 @@ START_TEST(test_cstat_get_client_names)
 	create_clientconfdir_file("client3");
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	c=clist;
-	ck_assert_str_eq("client1", c->cname);
+	ck_assert_str_eq("client1", c->name);
 	c=c->next;
-	ck_assert_str_eq("client2", c->cname);
+	ck_assert_str_eq("client2", c->name);
 	c=c->next;
-	ck_assert_str_eq("client3", c->cname);
-	fail_unless(c->next!=NULL);
+	ck_assert_str_eq("client3", c->name);
+	fail_unless(c->next==NULL);
 	clean();
+	cstat_list_free(&clist);
+	alloc_check();
 }
 END_TEST
 

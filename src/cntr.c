@@ -16,11 +16,18 @@
 #define CNTR_VERSION		3
 #define CNTR_PATH_BUF_LEN	256
 
-static void cntr_ent_free(struct cntr_ent *cntr_ent)
+static void cntr_ent_free_content(struct cntr_ent *cntr_ent)
 {
 	if(!cntr_ent) return;
-	if(cntr_ent->field) free(cntr_ent->field);
-	if(cntr_ent->label) free(cntr_ent->label);
+	free_w(&cntr_ent->field);
+	free_w(&cntr_ent->label);
+}
+
+static void cntr_ent_free(struct cntr_ent **cntr_ent)
+{
+	if(!cntr_ent || !*cntr_ent) return;
+	cntr_ent_free_content(*cntr_ent);
+	free_v((void **)cntr_ent);
 }
 
 struct cntr *cntr_alloc(void)
@@ -46,7 +53,7 @@ static int add_cntr_ent(struct cntr *cntr, int flags,
 	cntr->ent[(uint8_t)cmd]=cenew;
 	return 0;
 error:
-	cntr_ent_free(cenew);
+	cntr_ent_free(&cenew);
 	return -1;
 }
 
@@ -156,18 +163,24 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	return 0;
 }
 
-void cntr_free(struct cntr **cntr)
+static void cntr_free_content(struct cntr *cntr)
 {
 	struct cntr_ent *e;
 	struct cntr_ent *l=NULL;
-	if(!cntr || !*cntr) return;
-	for(e=(*cntr)->list; e; e=l)
+	for(e=cntr->list; e; e=l)
 	{
 		l=e->next;
-		cntr_ent_free(e);
+		cntr_ent_free(&e);
 	}
-	(*cntr)->list=NULL;
-	free_w(&(*cntr)->str);
+	cntr->list=NULL;
+	free_w(&cntr->str);
+	free_w(&cntr->cname);
+}
+
+void cntr_free(struct cntr **cntr)
+{
+	if(!cntr || !*cntr) return;
+	cntr_free_content(*cntr);
 	free_v((void **)cntr);
 }
 
@@ -681,7 +694,7 @@ static int extract_ul(const char *value, struct cntr_ent *ent)
 		// Single field.
 		ent->count=strtoull(as, NULL, 10);
 	}
-	free(copy);
+	free_w(&copy);
 	return 0;
 }
 

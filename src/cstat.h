@@ -50,6 +50,7 @@ extern int cstat_init(struct cstat *cstat,
 extern int cstat_init_with_cntr(struct cstat *cstat,
         const char *name, const char *clientconfdir);
 extern void cstat_free(struct cstat **cstat);
+extern void cstat_list_free(struct cstat **clist);
 extern int cstat_add_to_list(struct cstat **clist, struct cstat *cnew);
 
 extern const char *run_status_to_str(struct cstat *cstat);

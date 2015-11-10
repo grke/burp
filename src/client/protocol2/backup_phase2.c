@@ -264,7 +264,15 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	struct slist *slist=NULL;
 	struct iobuf *rbuf=NULL;
 	struct iobuf *wbuf=NULL;
-	struct cntr *cntr=get_cntr(confs);
+	struct cntr *cntr=NULL;
+
+	if(confs) cntr=get_cntr(confs);
+
+	if(!asfd)
+	{
+		logp("%s() called without asfd!\n", __func__);
+		goto end;
+	}
 
 	logp("Phase 2 begin (send backup data)\n");
 	printf("\n");
@@ -354,10 +362,12 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	ret=0;
 end:
 	slist_free(&slist);
-	// Write buffer did not allocate 'buf'.
-	wbuf->buf=NULL;
-	iobuf_free(&wbuf);
-
+	if(wbuf)
+	{
+		// Write buffer did not allocate 'buf'.
+		wbuf->buf=NULL;
+		iobuf_free(&wbuf);
+	}
 	cntr_print_end(cntr);
 	cntr_print(cntr, ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");

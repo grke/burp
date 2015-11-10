@@ -12,6 +12,12 @@ int main(void)
 	srunner_add_suite(sr, suite_alloc());
 	srunner_add_suite(sr, suite_attribs());
 	srunner_add_suite(sr, suite_base64());
+	srunner_add_suite(sr, suite_client_auth());
+	srunner_add_suite(sr, suite_client_find());
+        srunner_add_suite(sr, suite_client_monitor_lline());
+        srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
+        srunner_add_suite(sr, suite_client_protocol2_backup_phase2());
+	srunner_add_suite(sr, suite_client_restore());
 	srunner_add_suite(sr, suite_cmd());
 	srunner_add_suite(sr, suite_conf());
 	srunner_add_suite(sr, suite_conffile());
@@ -22,13 +28,11 @@ int main(void)
 	srunner_add_suite(sr, suite_protocol2_blist());
 	srunner_add_suite(sr, suite_protocol2_rabin_rconf());
 	srunner_add_suite(sr, suite_protocol2_rabin_win());
-	srunner_add_suite(sr, suite_client_auth());
-	srunner_add_suite(sr, suite_client_find());
-	srunner_add_suite(sr, suite_client_restore());
 	srunner_add_suite(sr, suite_server_bu_get());
 	srunner_add_suite(sr, suite_server_delete());
 	srunner_add_suite(sr, suite_server_list());
 	srunner_add_suite(sr, suite_server_manio());
+        srunner_add_suite(sr, suite_server_monitor_browse());
 	srunner_add_suite(sr, suite_server_monitor_cstat());
 	srunner_add_suite(sr, suite_server_resume());
 	srunner_add_suite(sr, suite_server_sdirs());

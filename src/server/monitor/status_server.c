@@ -198,8 +198,9 @@ static int parse_client_data(struct asfd *srfd,
 			goto error;
 	}
 
-	if(json_send(srfd, clist, cstat, bu, logfile, browse, confs))
-		goto error;
+	if(json_send(srfd, clist, cstat, bu, logfile, browse,
+		get_int(confs[OPT_MONITOR_BROWSE_CACHE])))
+			goto error;
 
 	goto end;
 error:

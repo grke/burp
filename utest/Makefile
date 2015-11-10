@@ -26,9 +26,13 @@ SRCS = \
 	protocol2/test_blist.c \
 	protocol2/rabin/test_rconf.c \
 	protocol2/rabin/test_win.c \
+	client/monitor/test_lline.c \
+	client/protocol1/test_backup_phase2.c \
+	client/protocol2/test_backup_phase2.c \
 	client/test_auth.c \
 	client/test_find.c \
 	client/test_restore.c \
+	server/monitor/test_browse.c \
 	server/monitor/test_cstat.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
@@ -201,6 +205,7 @@ test: Makefile $(OBJS) $(BURP_OBJS)
 	lcov --capture -d .. -b . --output-file /tmp/burp-coverage.info || exit 1
 	lcov -r /tmp/burp-coverage.info \
 		/usr/include/bits/* \
+		/usr/include/x86_64-linux-gnu/bits/* \
 		src/yajl/* \
 		utest/* \
 		-o /tmp/burp-coverage-clean.info
@@ -227,6 +232,12 @@ clean:
 	rm -f protocol2/*.gcda protocol2/*.gcno
 	rm -f protocol2/rabin/*.gcda protocol2/rabin/*.gcno
 	rm -f client/*.gcda client/*.gcno
+	rm -f client/monitor/*.gcda client/monitor/*.gcno
+	rm -f client/monitor/*.o
+	rm -f client/protocol1/*.gcda client/protocol1/*.gcno
+	rm -f client/protocol1/*.o
+	rm -f client/protocol2/*.gcda client/protocol2/*.gcno
+	rm -f client/protocol2/*.o
 	rm -f server/*.gcda server/*.gcno
 	rm -f server/monitor/*.gcda server/monitor/*.gcno
 	rm -f server/monitor/*.o

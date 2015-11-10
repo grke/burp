@@ -36,7 +36,7 @@ static struct sdirs *setup_sdirs(enum protocol protocol)
 		NULL, // client_lockdir
 		"a_group", // dedup_group
 		NULL // manual_delete
-       ));
+	));
 	return sdirs;
 }
 

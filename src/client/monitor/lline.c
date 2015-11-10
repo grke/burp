@@ -3,11 +3,16 @@
 #include "../../log.h"
 #include "lline.h"
 
-static void lline_free(struct lline *lline)
+static void lline_free_content(struct lline *lline)
 {
-	if(!lline) return;
-	if(lline->line) free(lline->line);
-	free(lline);
+	free_w(&lline->line);
+}
+
+static void lline_free(struct lline **lline)
+{
+	if(!lline || !*lline) return;
+	lline_free_content(*lline);
+	free_v((void **)lline);
 }
 
 void llines_free(struct lline **lline)
@@ -18,7 +23,7 @@ void llines_free(struct lline **lline)
 	{
 		l=lhead;
 		lhead=lhead->next;
-		lline_free(l);
+		lline_free(&l);
 	}
 	*lline=NULL;
 }

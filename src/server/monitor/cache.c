@@ -71,7 +71,7 @@ static void ents_free(struct ent *ent)
 	ent_free(&ent);
 }
 
-static void cache_free(void)
+void cache_free(void)
 {
 	if(!root) return;
 	ents_free(root);

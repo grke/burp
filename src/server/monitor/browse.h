@@ -2,6 +2,6 @@
 #define _BROWSE_H
 
 extern int browse_manifest(struct asfd *srfd, struct cstat *cstat,
-	struct bu *bu, const char *browse, struct conf **confs);
+	struct bu *bu, const char *browse, int use_cache);
 
 #endif

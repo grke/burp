@@ -355,7 +355,14 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	// data is read.
 	BFILE *bfd=NULL;
 	struct sbuf *sb=NULL;
-	struct iobuf *rbuf=asfd->rbuf;
+	struct iobuf *rbuf=NULL;
+
+	if(!asfd)
+	{
+		logp("%s() called without asfd!\n", __func__);
+		goto end;
+	}
+	rbuf=asfd->rbuf;
 
 	if(!(bfd=bfile_alloc())
 	  || !(sb=sbuf_alloc(PROTO_1)))
@@ -395,7 +402,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 
 end:
 	// It is possible for a bfd to still be open.
-	bfd->close(bfd, asfd);
+	if(bfd) bfd->close(bfd, asfd);
 	bfile_free(&bfd);
 	iobuf_free_content(rbuf);
 	sbuf_free(&sb);
@@ -406,14 +413,16 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	struct conf **confs, int resume)
 {
 	int ret=0;
+	struct cntr *cntr=NULL;
+	if(confs) cntr=get_cntr(confs);
 
 	logp("Phase 2 begin (send backup data)\n");
 	printf("\n");
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 
-	cntr_print_end(get_cntr(confs));
-	cntr_print(get_cntr(confs), ACTION_BACKUP);
+	cntr_print_end(cntr);
+	cntr_print(cntr, ACTION_BACKUP);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

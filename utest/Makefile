@@ -1,6 +1,6 @@
 
 LIBS = -lcheck -lpthread -lm -lssl -lcrypto -lrt -lacl -lcrypt
-CFLAGS+=-Wall -Werror -g -fprofile-arcs -ftest-coverage -x c++
+CFLAGS+=-Wall -g -fprofile-arcs -ftest-coverage -x c++
 
 SRCS = \
 	builders/build_attribs.c \

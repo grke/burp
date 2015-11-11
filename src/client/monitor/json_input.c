@@ -401,7 +401,7 @@ static int input_end_array(void *ctx)
 		bu_list=NULL;
 		if(cnew)
 		{
-			if(cstat_add_to_list(cslist, cnew)) return -1;
+			cstat_add_to_list(cslist, cnew);
 			cnew=NULL;
 		}
 		current=NULL;

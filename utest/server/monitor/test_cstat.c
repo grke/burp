@@ -1,7 +1,3 @@
-#include <check.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "../../test.h"
 #include "../../builders/build.h"
 #include "../../builders/build_file.h"
@@ -11,11 +7,12 @@
 #include "../../../src/conf.h"
 #include "../../../src/conffile.h"
 #include "../../../src/fsops.h"
+#include "../../../src/lock.h"
 #include "../../../src/server/monitor/cstat.h"
 #include "../../../src/server/sdirs.h"
 
 #define BASE		"utest_server_monitor_cstat"
-#define CLIENTCONFDIR	BASE "_clientconfdir"
+#define CLIENTCONFDIR	"clientconfdir"
 #define GLOBAL_CONF	BASE "/burp-server.conf"
 #define CNAME		"utestclient"
 
@@ -79,10 +76,10 @@ static struct sd sd12345[] = {
 	{ "0000005 1970-01-05 00:00:00", 5, 5, BU_CURRENT }
 };
 
-START_TEST(test_cstat_set_backup_list)
+static void do_test_cstat_set_backup_list(enum protocol protocol)
 {
 	struct cstat *cstat;
-	cstat=setup_cstat(CNAME, PROTO_1);
+	cstat=setup_cstat(CNAME, protocol);
 	ck_assert_str_eq(CLIENTCONFDIR "/" CNAME, cstat->conffile);
 
 	cstat->permitted=1;
@@ -111,30 +108,53 @@ START_TEST(test_cstat_set_backup_list)
 
 	tear_down(&cstat);
 }
+
+START_TEST(test_cstat_set_backup_list)
+{
+	do_test_cstat_set_backup_list(PROTO_1);
+	do_test_cstat_set_backup_list(PROTO_2);
+}
 END_TEST
 
-static void create_clientconfdir_file(const char *file)
+static char *get_clientconfdir_path(const char *file)
 {
-	char path[256]="";
+	static char path[256]="";
 	snprintf(path, sizeof(path), CLIENTCONFDIR "/%s", file);
-	build_file(path, NULL);
+	return path;
+}
+
+static void create_clientconfdir_file(const char *file, const char *content)
+{
+	const char *path=get_clientconfdir_path(file);
+	build_file(path, content);
+}
+
+static void delete_clientconfdir_file(const char *file)
+{
+	const char *path=get_clientconfdir_path(file);
+	fail_unless(!unlink(path));
 }
 
 static void create_clientconfdir_files(const char *cnames[])
 {
 	int i=0;
 	for(i=0; cnames[i]; i++)
-		create_clientconfdir_file(cnames[i]);
+		create_clientconfdir_file(cnames[i], NULL);
 }
 
 static void check_clist(struct cstat *clist, const char *cnames[])
 {
 	int i;
 	struct cstat *c=NULL;
+	struct cstat *l=NULL;
 	for(i=0, c=clist; cnames && cnames[i]; c=c->next, i++)
+	{
 		ck_assert_str_eq(cnames[i], c->name);
-if(c) printf("%s\n", c->name);
+		l=c;
+	}
 	fail_unless(c==NULL);
+	for(i--, c=l; i>=0; c=c->prev, i--)
+		ck_assert_str_eq(cnames[i], c->name);
 }
 
 START_TEST(test_cstat_get_client_names)
@@ -179,32 +199,476 @@ START_TEST(test_cstat_get_client_names)
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	check_clist(clist, cnames_add);
 
+	// Cause an error.
+	clean();
+	fail_unless(cstat_get_client_names(&clist, CLIENTCONFDIR)==-1);
+
 	cstat_list_free(&clist);
 	clean();
 	alloc_check();
 }
 END_TEST
 
+static void cstat_list_free_sdirs(struct cstat *clist)
+{
+	struct cstat *c;
+	for(c=clist; c; c=c->next)
+		sdirs_free((struct sdirs **)&c->sdirs);
+}
+
+static void set_mtime(const char *file, int diff)
+{
+	time_t t;
+	char path[256];
+	struct utimbuf times;
+
+	t=time(NULL);
+	t+=diff;
+	times.actime=t;
+	times.modtime=t;
+	snprintf(path, sizeof(path), CLIENTCONFDIR "/%s", file);
+	fail_unless(!utime(path, &times));
+}
+
+static void set_mtimes(const char *cnames[], int diff)
+{
+	int i=0;
+	for(i=0; cnames[i]; i++)
+		set_mtime(cnames[i], diff);
+}
+
 START_TEST(test_cstat_reload_from_client_confs)
 {
 	struct cstat *clist=NULL;
 	struct conf **globalcs;
 	struct conf **cconfs;
+	const char *cnames1[] = {"cli1", NULL};
+	const char *cnames123[] = {"cli1", "cli2", "cli3", NULL};
+	const char *cnames13[] = {"cli1", "cli3", NULL};
+
 	clean();
 	fail_unless((globalcs=confs_alloc())!=NULL);
 	fail_unless((cconfs=confs_alloc())!=NULL);
 	fail_unless(!confs_init(globalcs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
+	create_clientconfdir_files(cnames123);
 
-	// FIX THIS: Does not do much, as clist is NULL.
-	fail_unless(!cstat_reload_from_client_confs(&clist, globalcs, cconfs));
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==3);
+	check_clist(clist, cnames123);
+
+	// Going again should result in 0 updates.
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==0);
+	check_clist(clist, cnames123);
+
+	// Touching all clientconfdir files should result in 3 updates.
+	set_mtimes(cnames123, -100);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==3);
+	check_clist(clist, cnames123);
+
+	// Touching one clientconfdir file should result in 1 update.
+	set_mtimes(cnames1, -200);
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==1);
+	check_clist(clist, cnames123);
+
+	// Deleting one clientconfdir file should result in 0 updates.
+	delete_clientconfdir_file("cli2");
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==0);
+	check_clist(clist, cnames13);
+
+	// A clientconfdir file with junk in it should get permission denied
+	// and remain in the list.
+	build_file(get_clientconfdir_path("cli1"), "klasdjldkjf");
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==0);
+	check_clist(clist, cnames13);
+	// Should not reload it next time round.
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==0);
+	check_clist(clist, cnames13);
+	// Fix the file, and we should reload it.
+	build_file(get_clientconfdir_path("cli1"), NULL);
+	set_mtimes(cnames1, -300);
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==1);
+	check_clist(clist, cnames13);
+
+	// Delete everything.
+	delete_clientconfdir_file("cli1");
+	delete_clientconfdir_file("cli3");
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==0);
+	check_clist(clist, NULL);
+
+	unlink(GLOBAL_CONF);
+	fail_unless(cstat_reload_from_client_confs(&clist,
+		globalcs, cconfs)==-1);
 
 	confs_free(&globalcs);
 	confs_free(&cconfs);
+	cstat_list_free_sdirs(clist);
 	cstat_list_free(&clist);
 	clean();
 	alloc_check();
+}
+END_TEST
+
+static struct cstat *test_cstat_remove_setup(struct conf ***globalcs,
+	const char *cnames[])
+{
+	struct cstat *clist=NULL;
+	clean();
+	fail_unless((*globalcs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(*globalcs));
+	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(GLOBAL_CONF, *globalcs));
+	create_clientconfdir_files(cnames);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	check_clist(clist, cnames);
+	return clist;
+}
+
+static void test_cstat_remove_teardown(struct conf ***globalcs,
+	struct cstat **clist)
+{
+	confs_free(globalcs);
+	cstat_list_free_sdirs(*clist);
+	cstat_list_free(clist);
+	clean();
+	alloc_check();
+}
+
+static const char *cnames1234[] = {"cli1", "cli2", "cli3", "cli4", NULL};
+
+START_TEST(test_cstat_remove_first)
+{
+	struct cstat *c;
+	struct cstat *clist=NULL;
+	struct conf **globalcs;
+	const char *cnames234[] = {"cli2", "cli3", "cli4", NULL};
+	clist=test_cstat_remove_setup(&globalcs, cnames1234);
+	c=clist;
+	cstat_remove(&clist, &c);
+	check_clist(clist, cnames234);
+	test_cstat_remove_teardown(&globalcs, &clist);
+}
+END_TEST
+
+START_TEST(test_cstat_remove_second)
+{
+	struct cstat *c;
+	struct cstat *clist=NULL;
+	struct conf **globalcs;
+	const char *cnames134[] = {"cli1", "cli3", "cli4", NULL};
+	clist=test_cstat_remove_setup(&globalcs, cnames1234);
+	c=clist->next;
+	cstat_remove(&clist, &c);
+	check_clist(clist, cnames134);
+	test_cstat_remove_teardown(&globalcs, &clist);
+}
+END_TEST
+
+START_TEST(test_cstat_remove_third)
+{
+	struct cstat *c;
+	struct cstat *clist=NULL;
+	struct conf **globalcs;
+	const char *cnames124[] = {"cli1", "cli2", "cli4", NULL};
+	clist=test_cstat_remove_setup(&globalcs, cnames1234);
+	c=clist->next->next;
+	cstat_remove(&clist, &c);
+	check_clist(clist, cnames124);
+	test_cstat_remove_teardown(&globalcs, &clist);
+}
+END_TEST
+
+START_TEST(test_cstat_remove_fourth)
+{
+	struct cstat *c;
+	struct cstat *clist=NULL;
+	struct conf **globalcs;
+	const char *cnames123[] = {"cli1", "cli2", "cli3", NULL};
+	clist=test_cstat_remove_setup(&globalcs, cnames1234);
+	c=clist->next->next->next;
+	cstat_remove(&clist, &c);
+	check_clist(clist, cnames123);
+	test_cstat_remove_teardown(&globalcs, &clist);
+}
+END_TEST
+
+START_TEST(test_cstat_remove_only)
+{
+	struct cstat *c;
+	struct cstat *clist=NULL;
+	struct conf **globalcs;
+	const char *cnames1[] = {"cli1", NULL};
+	const char *cnames0[] = {NULL};
+	clist=test_cstat_remove_setup(&globalcs, cnames1);
+	c=clist;
+	cstat_remove(&clist, &c);
+	check_clist(clist, cnames0);
+	test_cstat_remove_teardown(&globalcs, &clist);
+}
+END_TEST
+
+START_TEST(test_cstat_add_out_of_order)
+{
+	struct cstat *clist=NULL;
+	struct conf **globalcs;
+	const char *cnames31204[]
+		= {"cli3", "cli1", "cli2", "cli0", "cli4", NULL};
+	const char *cnames01234[]
+		= {"cli0", "cli1", "cli2", "cli3", "cli4", NULL};
+	clean();
+	fail_unless((globalcs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(globalcs));
+	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
+	create_clientconfdir_files(cnames31204);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	check_clist(clist, cnames01234);
+	test_cstat_remove_teardown(&globalcs, &clist);
+}
+END_TEST
+
+static struct cstat *set_run_status_setup(enum protocol protocol, int permitted)
+{
+	struct cstat *cstat;
+	cstat=setup_cstat(CNAME, protocol);
+	fail_unless(cstat->run_status==RUN_STATUS_UNSET);
+	cstat->permitted=permitted;
+	return cstat;
+}
+
+static void test_cstat_set_run_status_not_permitted(enum protocol protocol)
+{
+	struct cstat *cstat;
+	cstat=set_run_status_setup(protocol, 0 /*not permitted*/);
+	cstat_set_run_status(cstat);
+	fail_unless(cstat->run_status==RUN_STATUS_UNSET);
+	tear_down(&cstat);
+}
+
+static void test_cstat_set_run_status_idle(enum protocol protocol)
+{
+	struct cstat *cstat;
+	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
+	cstat_set_run_status(cstat);
+	fail_unless(cstat->run_status==RUN_STATUS_IDLE);
+	tear_down(&cstat);
+}
+
+static struct sd sd1w[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_WORKING }
+};
+
+static void test_cstat_set_run_status_client_crashed(enum protocol protocol)
+{
+	struct cstat *cstat;
+	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
+	fail_unless(recursive_delete(BASE)==0);
+	build_storage_dirs((struct sdirs *)cstat->sdirs,
+		sd1w, ARR_LEN(sd1w));
+	cstat_set_run_status(cstat);
+	fail_unless(cstat->run_status==RUN_STATUS_CLIENT_CRASHED);
+	tear_down(&cstat);
+}
+
+static void test_cstat_set_run_status_server_crashed(enum protocol protocol)
+{
+	struct cstat *cstat;
+	struct sdirs *sdirs;
+	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
+	fail_unless(recursive_delete(BASE)==0);
+	build_storage_dirs((struct sdirs *)cstat->sdirs,
+		sd1w, ARR_LEN(sd1w));
+	sdirs=(struct sdirs *)cstat->sdirs;
+	build_file(sdirs->lock->path, NULL);
+	cstat_set_run_status(cstat);
+	fail_unless(cstat->run_status==RUN_STATUS_SERVER_CRASHED);
+	tear_down(&cstat);
+}
+
+static void test_cstat_set_run_status_running(enum protocol protocol)
+{
+	int waitstat;
+	struct cstat *cstat;
+	struct sdirs *sdirs;
+	struct lock *lock;
+	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
+	clean();
+	build_storage_dirs((struct sdirs *)cstat->sdirs,
+		sd1w, ARR_LEN(sd1w));
+	sdirs=(struct sdirs *)cstat->sdirs;
+	lock=sdirs->lock;
+
+        switch(fork())
+	{
+		case -1: fail_unless(0==1);
+			 break;
+		case 0: // Child.
+		{
+			lock_get_quick(lock);
+			sleep(2);
+			lock_release(lock);
+			exit(0);
+		}
+		default: break;
+	}
+        // Parent.
+
+	sleep(1);
+	lock_get(lock);
+	fail_unless(lock->status==GET_LOCK_NOT_GOT);
+	cstat_set_run_status(cstat);
+	fail_unless(cstat->run_status==RUN_STATUS_RUNNING);
+	wait(&waitstat);
+	tear_down(&cstat);
+}
+
+START_TEST(test_cstat_set_run_status)
+{
+	test_cstat_set_run_status_not_permitted(PROTO_1);
+	test_cstat_set_run_status_not_permitted(PROTO_2);
+	test_cstat_set_run_status_idle(PROTO_1);
+	test_cstat_set_run_status_idle(PROTO_2);
+	test_cstat_set_run_status_client_crashed(PROTO_1);
+	test_cstat_set_run_status_client_crashed(PROTO_2);
+	test_cstat_set_run_status_server_crashed(PROTO_1);
+	test_cstat_set_run_status_server_crashed(PROTO_2);
+	test_cstat_set_run_status_running(PROTO_1);
+	test_cstat_set_run_status_running(PROTO_2);
+}
+END_TEST
+
+static void do_test_cstat_reload_from_client_confs(enum protocol protocol)
+{
+	struct cstat *c1;
+	struct cstat *c2;
+	struct cstat *clist=NULL;
+	c1=setup_cstat("cli1", protocol);
+	c2=setup_cstat("cli2", protocol);
+	cstat_add_to_list(&clist, c1);
+	cstat_add_to_list(&clist, c2);
+	c1->permitted=1;
+
+	// First time, nothing is reloaded.
+	fail_unless(reload_from_clientdir(&clist)==0);
+	fail_unless(c1->run_status==RUN_STATUS_IDLE);
+	fail_unless(c2->run_status==RUN_STATUS_UNSET);
+	fail_unless(c1->bu==NULL);
+	fail_unless(c2->bu==NULL);
+
+	// Add some storage dirs, and c1 is loaded.
+	build_storage_dirs((struct sdirs *)c1->sdirs,
+		sd123, ARR_LEN(sd123));
+	fail_unless(reload_from_clientdir(&clist)==1);
+	fail_unless(c1->run_status==RUN_STATUS_IDLE);
+	fail_unless(c2->run_status==RUN_STATUS_UNSET);
+	fail_unless(c1->bu!=NULL);
+	fail_unless(c2->bu==NULL);
+
+	// Go again, nothing should be reloaded.
+	fail_unless(reload_from_clientdir(&clist)==0);
+
+	// Get a lock.
+	lock_get_quick(((struct sdirs *)c1->sdirs)->lock);
+	fail_unless(reload_from_clientdir(&clist)==1);
+
+	sdirs_free((struct sdirs **)&c1->sdirs);
+	sdirs_free((struct sdirs **)&c2->sdirs);
+	cstat_list_free(&clist);
+	clean();
+	alloc_check();
+}
+
+START_TEST(test_cstat_reload_from_clientdir)
+{
+	do_test_cstat_reload_from_client_confs(PROTO_1);
+	do_test_cstat_reload_from_client_confs(PROTO_2);
+}
+END_TEST
+
+static void check_restore_clients(struct cstat *cstat,
+	struct conf **parentconf, const char *restore_clients, int permitted)
+{
+	struct conf **cconfs=NULL;
+	fail_unless((cconfs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(cconfs));
+	fail_unless(!set_string(cconfs[OPT_CNAME], "cli1"));
+	create_clientconfdir_file("cli1", restore_clients);
+	fail_unless(!conf_load_clientconfdir(parentconf, cconfs));
+	fail_unless(!set_string(parentconf[OPT_CNAME], "cli2"));
+	fail_unless(cstat_permitted(cstat, parentconf, cconfs)==permitted);
+	confs_free(&cconfs);
+}
+
+START_TEST(test_cstat_permitted)
+{
+	struct cstat *cstat=NULL;
+	struct conf **parentconf=NULL;
+
+	clean();
+	fail_unless((cstat=cstat_alloc())!=NULL);
+	fail_unless(!cstat_init(cstat, "cli1", CLIENTCONFDIR));
+	fail_unless((parentconf=confs_alloc())!=NULL);
+	fail_unless(!confs_init(parentconf));
+	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(GLOBAL_CONF, parentconf));
+
+	// Clients can look at themselves.
+	// In this case, cli1 is 'us'.
+	fail_unless(!set_string(parentconf[OPT_CNAME], "cli1"));
+	fail_unless(cstat_permitted(cstat, parentconf, NULL)==1);
+
+	// Clients using the restore_client cannot see anything but the client
+	// they are pretending to be.
+	// In this case, cli2 is 'us'.
+	fail_unless(!set_string(parentconf[OPT_CNAME], "cli2"));
+	fail_unless(!set_string(parentconf[OPT_RESTORE_CLIENT], "is_set"));
+	fail_unless(cstat_permitted(cstat, parentconf, NULL)==0);
+	fail_unless(!set_string(parentconf[OPT_RESTORE_CLIENT], NULL));
+
+	// Clients can see another client if we are listed in its
+	// restore_clients list.
+	// In this case, cli2 is 'us' and we are trying to look at cli1.
+	check_restore_clients(cstat, parentconf,
+		"restore_client = cli3\n"
+		"restore_client = cli2\n"
+		"restore_client = cli4\n",
+		1 /* permitted */);
+
+	// If we are not in its list, we cannot see it.
+	check_restore_clients(cstat, parentconf,
+		"restore_client = cli3\n"
+		"restore_client = cli4\n",
+		0 /* not permitted */);
+
+	confs_free(&parentconf);
+	cstat_free(&cstat);
+	clean();
+	alloc_check();
+}
+END_TEST
+
+START_TEST(test_cstat_load_data_from_disk)
+{
+	struct cstat *clist=NULL;
+	struct conf **globalcs;
+	struct conf **cconfs;
+	clist=test_cstat_remove_setup(&globalcs, cnames1234);
+	fail_unless((cconfs=confs_alloc())!=NULL);
+	cstat_load_data_from_disk(&clist, globalcs, cconfs);
+	confs_free(&cconfs);
+	test_cstat_remove_teardown(&globalcs, &clist);
 }
 END_TEST
 
@@ -216,10 +680,22 @@ Suite *suite_server_monitor_cstat(void)
 	s=suite_create("server_monitor_cstat");
 
 	tc_core=tcase_create("Core");
+	tcase_set_timeout(tc_core, 5);
 
 	tcase_add_test(tc_core, test_cstat_set_backup_list);
 	tcase_add_test(tc_core, test_cstat_get_client_names);
 	tcase_add_test(tc_core, test_cstat_reload_from_client_confs);
+	tcase_add_test(tc_core, test_cstat_remove_first);
+	tcase_add_test(tc_core, test_cstat_remove_second);
+	tcase_add_test(tc_core, test_cstat_remove_third);
+	tcase_add_test(tc_core, test_cstat_remove_fourth);
+	tcase_add_test(tc_core, test_cstat_remove_only);
+	tcase_add_test(tc_core, test_cstat_add_out_of_order);
+	tcase_add_test(tc_core, test_cstat_set_run_status);
+	tcase_add_test(tc_core, test_cstat_reload_from_clientdir);
+	tcase_add_test(tc_core, test_cstat_permitted);
+	tcase_add_test(tc_core, test_cstat_load_data_from_disk);
+
 	suite_add_tcase(s, tc_core);
 
 	return s;

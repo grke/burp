@@ -11,13 +11,20 @@
 #include "../sdirs.h"
 #include "cstat.h"
 
-static int permitted(struct cstat *cstat,
+#ifndef UTEST
+static 
+#endif
+int cstat_permitted(struct cstat *cstat,
 	struct conf **parentconfs, struct conf **cconfs)
 {
 	struct strlist *rclient;
+	const char *parentconf_cname;
+
+	parentconf_cname=get_string(parentconfs[OPT_CNAME]);
+	if(!parentconf_cname) return 0;
 
 	// Allow clients to look at themselves.
-	if(!strcmp(cstat->name, get_string(parentconfs[OPT_CNAME]))) return 1;
+	if(!strcmp(cstat->name, parentconf_cname)) return 1;
 
 	// Do not allow clients using the restore_client option to see more
 	// than the client that it is pretending to be.
@@ -35,7 +42,7 @@ static int set_cstat_from_conf(struct cstat *cstat,
 	struct conf **parentconfs, struct conf **cconfs)
 {
 	// Make sure the permitted flag is set appropriately.
-	cstat->permitted=permitted(cstat, parentconfs, cconfs);
+	cstat->permitted=cstat_permitted(cstat, parentconfs, cconfs);
 
 	cstat->protocol=get_protocol(cconfs);
 	sdirs_free((struct sdirs **)&cstat->sdirs);
@@ -78,9 +85,9 @@ int cstat_get_client_names(struct cstat **clist, const char *clientconfdir)
 
 		// We do not have this client yet. Add it.
 		if(!(cnew=cstat_alloc())
-		  || cstat_init_with_cntr(cnew, dir[i]->d_name, clientconfdir)
-		  || cstat_add_to_list(clist, cnew))
+		  || cstat_init_with_cntr(cnew, dir[i]->d_name, clientconfdir))
 			goto end;
+		cstat_add_to_list(clist, cnew);
 	}
 
 	ret=0;
@@ -95,18 +102,21 @@ end:
 
 static void cstat_free_w(struct cstat **cstat)
 {
-	sdirs_free((struct sdirs **)(*cstat)->sdirs);
+	sdirs_free((struct sdirs **)&(*cstat)->sdirs);
 	cstat_free(cstat);
 }
 
+#ifndef UTEST
+static
+#endif
 void cstat_remove(struct cstat **clist, struct cstat **cstat)
 {
 	struct cstat *c;
-	struct cstat *clast=NULL;
 	if(!cstat || !*cstat) return;
 	if(*clist==*cstat)
 	{
-		*clist=(*cstat)->next;
+		*clist=(*clist)->next;
+		if(*clist) (*clist)->prev=NULL;
 		cstat_free_w(cstat);
 		*cstat=*clist;
 		return;
@@ -114,19 +124,17 @@ void cstat_remove(struct cstat **clist, struct cstat **cstat)
 	for(c=*clist; c; c=c->next)
 	{
 		if(c->next!=*cstat)
-		{
-			clast=c;
 			continue;
-		}
 		c->next=(*cstat)->next;
-		c->prev=clast;
+		if(c->next)
+			c->next->prev=(*cstat)->prev;
 		cstat_free_w(cstat);
 		*cstat=*clist;
-
 		return;
 	}
 }
 
+// Returns -1 on error, otherwise the number of clients that were reloaded.
 #ifndef UTEST
 static
 #endif
@@ -138,6 +146,7 @@ int cstat_reload_from_client_confs(struct cstat **clist,
 	static time_t global_mtime=0;
 	time_t global_mtime_new=0;
 	const char *globalconffile;
+	int reloaded=0;
 
 	globalconffile=get_string(globalcs[OPT_CONFFILE]);
 
@@ -146,7 +155,7 @@ int cstat_reload_from_client_confs(struct cstat **clist,
 	{
 		logp("Could not stat main conf file %s: %s\n",
 			globalconffile, strerror(errno));
-		goto error;
+		return -1;
 	}
 	global_mtime_new=statp.st_mtime;
 
@@ -177,32 +186,33 @@ int cstat_reload_from_client_confs(struct cstat **clist,
 
 			confs_free_content(cconfs);
 			if(set_string(cconfs[OPT_CNAME], c->name))
-				goto error;
+				return -1;
 			if(conf_load_clientconfdir(globalcs, cconfs))
 			{
-				cstat_remove(clist, &c);
-				break; // Go to the beginning of the list.
+				// If the file has junk in it, we will keep
+				// trying to reload it after removal.
+				// So, just deny permission to view it.
+				c->permitted=0;
+				continue;
 			}
 
 			if(set_cstat_from_conf(c, globalcs, cconfs))
-				goto error;
+				return -1;
+			reloaded++;
 		}
 		// Only stop if the end of the list was not reached.
 		if(!c) break;
 	}
 	if(global_mtime!=global_mtime_new)
 		global_mtime=global_mtime_new;
-	return 0;
-error:
-	confs_free(&cconfs);
-	return -1;
+	return reloaded;
 }
 
-int cstat_set_run_status(struct cstat *cstat)
+void cstat_set_run_status(struct cstat *cstat)
 {
 	struct stat statp;
 	struct sdirs *sdirs=(struct sdirs *)cstat->sdirs;
-	if(!cstat->permitted) return 0;
+	if(!cstat->permitted) return;
 
 	if(lstat(sdirs->lock->path, &statp))
 	{
@@ -219,11 +229,16 @@ int cstat_set_run_status(struct cstat *cstat)
 			cstat->run_status=RUN_STATUS_RUNNING;
 	}
 
-	return 0;
+	return;
 }
 
-static int reload_from_clientdir(struct cstat **clist, struct conf **confs)
+// Return -1 on error, or the number of reloaded clients.
+#ifndef UTEST
+static
+#endif
+int reload_from_clientdir(struct cstat **clist)
 {
+	int reloaded=0;
 	struct cstat *c;
 	for(c=*clist; c; c=c->next)
 	{
@@ -235,13 +250,12 @@ static int reload_from_clientdir(struct cstat **clist, struct conf **confs)
 		if(!c->permitted) continue;
 
 		sdirs=(struct sdirs *)c->sdirs;
-		if(!sdirs->client) continue;
+		if(!sdirs || !sdirs->client) continue;
 		if(stat(sdirs->client, &statp))
 		{
 			// No clientdir.
-			if(!c->run_status
-			  && cstat_set_run_status(c))
-				goto error;
+			if(!c->run_status)
+				cstat_set_run_status(c);
 			continue;
 		}
 		if(!lstat(sdirs->lock->path, &lstatp))
@@ -256,7 +270,7 @@ static int reload_from_clientdir(struct cstat **clist, struct conf **confs)
 		}
 		c->clientdir_mtime=statp.st_mtime;
 		c->lockfile_mtime=ltime;
-		if(cstat_set_run_status(c)) goto error;
+		cstat_set_run_status(c);
 
 		bu_list_free(&c->bu);
 // FIX THIS: should probably not load everything each time.
@@ -264,21 +278,21 @@ static int reload_from_clientdir(struct cstat **clist, struct conf **confs)
 //			goto error;
 		if(bu_get_list_with_working(sdirs, &c->bu, c))
 			goto error;
+		reloaded++;
 	}
-	return 0;
+	return reloaded;
 error:
 	return -1;
 }
 
-int cstat_load_data_from_disk(struct cstat **clist, struct conf **globalcs)
+int cstat_load_data_from_disk(struct cstat **clist, struct conf **globalcs,
+	struct conf **cconfs)
 {
-	static struct conf **cconfs=NULL;
-	if(!cconfs && !(cconfs=confs_alloc())) return -1;
-
+	if(!globalcs) return -1;
 	return cstat_get_client_names(clist,
 		get_string(globalcs[OPT_CLIENTCONFDIR]))
-	  || cstat_reload_from_client_confs(clist, globalcs, cconfs)
-	  || reload_from_clientdir(clist, globalcs);
+	  || cstat_reload_from_client_confs(clist, globalcs, cconfs)<0
+	  || reload_from_clientdir(clist)<0;
 }
 
 int cstat_set_backup_list(struct cstat *cstat)

@@ -189,13 +189,13 @@ static int parse_client_data(struct asfd *srfd,
 
 	if(cstat)
 	{
-		if(!cstat->run_status && cstat_set_run_status(cstat))
-			goto error;
+		if(!cstat->run_status)
+			cstat_set_run_status(cstat);
 	}
 	else for(cstat=clist; cstat; cstat=cstat->next)
 	{
-		if(!cstat->run_status && cstat_set_run_status(cstat))
-			goto error;
+		if(!cstat->run_status)
+			cstat_set_run_status(cstat);
 	}
 
 	if(json_send(srfd, clist, cstat, bu, logfile, browse,
@@ -222,17 +222,23 @@ static int parse_data(struct asfd *asfd, struct cstat *clist,
 
 int status_server(struct async *as, struct conf **confs)
 {
+	int ret=-1;
 	int gotdata=0;
 	struct asfd *asfd;
 	struct cstat *clist=NULL;
 	struct asfd *cfd=as->asfd; // Client.
+	struct conf **cconfs=NULL;
+
+	if(!(cconfs=confs_alloc()))
+		goto end;
+
 	while(1)
 	{
 		// Take the opportunity to get data from the disk if nothing
 		// was read from the fds.
 		if(gotdata) gotdata=0;
-		else if(cstat_load_data_from_disk(&clist, confs))
-			goto error;
+		else if(cstat_load_data_from_disk(&clist, confs, cconfs))
+			goto end;
 		if(as->read_write(as))
 		{
 			logp("Exiting main status server loop\n");
@@ -244,12 +250,12 @@ int status_server(struct async *as, struct conf **confs)
 			gotdata=1;
 			if(parse_data(asfd, clist, cfd, confs)
 			  || asfd->parse_readbuf(asfd))
-				goto error;
+				goto end;
 			iobuf_free_content(asfd->rbuf);
 		}
 	}
+	ret=0;
+end:
 // FIX THIS: should free clist;
-	return 0;
-error:
-	return -1;
+	return ret;
 }

@@ -36,7 +36,7 @@ static void cstat_free_content(struct cstat *c)
 	free_w(&c->name);
 	free_w(&c->conffile);
 	cntr_free(&c->cntr);
-	if(c->sdirs) logp("%s() called without freeing sdirs\n");
+	if(c->sdirs) logp("%s() called without freeing sdirs\n", __func__);
 	c->clientdir_mtime=0;
 	c->lockfile_mtime=0;
 }
@@ -48,14 +48,18 @@ void cstat_free(struct cstat **cstat)
 	free_v((void **)cstat);
 }
 
-int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
+void cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 {
 	struct cstat *c=NULL;
 	struct cstat *clast=NULL;
 
 	for(c=*clist; c; c=c->next)
 	{
-		if(strcmp(cnew->name, c->name)<0) break;
+		if(strcmp(cnew->name, c->name)<0)
+		{
+			c->prev=cnew;
+			break;
+		}
 		c->prev=clast;
 		clast=c;
 	}
@@ -70,8 +74,6 @@ int cstat_add_to_list(struct cstat **clist, struct cstat *cnew)
 		*clist=cnew;
 		cnew->next=c;
 	}
-
-	return 0;
 }
 
 void cstat_list_free(struct cstat **clist)

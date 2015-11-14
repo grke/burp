@@ -165,6 +165,7 @@ static int run_restore(struct asfd *asfd,
 		logp("Could not parse %s in %s\n", copy, __func__);
 		goto end;
 	}
+	backupnostr++;
 	if(set_string(cconfs[OPT_BACKUP], backupnostr))
 		goto end;
 	// FIX THIS.

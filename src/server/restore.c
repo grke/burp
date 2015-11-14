@@ -373,10 +373,18 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(protocol==PROTO_2)
 	{
-		if(asfd->write_str(asfd, CMD_GEN, "restore_stream")
-		  || asfd->read_expect(asfd, CMD_GEN, "restore_stream_ok")
-		  || !(blk=blk_alloc()))
-                	goto end;
+		static int rs_sent=0;
+		if(!(blk=blk_alloc()))
+			goto end;
+		if(!rs_sent)
+		{
+			rs_sent=1;
+			if(asfd->write_str(asfd,
+				CMD_GEN, "restore_stream")
+			  || asfd->read_expect(asfd,
+				CMD_GEN, "restore_stream_ok"))
+					goto end;
+		}
 	}
 
 	if(!(manio=manio_open(manifest, "rb", protocol))
@@ -502,10 +510,6 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 	if(restore_remaining_dirs(asfd, bu, slist,
 		act, sdirs, cntr_status, cconfs)) goto end;
 
-        // Restore has nearly completed OK.
-
-        ret=restore_end(asfd, cconfs);
-
 	cntr_print(get_cntr(cconfs), act);
 	cntr_stats_to_file(get_cntr(cconfs), bu->path, act, cconfs);
 end:
@@ -611,10 +615,10 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		return -1;
 	}
 
-	if((!backup
+	if(bu_list &&
+	   (!backup
 	 || !*backup
-	 || !(bno=strtoul(backup, NULL, 10)))
-		&& bu_list)
+	 || (!(bno=strtoul(backup, NULL, 10)) && *backup!='a')))
 	{
 		found=1;
 		// No backup specified, do the most recent.
@@ -626,19 +630,27 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	if(!found) for(bu=bu_list; bu; bu=bu->next)
 	{
 		if(!strcmp(bu->timestamp, backup)
-		  || bu->bno==bno)
+		  || bu->bno==bno || (backup && *backup=='a'))
 		{
 			found=1;
 			//logp("got: %s\n", bu->path);
 			ret|=restore_manifest(asfd, bu, regex, srestore,
 				act, sdirs, dir_for_notify, confs);
+			if(backup && *backup=='a')
+				continue;
 			break;
 		}
 	}
 
 	bu_list_free(&bu_list);
 
-	if(!found)
+
+	if(found)
+	{
+		// Restore has nearly completed OK.
+		ret=restore_end(asfd, confs);
+	}
+	else
 	{
 		logp("backup not found\n");
 		asfd->write_str(asfd, CMD_ERROR, "backup not found");

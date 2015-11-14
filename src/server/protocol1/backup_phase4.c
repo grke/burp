@@ -36,12 +36,8 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 
 	if(!(dstp=fzp_open(dst, "rb"))) goto end;
 
-	if(dpth_protocol1_is_compressed(compression, del))
-		delfzp=fzp_gzopen(del, "rb");
-	else
-		delfzp=fzp_open(del, "rb");
-
-	if(!delfzp) goto end;
+	if(!(delfzp=fzp_gzopen(del, "rb")))
+		goto end;
 
 	if(gzupd)
 		upfzp=fzp_gzopen(upd, comp_level(compression));

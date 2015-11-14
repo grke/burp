@@ -1,4 +1,6 @@
 #include "../../burp.h"
+#include "../../attribs.h"
+#include "../../base64.h"
 #include "../../fzp.h"
 #include "../../handy.h"
 #include "../../hexmap.h"
@@ -14,7 +16,7 @@ static int usage(void)
 	return 1;
 }
 
-static int parse_cmd(struct iobuf *rbuf, struct blk *blk)
+static int parse_cmd(struct iobuf *rbuf, struct blk *blk, struct sbuf *sb)
 {
 	int ret=-1;
 
@@ -42,6 +44,14 @@ static int parse_cmd(struct iobuf *rbuf, struct blk *blk)
 		case CMD_DATA:
 			logp("\n%s looks like a data file\n", path);
 			goto end;
+/*
+	FIX THIS - give a flag to tell it to decode attributes.
+		case CMD_ATTRIBS:
+			memcpy(&sb->attr, rbuf, sizeof(struct iobuf));
+			attribs_decode(sb);
+			printf("compression: %d\n", sb->compression);
+			break;
+*/
 		default:
 			printf("%s\n", rbuf->buf);
 			break;
@@ -57,7 +67,10 @@ int run_bsigs(int argc, char *argv[])
 	fzp *fzp=NULL;
 	struct iobuf rbuf;
 	struct blk blk;
+	struct sbuf *sb=sbuf_alloc(PROTO_1);
 	memset(&rbuf, 0, sizeof(struct iobuf));
+
+	base64_init();
 
 	if(argc!=2)
 		return usage();
@@ -74,7 +87,7 @@ int run_bsigs(int argc, char *argv[])
 			case -1: goto end; // Error.
 		}
 
-		if(parse_cmd(&rbuf, &blk)) goto end;
+		if(parse_cmd(&rbuf, &blk, sb)) goto end;
 	}
 
 end:

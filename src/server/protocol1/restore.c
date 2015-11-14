@@ -243,10 +243,9 @@ static int process_data_dir_file(struct asfd *asfd,
 			if(inflate_or_link_oldfile(asfd, best, tmp,
 				cconfs, sb->compression))
 			{
-				char msg[256]="";
-				snprintf(msg, sizeof(msg),
-				  "error when inflating %s\n", best);
-				log_and_send(asfd, msg);
+				logw(asfd, cntr,
+				  "problem when inflating %s\n", best);
+				ret=0;
 				goto end;
 			}
 			best=tmp;
@@ -258,10 +257,8 @@ static int process_data_dir_file(struct asfd *asfd,
 			0 /* do not gzip the result */,
 			sb->compression /* from the manifest */, cconfs))
 		{
-			char msg[256]="";
-			snprintf(msg, sizeof(msg), "error when patching %s\n",
-				path);
-			log_and_send(asfd, msg);
+			logw(asfd, cntr, "problem when patching %s with %s\n", path, b->timestamp);
+			ret=0;
 			goto end;
 		}
 

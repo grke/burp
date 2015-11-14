@@ -22,6 +22,9 @@ struct sel
 	uint8_t gotfirstresponse;
 };
 
+extern struct sel *sel_alloc(void);
+extern void sel_free(struct sel **sel);
+
 extern int status_client_ncurses(enum action act, struct conf **confs);
 
 #endif

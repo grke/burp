@@ -26,6 +26,7 @@ SRCS = \
 	protocol2/test_blist.c \
 	protocol2/rabin/test_rconf.c \
 	protocol2/rabin/test_win.c \
+	client/monitor/test_json_input.c \
 	client/monitor/test_lline.c \
 	client/protocol1/test_backup_phase2.c \
 	client/protocol2/test_backup_phase2.c \

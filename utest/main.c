@@ -14,6 +14,7 @@ int main(void)
 	srunner_add_suite(sr, suite_base64());
 	srunner_add_suite(sr, suite_client_auth());
 	srunner_add_suite(sr, suite_client_find());
+        srunner_add_suite(sr, suite_client_monitor_json_input());
         srunner_add_suite(sr, suite_client_monitor_lline());
         srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
         srunner_add_suite(sr, suite_client_protocol2_backup_phase2());

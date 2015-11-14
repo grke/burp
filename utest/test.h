@@ -48,6 +48,7 @@ Suite *suite_attribs(void);
 Suite *suite_base64(void);
 Suite *suite_client_auth(void);
 Suite *suite_client_find(void);
+Suite *suite_client_monitor_json_input(void);
 Suite *suite_client_monitor_lline(void);
 Suite *suite_client_protocol1_backup_phase2(void);
 Suite *suite_client_protocol2_backup_phase2(void);

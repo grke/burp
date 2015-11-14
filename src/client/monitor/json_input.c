@@ -451,22 +451,34 @@ static void do_yajl_error(yajl_handle yajl, struct asfd *asfd)
 	yajl_free_error(yajl, str);
 }
 
+static yajl_handle yajl=NULL;
+
+int json_input_init(void)
+{
+	if(!(yajl=yajl_alloc(&callbacks, NULL, NULL)))
+		return -1;
+	yajl_config(yajl, yajl_dont_validate_strings, 1);
+	return 0;
+}
+
+void json_input_free(void)
+{
+	if(!yajl) return;
+	yajl_free(yajl);
+	yajl=NULL;
+}
+
 // Client records will be coming through in alphabetical order.
 // FIX THIS: If a client is deleted on the server, it is not deleted from
 // clist.
 int json_input(struct asfd *asfd, struct sel *sel)
 {
-        static yajl_handle yajl=NULL;
 	cslist=&sel->clist;
 	sselbu=&sel->backup;
 	sllines=&sel->llines;
 
-	if(!yajl)
-	{
-		if(!(yajl=yajl_alloc(&callbacks, NULL, NULL)))
-			goto error;
-		yajl_config(yajl, yajl_dont_validate_strings, 1);
-	}
+	if(!yajl && json_input_init()) goto error;
+
 	if(yajl_parse(yajl, (const unsigned char *)asfd->rbuf->buf,
 		asfd->rbuf->len)!=yajl_status_ok)
 	{
@@ -483,13 +495,11 @@ int json_input(struct asfd *asfd, struct sel *sel)
 			do_yajl_error(yajl, asfd);
 			goto error;
 		}
-		yajl_free(yajl);
-		yajl=NULL;
+		json_input_free();
 	}
 
 	return 0;
 error:
-	yajl_free(yajl);
-	yajl=NULL;
+	json_input_free();
 	return -1;
 }

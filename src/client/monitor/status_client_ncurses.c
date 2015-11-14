@@ -34,6 +34,16 @@ static struct fzp *lfzp=NULL;
 // screen.
 static uint8_t toggle=0;
 
+struct sel *sel_alloc(void)
+{
+	return (struct sel *)calloc_w(1, sizeof(struct sel), __func__);
+}
+
+void sel_free(struct sel **sel)
+{
+	free_v((void **)sel);
+}
+
 static void print_line(const char *string, int row, int col)
 {
 	int k=0;
@@ -1253,7 +1263,7 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 	struct sel *sel=NULL;
 	const char *orig_client=get_string(confs[OPT_ORIG_CLIENT]);
 
-	if(!(sel=(struct sel *)calloc_w(1, sizeof(struct sel), __func__)))
+	if(!(sel=sel_alloc()))
 		goto error;
 	sel->page=PAGE_CLIENT_LIST;
 
@@ -1334,7 +1344,7 @@ end:
 	ret=0;
 error:
 	// FIX THIS: should probably be freeing a bunch of stuff here.
-	free_v((void **)&sel);
+	sel_free(&sel);
 	return ret;
 }
 
@@ -1422,12 +1432,15 @@ int status_client_ncurses(enum action act, struct conf **confs)
 		goto end;
 	log_fzp_set_direct(lfzp);
 
+	if(json_input_init()) goto end;
+
 	ret=main_loop(as, act, confs);
 end:
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS) endwin();
 #endif
 	if(ret) logp("%s exiting with error: %d\n", __func__, ret);
+	json_input_free();
 	fzp_close(&lfzp);
 	async_asfd_free_all(&as);
 	close_fd(&csin);

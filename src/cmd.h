@@ -68,6 +68,10 @@ enum cmd
 	CMD_ENC_VSS	='V',	/* Encrypted Windows VSS metadata */
 	CMD_VSS_T	='u',	/* Windows VSS footer */
 	CMD_ENC_VSS_T	='U',	/* Encrypted Windows VSS footer */
+
+// For diffs
+	CMD_DEL		='0',
+	CMD_ADD		='1',
 };
 
 

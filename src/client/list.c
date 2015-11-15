@@ -107,7 +107,6 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 {
 	int ret=-1;
 	char msg[512]="";
-	char *dpth=NULL;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 	const char *backup=get_string(confs[OPT_BACKUP]);
@@ -197,14 +196,7 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 
 	ret=0;
 end:
-	if(sb)
-	{
-		iobuf_free_content(&sb->path);
-		iobuf_free_content(&sb->link);
-		iobuf_free_content(&sb->attr);
-		sbuf_free(&sb);
-	}
-	if(dpth) free(dpth);
+	sbuf_free(&sb);
 	if(!ret) logp("List finished ok\n");
 	return ret;
 }

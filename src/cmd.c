@@ -91,6 +91,11 @@ static char *cmd_to_text(enum cmd cmd)
 			snprintf(buf, len, "Windows VSS footer"); break;
 		case CMD_ENC_VSS_T:
 			snprintf(buf, len, "Encrypted windows VSS footer"); break;
+
+		case CMD_DEL:
+			snprintf(buf, len, "Diff deletion"); break;
+		case CMD_ADD:
+			snprintf(buf, len, "Diff addition"); break;
 		// No default so that we get compiler warnings when we forget
 		// to add new ones here.
 	}

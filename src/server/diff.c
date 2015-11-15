@@ -13,115 +13,184 @@
 #include "child.h"
 #include "manio.h"
 
-static int diff_manifest(struct asfd *asfd,
-	const char *fullpath, struct cntr *cntr, enum protocol protocol)
+static char *get_manifest_path(const char *fullpath, enum protocol protocol)
 {
-	int ret=0;
-	struct sbuf *sb=NULL;
-	struct manio *manio=NULL;
-	char *manifest_dir=NULL;
+	return prepend_s(fullpath, protocol==PROTO_1?"manifest.gz":"manifest");
+}
 
-	if(!(manifest_dir=prepend_s(fullpath,
-		protocol==PROTO_1?"manifest.gz":"manifest"))
-	  || !(manio=manio_open(manifest_dir, "rb", protocol))
-	  || !(sb=sbuf_alloc(protocol)))
+static int send_diff(struct asfd *asfd, enum cmd cmd, struct sbuf *sb)
+{
+	if(asfd->write_str(asfd, cmd, "x")
+	  || asfd->write(asfd, &sb->attr)
+	  || asfd->write(asfd, &sb->path))
+		return -1;
+	if(sbuf_is_link(sb)
+	  && asfd->write(asfd, &sb->link))
+		return -1;
+	return 0;
+}
+
+static int send_deletion(struct asfd *asfd, struct sbuf *sb)
+{
+	return send_diff(asfd, CMD_DEL, sb);
+}
+
+static int send_addition(struct asfd *asfd, struct sbuf *sb)
+{
+	return send_diff(asfd, CMD_ADD, sb);
+}
+
+static int diff_manifests(struct asfd *asfd,
+	const char *fullpath1, const char *fullpath2,
+	struct cntr *cntr, enum protocol protocol)
+{
+	int ret=-1;
+	int pcmp;
+	struct sbuf *sb1=NULL;
+	struct sbuf *sb2=NULL;
+	struct manio *manio1=NULL;
+	struct manio *manio2=NULL;
+	char *manifest_dir1=NULL;
+	char *manifest_dir2=NULL;
+
+	if(!(manifest_dir1=get_manifest_path(fullpath1, protocol))
+	  || !(manifest_dir2=get_manifest_path(fullpath2, protocol))
+	  || !(manio1=manio_open(manifest_dir1, "rb", protocol))
+	  || !(manio2=manio_open(manifest_dir2, "rb", protocol))
+	  || !(sb1=sbuf_alloc(protocol))
+	  || !(sb2=sbuf_alloc(protocol)))
 	{
 		log_and_send_oom(asfd, __func__);
-		goto error;
+		goto end;
 	}
 
-	while(1)
+	while(manio1 || manio2)
 	{
-		sbuf_free_content(sb);
+		if(manio1
+		  && !sb1->path.buf)
+		{
+			switch(manio_read(manio1, sb1))
+			{
+				case -1: goto end;
+				case 1: manio_close(&manio1);
+			}
+		}
 
-                switch(manio_read(manio, sb))
-                {
-                        case 0: break;
-                        case 1: goto end; // Finished OK.
-                        default: goto error;
-                }
+		if(manio2
+		  && !sb2->path.buf)
+		{
+			switch(manio_read(manio2, sb2))
+			{
+				case -1: goto end;
+				case 1: manio_close(&manio2);
+			}
+		}
 
-		if(protocol==PROTO_2 && sb->endfile.buf)
+		if(sb1->path.buf && !sb2->path.buf)
+		{
+			if(send_deletion(asfd, sb1))
+				goto end;
+			sbuf_free_content(sb1);
+		}
+		else if(!sb1->path.buf && sb2->path.buf)
+		{
+			if(send_addition(asfd, sb2))
+				goto end;
+			sbuf_free_content(sb2);
+		}
+		else if(!sb1->path.buf && !sb2->path.buf)
+		{
 			continue;
-
-		if(write_status(CNTR_STATUS_DIFFING, sb->path.buf, cntr))
-			goto error;
-
-		if(asfd->write(asfd, &sb->attr)
-		  || asfd->write(asfd, &sb->path))
-			goto error;
-		if(sbuf_is_link(sb)
-		  && asfd->write(asfd, &sb->link))
-			goto error;
+		}
+		else if(!(pcmp=sbuf_pathcmp(sb1, sb2)))
+		{
+			if(sb1->statp.st_mtime!=sb2->statp.st_mtime)
+			{
+				if(send_deletion(asfd, sb1)
+				  || send_addition(asfd, sb2))
+					goto end;
+			}
+			sbuf_free_content(sb1);
+			sbuf_free_content(sb2);
+		}
+		else if(pcmp<0)
+		{
+			if(send_deletion(asfd, sb1))
+				goto end;
+			sbuf_free_content(sb1);
+		}
+		else
+		{
+			if(send_addition(asfd, sb2))
+				goto end;
+			sbuf_free_content(sb2);
+		}
 	}
 
-error:
-	ret=-1;
+	ret=0;
 end:
-	sbuf_free(&sb);
-	free_w(&manifest_dir);
-	manio_close(&manio);
+	sbuf_free(&sb1);
+	sbuf_free(&sb2);
+	free_w(&manifest_dir1);
+	free_w(&manifest_dir2);
+	manio_close(&manio1);
+	manio_close(&manio2);
 	return ret;
 }
 
 static int send_backup_name_to_client(struct asfd *asfd, struct bu *bu)
 {
 	char msg[64]="";
-	//snprintf(msg, sizeof(msg), "%s%s",
-	//	bu->timestamp, bu->deletable?" (deletable)":"");
 	snprintf(msg, sizeof(msg), "%s", bu->timestamp);
 	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
 }
 
 int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
-	enum protocol protocol, const char *backup)
+	enum protocol protocol, const char *backup1, const char *backup2)
 {
 	int ret=-1;
-	uint8_t found=0;
-	unsigned long bno=0;
-	struct bu *bu=NULL;
+	unsigned long bno1=0;
+	unsigned long bno2=0;
+	struct bu *bu1=NULL;
+	struct bu *bu2=NULL;
 	struct bu *bu_list=NULL;
 
-	printf("in do_diff_server\n");
+	//printf("in do_diff_server\n");
 
 	if(bu_get_list(sdirs, &bu_list)
 	  || write_status(CNTR_STATUS_DIFFING, NULL, cntr))
 		goto end;
 
-	if(backup && *backup) bno=strtoul(backup, NULL, 10);
+	if(backup1 && *backup1) bno1=strtoul(backup1, NULL, 10);
+	if(backup2 && *backup2) bno2=strtoul(backup2, NULL, 10);
 
-	for(bu=bu_list; bu; bu=bu->next)
+	if(!bno1 || !bno2 || bno1==bno2)
 	{
-		// Search or list a particular backup.
-		if(backup && *backup)
-		{
-			if(!found
-			  && (!strcmp(bu->timestamp, backup)
-				|| bu->bno==bno))
-			{
-				found=1;
-				if(send_backup_name_to_client(asfd, bu)
-				  || diff_manifest(asfd, bu->path,
-					cntr, protocol))
-						goto end;
-			}
-		}
-		// List the backups.
-		else
-		{
-			found=1;
-			if(send_backup_name_to_client(asfd, bu))
-				goto end;
-		}
-	}
-
-	if(backup && *backup && !found)
-	{
-		asfd->write_str(asfd, CMD_ERROR, "backup not found");
+		asfd->write_str(asfd, CMD_ERROR,
+			"you need to specify two backups");
 		goto end;
 	}
+
+	for(bu1=bu_list; bu1; bu1=bu1->next)
+		if(bu1->bno==bno1) break;
+	for(bu2=bu_list; bu2; bu2=bu2->next)
+		if(bu2->bno==bno2) break;
+	if(!bu1 || !bu2)
+	{
+		asfd->write_str(asfd, CMD_ERROR,
+			"could not find specified backups");
+		goto end;
+	}
+
+	if(send_backup_name_to_client(asfd, bu1)
+	  || send_backup_name_to_client(asfd, bu2))
+		goto end;
+
+	if(diff_manifests(asfd, bu1->path, bu2->path, cntr, protocol))
+		goto end;
+
 	ret=0;
 end:
-	bu_list_free(&bu);
+	bu_list_free(&bu_list);
 	return ret;
 }

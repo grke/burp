@@ -295,7 +295,8 @@ static int run_diff(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs)
 {
 	int ret=-1;
-	char *backupno=NULL;
+	char *backup1=NULL;
+	char *backup2=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 
 	if(!client_can_generic(cconfs, OPT_CLIENT_CAN_DIFF))
@@ -308,7 +309,14 @@ static int run_diff(struct asfd *asfd,
 
 	if(!strncmp_w(rbuf->buf, "diff "))
 	{
-		if((backupno=strdup_w(rbuf->buf+strlen("diff "), __func__)))
+		char *cp;
+		if((cp=strchr(rbuf->buf, ':')))
+		{
+			*cp='\0';
+			if(!(backup2=strdup_w(cp+1, __func__)))
+				goto end;
+		}
+		if(!(backup1=strdup_w(rbuf->buf+strlen("diff "), __func__)))
 			goto end;
 	}
 	if(asfd->write_str(asfd, CMD_GEN, "ok")) goto end;
@@ -316,7 +324,7 @@ static int run_diff(struct asfd *asfd,
 	iobuf_free_content(asfd->rbuf);
 
 	ret=do_diff_server(asfd, sdirs,
-		get_cntr(cconfs), get_protocol(cconfs), backupno);
+		get_cntr(cconfs), get_protocol(cconfs), backup1, backup2);
 end:
 	return ret;
 }

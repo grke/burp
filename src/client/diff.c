@@ -77,29 +77,29 @@ static void diff_to_buf(char *lsbuf, struct sbuf *sb)
 	*p=0;
 }
 
-static void diff_long_output(struct sbuf *sb)
+static void diff_long_output(struct sbuf *sb, int deloradd)
 {
 	static char lsbuf[2048];
 	diff_to_buf(lsbuf, sb);
-	printf("%s", lsbuf);
+	printf("%s %s", deloradd?"+":"-", lsbuf);
 	if(sb->link.buf) printf(" -> %s", sb->link.buf);
 	printf("\n");
 }
 
-static void diff_short_output(struct sbuf *sb)
+static void diff_short_output(struct sbuf *sb, int deloradd)
 {
-	printf("%s\n", sb->path.buf);
+	printf("%s %s\n", deloradd?"+":"-", sb->path.buf);
 }
 
-static void diff_item(enum action act, struct sbuf *sb)
+static void diff_item(enum action act, struct sbuf *sb, int deloradd)
 {
-	if(act==ACTION_LIST_LONG)
+	if(act==ACTION_DIFF_LONG)
 	{
-		diff_long_output(sb);
+		diff_long_output(sb, deloradd);
 	}
 	else
 	{
-		diff_short_output(sb);
+		diff_short_output(sb, deloradd);
 	}
 }
 
@@ -107,16 +107,17 @@ int do_diff_client(struct asfd *asfd,
 	enum action act, struct conf **confs)
 {
 	int ret=-1;
+	int deloradd=0;
 	char msg[512]="";
-	char *dpth=NULL;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 	const char *backup=get_string(confs[OPT_BACKUP]);
+	const char *backup2=get_string(confs[OPT_BACKUP2]);
 	const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
 	const char *regex=get_string(confs[OPT_REGEX]);
-//logp("in do_diff\n");
 
-	snprintf(msg, sizeof(msg), "diff %s", backup?backup:"");
+	snprintf(msg, sizeof(msg), "diff %s:%s",
+		backup?backup:"", backup2?backup2:"");
 	if(asfd->write_str(asfd, CMD_GEN, msg)
 	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
@@ -145,6 +146,16 @@ int do_diff_client(struct asfd *asfd,
 				       regex);
 			continue;
 		}
+		else if(rbuf->cmd==CMD_DEL)
+		{
+			deloradd=0;
+			continue;
+		}
+		else if(rbuf->cmd==CMD_ADD)
+		{
+			deloradd=1;
+			continue;
+		}
 		else if(rbuf->cmd!=CMD_ATTRIBS)
 		{
 			iobuf_log_unexpected(rbuf, __func__);
@@ -169,7 +180,7 @@ int do_diff_client(struct asfd *asfd,
 			|| sb->path.cmd==CMD_EFS_FILE
 			|| sb->path.cmd==CMD_SPECIAL)
 		{
-			diff_item(act, sb);
+			diff_item(act, sb, deloradd);
 		}
 		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{
@@ -182,7 +193,7 @@ int do_diff_client(struct asfd *asfd,
 			}
 			iobuf_copy(&sb->link, rbuf);
 			iobuf_init(rbuf);
-			diff_item(act, sb);
+			diff_item(act, sb, deloradd);
 		}
 		else
 		{
@@ -193,11 +204,6 @@ int do_diff_client(struct asfd *asfd,
 
 	ret=0;
 end:
-	printf("\n");
-	iobuf_free_content(&sb->path);
-	iobuf_free_content(&sb->link);
-	iobuf_free_content(&sb->attr);
-	if(dpth) free(dpth);
 	sbuf_free(&sb);
 	if(!ret) logp("List finished ok\n");
 	return ret;

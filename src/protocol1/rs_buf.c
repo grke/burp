@@ -49,11 +49,6 @@
 #define fseek fseeko
 #endif
 
-void *rs_alloc(size_t size)
-{
-	return calloc_w(1, size, __func__);
-}
-
 rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 	BFILE *bfd, struct fzp *fzp, int fd,
 	size_t buf_len, size_t data_len, struct cntr *cntr)
@@ -143,7 +138,8 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		}
 	}
 
-	if(buf->eof_in) return RS_DONE;
+	if(buf->eof_in)
+		return RS_DONE;
 
 	if(buf->avail_in)
 		/* Still some data remaining.  Perhaps we should read

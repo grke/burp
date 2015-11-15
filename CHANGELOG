@@ -1,3 +1,5 @@
+  * Use the same maximum blocksize as rsync ((int32_t)1<<17).
+
 2015-10-31 Changes in burp-2.0.26:
   * Paid for by an anonymous user: add a new screen to the Windows installer
     for choosing 'include' directories.

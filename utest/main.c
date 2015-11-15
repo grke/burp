@@ -26,6 +26,7 @@ int main(void)
 	srunner_add_suite(sr, suite_hexmap());
 	srunner_add_suite(sr, suite_lock());
 	srunner_add_suite(sr, suite_pathcmp());
+	srunner_add_suite(sr, suite_protocol1_rs_buf());
 	srunner_add_suite(sr, suite_protocol2_blist());
 	srunner_add_suite(sr, suite_protocol2_rabin_rconf());
 	srunner_add_suite(sr, suite_protocol2_rabin_win());
@@ -37,6 +38,8 @@ int main(void)
 	srunner_add_suite(sr, suite_server_monitor_cstat());
 	srunner_add_suite(sr, suite_server_resume());
 	srunner_add_suite(sr, suite_server_sdirs());
+	srunner_add_suite(sr, suite_server_protocol1_bedup());
+	srunner_add_suite(sr, suite_server_protocol1_blocklen());
 	srunner_add_suite(sr, suite_server_protocol1_dpth());
 	srunner_add_suite(sr, suite_server_protocol1_fdirs());
 	srunner_add_suite(sr, suite_server_protocol2_backup_phase4());

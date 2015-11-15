@@ -23,6 +23,7 @@ SRCS = \
 	test_hexmap.c \
 	test_lock.c \
 	test_pathcmp.c \
+	protocol1/test_rs_buf.c \
 	protocol2/test_blist.c \
 	protocol2/rabin/test_rconf.c \
 	protocol2/rabin/test_win.c \
@@ -35,6 +36,8 @@ SRCS = \
 	client/test_restore.c \
 	server/monitor/test_browse.c \
 	server/monitor/test_cstat.c \
+	server/protocol1/test_bedup.c \
+	server/protocol1/test_blocklen.c \
 	server/protocol1/test_dpth.c \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/champ_chooser/test_candidate.c \
@@ -221,6 +224,7 @@ clean:
 	rm -f builders/server/protocol2/champ_chooser/*.o
 	rm -f client/*.o server/*.o server/protocol1/*.o server/protocol2/*.o
 	rm -f server/protocol2/champ_chooser/*.o
+	rm -f protocol1/*.o
 	rm -f protocol2/*.o
 	rm -f protocol2/rabin/*.o
 	rm -f *.gcda *.gcno
@@ -230,6 +234,7 @@ clean:
 	rm -f builders/server/*.gcda builders/server/*.gcno
 	rm -f builders/server/protocol2/champ_chooser/*.gcda
 	rm -f builders/server/protocol2/champ_chooser/*.gcno
+	rm -f protocol1/*.gcda protocol1/*.gcno
 	rm -f protocol2/*.gcda protocol2/*.gcno
 	rm -f protocol2/rabin/*.gcda protocol2/rabin/*.gcno
 	rm -f client/*.gcda client/*.gcno

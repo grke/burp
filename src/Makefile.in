@@ -67,7 +67,6 @@ SUBDIROBJS = \
 		client/ca.o \
 		client/cvss.o \
 		client/delete.o \
-		client/diff.o \
 		client/extra_comms.o \
 		client/extrameta.o \
 		client/find.o \

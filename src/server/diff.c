@@ -18,26 +18,31 @@ static char *get_manifest_path(const char *fullpath, enum protocol protocol)
 	return prepend_s(fullpath, protocol==PROTO_1?"manifest.gz":"manifest");
 }
 
-static int send_diff(struct asfd *asfd, enum cmd cmd, struct sbuf *sb)
+static int send_diff(struct asfd *asfd, const char *symbol, struct sbuf *sb)
 {
-	if(asfd->write_str(asfd, cmd, "x")
+	int ret=-1;
+	char *dpath=NULL;
+	if(!(dpath=prepend_s(symbol, sb->path.buf))
 	  || asfd->write(asfd, &sb->attr)
-	  || asfd->write(asfd, &sb->path))
-		return -1;
+	  || asfd->write_str(asfd, sb->path.cmd, dpath))
+		goto end;
 	if(sbuf_is_link(sb)
 	  && asfd->write(asfd, &sb->link))
-		return -1;
-	return 0;
+		goto end;
+	ret=0;
+end:
+	free_w(&dpath);
+	return ret;
 }
 
 static int send_deletion(struct asfd *asfd, struct sbuf *sb)
 {
-	return send_diff(asfd, CMD_DEL, sb);
+	return send_diff(asfd, "- ", sb);
 }
 
 static int send_addition(struct asfd *asfd, struct sbuf *sb)
 {
-	return send_diff(asfd, CMD_ADD, sb);
+	return send_diff(asfd, "+ ", sb);
 }
 
 static int diff_manifests(struct asfd *asfd,

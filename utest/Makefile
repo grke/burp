@@ -96,7 +96,6 @@ BURP_SRCS = \
 	../src/client/backup.c \
 	../src/client/backup_phase1.c \
 	../src/client/delete.c \
-	../src/client/diff.c \
 	../src/client/extra_comms.c \
 	../src/client/extrameta.c \
 	../src/client/find.c \

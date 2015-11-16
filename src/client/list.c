@@ -110,16 +110,31 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 	const char *backup=get_string(confs[OPT_BACKUP]);
+	const char *backup2=get_string(confs[OPT_BACKUP2]);
 	const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
 	const char *regex=get_string(confs[OPT_REGEX]);
 //logp("in do_list\n");
 
-	if(browsedir)
-	  snprintf(msg, sizeof(msg), "listb %s:%s",
-		backup?backup:"", browsedir);
-	else
-	  snprintf(msg, sizeof(msg), "list %s:%s",
-		backup?backup:"", regex?regex:"");
+	switch(act)
+	{
+		case ACTION_LIST:
+		case ACTION_LIST_LONG:
+			if(browsedir)
+				snprintf(msg, sizeof(msg), "listb %s:%s",
+					backup?backup:"", browsedir);
+			else
+				snprintf(msg, sizeof(msg), "list %s:%s",
+					backup?backup:"", regex?regex:"");
+			break;
+		case ACTION_DIFF:
+		case ACTION_DIFF_LONG:
+			snprintf(msg, sizeof(msg), "diff %s:%s",
+				backup?backup:"", backup2?backup2:"");
+			break;
+		default:
+			fprintf(stderr, "unknown action %d\n", act);
+			goto end;
+	}
 	if(asfd->write_str(asfd, CMD_GEN, msg)
 	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
 		goto end;

@@ -13,7 +13,6 @@
 #include "backup.h"
 #include "ca.h"
 #include "delete.h"
-#include "diff.h"
 #include "extra_comms.h"
 #include "list.h"
 #include "monitor.h"
@@ -435,20 +434,21 @@ static enum cliret do_client(struct conf **confs,
 		case ACTION_DELETE:
 			if(do_delete_client(asfd, confs)) goto error;
 			break;
+		case ACTION_MONITOR:
+			if(do_monitor_client(asfd, confs)) goto error;
+			break;
 		case ACTION_DIFF:
 		case ACTION_DIFF_LONG:
+/*
 			if(!strcmp(get_string(confs[OPT_BACKUP2]), "n"))
 				// Do a phase1 scan and diff that.
 				ret=backup_wrapper(asfd, act,
 					"backupphase1diff", incexc, confs);
 			else
-				// Diff two backups that already exist.
-				if(do_diff_client(asfd, act, confs))
-					goto error;
-			break;
-		case ACTION_MONITOR:
-			if(do_monitor_client(asfd, confs)) goto error;
-			break;
+*/
+			// Diff two backups that already exist.
+			// Fall through, the list code is all we need
+			// for simple diffs on the client side.
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:
 		default:

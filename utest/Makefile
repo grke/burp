@@ -34,6 +34,7 @@ SRCS = \
 	client/test_auth.c \
 	client/test_find.c \
 	client/test_restore.c \
+	client/test_xattr.c \
 	server/monitor/test_browse.c \
 	server/monitor/test_cstat.c \
 	server/protocol1/test_bedup.c \

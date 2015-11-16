@@ -7,10 +7,10 @@
  || defined(HAVE_OPENBSD_OS) \
  || defined(HAVE_NETBSD_OS) \
  || defined(HAVE_DARWIN_OS)
-extern int has_xattr(const char *path, enum cmd cmd);
-extern int get_xattr(struct asfd *asfd, struct sbuf *sb,
+extern int has_xattr(const char *path);
+extern int get_xattr(struct asfd *asfd, const char *path,
 	char **xattrtext, size_t *xlen, struct cntr *cntr);
-extern int set_xattr(struct asfd *asfd, const char *path, struct sbuf *sb,
+extern int set_xattr(struct asfd *asfd, const char *path,
 	const char *xattrtext, size_t xlen, char metacmd, struct cntr *cntr);
 #endif
 #endif

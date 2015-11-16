@@ -53,6 +53,7 @@ Suite *suite_client_monitor_lline(void);
 Suite *suite_client_protocol1_backup_phase2(void);
 Suite *suite_client_protocol2_backup_phase2(void);
 Suite *suite_client_restore(void);
+Suite *suite_client_xattr(void);
 Suite *suite_cmd(void);
 Suite *suite_conf(void);
 Suite *suite_conffile(void);

@@ -32,7 +32,7 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
     defined(HAVE_NETBSD_OS) || \
     defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
-	if(enable_xattr && has_xattr(path, cmd)) return 1;
+	if(enable_xattr && has_xattr(path)) return 1;
 #endif
 #endif
         return 0;
@@ -64,7 +64,7 @@ int get_extrameta(struct asfd *asfd,
     defined(HAVE_NETBSD_OS) || \
     defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
-	if(get_xattr(asfd, sb, extrameta, elen, cntr)) return -1;
+	if(get_xattr(asfd, sb->path.buf, extrameta, elen, cntr)) return -1;
 #endif
 #endif
         return 0;
@@ -132,7 +132,7 @@ int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_XATTR
 			case META_XATTR:
 				if(set_xattr(asfd,
-					path, sb, m, s, cmdtmp, cntr))
+					path, m, s, cmdtmp, cntr))
 						errors++;
 				break;
 #endif
@@ -143,7 +143,7 @@ int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_XATTR
 			case META_XATTR_BSD:
 				if(set_xattr(asfd,
-					path, sb, m, s, cmdtmp, cntr))
+					path, m, s, cmdtmp, cntr))
 						errors++;
 				break;
 #endif
@@ -152,7 +152,7 @@ int set_extrameta(struct asfd *asfd,
 #ifdef HAVE_XATTR
 			case META_XATTR_OSX:
 				if(set_xattr(asfd,
-					path, sb, m, s, cmdtmp, cntr))
+					path, m, s, cmdtmp, cntr))
 						errors++;
 				break;
 #endif

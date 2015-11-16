@@ -19,6 +19,7 @@ int main(void)
         srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
         srunner_add_suite(sr, suite_client_protocol2_backup_phase2());
 	srunner_add_suite(sr, suite_client_restore());
+	srunner_add_suite(sr, suite_client_xattr());
 	srunner_add_suite(sr, suite_cmd());
 	srunner_add_suite(sr, suite_conf());
 	srunner_add_suite(sr, suite_conffile());

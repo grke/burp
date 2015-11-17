@@ -37,6 +37,7 @@ SRCS = \
 	client/test_xattr.c \
 	server/monitor/test_browse.c \
 	server/monitor/test_cstat.c \
+	server/monitor/test_json_output.c \
 	server/protocol1/test_bedup.c \
 	server/protocol1/test_blocklen.c \
 	server/protocol1/test_dpth.c \
@@ -105,6 +106,7 @@ BURP_SRCS = \
 	../src/client/main.c \
 	../src/client/monitor/json_input.c \
 	../src/client/monitor/lline.c \
+	../src/client/monitor/sel.c \
 	../src/client/monitor/status_client_ncurses.c \
 	../src/client/monitor.c \
 	../src/client/protocol1/backup_phase2.c \

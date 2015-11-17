@@ -1,6 +1,3 @@
-/* Client of the server status. Runs on the server machine and connects to the
-   burp server to get status information. */
-
 #include "../../burp.h"
 #include "../../action.h"
 #include "../../alloc.h"
@@ -17,6 +14,7 @@
 #include "../../log.h"
 #include "json_input.h"
 #include "lline.h"
+#include "sel.h"
 #include "status_client_ncurses.h"
 
 #ifdef HAVE_NCURSES_H
@@ -33,16 +31,6 @@ static struct fzp *lfzp=NULL;
 // For switching between seeing 'last backup' and counter summary on the front
 // screen.
 static uint8_t toggle=0;
-
-struct sel *sel_alloc(void)
-{
-	return (struct sel *)calloc_w(1, sizeof(struct sel), __func__);
-}
-
-void sel_free(struct sel **sel)
-{
-	free_v((void **)sel);
-}
 
 static void print_line(const char *string, int row, int col)
 {

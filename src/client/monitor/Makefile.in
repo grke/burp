@@ -15,6 +15,7 @@ thisdir = src/client/monitor
 SRCS = \
 	lline.o \
 	json_input.o \
+	sel.o \
 	status_client_ncurses.o \
 
 OBJS = $(SRCS:.c=.o)

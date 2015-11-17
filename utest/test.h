@@ -71,6 +71,7 @@ Suite *suite_server_list(void);
 Suite *suite_server_manio(void);
 Suite *suite_server_monitor_browse(void);
 Suite *suite_server_monitor_cstat(void);
+Suite *suite_server_monitor_json_output(void);
 Suite *suite_server_resume(void);
 Suite *suite_server_sdirs(void);
 Suite *suite_server_protocol1_bedup(void);

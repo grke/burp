@@ -4,6 +4,7 @@
 #include "../../../src/asfd.h"
 #include "../../../src/iobuf.h"
 #include "../../../src/client/monitor/json_input.h"
+#include "../../../src/client/monitor/sel.h"
 #include "../../../src/client/monitor/status_client_ncurses.h"
 #include "../../builders/build_asfd_mock.h"
 

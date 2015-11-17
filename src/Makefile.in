@@ -75,6 +75,7 @@ SUBDIROBJS = \
 		client/main.o \
 		client/monitor/json_input.o \
 		client/monitor/lline.o \
+		client/monitor/sel.o \
 		client/monitor/status_client_ncurses.o \
 		client/monitor.o \
 		client/protocol1/backup_phase2.o \

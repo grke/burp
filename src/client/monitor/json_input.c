@@ -9,7 +9,7 @@
 #include "../../log.h"
 #include "json_input.h"
 #include "lline.h"
-#include "status_client_ncurses.h"
+#include "sel.h"
 #ifdef HAVE_WIN32
 #include <yajl/yajl_parse.h>
 #else

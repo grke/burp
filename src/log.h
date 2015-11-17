@@ -7,6 +7,7 @@ extern void log_init(char *progname);
 extern void logp(const char *fmt, ...);
 extern void logp_ssl_err(const char *fmt, ...);
 extern void logc(const char *fmt, ...);
+extern void logf(const char *fmt, ...);
 extern const char *progname(void);
 extern int log_fzp_set(const char *path, struct conf **confs);
 extern void log_fzp_set_direct(struct fzp *fzp);

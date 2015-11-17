@@ -124,6 +124,17 @@ void logc(const char *fmt, ...)
 	va_end(ap);
 }
 
+void logf(const char *fmt, ...)
+{
+#ifndef UTEST
+	char buf[512]="";
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	fprintf(stdout, "%s", buf);
+#endif
+}
+
 const char *progname(void)
 {
 	return prog;

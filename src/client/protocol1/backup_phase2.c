@@ -417,7 +417,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	if(confs) cntr=get_cntr(confs);
 
 	logp("Phase 2 begin (send backup data)\n");
-	printf("\n");
+	logf("\n");
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 

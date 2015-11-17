@@ -66,17 +66,15 @@ END_TEST
 
 START_TEST(test_bedup_usage1)
 {
-	// FIX THIS - the usage uses a printf, so you get a bunch of crap
-	// come out in the unit test.
-//	const char *argv[]={"utest", "-h"};
-//	bad_options(ARR_LEN(argv), argv);
+	const char *argv[]={"utest", "-h"};
+	bad_options(ARR_LEN(argv), argv);
 }
 END_TEST
 
 START_TEST(test_bedup_usage2)
 {
-//	const char *argv[]={"utest", "-?"};
-//	bad_options(ARR_LEN(argv), argv);
+	const char *argv[]={"utest", "-?"};
+	bad_options(ARR_LEN(argv), argv);
 }
 END_TEST
 
@@ -97,6 +95,7 @@ Suite *suite_server_protocol1_bedup(void)
 	tcase_add_test(tc_core, test_bedup_burp_extra_args);
 	tcase_add_test(tc_core, test_bedup_non_burp_max_links_low);
 	tcase_add_test(tc_core, test_bedup_usage1);
+	tcase_add_test(tc_core, test_bedup_usage2);
 	suite_add_tcase(s, tc_core);
 
 	return s;

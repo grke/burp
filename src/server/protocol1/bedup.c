@@ -709,35 +709,35 @@ static char *get_config_path(void)
 
 static int usage(void)
 {
-	printf("\nUsage: %s [options]\n", prog);
-	printf("\n");
-	printf(" Options:\n");
-	printf("  -c <path>                Path to config file (default: %s).\n", get_config_path());
-	printf("  -g <list of group names> Only run on the directories of clients that\n");
-	printf("                           are in one of the groups specified.\n");
-	printf("                           The list is comma-separated. To put a client in a\n");
-	printf("                           group, use the 'dedup_group' option in the client\n");
-	printf("                           configuration file on the server.\n");
-	printf("  -h|-?                    Print this text and exit.\n");
-	printf("  -d                       Delete any duplicate files found.\n");
-	printf("                           (non-burp mode only)\n");
-	printf("  -l                       Hard link any duplicate files found.\n");
-	printf("  -m <number>              Maximum number of hard links to a single file.\n");
-	printf("                           (non-burp mode only - in burp mode, use the\n");
-	printf("                           max_hardlinks option in the configuration file)\n");
-	printf("                           The default is %d. On ext3, the maximum number\n", DEF_MAX_LINKS);
-	printf("                           of links possible is 32000, but space is needed\n");
-	printf("                           for the normal operation of burp.\n");
-	printf("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
-	printf("  -v                       Print duplicate paths.\n");
-	printf("  -V                       Print version and exit.\n");
-	printf("\n");
-	printf("By default, %s will read %s and deduplicate client storage\n", prog, get_config_path());
-	printf("directories using special knowledge of the structure.\n");
-	printf("\n");
-	printf("With '-n', this knowledge is turned off and you have to specify the directories\n");
-	printf("to deduplicate on the command line. Running with '-n' is therefore dangerous\n");
-	printf("if you are deduplicating burp storage directories.\n\n");
+	logf("\nUsage: %s [options]\n", prog);
+	logf("\n");
+	logf(" Options:\n");
+	logf("  -c <path>                Path to config file (default: %s).\n", get_config_path());
+	logf("  -g <list of group names> Only run on the directories of clients that\n");
+	logf("                           are in one of the groups specified.\n");
+	logf("                           The list is comma-separated. To put a client in a\n");
+	logf("                           group, use the 'dedup_group' option in the client\n");
+	logf("                           configuration file on the server.\n");
+	logf("  -h|-?                    Print this text and exit.\n");
+	logf("  -d                       Delete any duplicate files found.\n");
+	logf("                           (non-burp mode only)\n");
+	logf("  -l                       Hard link any duplicate files found.\n");
+	logf("  -m <number>              Maximum number of hard links to a single file.\n");
+	logf("                           (non-burp mode only - in burp mode, use the\n");
+	logf("                           max_hardlinks option in the configuration file)\n");
+	logf("                           The default is %d. On ext3, the maximum number\n", DEF_MAX_LINKS);
+	logf("                           of links possible is 32000, but space is needed\n");
+	logf("                           for the normal operation of burp.\n");
+	logf("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
+	logf("  -v                       Print duplicate paths.\n");
+	logf("  -V                       Print version and exit.\n");
+	logf("\n");
+	logf("By default, %s will read %s and deduplicate client storage\n", prog, get_config_path());
+	logf("directories using special knowledge of the structure.\n");
+	logf("\n");
+	logf("With '-n', this knowledge is turned off and you have to specify the directories\n");
+	logf("to deduplicate on the command line. Running with '-n' is therefore dangerous\n");
+	logf("if you are deduplicating burp storage directories.\n\n");
 	return 1;
 }
 
@@ -780,7 +780,7 @@ int run_bedup(int argc, char *argv[])
 				nonburp=1;
 				break;
 			case 'V':
-				printf("%s-%s\n", prog, VERSION);
+				logf("%s-%s\n", prog, VERSION);
 				return 0;
 			case 'v':
 				verbose=1;

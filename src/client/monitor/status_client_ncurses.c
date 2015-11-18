@@ -1233,7 +1233,6 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 
 static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 {
-	int ret;
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
 		return parse_stdin_data(asfd, sel, count);
@@ -1340,7 +1339,6 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 end:
 	ret=0;
 error:
-	// FIX THIS: should probably be freeing a bunch of stuff here.
 	sel_free(&sel);
 	return ret;
 }

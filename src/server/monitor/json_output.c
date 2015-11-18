@@ -81,6 +81,31 @@ end:
 	return ret;
 }
 
+// Portable timegm, copied from 'man timegm'.
+static time_t my_timegm(struct tm *tm)
+{
+	time_t ret;
+	char *tz;
+
+	if((tz=getenv("TZ")))
+	{
+		if(!(tz=strdup_w(tz, __func__)))
+			return -1;
+	}
+	setenv("TZ", "", 1);
+	tzset();
+	ret=mktime(tm);
+	if(tz)
+	{
+		setenv("TZ", tz, 1);
+		free_w(&tz);
+	}
+	else
+		unsetenv("TZ");
+	tzset();
+	return ret;
+}
+
 static long timestamp_to_long(const char *buf)
 {
 	struct tm tm;
@@ -88,10 +113,7 @@ static long timestamp_to_long(const char *buf)
 	if(!(b=strchr(buf, ' '))) return 0;
 	memset(&tm, 0, sizeof(struct tm));
 	if(!strptime(b, " %Y-%m-%d %H:%M:%S", &tm)) return 0;
-	// Tell mktime to use the daylight savings time setting
-	// from the time zone of the system.
-	tm.tm_isdst=-1;
-	return (long)mktime(&tm);
+	return (long)my_timegm(&tm);
 }
 
 static int flag_matches(struct bu *bu, uint16_t flag)
@@ -172,7 +194,9 @@ static int do_counters(struct cntr *cntr)
 	static char type[2];
 	struct cntr_ent *e;
 
+#ifndef UTEST
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)time(NULL);
+#endif
 	if(yajl_gen_str_w("counters")
 	  || yajl_array_open_w()) return -1;
 	for(e=cntr->list; e; e=e->next)

@@ -437,6 +437,7 @@ Suite *suite_server_manio(void)
 	s=suite_create("server_manio");
 
 	tc_core=tcase_create("Core");
+	tcase_set_timeout(tc_core, 30);
 
 	tcase_add_test(tc_core, test_man_protocol1);
 	tcase_add_test(tc_core, test_man_protocol2);

@@ -1,0 +1,46 @@
+{
+    "clients": [
+        {
+            "name": "cli1",
+            "run_status": "unknown",
+            "backups": [
+                {
+                    "number": 1,
+                    "timestamp": 0,
+                    "flags": [
+                        "deletable",
+                        "current"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cli2",
+            "run_status": "unknown",
+            "backups": [
+                {
+                    "number": 1,
+                    "timestamp": 0,
+                    "flags": [
+                        "deletable",
+                        "current"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cli3",
+            "run_status": "unknown",
+            "backups": [
+                {
+                    "number": 1,
+                    "timestamp": 0,
+                    "flags": [
+                        "deletable",
+                        "current"
+                    ]
+                }
+            ]
+        }
+    ]
+}

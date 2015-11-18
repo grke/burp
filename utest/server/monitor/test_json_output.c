@@ -2,6 +2,7 @@
 #include "../../builders/build.h"
 #include "../../../src/alloc.h"
 #include "../../../src/asfd.h"
+#include "../../../src/bu.h"
 #include "../../../src/cstat.h"
 #include "../../../src/fsops.h"
 #include "../../../src/fzp.h"
@@ -9,8 +10,10 @@
 #include "../../../src/prepend.h"
 #include "../../../src/server/monitor/cstat.h"
 #include "../../../src/server/monitor/json_output.h"
+#include "../../../src/server/sdirs.h"
 
 #define BASE		"utest_server_monitor_json_output"
+#define SDIRS		BASE "_sdirs"
 #define EXPECTED	"json_output"
 
 static struct fzp *output=NULL;
@@ -75,6 +78,114 @@ START_TEST(test_json_send_clients)
 	fail_unless(!json_send(asfd, clist, NULL, NULL, NULL, NULL, 0/*cache*/));
 	cstat_list_free(&clist);
 	tear_down(&asfd);
+}
+END_TEST
+
+static struct sd sd1[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_CURRENT },
+};
+
+static struct sdirs *setup_sdirs(enum protocol protocol, const char *cname)
+{
+	struct sdirs *sdirs;
+	fail_unless((sdirs=sdirs_alloc())!=NULL);
+	fail_unless(!sdirs_init(sdirs, protocol,
+		SDIRS, // directory
+		cname, // cname
+		NULL, // client_lockdir
+		"a_group", // dedup_group
+		NULL // manual_delete
+	));
+	return sdirs;
+}
+
+static void cstat_list_free_sdirs(struct cstat *clist)
+{
+	struct cstat *c;
+	for(c=clist; c; c=c->next)
+		sdirs_free((struct sdirs **)&c->sdirs);
+}
+
+static void do_test_json_send_clients_with_backup(const char *path,
+	struct sd *sd, int s)
+{
+	struct asfd *asfd;
+	struct cstat *c=NULL;
+	struct cstat *clist=NULL;
+	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
+	fail_unless(recursive_delete(CLIENTCONFDIR)==0);
+	build_clientconfdir_files(cnames);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	assert_cstat_list(clist, cnames);
+	for(c=clist; c; c=c->next)
+	{
+		c->permitted=1;
+		fail_unless((c->sdirs=setup_sdirs(PROTO_1, c->name))!=NULL);
+		build_storage_dirs((struct sdirs *)c->sdirs, sd, s);
+		fail_unless(!cstat_set_backup_list(c));
+		fail_unless(c->bu!=NULL);
+		// Hack the cntr timestamps so that they are always the same.
+		c->cntr->ent[(uint8_t)CMD_TIMESTAMP]->count=200;
+		c->cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=400;
+
+	}
+	asfd=asfd_setup(path);
+	fail_unless(!json_send(asfd, clist, NULL, NULL, NULL, NULL, 0/*cache*/));
+	cstat_list_free_sdirs(clist);
+	cstat_list_free(&clist);
+	fail_unless(!recursive_delete(SDIRS));
+	tear_down(&asfd);
+}
+
+START_TEST(test_json_send_clients_with_backup)
+{
+	do_test_json_send_clients_with_backup(
+		BASE "/clients_with_backup",
+		sd1, ARR_LEN(sd1));
+}
+END_TEST
+
+static struct sd sd12345[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1970-01-02 00:00:00", 2, 2, 0 },
+	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_HARDLINKED },
+	{ "0000004 1970-01-04 00:00:00", 4, 4, 0 },
+	{ "0000005 1970-01-05 00:00:00", 5, 5, BU_CURRENT|BU_MANIFEST }
+};
+
+START_TEST(test_json_send_clients_with_backups)
+{
+	do_test_json_send_clients_with_backup(
+		BASE "/clients_with_backups",
+		sd12345, ARR_LEN(sd12345));
+}
+END_TEST
+
+static struct sd sd123w[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1970-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
+	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_WORKING },
+};
+
+START_TEST(test_json_send_clients_with_backups_working)
+{
+	do_test_json_send_clients_with_backup(
+		BASE "/clients_with_backups_working",
+		sd123w, ARR_LEN(sd123w));
+}
+END_TEST
+
+static struct sd sd123f[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1970-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
+	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_FINISHING },
+};
+
+START_TEST(test_json_send_clients_with_backups_finishing)
+{
+	do_test_json_send_clients_with_backup(
+		BASE "/clients_with_backups_finishing",
+		sd123f, ARR_LEN(sd123f));
 }
 END_TEST
 
@@ -154,6 +265,7 @@ START_TEST(cleanup)
 {
 	// Not a test. Just wanted to cleanup before and after this suite.
 	fail_unless(!recursive_delete(BASE));
+	fail_unless(!recursive_delete(SDIRS));
 }
 END_TEST
 
@@ -171,6 +283,10 @@ Suite *suite_server_monitor_json_output(void)
 	tcase_add_test(tc_core, test_json_send_warn);
 	tcase_add_test(tc_core, test_json_send_empty);
 	tcase_add_test(tc_core, test_json_send_clients);
+	tcase_add_test(tc_core, test_json_send_clients_with_backup);
+	tcase_add_test(tc_core, test_json_send_clients_with_backups);
+	tcase_add_test(tc_core, test_json_send_clients_with_backups_working);
+	tcase_add_test(tc_core, test_json_send_clients_with_backups_finishing);
 	tcase_add_test(tc_core, test_json_matching_output);
 	tcase_add_test(tc_core, cleanup);
 

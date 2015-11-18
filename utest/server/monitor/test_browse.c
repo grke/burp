@@ -11,7 +11,6 @@
 #include "../../../src/server/sdirs.h"
 
 #define BASE		"utest_server_monitor_browse"
-#define CLIENTCONFDIR	BASE "_clientconfdir"
 #define CNAME		"utestclient"
 
 static void clean(void)

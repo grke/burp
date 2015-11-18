@@ -89,6 +89,8 @@ Suite *suite_attribs(void)
 
 	tc_core=tcase_create("Core");
 
+	tcase_set_timeout(tc_core, 5);
+
 	tcase_add_test(tc_core, test_attribs_protocol1);
 	tcase_add_test(tc_core, test_attribs_protocol2);
 	suite_add_tcase(s, tc_core);

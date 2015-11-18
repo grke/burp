@@ -1,0 +1,103 @@
+{
+    "clients": [
+        {
+            "name": "cli1",
+            "run_status": "unknown",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 86400,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ]
+                },
+                {
+                    "number": 3,
+                    "timestamp": 172800,
+                    "flags": [
+                        "finishing"
+                    ],
+                    "counters": [
+                        {
+                            "name": "time_start",
+                            "type": "b",
+                            "count": 200
+                        },
+                        {
+                            "name": "time_end",
+                            "type": "E",
+                            "count": 400
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cli2",
+            "run_status": "unknown",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 86400,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ]
+                },
+                {
+                    "number": 3,
+                    "timestamp": 172800,
+                    "flags": [
+                        "finishing"
+                    ],
+                    "counters": [
+                        {
+                            "name": "time_start",
+                            "type": "b",
+                            "count": 200
+                        },
+                        {
+                            "name": "time_end",
+                            "type": "E",
+                            "count": 400
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "cli3",
+            "run_status": "unknown",
+            "backups": [
+                {
+                    "number": 2,
+                    "timestamp": 86400,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ]
+                },
+                {
+                    "number": 3,
+                    "timestamp": 172800,
+                    "flags": [
+                        "finishing"
+                    ],
+                    "counters": [
+                        {
+                            "name": "time_start",
+                            "type": "b",
+                            "count": 200
+                        },
+                        {
+                            "name": "time_end",
+                            "type": "E",
+                            "count": 400
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

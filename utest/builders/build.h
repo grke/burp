@@ -6,6 +6,7 @@
 #include "server/protocol2/champ_chooser/build_dindex.h"
 
 #define RMANIFEST_RELATIVE	"rmanifest_relative"
+#define CLIENTCONFDIR		"clientconfdir"
 
 extern char **build_paths(int wanted);
 extern struct sbuf *build_attribs(enum protocol protocol);
@@ -21,5 +22,11 @@ extern void build_manifest_phase2_from_slist(const char *path,
 	struct slist *slist, enum protocol protocol, int short_write);
 extern void build_manifest_phase1_from_slist(const char *path,
 	struct slist *slist, enum protocol protocol);
+
+extern char *get_clientconfdir_path(const char *file);
+extern void build_clientconfdir_file(const char *file, const char *content);
+extern void delete_clientconfdir_file(const char *file);
+extern void build_clientconfdir_files(const char *cnames[]);
+extern void assert_cstat_list(struct cstat *clist, const char *cnames[]);
 
 #endif

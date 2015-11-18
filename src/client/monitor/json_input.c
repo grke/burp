@@ -197,6 +197,10 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 			goto error;
 		goto end;
 	}
+	else if(!strcmp(lastkey, "warning")) 
+	{
+		goto end;
+	}
 error:
 	logp("Unexpected string: %s %s\n", lastkey, str);
 	free_w(&str);
@@ -447,8 +451,8 @@ static void do_yajl_error(yajl_handle yajl, struct asfd *asfd)
 	unsigned char *str;
 	str=yajl_get_error(yajl, 1,
 		(const unsigned char *)asfd->rbuf->buf, asfd->rbuf->len);
-	logp("yajl error: %s\n", (const char *)str);
-	yajl_free_error(yajl, str);
+	logp("yajl error: %s\n", str?(const char *)str:"unknown");
+	if(str) yajl_free_error(yajl, str);
 }
 
 static yajl_handle yajl=NULL;
@@ -496,6 +500,7 @@ int json_input(struct asfd *asfd, struct sel *sel)
 			goto error;
 		}
 		json_input_free();
+		return 1;
 	}
 
 	return 0;

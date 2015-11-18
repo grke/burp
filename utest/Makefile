@@ -5,6 +5,7 @@ CFLAGS+=-Wall -g -fprofile-arcs -ftest-coverage -x c++
 SRCS = \
 	builders/build_attribs.c \
 	builders/build_asfd_mock.c \
+	builders/build_clientconfdir.c \
 	builders/build_file.c \
 	builders/build_paths.c \
 	builders/protocol2/build_blist.c \

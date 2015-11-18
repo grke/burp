@@ -1,10 +1,13 @@
 #include "../../test.h"
+#include "../../builders/build.h"
 #include "../../../src/alloc.h"
 #include "../../../src/asfd.h"
+#include "../../../src/cstat.h"
 #include "../../../src/fsops.h"
 #include "../../../src/fzp.h"
 #include "../../../src/iobuf.h"
 #include "../../../src/prepend.h"
+#include "../../../src/server/monitor/cstat.h"
 #include "../../../src/server/monitor/json_output.h"
 
 #define BASE		"utest_server_monitor_json_output"
@@ -16,6 +19,7 @@ static void tear_down(struct asfd **asfd)
 {
 	asfd_free(asfd);
 	fail_unless(!fzp_close(&output));
+	fail_unless(!recursive_delete(CLIENTCONFDIR));
 	alloc_check();
 }
 
@@ -52,6 +56,24 @@ START_TEST(test_json_send_empty)
 	struct asfd *asfd;
 	asfd=asfd_setup(BASE "/empty");
 	fail_unless(!json_send(asfd, NULL, NULL, NULL, NULL, NULL, 0/*cache*/));
+	tear_down(&asfd);
+}
+END_TEST
+
+START_TEST(test_json_send_clients)
+{
+	struct asfd *asfd;
+	struct cstat *c=NULL;
+	struct cstat *clist=NULL;
+	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
+	fail_unless(recursive_delete(CLIENTCONFDIR)==0);
+	build_clientconfdir_files(cnames);
+	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	assert_cstat_list(clist, cnames);
+	for(c=clist; c; c=c->next) c->permitted=1;
+	asfd=asfd_setup(BASE "/clients");
+	fail_unless(!json_send(asfd, clist, NULL, NULL, NULL, NULL, 0/*cache*/));
+	cstat_list_free(&clist);
 	tear_down(&asfd);
 }
 END_TEST
@@ -148,8 +170,9 @@ Suite *suite_server_monitor_json_output(void)
 	tcase_add_test(tc_core, cleanup);
 	tcase_add_test(tc_core, test_json_send_warn);
 	tcase_add_test(tc_core, test_json_send_empty);
+	tcase_add_test(tc_core, test_json_send_clients);
 	tcase_add_test(tc_core, test_json_matching_output);
-//	tcase_add_test(tc_core, cleanup);
+	tcase_add_test(tc_core, cleanup);
 
 	suite_add_tcase(s, tc_core);
 

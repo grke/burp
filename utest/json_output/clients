@@ -1,0 +1,25 @@
+{
+    "clients": [
+        {
+            "name": "cli1",
+            "run_status": "unknown",
+            "backups": [
+
+            ]
+        },
+        {
+            "name": "cli2",
+            "run_status": "unknown",
+            "backups": [
+
+            ]
+        },
+        {
+            "name": "cli3",
+            "run_status": "unknown",
+            "backups": [
+
+            ]
+        }
+    ]
+}

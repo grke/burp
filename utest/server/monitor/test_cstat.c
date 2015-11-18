@@ -116,47 +116,6 @@ START_TEST(test_cstat_set_backup_list)
 }
 END_TEST
 
-static char *get_clientconfdir_path(const char *file)
-{
-	static char path[256]="";
-	snprintf(path, sizeof(path), CLIENTCONFDIR "/%s", file);
-	return path;
-}
-
-static void create_clientconfdir_file(const char *file, const char *content)
-{
-	const char *path=get_clientconfdir_path(file);
-	build_file(path, content);
-}
-
-static void delete_clientconfdir_file(const char *file)
-{
-	const char *path=get_clientconfdir_path(file);
-	fail_unless(!unlink(path));
-}
-
-static void create_clientconfdir_files(const char *cnames[])
-{
-	int i=0;
-	for(i=0; cnames[i]; i++)
-		create_clientconfdir_file(cnames[i], NULL);
-}
-
-static void check_clist(struct cstat *clist, const char *cnames[])
-{
-	int i;
-	struct cstat *c=NULL;
-	struct cstat *l=NULL;
-	for(i=0, c=clist; cnames && cnames[i]; c=c->next, i++)
-	{
-		ck_assert_str_eq(cnames[i], c->name);
-		l=c;
-	}
-	fail_unless(c==NULL);
-	for(i--, c=l; i>=0; c=c->prev, i--)
-		ck_assert_str_eq(cnames[i], c->name);
-}
-
 START_TEST(test_cstat_get_client_names)
 {
 	struct cstat *clist=NULL;
@@ -170,34 +129,34 @@ START_TEST(test_cstat_get_client_names)
 		{".abc", "xyz~", NULL };
 
 	clean();
-	create_clientconfdir_files(cnames);
+	build_clientconfdir_files(cnames);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	check_clist(clist, cnames);
+	assert_cstat_list(clist, cnames);
 
 	// Call again with the same clientconfdir files.
 	clean();
-	create_clientconfdir_files(cnames);
+	build_clientconfdir_files(cnames);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	check_clist(clist, cnames);
+	assert_cstat_list(clist, cnames);
 
 	// Call again with extra clientconfdir files.
 	clean();
-	create_clientconfdir_files(cnames_add);
+	build_clientconfdir_files(cnames_add);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	check_clist(clist, cnames_add);
+	assert_cstat_list(clist, cnames_add);
 
 	// Call again with fewer clientconfdir files.
 	// The list will not be shorter.
 	clean();
-	create_clientconfdir_files(cnames_rm);
+	build_clientconfdir_files(cnames_rm);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	check_clist(clist, cnames_add);
+	assert_cstat_list(clist, cnames_add);
 
 	// Temporary files should be missed.
 	clean();
-	create_clientconfdir_files(tmp_files);
+	build_clientconfdir_files(tmp_files);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	check_clist(clist, cnames_add);
+	assert_cstat_list(clist, cnames_add);
 
 	// Cause an error.
 	clean();
@@ -252,61 +211,61 @@ START_TEST(test_cstat_reload_from_client_confs)
 	fail_unless(!confs_init(globalcs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
-	create_clientconfdir_files(cnames123);
+	build_clientconfdir_files(cnames123);
 
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==3);
-	check_clist(clist, cnames123);
+	assert_cstat_list(clist, cnames123);
 
 	// Going again should result in 0 updates.
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==0);
-	check_clist(clist, cnames123);
+	assert_cstat_list(clist, cnames123);
 
 	// Touching all clientconfdir files should result in 3 updates.
 	set_mtimes(cnames123, -100);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==3);
-	check_clist(clist, cnames123);
+	assert_cstat_list(clist, cnames123);
 
 	// Touching one clientconfdir file should result in 1 update.
 	set_mtimes(cnames1, -200);
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==1);
-	check_clist(clist, cnames123);
+	assert_cstat_list(clist, cnames123);
 
 	// Deleting one clientconfdir file should result in 0 updates.
 	delete_clientconfdir_file("cli2");
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==0);
-	check_clist(clist, cnames13);
+	assert_cstat_list(clist, cnames13);
 
 	// A clientconfdir file with junk in it should get permission denied
 	// and remain in the list.
 	build_file(get_clientconfdir_path("cli1"), "klasdjldkjf");
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==0);
-	check_clist(clist, cnames13);
+	assert_cstat_list(clist, cnames13);
 	// Should not reload it next time round.
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==0);
-	check_clist(clist, cnames13);
+	assert_cstat_list(clist, cnames13);
 	// Fix the file, and we should reload it.
 	build_file(get_clientconfdir_path("cli1"), NULL);
 	set_mtimes(cnames1, -300);
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==1);
-	check_clist(clist, cnames13);
+	assert_cstat_list(clist, cnames13);
 
 	// Delete everything.
 	delete_clientconfdir_file("cli1");
 	delete_clientconfdir_file("cli3");
 	fail_unless(cstat_reload_from_client_confs(&clist,
 		globalcs, cconfs)==0);
-	check_clist(clist, NULL);
+	assert_cstat_list(clist, NULL);
 
 	unlink(GLOBAL_CONF);
 	fail_unless(cstat_reload_from_client_confs(&clist,
@@ -330,9 +289,9 @@ static struct cstat *test_cstat_remove_setup(struct conf ***globalcs,
 	fail_unless(!confs_init(*globalcs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, *globalcs));
-	create_clientconfdir_files(cnames);
+	build_clientconfdir_files(cnames);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	check_clist(clist, cnames);
+	assert_cstat_list(clist, cnames);
 	return clist;
 }
 
@@ -357,7 +316,7 @@ START_TEST(test_cstat_remove_first)
 	clist=test_cstat_remove_setup(&globalcs, cnames1234);
 	c=clist;
 	cstat_remove(&clist, &c);
-	check_clist(clist, cnames234);
+	assert_cstat_list(clist, cnames234);
 	test_cstat_remove_teardown(&globalcs, &clist);
 }
 END_TEST
@@ -371,7 +330,7 @@ START_TEST(test_cstat_remove_second)
 	clist=test_cstat_remove_setup(&globalcs, cnames1234);
 	c=clist->next;
 	cstat_remove(&clist, &c);
-	check_clist(clist, cnames134);
+	assert_cstat_list(clist, cnames134);
 	test_cstat_remove_teardown(&globalcs, &clist);
 }
 END_TEST
@@ -385,7 +344,7 @@ START_TEST(test_cstat_remove_third)
 	clist=test_cstat_remove_setup(&globalcs, cnames1234);
 	c=clist->next->next;
 	cstat_remove(&clist, &c);
-	check_clist(clist, cnames124);
+	assert_cstat_list(clist, cnames124);
 	test_cstat_remove_teardown(&globalcs, &clist);
 }
 END_TEST
@@ -399,7 +358,7 @@ START_TEST(test_cstat_remove_fourth)
 	clist=test_cstat_remove_setup(&globalcs, cnames1234);
 	c=clist->next->next->next;
 	cstat_remove(&clist, &c);
-	check_clist(clist, cnames123);
+	assert_cstat_list(clist, cnames123);
 	test_cstat_remove_teardown(&globalcs, &clist);
 }
 END_TEST
@@ -414,7 +373,7 @@ START_TEST(test_cstat_remove_only)
 	clist=test_cstat_remove_setup(&globalcs, cnames1);
 	c=clist;
 	cstat_remove(&clist, &c);
-	check_clist(clist, cnames0);
+	assert_cstat_list(clist, cnames0);
 	test_cstat_remove_teardown(&globalcs, &clist);
 }
 END_TEST
@@ -432,9 +391,9 @@ START_TEST(test_cstat_add_out_of_order)
 	fail_unless(!confs_init(globalcs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
-	create_clientconfdir_files(cnames31204);
+	build_clientconfdir_files(cnames31204);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	check_clist(clist, cnames01234);
+	assert_cstat_list(clist, cnames01234);
 	test_cstat_remove_teardown(&globalcs, &clist);
 }
 END_TEST
@@ -604,7 +563,7 @@ static void check_restore_clients(struct cstat *cstat,
 	fail_unless((cconfs=confs_alloc())!=NULL);
 	fail_unless(!confs_init(cconfs));
 	fail_unless(!set_string(cconfs[OPT_CNAME], "cli1"));
-	create_clientconfdir_file("cli1", restore_clients);
+	build_clientconfdir_file("cli1", restore_clients);
 	fail_unless(!conf_load_clientconfdir(parentconf, cconfs));
 	fail_unless(!set_string(parentconf[OPT_CNAME], "cli2"));
 	fail_unless(cstat_permitted(cstat, parentconf, cconfs)==permitted);

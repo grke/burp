@@ -1233,11 +1233,20 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 
 static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 {
+	int ret;
 #ifdef HAVE_NCURSES_H
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
 		return parse_stdin_data(asfd, sel, count);
 #endif
-	return json_input(asfd, sel);
+	switch(json_input(asfd, sel))
+	{
+		// 0 means carry on.
+		// 1 means it got to the end of the JSON statement.
+		// Anything else means an error.
+		case 0: return 0;
+		case 1: return 0;
+		default: return -1;
+	}
 }
 
 static int main_loop(struct async *as, enum action act, struct conf **confs)

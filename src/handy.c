@@ -422,7 +422,7 @@ static const struct tm *my_localtime(time_t t)
 		if(!(tz=strdup_w(tz, __func__)))
 			return NULL;
 	}
-	putenv("TZ=");
+	putenv((char *)"TZ=");
 	tzset();
 	ctm=localtime(&t);
 

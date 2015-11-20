@@ -268,14 +268,14 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 
 	if(confs) cntr=get_cntr(confs);
 
-	if(!asfd)
+	if(!asfd || !asfd->as)
 	{
-		logp("%s() called without asfd!\n", __func__);
+		logp("%s() called without async structs!\n", __func__);
 		goto end;
 	}
 
 	logp("Phase 2 begin (send backup data)\n");
-	printf("\n");
+	logf("\n");
 
 	if(!(slist=slist_alloc())
 	  || !(wbuf=iobuf_alloc())
@@ -362,6 +362,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	ret=0;
 end:
 	slist_free(&slist);
+	blks_generate_free();
 	if(wbuf)
 	{
 		// Write buffer did not allocate 'buf'.

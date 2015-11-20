@@ -26,6 +26,12 @@ int blks_generate_init(void)
 	return 0;
 }
 
+void blks_generate_free(void)
+{
+	free_w(&gbuf);
+	win_free(&win);
+}
+
 // This is where the magic happens.
 // Return 1 for got a block, 0 for no block got.
 static int blk_read(void)
@@ -85,7 +91,9 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 
 	if(sb->protocol2->bfd.mode==BF_CLOSED)
 	{
-		if(sbuf_open_file(sb, asfd, confs)) return -1;
+		struct cntr *cntr=NULL;
+		if(confs) cntr=get_cntr(confs);
+		if(sbuf_open_file(sb, asfd, cntr, confs)) return -1;
 		first=1;
 	}
 

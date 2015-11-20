@@ -58,7 +58,7 @@ extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf **sb);
 
 extern int sbuf_open_file(struct sbuf *sb,
-	struct asfd *asfd, struct conf **confs);
+	struct asfd *asfd, struct cntr *cntr, struct conf **confs);
 extern void sbuf_close_file(struct sbuf *sb, struct asfd *asfd);
 extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
 

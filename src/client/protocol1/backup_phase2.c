@@ -356,6 +356,8 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	BFILE *bfd=NULL;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=NULL;
+	struct cntr *cntr=NULL;
+	if(confs) cntr=get_cntr(confs);
 
 	if(!asfd)
 	{
@@ -367,7 +369,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	if(!(bfd=bfile_alloc())
 	  || !(sb=sbuf_alloc(PROTO_1)))
 		goto end;
-	bfile_init(bfd, 0, get_cntr(confs));
+	bfile_init(bfd, 0, cntr);
 
 	if(!resume)
 	{

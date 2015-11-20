@@ -129,7 +129,8 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 	return iobuf_pathcmp(&a->path, &b->path);
 }
 
-int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf **confs)
+int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
+	struct conf **confs)
 {
 	BFILE *bfd=&sb->protocol2->bfd;
 #ifdef HAVE_WIN32
@@ -139,7 +140,7 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf **confs)
 #endif
 	{
 		// This file is no longer available.
-		logw(asfd, get_cntr(confs), "%s has vanished\n", sb->path.buf);
+		logw(asfd, cntr, "%s has vanished\n", sb->path.buf);
 		return -1;
 	}
 	sb->compression=get_int(confs[OPT_COMPRESSION]);
@@ -149,7 +150,7 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct conf **confs)
 
 	if(bfd->open_for_send(bfd, asfd,
 		sb->path.buf, sb->winattr,
-		get_int(confs[OPT_ATIME]), get_cntr(confs), PROTO_2))
+		get_int(confs[OPT_ATIME]), cntr, PROTO_2))
 	{
 		logw(asfd, get_cntr(confs),
 			"Could not open %s\n", sb->path.buf);

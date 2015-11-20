@@ -6,7 +6,7 @@
             "backups": [
                 {
                     "number": 1,
-                    "timestamp": 0,
+                    "timestamp": 31536000,
                     "flags": [
                         "deletable",
                         "current"
@@ -20,7 +20,7 @@
             "backups": [
                 {
                     "number": 1,
-                    "timestamp": 0,
+                    "timestamp": 31536000,
                     "flags": [
                         "deletable",
                         "current"
@@ -34,7 +34,7 @@
             "backups": [
                 {
                     "number": 1,
-                    "timestamp": 0,
+                    "timestamp": 31536000,
                     "flags": [
                         "deletable",
                         "current"

@@ -26,6 +26,7 @@ SRCS = \
 	test_pathcmp.c \
 	protocol1/test_rs_buf.c \
 	protocol2/test_blist.c \
+	protocol2/test_sbuf_protocol2.c \
 	protocol2/rabin/test_rconf.c \
 	protocol2/rabin/test_win.c \
 	client/monitor/test_json_input.c \

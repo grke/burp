@@ -124,25 +124,24 @@ START_TEST(test_json_clients)
 END_TEST
 
 static struct sd sd1[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_CURRENT },
+	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_CURRENT },
 };
 
 // FIX THIS - this should only check the most recent backup in the list.
 // This should come out in the wash when I do clients with multiple backups.
-static void assert_bu_list_minimal(struct bu *bu, struct sd *s)
+static void assert_bu_minimal(struct bu *bu, struct sd *s)
 {
+	const char *sd_timestamp;
 	fail_unless(bu!=NULL);
 	fail_unless(s->bno==bu->bno);
 	fail_unless(s->flags==bu->flags);
-// FIX THIS
-//printf("%d %d\n", s->timestamp, bu->timestamp);
-//	fail_unless(s->timestamp==bu->timestamp);
-//if(bu->next)
-//printf("bu next\n");
+	fail_unless((sd_timestamp=strchr(s->timestamp, ' '))!=NULL);
+	sd_timestamp++;
+	ck_assert_str_eq(sd_timestamp, bu->timestamp);
 }
 
 static void do_test_json_clients_with_backup(const char *path,
-	struct sd *sd, int s, int times)
+	struct sd *sd_current, struct sd *sd_working, int times)
 {
 	struct cstat *c;
 	struct sel *sel;
@@ -151,48 +150,56 @@ static void do_test_json_clients_with_backup(const char *path,
 	fail_unless(sel->clist!=NULL);
 	assert_cstat_list(sel->clist, cnames);
 	for(c=sel->clist; c; c=c->next)
-		assert_bu_list_minimal(c->bu, &sd[s-1]);
+	{
+		if(sd_current) assert_bu_minimal(c->bu, sd_current);
+		if(sd_working) assert_bu_minimal(c->bu->next, sd_working);
+	}
 	tear_down(&sel);
 }
 
 START_TEST(test_json_clients_with_backup)
 {
-	int s=ARR_LEN(sd1);
 	const char *path=SRC_DIR "/clients_with_backup";
-	do_test_json_clients_with_backup(path, sd1, s, 1);
-	do_test_json_clients_with_backup(path, sd1, s, 4);
+	do_test_json_clients_with_backup(path, &sd1[0], NULL, 1);
+	do_test_json_clients_with_backup(path, &sd1[0], NULL, 4);
 }
 END_TEST
 
-static struct sd sd12345[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
-	{ "0000002 1970-01-02 00:00:00", 2, 2, 0 },
-	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_HARDLINKED },
-	{ "0000004 1970-01-04 00:00:00", 4, 4, 0 },
-	{ "0000005 1970-01-05 00:00:00", 5, 5, BU_CURRENT|BU_MANIFEST}
+static struct sd sd5[] = {
+	{ "0000005 1971-01-05 00:00:00", 5, 5, BU_CURRENT|BU_MANIFEST}
 };
 
 START_TEST(test_json_clients_with_backups)
 {
-	int s=ARR_LEN(sd12345);
 	const char *path=SRC_DIR "/clients_with_backups";
-	do_test_json_clients_with_backup(path, sd12345, s, 1);
-	do_test_json_clients_with_backup(path, sd12345, s, 4);
+	do_test_json_clients_with_backup(path, &sd5[0], NULL, 1);
+	do_test_json_clients_with_backup(path, &sd5[0], NULL, 4);
 }
 END_TEST
 
-static struct sd sd123w[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
-	{ "0000002 1970-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
-	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_WORKING },
+static struct sd sd23w[] = {
+	{ "0000002 1971-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
+	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_WORKING },
 };
 
 START_TEST(test_json_clients_with_backups_working)
 {
-	int s=ARR_LEN(sd123w);
 	const char *path=SRC_DIR "/clients_with_backups_working";
-	do_test_json_clients_with_backup(path, sd123w, s, 1);
-	do_test_json_clients_with_backup(path, sd123w, s, 4);
+	do_test_json_clients_with_backup(path, &sd23w[1], &sd23w[0], 1);
+	do_test_json_clients_with_backup(path, &sd23w[1], &sd23w[0], 4);
+}
+END_TEST
+
+static struct sd sd23f[] = {
+	{ "0000002 1971-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
+	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_FINISHING },
+};
+
+START_TEST(test_json_clients_with_backups_finishing)
+{
+	const char *path=SRC_DIR "/clients_with_backups_finishing";
+	do_test_json_clients_with_backup(path, &sd23f[1], &sd23f[0], 1);
+	do_test_json_clients_with_backup(path, &sd23f[1], &sd23f[0], 4);
 }
 END_TEST
 
@@ -212,6 +219,7 @@ Suite *suite_client_monitor_json_input(void)
 	tcase_add_test(tc_core, test_json_clients_with_backup);
 	tcase_add_test(tc_core, test_json_clients_with_backups);
 	tcase_add_test(tc_core, test_json_clients_with_backups_working);
+	tcase_add_test(tc_core, test_json_clients_with_backups_finishing);
 	suite_add_tcase(s, tc_core);
 
 	return s;

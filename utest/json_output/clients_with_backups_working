@@ -6,7 +6,7 @@
             "backups": [
                 {
                     "number": 2,
-                    "timestamp": 86400,
+                    "timestamp": 31622400,
                     "flags": [
                         "current",
                         "manifest"
@@ -14,7 +14,7 @@
                 },
                 {
                     "number": 3,
-                    "timestamp": 172800,
+                    "timestamp": 31708800,
                     "flags": [
                         "working"
                     ],
@@ -39,7 +39,7 @@
             "backups": [
                 {
                     "number": 2,
-                    "timestamp": 86400,
+                    "timestamp": 31622400,
                     "flags": [
                         "current",
                         "manifest"
@@ -47,7 +47,7 @@
                 },
                 {
                     "number": 3,
-                    "timestamp": 172800,
+                    "timestamp": 31708800,
                     "flags": [
                         "working"
                     ],
@@ -72,7 +72,7 @@
             "backups": [
                 {
                     "number": 2,
-                    "timestamp": 86400,
+                    "timestamp": 31622400,
                     "flags": [
                         "current",
                         "manifest"
@@ -80,7 +80,7 @@
                 },
                 {
                     "number": 3,
-                    "timestamp": 172800,
+                    "timestamp": 31708800,
                     "flags": [
                         "working"
                     ],

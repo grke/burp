@@ -1,5 +1,3 @@
-#include <check.h>
-#include "../../../src/burp.h"
 #include "../../test.h"
 #include "../../../src/alloc.h"
 #include "../../../src/protocol2/rabin/rconf.h"
@@ -21,6 +19,17 @@ START_TEST(test_win)
 }
 END_TEST
 
+START_TEST(test_win_alloc_error)
+{
+	struct rconf rconf;
+	struct win *win;
+	rconf_init(&rconf);
+	alloc_errors=1;
+	fail_unless((win=win_alloc(&rconf))==NULL);
+	tear_down();
+}
+END_TEST
+
 Suite *suite_protocol2_rabin_win(void)
 {
 	Suite *s;
@@ -31,6 +40,7 @@ Suite *suite_protocol2_rabin_win(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_win);
+	tcase_add_test(tc_core, test_win_alloc_error);
 	suite_add_tcase(s, tc_core);
 
 	return s;

@@ -4,6 +4,7 @@
 #include "burp.h"
 
 #ifdef UTEST
+extern int alloc_errors;
 extern uint64_t alloc_count;
 extern uint64_t free_count;
 extern void alloc_counters_reset(void);

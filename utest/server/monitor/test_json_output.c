@@ -82,7 +82,7 @@ START_TEST(test_json_send_clients)
 END_TEST
 
 static struct sd sd1[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_CURRENT },
+	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_CURRENT },
 };
 
 static struct sdirs *setup_sdirs(enum protocol protocol, const char *cname)
@@ -146,11 +146,11 @@ START_TEST(test_json_send_clients_with_backup)
 END_TEST
 
 static struct sd sd12345[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
-	{ "0000002 1970-01-02 00:00:00", 2, 2, 0 },
-	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_HARDLINKED },
-	{ "0000004 1970-01-04 00:00:00", 4, 4, 0 },
-	{ "0000005 1970-01-05 00:00:00", 5, 5, BU_CURRENT|BU_MANIFEST }
+	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1971-01-02 00:00:00", 2, 2, 0 },
+	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_HARDLINKED },
+	{ "0000004 1971-01-04 00:00:00", 4, 4, 0 },
+	{ "0000005 1971-01-05 00:00:00", 5, 5, BU_CURRENT|BU_MANIFEST }
 };
 
 START_TEST(test_json_send_clients_with_backups)
@@ -162,9 +162,9 @@ START_TEST(test_json_send_clients_with_backups)
 END_TEST
 
 static struct sd sd123w[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
-	{ "0000002 1970-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
-	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_WORKING },
+	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1971-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
+	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_WORKING },
 };
 
 START_TEST(test_json_send_clients_with_backups_working)
@@ -176,9 +176,9 @@ START_TEST(test_json_send_clients_with_backups_working)
 END_TEST
 
 static struct sd sd123f[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
-	{ "0000002 1970-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
-	{ "0000003 1970-01-03 00:00:00", 3, 3, BU_FINISHING },
+	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1971-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
+	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_FINISHING },
 };
 
 START_TEST(test_json_send_clients_with_backups_finishing)

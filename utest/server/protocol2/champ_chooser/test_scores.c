@@ -1,8 +1,5 @@
-#include <check.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "../../../test.h"
+#include "../../../../src/alloc.h"
 #include "../../../../src/server/protocol2/champ_chooser/scores.h"
 
 static void tear_down(void)
@@ -44,6 +41,18 @@ START_TEST(test_scores)
 }
 END_TEST
 
+START_TEST(test_scores_grow_alloc_error)
+{
+	struct scores *scores=NULL;
+
+	fail_unless((scores=scores_alloc())!=NULL);
+	alloc_errors=1;
+	fail_unless(scores_grow(scores, 10)==-1);
+	scores_free(&scores);
+	tear_down();
+}
+END_TEST
+
 Suite *suite_server_protocol2_champ_chooser_scores(void)
 {
 	Suite *s;
@@ -54,6 +63,7 @@ Suite *suite_server_protocol2_champ_chooser_scores(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_scores);
+	tcase_add_test(tc_core, test_scores_grow_alloc_error);
 	suite_add_tcase(s, tc_core);
 
 	return s;

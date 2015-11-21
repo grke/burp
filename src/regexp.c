@@ -21,7 +21,7 @@ regex_t *regex_compile(const char *str)
 
 int regex_check(regex_t *regex, const char *buf)
 {
-	if(!regex) return 1;
+	if(!regex) return 0;
 	switch(regexec(regex, buf, 0, NULL, 0))
 	{
 		case 0: return 1;

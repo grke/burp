@@ -198,8 +198,10 @@ static int run_restore(struct asfd *asfd,
 		*restoreregex='\0';
 		restoreregex++;
 	}
-	if(set_string(cconfs[OPT_REGEX], restoreregex)
-	  || asfd->write_str(asfd, CMD_GEN, "ok"))
+	if(restoreregex && *restoreregex
+	  && set_string(cconfs[OPT_REGEX], restoreregex))
+		goto end;
+	if(asfd->write_str(asfd, CMD_GEN, "ok"))
 		goto end;
 	ret=do_restore_server(asfd, sdirs, act,
 		srestore, &dir_for_notify, cconfs);

@@ -14,9 +14,10 @@ int main(void)
 	srunner_add_suite(sr, suite_base64());
 	srunner_add_suite(sr, suite_client_auth());
 	srunner_add_suite(sr, suite_client_find());
-        srunner_add_suite(sr, suite_client_monitor_lline());
-        srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
-        srunner_add_suite(sr, suite_client_protocol2_backup_phase2());
+	srunner_add_suite(sr, suite_client_monitor_json_input());
+	srunner_add_suite(sr, suite_client_monitor_lline());
+	srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
+	srunner_add_suite(sr, suite_client_protocol2_backup_phase2());
 	srunner_add_suite(sr, suite_client_restore());
 	srunner_add_suite(sr, suite_client_xattr());
 	srunner_add_suite(sr, suite_cmd());
@@ -35,10 +36,9 @@ int main(void)
 	srunner_add_suite(sr, suite_server_delete());
 	srunner_add_suite(sr, suite_server_list());
 	srunner_add_suite(sr, suite_server_manio());
-        srunner_add_suite(sr, suite_server_monitor_browse());
+	srunner_add_suite(sr, suite_server_monitor_browse());
 	srunner_add_suite(sr, suite_server_monitor_cstat());
-	srunner_add_suite(sr, suite_server_resume());
-	srunner_add_suite(sr, suite_server_sdirs());
+	srunner_add_suite(sr, suite_server_monitor_json_output());
 	srunner_add_suite(sr, suite_server_protocol1_bedup());
 	srunner_add_suite(sr, suite_server_protocol1_blocklen());
 	srunner_add_suite(sr, suite_server_protocol1_dpth());
@@ -49,8 +49,9 @@ int main(void)
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_scores());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_sparse());
 	srunner_add_suite(sr, suite_server_protocol2_dpth());
-	srunner_add_suite(sr, suite_server_monitor_json_output());
-        srunner_add_suite(sr, suite_client_monitor_json_input());
+	srunner_add_suite(sr, suite_server_restore());
+	srunner_add_suite(sr, suite_server_resume());
+	srunner_add_suite(sr, suite_server_sdirs());
 
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);

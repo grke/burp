@@ -183,9 +183,11 @@ void log_restore_settings(struct conf **cconfs, int srestore)
 	struct strlist *l;
 	logp("Restore settings:\n");
 	if(get_string(cconfs[OPT_ORIG_CLIENT]))
-		logp("orig_client = %s\n", get_string(cconfs[OPT_ORIG_CLIENT]));
+		logp("orig_client = '%s'\n",
+			get_string(cconfs[OPT_ORIG_CLIENT]));
 	if(get_string(cconfs[OPT_BACKUP]))
-		logp("backup = %s\n", get_string(cconfs[OPT_BACKUP]));
+		logp("backup = '%s'\n",
+			get_string(cconfs[OPT_BACKUP]));
 	if(srestore)
 	{
 		// This are unknown unless doing a server initiated restore.
@@ -193,11 +195,12 @@ void log_restore_settings(struct conf **cconfs, int srestore)
 		logp("strip = %d\n", get_int(cconfs[OPT_STRIP]));
 	}
 	if(get_string(cconfs[OPT_RESTOREPREFIX]))
-	  logp("restoreprefix = %s\n", get_string(cconfs[OPT_RESTOREPREFIX]));
+		logp("restoreprefix = '%s'\n",
+			get_string(cconfs[OPT_RESTOREPREFIX]));
 	if(get_string(cconfs[OPT_REGEX]))
-		logp("regex = %s\n", get_string(cconfs[OPT_REGEX]));
+		logp("regex = '%s'\n", get_string(cconfs[OPT_REGEX]));
 	for(l=get_strlist(cconfs[OPT_INCLUDE]); l; l=l->next)
-		logp("include = %s\n", l->path);
+		logp("include = '%s'\n", l->path);
 }
 
 int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...)

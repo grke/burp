@@ -91,7 +91,11 @@ int strlist_add_sorted(struct strlist **strlist,
 int strlist_compile_regexes(struct strlist *strlist)
 {
         struct strlist *l;
-        for(l=strlist; l; l=l->next) l->re=regex_compile(l->path);
+	// FIX THIS: when the regex does not compile, should remove the
+	// strlist entry completely.
+        for(l=strlist; l; l=l->next)
+		if(!(l->re=regex_compile(l->path)))
+			logp("unable to compile regex: %s\n", l->path);
 	return 0;
 }
 

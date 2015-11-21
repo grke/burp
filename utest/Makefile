@@ -55,6 +55,7 @@ SRCS = \
 	server/test_list.c \
 	server/test_manio.c \
 	server/test_resume.c \
+	server/test_restore.c \
 	server/test_sdirs.c \
 
 BURP_SRCS = \

@@ -39,7 +39,6 @@ static int restore_end(struct asfd *asfd, struct conf **confs)
 	return asfd->simple_loop(asfd, confs, NULL, __func__, restore_end_func);
 }
 
-
 static int srestore_matches(struct strlist *s, const char *path)
 {
 	int r=0;
@@ -69,7 +68,7 @@ int want_to_restore(int srestore, struct sbuf *sb,
 	regex_t *regex, struct conf **cconfs)
 {
 	return (!srestore || check_srestore(cconfs, sb->path.buf))
-	  && regex_check(regex, sb->path.buf);
+	  && (!regex || regex_check(regex, sb->path.buf));
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
@@ -593,7 +592,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	enum action act, int srestore,
 	char **dir_for_notify, struct conf **confs)
 {
-	int ret=0;
+	int ret=-1;
 	uint8_t found=0;
 	struct bu *bu=NULL;
 	struct bu *bu_list=NULL;
@@ -607,13 +606,16 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	if(regexstr
 	  && *regexstr
 	  && !(regex=regex_compile(regexstr)))
-		return -1;
+	{
+		char msg[256]="";
+		snprintf(msg, sizeof(msg), "unable to compile regex: %s\n",
+			regexstr);
+		log_and_send(asfd, msg);
+		goto end;
+	}
 
 	if(bu_get_list(sdirs, &bu_list))
-	{
-		regex_free(&regex);
-		return -1;
-	}
+		goto end;
 
 	if(bu_list &&
 	   (!backup
@@ -656,6 +658,7 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 		asfd->write_str(asfd, CMD_ERROR, "backup not found");
 		ret=-1;
 	}
+end:
 	regex_free(&regex);
 	return ret;
 }

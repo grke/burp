@@ -50,7 +50,13 @@ int list_server_init(
 	if(regex_str
 	  && *regex_str
 	  && !(regex=regex_compile(regex_str)))
+	{
+		char msg[256]="";
+		snprintf(msg, sizeof(msg), "unable to compile regex: %s\n",
+			regex_str);
+		log_and_send(asfd, msg);
 		goto error;
+	}
 	list_mode=LIST_MODE_BACKUPS;
 	if(regex)
 		list_mode=LIST_MODE_CONTENTS_MANY;
@@ -192,7 +198,7 @@ static int list_manifest(const char *fullpath)
 		}
 		else
 		{
-			if(regex_check(regex, sb->path.buf))
+			if(!regex || regex_check(regex, sb->path.buf))
 				show++;
 		}
 		if(show)

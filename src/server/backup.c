@@ -210,6 +210,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	// Close the connection with the client, the rest of the job we can do
 	// by ourselves.
 	logp("Backup ending - disconnect from client.\n");
+	if(asfd_flush_asio(asfd)) goto end;
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 

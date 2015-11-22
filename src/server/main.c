@@ -281,6 +281,8 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	ret=child(as, status_wfd, confs, cconfs);
 end:
 	*cfd=-1;
+	if(as && asfd_flush_asio(as->asfd))
+		ret=-1;
 	async_asfd_free_all(&as); // This closes cfd for us.
 	logp("exit child\n");
 	if(cntr) cntr_free(&cntr);

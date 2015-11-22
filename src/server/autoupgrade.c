@@ -99,6 +99,8 @@ int autoupgrade_server(struct async *as,
 		logp("Problem sending %s\n", package_path);
 		goto end;
 	}
+	if(asfd_flush_asio(asfd))
+		goto end;
 	ret=0;
 	/* Clients currently exit after forking, so exit ourselves. */
 	logp("Expecting client to upgrade - now exiting\n");

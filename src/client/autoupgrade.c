@@ -124,6 +124,7 @@ int autoupgrade_client(struct async *as, struct conf **confs)
 	printf("\n");
 	logp("The server tried to upgrade your client.\n");
 	logp("You will need to try your command again.\n");
+	asfd_flush_asio(asfd);
 	asfd_free(&as->asfd);
 
 	exit(0);

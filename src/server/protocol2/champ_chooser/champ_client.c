@@ -1,4 +1,5 @@
 #include "../../../burp.h"
+#include "../../../alloc.h"
 #include "../../../asfd.h"
 #include "../../../async.h"
 #include "../../../cmd.h"
@@ -128,10 +129,10 @@ struct asfd *champ_chooser_connect(struct async *as,
 	  || chfd->read_expect(chfd, CMD_GEN, "cname ok"))
 		goto error;
 
-	free(champname);
+	free_w(&champname);
 	return chfd;
 error:
-	free(champname);
+	free_w(&champname);
 	as->asfd_remove(as, chfd);
 	asfd_free(&chfd);
 	close_fd(&champsock);

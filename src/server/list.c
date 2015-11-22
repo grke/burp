@@ -313,11 +313,8 @@ int do_list_server_work(
 	if(!found)
 	{
 		asfd_write_wrapper_str(asfd, CMD_ERROR, "backup not found");
-		asfd_flush_asio(asfd);
 		goto end;
 	}
-
-	if(asfd_flush_asio(asfd)) goto end;
 
 	ret=0;
 end:

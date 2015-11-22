@@ -654,7 +654,7 @@ static int read_and_write(struct asfd *asfd)
 
 int asfd_flush_asio(struct asfd *asfd)
 {
-	while(asfd->writebuflen>0)
+	while(asfd && asfd->writebuflen>0)
 		if(read_and_write(asfd)) return -1;
 	return 0;
 }

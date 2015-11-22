@@ -456,6 +456,9 @@ static enum cliret do_client(struct conf **confs,
 			break;
 	}
 
+	if(asfd_flush_asio(asfd))
+		ret=CLIENT_ERROR;
+
 	goto end;
 error:
 	ret=CLIENT_ERROR; goto end;
@@ -466,9 +469,9 @@ end:
 	async_free(&as);
 	asfd_free(&asfd);
 	if(ctx) ssl_destroy_ctx(ctx);
-	if(incexc) free(incexc);
+	free_w(&incexc);
 	set_cntr(confs[OPT_CNTR], NULL);
-	if(cntr) cntr_free(&cntr);
+	cntr_free(&cntr);
 
 	//logp("end client\n");
 	return ret;

@@ -55,9 +55,8 @@ rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
 {
 	rs_filebuf_t *pf=NULL;
 	if(!(pf=(struct rs_filebuf *)calloc_w(1,
-		sizeof(struct rs_filebuf), __func__))) return NULL;
-
-	if(!(pf->buf=(char *)calloc_w(1, buf_len, __func__)))
+		sizeof(struct rs_filebuf), __func__))
+	  || !(pf->buf=(char *)calloc_w(1, buf_len, __func__)))
 		goto error;
 	pf->buf_len=buf_len;
 	pf->fzp=fzp;

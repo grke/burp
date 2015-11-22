@@ -42,6 +42,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 
 	if(!(ctx=(EVP_CIPHER_CTX *)
 		calloc_w(1, sizeof(EVP_CIPHER_CTX), __func__)))
+			goto error;
 
 	// Don't set key or IV because we will modify the parameters.
 	EVP_CIPHER_CTX_init(ctx);
@@ -62,7 +63,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	}
 	return ctx;
 error:
-	if(ctx) free(ctx);
+	free_v((void **)&ctx);
 	return NULL;
 }
 

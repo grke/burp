@@ -107,7 +107,7 @@ static void cstat_list_free_sdirs(struct cstat *clist)
 }
 
 static void do_test_json_send_clients_with_backup(const char *path,
-	struct sd *sd, int s)
+	struct sd *sd, int s, const char *specific_client)
 {
 	struct asfd *asfd;
 	struct cstat *c=NULL;
@@ -130,7 +130,12 @@ static void do_test_json_send_clients_with_backup(const char *path,
 
 	}
 	asfd=asfd_setup(path);
-	fail_unless(!json_send(asfd, clist, NULL, NULL, NULL, NULL, 0/*cache*/));
+
+	c=NULL;
+	if(specific_client)
+	  fail_unless((c=cstat_get_by_name(clist, specific_client))!=NULL);
+
+	fail_unless(!json_send(asfd, clist, c, NULL, NULL, NULL, 0/*cache*/));
 	cstat_list_free_sdirs(clist);
 	cstat_list_free(&clist);
 	fail_unless(!recursive_delete(SDIRS));
@@ -141,7 +146,7 @@ START_TEST(test_json_send_clients_with_backup)
 {
 	do_test_json_send_clients_with_backup(
 		BASE "/clients_with_backup",
-		sd1, ARR_LEN(sd1));
+		sd1, ARR_LEN(sd1), NULL);
 }
 END_TEST
 
@@ -149,7 +154,7 @@ static struct sd sd12345[] = {
 	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
 	{ "0000002 1971-01-02 00:00:00", 2, 2, 0 },
 	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_HARDLINKED },
-	{ "0000004 1971-01-04 00:00:00", 4, 4, 0 },
+	{ "0000004 1971-01-04 00:00:00", 4, 4, BU_DELETABLE },
 	{ "0000005 1971-01-05 00:00:00", 5, 5, BU_CURRENT|BU_MANIFEST }
 };
 
@@ -157,7 +162,7 @@ START_TEST(test_json_send_clients_with_backups)
 {
 	do_test_json_send_clients_with_backup(
 		BASE "/clients_with_backups",
-		sd12345, ARR_LEN(sd12345));
+		sd12345, ARR_LEN(sd12345), NULL);
 }
 END_TEST
 
@@ -171,7 +176,7 @@ START_TEST(test_json_send_clients_with_backups_working)
 {
 	do_test_json_send_clients_with_backup(
 		BASE "/clients_with_backups_working",
-		sd123w, ARR_LEN(sd123w));
+		sd123w, ARR_LEN(sd123w), NULL);
 }
 END_TEST
 
@@ -185,7 +190,15 @@ START_TEST(test_json_send_clients_with_backups_finishing)
 {
 	do_test_json_send_clients_with_backup(
 		BASE "/clients_with_backups_finishing",
-		sd123f, ARR_LEN(sd123f));
+		sd123f, ARR_LEN(sd123f), NULL);
+}
+END_TEST
+
+START_TEST(test_json_send_client_specific)
+{
+	do_test_json_send_clients_with_backup(
+		BASE "/client_specific",
+		sd12345, ARR_LEN(sd12345), "cli2");
 }
 END_TEST
 
@@ -287,6 +300,7 @@ Suite *suite_server_monitor_json_output(void)
 	tcase_add_test(tc_core, test_json_send_clients_with_backups);
 	tcase_add_test(tc_core, test_json_send_clients_with_backups_working);
 	tcase_add_test(tc_core, test_json_send_clients_with_backups_finishing);
+	tcase_add_test(tc_core, test_json_send_client_specific);
 	tcase_add_test(tc_core, test_json_matching_output);
 	tcase_add_test(tc_core, cleanup);
 

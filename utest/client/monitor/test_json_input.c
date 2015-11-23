@@ -127,8 +127,6 @@ static struct sd sd1[] = {
 	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_CURRENT },
 };
 
-// FIX THIS - this should only check the most recent backup in the list.
-// This should come out in the wash when I do clients with multiple backups.
 static void assert_bu_minimal(struct bu *bu, struct sd *s)
 {
 	const char *sd_timestamp;
@@ -203,6 +201,40 @@ START_TEST(test_json_clients_with_backups_finishing)
 }
 END_TEST
 
+static struct sd sd12345[] = {
+	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1971-01-02 00:00:00", 2, 2, 0 },
+	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_HARDLINKED },
+	{ "0000004 1971-01-04 00:00:00", 4, 4, BU_DELETABLE },
+	{ "0000005 1971-01-05 00:00:00", 5, 5, BU_CURRENT|BU_MANIFEST }
+};
+
+static void do_test_json_client_specific(const char *path,
+	struct sd *sd, int len, int times)
+{
+	int s;
+	struct sel *sel;
+	struct bu *bu;
+	const char *cnames[] ={"cli2", NULL};
+	fail_unless((sel=read_in_file(path, times))!=NULL);
+	fail_unless(sel->clist!=NULL);
+	assert_cstat_list(sel->clist, cnames);
+
+	for(bu=sel->clist->bu, s=len-1; bu && s>=0; bu=bu->next, s--)
+		assert_bu_minimal(bu, &sd[s]);
+	fail_unless(s==-1);
+	fail_unless(!bu);
+	tear_down(&sel);
+}
+
+START_TEST(test_json_client_specific)
+{
+	const char *path=SRC_DIR "/client_specific";
+	do_test_json_client_specific(path, sd12345, ARR_LEN(sd12345), 1);
+	do_test_json_client_specific(path, sd12345, ARR_LEN(sd12345), 4);
+}
+END_TEST
+
 Suite *suite_client_monitor_json_input(void)
 {
 	Suite *s;
@@ -220,6 +252,7 @@ Suite *suite_client_monitor_json_input(void)
 	tcase_add_test(tc_core, test_json_clients_with_backups);
 	tcase_add_test(tc_core, test_json_clients_with_backups_working);
 	tcase_add_test(tc_core, test_json_clients_with_backups_finishing);
+	tcase_add_test(tc_core, test_json_client_specific);
 	suite_add_tcase(s, tc_core);
 
 	return s;

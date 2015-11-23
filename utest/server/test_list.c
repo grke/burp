@@ -3,10 +3,11 @@
 #include "../../src/asfd.h"
 #include "../../src/bu.h"
 #include "../../src/fsops.h"
+#include "../../src/iobuf.h"
+#include "../../src/sbuf.h"
 #include "../../src/server/bu_get.h"
 #include "../../src/server/list.h"
 #include "../../src/server/sdirs.h"
-#include "../../src/iobuf.h"
 #include "../builders/build.h"
 #include "../builders/build_asfd_mock.h"
 
@@ -366,6 +367,243 @@ START_TEST(test_do_server_list)
 }
 END_TEST
 
+static void run_check_browsedir(const char *browsedir,
+	struct sbuf *mb,
+	enum cmd cmd,
+	const char *path,
+	char **last_bd_match,
+	const char *expected_last_bd_match,
+	int expected_ret,
+	int expected_isdir)
+{
+	char *mbpath;
+	size_t bdlen=0;
+	if(browsedir) bdlen=strlen(browsedir);
+	fail_unless((mbpath=strdup_w(path, __func__))!=NULL);
+	iobuf_from_str(&mb->path, cmd, mbpath);
+	fail_unless(check_browsedir(
+		browsedir,
+		mb,
+		bdlen,
+		last_bd_match)
+			==expected_ret);
+	if(expected_last_bd_match)
+	{
+		fail_unless(*last_bd_match!=NULL);
+		ck_assert_str_eq(expected_last_bd_match, *last_bd_match);
+	}
+	else
+		fail_unless(*last_bd_match==NULL);
+	fail_unless(expected_isdir==S_ISDIR(mb->statp.st_mode));
+	sbuf_free_content(mb);
+}
+
+static void do_test_check_browsedir(enum protocol protocol)
+{
+	struct sbuf *mb;
+	const char *browsedir;
+	char *last_bd_match=NULL;
+
+	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+
+	browsedir="/path";
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/aaaa/path/file",
+		&last_bd_match, NULL, 0, 0);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/pat/aaa/file",
+		&last_bd_match, NULL, 0, 0);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "/path",
+		&last_bd_match, ".",  1, 1);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "/path/",
+		&last_bd_match, ".",  0, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/path/aa/file",
+		&last_bd_match, "aa", 1, 1);
+	// Get a bit more coverage by setting the statp mode to S_IFDIR.
+	mb->statp.st_mode &= ~(S_IFMT);
+	mb->statp.st_mode |= S_IFDIR;
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/path/to/file",
+		&last_bd_match, "to", 1, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/path/to/gggg",
+		&last_bd_match, "to", 0, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/path/to/gggg/zzz",
+		&last_bd_match, "to", 0, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/path/to/hhhh",
+		&last_bd_match, "to", 0, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/path/so/hhhh",
+		&last_bd_match, "so", 1, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/patha/aaa/file",
+		&last_bd_match, "so", 0, 0);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "path/aaa/file",
+		&last_bd_match, "so", 0, 0);
+
+	sbuf_free(&mb);
+	free_w(&last_bd_match);
+	alloc_check();
+}
+
+START_TEST(test_check_browsedir)
+{
+	do_test_check_browsedir(PROTO_1);
+	do_test_check_browsedir(PROTO_2);
+}
+END_TEST
+
+static void do_test_check_browsedir_root(enum protocol protocol)
+{
+	struct sbuf *mb;
+	const char *browsedir;
+	char *last_bd_match=NULL;
+
+	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+
+	browsedir="/";
+	run_check_browsedir(browsedir, mb, CMD_FILE, "aaa",
+		&last_bd_match, NULL,  0, 0);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "/",
+		&last_bd_match, ".",   1, 1);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "/aa",
+		&last_bd_match, "aa",  1, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "/aa/bb",
+		&last_bd_match, "aa",  0, 1);
+
+	sbuf_free(&mb);
+	free_w(&last_bd_match);
+	alloc_check();
+}
+
+START_TEST(test_check_browsedir_root)
+{
+	do_test_check_browsedir_root(PROTO_1);
+	do_test_check_browsedir_root(PROTO_2);
+}
+END_TEST
+
+static void do_test_check_browsedir_null_or_blank(enum protocol protocol,
+	const char *browsedir)
+{
+	struct sbuf *mb;
+	char *last_bd_match=NULL;
+
+	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+
+	run_check_browsedir(browsedir, mb, CMD_FILE, "aaa",
+		&last_bd_match, "aaa",  1, 0);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "/",
+		&last_bd_match, "/",    1, 1);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "/asdf",
+		&last_bd_match, "/",    0, 1);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "/asdf/blah",
+		&last_bd_match, "/",    0, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "zzz",
+		&last_bd_match, "zzz",  1, 0);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "zzzz//",
+		&last_bd_match, "zzzz",  1, 1);
+
+	sbuf_free(&mb);
+	free_w(&last_bd_match);
+	alloc_check();
+}
+
+START_TEST(test_check_browsedir_null_or_blank)
+{
+	do_test_check_browsedir_null_or_blank(PROTO_1, NULL);
+	do_test_check_browsedir_null_or_blank(PROTO_2, NULL);
+	do_test_check_browsedir_null_or_blank(PROTO_1, "");
+	do_test_check_browsedir_null_or_blank(PROTO_2, "");
+}
+END_TEST
+
+static void do_test_check_browsedir_windows(enum protocol protocol)
+{
+	struct sbuf *mb;
+	const char *browsedir;
+	char *last_bd_match=NULL;
+
+	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+
+	browsedir="C:/aaa";
+	run_check_browsedir(browsedir, mb, CMD_FILE, "A:/aaa",
+		&last_bd_match, NULL,   0, 0);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "C:/aaa",
+		&last_bd_match, ".",    1, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "C:/aaa/file",
+		&last_bd_match, "file", 1, 0);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "C:/aaa/filx",
+		&last_bd_match, "filx", 1, 0);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "D:/adf",
+		&last_bd_match, "filx", 0, 0);
+
+	sbuf_free(&mb);
+	free_w(&last_bd_match);
+	alloc_check();
+}
+
+START_TEST(test_check_browsedir_windows)
+{
+	do_test_check_browsedir_windows(PROTO_1);
+	do_test_check_browsedir_windows(PROTO_2);
+}
+END_TEST
+
+static void do_test_check_browsedir_windows_blank(enum protocol protocol)
+{
+	struct sbuf *mb;
+	const char *browsedir;
+	char *last_bd_match=NULL;
+
+	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+
+	browsedir="";
+	run_check_browsedir(browsedir, mb, CMD_FILE, "A:/aaa",
+		&last_bd_match, "A:", 1, 1);
+	run_check_browsedir(browsedir, mb, CMD_DIRECTORY, "C:/aaa",
+		&last_bd_match, "C:", 1, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "C:/aaa/file",
+		&last_bd_match, "C:", 0, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "C:/aaa/filx",
+		&last_bd_match, "C:", 0, 1);
+	run_check_browsedir(browsedir, mb, CMD_FILE, "D:/adf",
+		&last_bd_match, "D:", 1, 1);
+
+	sbuf_free(&mb);
+	free_w(&last_bd_match);
+	alloc_check();
+}
+
+START_TEST(test_check_browsedir_windows_blank)
+{
+	do_test_check_browsedir_windows_blank(PROTO_1);
+	do_test_check_browsedir_windows_blank(PROTO_2);
+}
+END_TEST
+
+START_TEST(test_check_browsedir_alloc_error)
+{
+	char *path;
+	size_t bdlen;
+	struct sbuf *mb;
+	const char *browsedir;
+	char *last_bd_match=NULL;
+
+	fail_unless((mb=sbuf_alloc(PROTO_1))!=NULL);
+
+	browsedir="";
+	bdlen=0;
+	fail_unless((path=strdup_w("aaa", __func__))!=NULL);
+	iobuf_from_str(&mb->path, CMD_FILE, path);
+	alloc_errors=1;
+	fail_unless(check_browsedir(
+		browsedir,
+		mb,
+		bdlen,
+		&last_bd_match)
+			==-1);
+
+	sbuf_free(&mb);
+	free_w(&last_bd_match);
+	alloc_check();
+}
+END_TEST
+
 Suite *suite_server_list(void)
 {
 	Suite *s;
@@ -376,6 +614,12 @@ Suite *suite_server_list(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_do_server_list);
+	tcase_add_test(tc_core, test_check_browsedir);
+	tcase_add_test(tc_core, test_check_browsedir_root);
+	tcase_add_test(tc_core, test_check_browsedir_null_or_blank);
+	tcase_add_test(tc_core, test_check_browsedir_windows);
+	tcase_add_test(tc_core, test_check_browsedir_windows_blank);
+	tcase_add_test(tc_core, test_check_browsedir_alloc_error);
 	suite_add_tcase(s, tc_core);
 
 	return s;

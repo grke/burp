@@ -116,6 +116,18 @@ START_TEST(test_cstat_set_backup_list)
 }
 END_TEST
 
+START_TEST(test_cstat_set_backup_list_fail_bu_get_list)
+{
+	struct cstat *cstat;
+	fail_unless((cstat=cstat_alloc())!=NULL);
+	cstat->permitted=1;
+	// No sdirs is set on cstat, so bu_get_list_with_working() will fail.
+	// But cstat_set_backup_list() will return OK anyway.
+	fail_unless(!cstat_set_backup_list(cstat));
+	fail_unless(cstat->bu==NULL);
+}
+END_TEST
+
 START_TEST(test_cstat_get_client_names)
 {
 	struct cstat *clist=NULL;
@@ -642,6 +654,7 @@ Suite *suite_server_monitor_cstat(void)
 	tcase_set_timeout(tc_core, 5);
 
 	tcase_add_test(tc_core, test_cstat_set_backup_list);
+	tcase_add_test(tc_core, test_cstat_set_backup_list_fail_bu_get_list);
 	tcase_add_test(tc_core, test_cstat_get_client_names);
 	tcase_add_test(tc_core, test_cstat_reload_from_client_confs);
 	tcase_add_test(tc_core, test_cstat_remove_first);

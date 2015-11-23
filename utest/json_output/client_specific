@@ -1,0 +1,47 @@
+{
+    "clients": [
+        {
+            "name": "cli2",
+            "run_status": "unknown",
+            "backups": [
+                {
+                    "number": 5,
+                    "timestamp": 31881600,
+                    "flags": [
+                        "current",
+                        "manifest"
+                    ]
+                },
+                {
+                    "number": 4,
+                    "timestamp": 31795200,
+                    "flags": [
+                        "deletable"
+                    ]
+                },
+                {
+                    "number": 3,
+                    "timestamp": 31708800,
+                    "flags": [
+                        "hardlinked"
+                    ]
+                },
+                {
+                    "number": 2,
+                    "timestamp": 31622400,
+                    "flags": [
+
+                    ]
+                },
+                {
+                    "number": 1,
+                    "timestamp": 31536000,
+                    "flags": [
+                        "deletable",
+                        "manifest"
+                    ]
+                }
+            ]
+        }
+    ]
+}

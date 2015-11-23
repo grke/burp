@@ -83,6 +83,17 @@ void list_server_free(void)
 	regex_free(&regex);
 }
 
+static void maybe_fake_directory(struct sbuf *mb)
+{
+	if(S_ISDIR(mb->statp.st_mode))
+		return;
+	// We are faking a directory entry.
+	// Make sure the directory bit is set.
+	mb->statp.st_mode &= ~(S_IFMT);
+	mb->statp.st_mode |= S_IFDIR;
+	attribs_encode(mb);
+}
+
 int check_browsedir(const char *browsedir,
 	struct sbuf *mb, size_t bdlen, char **last_bd_match)
 {
@@ -97,43 +108,43 @@ int check_browsedir(const char *browsedir,
 		{
 			if(*cp!='\0')
 			{
-				if(*cp!='/') return 0;
+				if(*cp!='/')
+					return 0;
 				cp++;
 			}
 		}
 	}
-	if(*cp=='\0') cp=(char *)".";
-	if(!(copy=strdup_w(cp, __func__))) goto error;
+	if(*cp=='\0')
+		cp=(char *)".";
+	if(!(copy=strdup_w(cp, __func__)))
+		goto error;
 	if((cp=strchr(copy, '/')))
 	{
 		if(bdlen==0) cp++;
 		*cp='\0';
 
-		if(!S_ISDIR(mb->statp.st_mode))
-		{
-			// We are faking a directory entry.
-			// Make sure the directory bit is set.
-			mb->statp.st_mode &= ~(S_IFMT);
-			mb->statp.st_mode |= S_IFDIR;
-			attribs_encode(mb);
-		}
+		maybe_fake_directory(mb);
 	}
+	else if(!strcmp(mb->path.buf, "/")
+	  && !strcmp(browsedir, "/"))
+		maybe_fake_directory(mb);
+	else if(mb->path.cmd==CMD_DIRECTORY)
+		maybe_fake_directory(mb);
 
 	// Strip off possible trailing slash.
-	if((cp=strrchr(copy, '/')) && cp>copy) *cp='\0';
+	if((cp=strrchr(copy, '/')) && cp>copy)
+		*cp='\0';
 
-	if(*last_bd_match)
+	if(*last_bd_match
+	  && !strcmp(*last_bd_match, copy))
 	{
-		if(!strcmp(*last_bd_match, copy))
-		{
-			// Got a duplicate match.
-			free_w(&copy);
-			return 0;
-		}
-		free(*last_bd_match);
+		// Got a duplicate match.
+		free_w(&copy);
+		return 0;
 	}
 	free_w(&mb->path.buf);
 	mb->path.buf=copy;
+	free_w(last_bd_match);
 	if(!(*last_bd_match=strdup_w(copy, __func__)))
 		goto error;
 	return 1;

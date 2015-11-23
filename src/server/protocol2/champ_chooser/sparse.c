@@ -37,7 +37,6 @@ void sparse_delete_all(void)
 	sparse_table=NULL;
 }
 
-
 int sparse_add_candidate(uint64_t *fingerprint, struct candidate *candidate)
 {
 	static size_t s;

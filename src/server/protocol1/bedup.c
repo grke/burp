@@ -84,6 +84,59 @@ static int add_key(off_t st_size, struct file *f)
 	return 0;
 }
 
+static void file_free_content(struct file *file)
+{
+	if(!file) return;
+	free_w(&file->path);
+}
+
+static void file_free(struct file **file)
+{
+	if(!file || !*file) return;
+	file_free_content(*file);
+	free_v((void **)file);
+}
+
+static void files_free(struct file **files)
+{
+	struct file *f;
+	struct file *fhead;
+	if(!files || !*files) return;
+	fhead=*files;
+	while(fhead)
+	{
+		f=fhead;
+		fhead=fhead->next;
+		file_free(&f);
+	}
+}
+
+static void mystruct_free_content(struct mystruct *mystruct)
+{
+	if(!mystruct) return;
+	files_free(&mystruct->files);
+}
+
+static void mystruct_free(struct mystruct **mystruct)
+{
+	if(!mystruct || !*mystruct) return;
+	mystruct_free_content(*mystruct);
+	free_v((void **)mystruct);
+}
+
+static void mystruct_delete_all(void)
+{
+	struct mystruct *tmp;
+	struct mystruct *mystruct;
+
+	HASH_ITER(hh, myfiles, mystruct, tmp)
+	{
+		HASH_DEL(myfiles, mystruct);
+		mystruct_free(&mystruct);
+	}
+	myfiles=NULL;
+}
+
 #define FULL_CHUNK	4096
 
 static int full_match(struct file *o, struct file *n,
@@ -941,5 +994,6 @@ int run_bedup(int argc, char *argv[])
 	logp("%llu bytes %s%s\n",
 		savedbytes, (makelinks || deletedups)?"saved":"saveable",
 			bytes_to_human(savedbytes));
+	mystruct_delete_all();
 	return ret;
 }

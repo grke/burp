@@ -1,8 +1,5 @@
-#include <check.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "../../../test.h"
+#include "../../../../src/alloc.h"
 #include "../../../../src/server/protocol2/champ_chooser/candidate.h"
 #include "../../../../src/server/protocol2/champ_chooser/sparse.h"
 
@@ -10,6 +7,15 @@ static void tear_down(void)
 {
 	alloc_check();
 }
+
+START_TEST(test_sparse_add_alloc_error)
+{
+	uint64_t f0=0xFF11223344556699;
+	alloc_errors=1;
+	fail_unless(sparse_add_candidate(&f0, NULL)==-1);
+	tear_down();
+}
+END_TEST
 
 START_TEST(test_sparse_add_one)
 {
@@ -49,6 +55,7 @@ START_TEST(test_sparse_add_many)
 	fail_unless((candidate4=candidate_alloc())!=NULL);
 	fail_unless((candidate5=candidate_alloc())!=NULL);
 	fail_unless(!sparse_add_candidate(&f1, candidate1));
+	fail_unless(!sparse_add_candidate(&f1, candidate1));
 	fail_unless(!sparse_add_candidate(&f1, candidate2));
 	fail_unless(!sparse_add_candidate(&f2, candidate3));
 	fail_unless(!sparse_add_candidate(&f2, candidate4));
@@ -86,6 +93,7 @@ Suite *suite_server_protocol2_champ_chooser_sparse(void)
 
 	tc_core=tcase_create("Core");
 
+	tcase_add_test(tc_core, test_sparse_add_alloc_error);
 	tcase_add_test(tc_core, test_sparse_add_one);
 	tcase_add_test(tc_core, test_sparse_add_many);
 	suite_add_tcase(s, tc_core);

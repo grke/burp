@@ -2,6 +2,7 @@
 #define _CHAMP_CHOOSER_HASH_H
 
 #include <uthash.h>
+#include <openssl/md5.h>
 
 typedef struct hash_strong hash_strong_t;
 

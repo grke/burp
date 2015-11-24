@@ -83,6 +83,7 @@ Suite *suite_server_protocol1_fdirs(void);
 Suite *suite_server_protocol2_backup_phase4(void);
 Suite *suite_server_protocol2_champ_chooser_candidate(void);
 Suite *suite_server_protocol2_champ_chooser_dindex(void);
+Suite *suite_server_protocol2_champ_chooser_hash(void);
 Suite *suite_server_protocol2_champ_chooser_scores(void);
 Suite *suite_server_protocol2_champ_chooser_sparse(void);
 Suite *suite_server_protocol2_dpth(void);

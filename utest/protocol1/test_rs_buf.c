@@ -126,6 +126,66 @@ START_TEST(test_protocol1_rs_infilebuf_fill_eof)
 }
 END_TEST
 
+START_TEST(test_protocol1_rs_outfilebuf_drain)
+{
+	rs_buffers_t rsbuf;
+	rs_filebuf_t *fb;
+	fb=setup(&rsbuf, 0 /*data_len*/);
+	fail_unless(rs_outfilebuf_drain(NULL /*job*/, &rsbuf, fb)==RS_DONE);
+	tear_down(&fb);
+}
+END_TEST
+
+START_TEST(test_protocol1_rs_outfilebuf_drain_error1)
+{
+	char *next_out=(char *)"next_out";
+	rs_buffers_t rsbuf;
+	rs_filebuf_t *fb;
+	fb=setup(&rsbuf, 0 /*data_len*/);
+	rsbuf.next_out=next_out;
+	rsbuf.avail_out=64; // greater than fb->buf_len
+	fail_unless(rs_outfilebuf_drain(NULL /*job*/, &rsbuf, fb)==RS_IO_ERROR);
+	tear_down(&fb);
+}
+END_TEST
+
+START_TEST(test_protocol1_rs_outfilebuf_drain_error2)
+{
+	rs_buffers_t rsbuf;
+	rs_filebuf_t *fb;
+	fb=setup(&rsbuf, 0 /*data_len*/);
+	rsbuf.next_out=fb->buf-1; // buf->next_out < fb->buf
+	rsbuf.avail_out=1;
+	fail_unless(rs_outfilebuf_drain(NULL /*job*/, &rsbuf, fb)==RS_IO_ERROR);
+	tear_down(&fb);
+}
+END_TEST
+
+START_TEST(test_protocol1_rs_outfilebuf_drain_error3)
+{
+	rs_buffers_t rsbuf;
+	rs_filebuf_t *fb;
+	fb=setup(&rsbuf, 0 /*data_len*/);
+	// buf->next_out > fb->buf + fb->buf_len
+	rsbuf.next_out=fb->buf+fb->buf_len+1;
+	fail_unless(rs_outfilebuf_drain(NULL /*job*/, &rsbuf, fb)==RS_IO_ERROR);
+	tear_down(&fb);
+}
+END_TEST
+
+START_TEST(test_protocol1_rs_outfilebuf_drain_error4)
+{
+	rs_buffers_t rsbuf;
+	rs_filebuf_t *fb;
+	fb=setup(&rsbuf, 0 /*data_len*/);
+	// !buf->next_out && buf->avail_out
+	rsbuf.next_out=NULL;
+	rsbuf.avail_out=1;
+	fail_unless(rs_outfilebuf_drain(NULL /*job*/, &rsbuf, fb)==RS_IO_ERROR);
+	tear_down(&fb);
+}
+END_TEST
+
 Suite *suite_protocol1_rs_buf(void)
 {
 	Suite *s;
@@ -137,12 +197,20 @@ Suite *suite_protocol1_rs_buf(void)
 
 	tcase_add_test(tc_core, test_protocol1_rs_buf);
 	tcase_add_test(tc_core, test_protocol1_rs_buf_alloc_failure);
+
 	tcase_add_test(tc_core, test_protocol1_rs_infilebuf_fill);
 	tcase_add_test(tc_core, test_protocol1_rs_infilebuf_fill_error1);
 	tcase_add_test(tc_core, test_protocol1_rs_infilebuf_fill_error2);
 	tcase_add_test(tc_core, test_protocol1_rs_infilebuf_fill_error3);
 	tcase_add_test(tc_core, test_protocol1_rs_infilebuf_fill_error4);
 	tcase_add_test(tc_core, test_protocol1_rs_infilebuf_fill_eof);
+
+	tcase_add_test(tc_core, test_protocol1_rs_outfilebuf_drain);
+	tcase_add_test(tc_core, test_protocol1_rs_outfilebuf_drain_error1);
+	tcase_add_test(tc_core, test_protocol1_rs_outfilebuf_drain_error2);
+	tcase_add_test(tc_core, test_protocol1_rs_outfilebuf_drain_error3);
+	tcase_add_test(tc_core, test_protocol1_rs_outfilebuf_drain_error4);
+
 	suite_add_tcase(s, tc_core);
 
 	return s;

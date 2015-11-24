@@ -46,6 +46,7 @@ SRCS = \
 	server/protocol1/test_fdirs.c \
 	server/protocol2/champ_chooser/test_candidate.c \
 	server/protocol2/champ_chooser/test_dindex.c \
+	server/protocol2/champ_chooser/test_hash.c \
 	server/protocol2/champ_chooser/test_scores.c \
 	server/protocol2/champ_chooser/test_sparse.c \
 	server/protocol2/test_backup_phase4.c \

@@ -3,16 +3,15 @@
 # Restarts Amazon virtual machines.
 
 prog=$(basename $0)
+DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
 
-ubuntuid=i-be250362
-windowsid=i-c021071c
-freebsdid=i-0b62f4d4
+. "$DIR"/vms_ids
 
 usage()
 {
 	echo "usage: $prog [stop|start|restart|status] [instanceid ...]" 1>&2
 	echo "No instanceids restarts all AWS machines" 1>&2
-	echo "'ubuntu' maps to instanceid $ubuntu" 1>&2
+	echo "'ubuntu' maps to instanceid $ubuntuid" 1>&2
 	echo "'freebsd' maps to instanceid $windowsid" 1>&2
 	echo "'windows' maps to instanceid $freebsdid" 1>&2
 	exit 1
@@ -20,7 +19,7 @@ usage()
 
 [ -z "$1" ] && usage
 
-. ./vms_shared
+. "$DIR"/vms_shared
 
 instanceids="$2"
 if [ -n "$instanceids" ] ; then

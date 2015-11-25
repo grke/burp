@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-#
-# Run builds and tests on Amazon virtual machines.
 
 prog=$(basename $0)
 DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
@@ -19,13 +17,12 @@ directory="$2"
 
 . "$DIR"/vms_shared || fail
 . "$DIR"/vms_ids || fail
-instanceids="$ubuntuid
-$windowsid"
+instanceids="$freebsdid"
 [ -n "$instanceids" ] || fail
 restart_instanceids "$instanceids"
 get_summary "$instanceids"
 
-host="ubuntu@$ubuntu"
+host="ec2-user@$freebsd"
 ssh_opts="-i /var/lib/jenkins/aws/ubfree.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
 
 # It is possible for the machine to be up, but for sshd to not yet be running.
@@ -48,16 +45,6 @@ ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 ssh $ssh_opts "$host" \
 	"cd $directory && ./configure && make test" \
 		|| fail "make test"
-ssh $ssh_opts "$host" \
-	"cd $directory/src/win32 && make && make WIN64=yes" \
-		|| fail "building windows installers"
-ssh $ssh_opts "$host" \
-	"cd $directory/test && ./test_windows64 $ubuntu $windows Administrator" \
-		|| fail "running windows tests"
-scp -r $ssh_opts "$host:$directory/src/win*/release*/burp-win*installer*.exe" . || fail "copying windows installers"
-scp -r $ssh_opts "$host:/tmp/burp-coverage" . || fail "copying code coverage"
-ssh $ssh_opts "$host" "rm -rf $tarfile $directory" \
-	|| fail "cleaning ubuntu machine"
 
 stop_instanceids "$instanceids"
 

@@ -3,19 +3,18 @@
 # Some useful wrapping to help the vms test script with automatic builds and
 # testing.
 
-v=$(grep define src/version.h | cut -f 2 -d "\"")
-[ -n $v ] || exit 1
-dir=burp-$v
-ext=tar.bz2
-tarfile=$dir.$ext
+tarfile=$(ls burp-*.tar.bz2)
+dir=${tarfile%*.tar.bz2}
 
-files=$(ls)
-mkdir $dir || exit 1
-mv $files $dir || exit 1
-tar -cjvf $tarfile $dir || exit 1
-
-$dir/test/vms_i386 $tarfile $dir || exit 1
-
-$dir/test/vms $tarfile $dir || exit 1
+if [ "$1" = "burp-main" ] ; then
+	$dir/test/vms $tarfile $dir || exit 1
+elif [ "$1" = "burp-i386" ] ; then
+	$dir/test/vms_i386 $tarfile $dir || exit 1
+elif [ "$1" = "burp-freebsd" ] ; then
+	$dir/test/vms_freebsd $tarfile $dir || exit 1
+else
+	echo "Do not know what sort of build to do"
+	exit 1
+fi
 
 exit 0

@@ -97,7 +97,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// sort it out.
 		if(sbuf_is_encrypted(sb))
 		{
-			ret=send_whole_filel(asfd, sb->path.cmd, best,
+			ret=send_whole_filel(asfd, sb->path.cmd,
 				sb->protocol1->datapth.buf, 1, bytes,
 				cntr, bfd, NULL, 0);
 		}
@@ -115,7 +115,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
-			ret=send_whole_filel(asfd, sb->path.cmd, best,
+			ret=send_whole_filel(asfd, sb->path.cmd,
 				sb->protocol1->datapth.buf, 1, bytes,
 				cntr, bfd, NULL, 0);
 		}

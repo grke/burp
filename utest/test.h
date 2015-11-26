@@ -61,6 +61,7 @@ Suite *suite_fzp(void);
 Suite *suite_hexmap(void);
 Suite *suite_lock(void);
 Suite *suite_pathcmp(void);
+Suite *suite_protocol1_handy(void);
 Suite *suite_protocol1_rs_buf(void);
 Suite *suite_protocol2_blist(void);
 Suite *suite_protocol2_rabin_rconf(void);

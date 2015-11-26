@@ -40,6 +40,12 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	// compilation warnings on Macs.
 	uint8_t enc_iv[]={'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'};
 
+	if(!encryption_password)
+	{
+		logp("No encryption password in %s()\n", __func__);
+		goto error;
+	}
+
 	if(!(ctx=(EVP_CIPHER_CTX *)
 		calloc_w(1, sizeof(EVP_CIPHER_CTX), __func__)))
 			goto error;
@@ -370,7 +376,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 #endif
 
 int send_whole_filel(struct asfd *asfd,
-	enum cmd cmd, const char *fname, const char *datapth,
+	enum cmd cmd, const char *datapth,
 	int quick_read, uint64_t *bytes, struct cntr *cntr,
 	BFILE *bfd, const char *extrameta, size_t elen)
 {
@@ -378,6 +384,12 @@ int send_whole_filel(struct asfd *asfd,
 	size_t s=0;
 	MD5_CTX md5;
 	char buf[4096]="";
+
+	if(!bfd)
+	{
+		logp("No bfd in %s()\n", __func__);
+		return -1;
+	}
 
 	if(!MD5_Init(&md5))
 	{

@@ -118,11 +118,11 @@ static int send_whole_file_w(struct asfd *asfd,
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 		return send_whole_file_gzl(asfd,
-		  sb->path.buf, datapth, quick_read, bytes, 
+		  sb->path.buf, datapth, quick_read, bytes,
 		  encpassword, cntr, compression, bfd, extrameta, elen);
 	else
 		return send_whole_filel(asfd,
-		  sb->path.cmd, sb->path.buf, datapth, quick_read, bytes, 
+		  sb->path.cmd, datapth, quick_read, bytes,
 		  cntr, bfd, extrameta, elen);
 }
 

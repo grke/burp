@@ -26,7 +26,7 @@ build_and_install()
 	ls ../ | while read f ; do
 		[ "$f" = "test" ] && continue
 		[ "$f" = ".git" ] && continue
-		cp -ar ../"$f" "$build" || fail "could not copy ../$f to $build"
+		cp -a ../"$f" "$build" || fail "could not copy ../$f to $build"
 	done || exit 1
 
 	tolink="$build/utest/test_cmd.c"

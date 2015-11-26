@@ -339,7 +339,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 		char *cnamespace=NULL;
 		size_t totallen=0;
 		char *toappend=NULL;
-		char ctuple[BSD_BUF_SIZE]="";
+		char z[BSD_BUF_SIZE]="";
 		char cattrname[BSD_BUF_SIZE]="";
 		if((len=extattr_list_link(path, namespaces[i], NULL, 0))<0)
 		{
@@ -390,7 +390,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 				cnt=((int)sizeof(cattrname)-1);
 			strncpy(cattrname, xattrlist+(j+1), cnt);
 			cattrname[cnt]='\0';
-			snprintf(ctuple, sizeof(ctuple), "%s.%s",
+			snprintf(z, sizeof(z), "%s.%s",
 				cnamespace, cattrname);
 
 			if(have_acl)
@@ -401,7 +401,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 				// as ACLs.
 				for(c=0; acl_skiplist[c]; c++)
 				{
-					if(!strcmp(ctuple, acl_skiplist[c]))
+					if(!strcmp(z, acl_skiplist[c]))
 					{
 						skip++;
 						break;
@@ -409,8 +409,8 @@ int get_xattr(struct asfd *asfd, const char *path,
 				}
 				if(skip) continue;
 			}
-			zlen=strlen(ctuple);
-			//printf("\ngot: %s (%s)\n", ctuple, path);
+			zlen=strlen(z);
+			//printf("\ngot: %s (%s)\n", z, path);
 
 			if((vlen=extattr_list_link(path, namespaces[i],
 				xattrlist, len))<0)

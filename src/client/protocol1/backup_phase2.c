@@ -12,29 +12,76 @@
 #include "../extrameta.h"
 #include "../find.h"
 
+/*
 static int load_signature(struct asfd *asfd,
-	rs_signature_t **sumset, struct conf **confs)
+	rs_signature_t **sumset, struct cntr *cntr)
 {
-	rs_result r;
+	int ret=-1;
+	rs_result result;
+	rs_buffers_t rsbuf;
+	rs_job_t *job=NULL;
+	rs_filebuf_t *infb=NULL;
+	memset(&rsbuf, 0, sizeof(rsbuf));
+
+	if(!(job=rs_loadsig_begin(sumset)))
+	{
+		logp("could not start sig job.\n");
+		goto end;
+	}
+
+        if(!(infb=rs_filebuf_new(asfd, NULL,
+		NULL, asfd->fd, ASYNC_BUF_LEN, -1, cntr)))
+			goto end;
+
+	while(1)
+	{
+		switch((result=rs_async(job, &rsbuf, infb, NULL)))
+		{
+			case RS_BLOCKED:
+			case RS_RUNNING:
+				continue;
+			case RS_DONE:
+				if(rs_build_hash_table(*sumset))
+					goto end;
+				ret=0;
+				goto end;
+			default:
+				logp("error in rs_async for sig: %d\n",
+					result);
+				goto end;
+		}
+	}
+end:
+	if(job) rs_job_free(job);
+	rs_filebuf_free(&infb);
+	return ret;
+}
+*/
+
+static int load_signature(struct asfd *asfd,
+	rs_signature_t **sumset, struct cntr *cntr)
+{
 	rs_job_t *job;
 
-	job=rs_loadsig_begin(sumset);
-	if((r=rs_loadsig_network_run(asfd, job, get_cntr(confs))))
+	if(!(job=rs_loadsig_begin(sumset)))
 	{
-		rs_free_sumset(*sumset);
-		return r;
+		logp("could not start sig job.\n");
+		return -1;
 	}
-	if((r=rs_build_hash_table(*sumset))) return r;
+	if(rs_loadsig_network_run(asfd, job, cntr))
+		return -1;
+	if(rs_build_hash_table(*sumset))
+		return -1;
 	rs_job_free(job);
-	return r;
+	return 0;
 }
 
 static int load_signature_and_send_delta(struct asfd *asfd,
 	BFILE *bfd, uint64_t *bytes, uint64_t *sentbytes,
-	struct conf **confs)
+	struct cntr *cntr)
 {
-	rs_job_t *job;
-	rs_result r;
+	int ret=-1;
+	rs_job_t *job=NULL;
 	rs_signature_t *sumset=NULL;
 	uint8_t checksum[MD5_DIGEST_LENGTH];
 	rs_filebuf_t *infb=NULL;
@@ -42,72 +89,60 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 	rs_buffers_t rsbuf;
 	memset(&rsbuf, 0, sizeof(rsbuf));
 
-	if(load_signature(asfd, &sumset, confs)) return -1;
+	if(load_signature(asfd, &sumset, cntr))
+		goto end;
 
 	if(!(job=rs_delta_begin(sumset)))
 	{
 		logp("could not start delta job.\n");
-		rs_free_sumset(sumset);
-		return RS_IO_ERROR;
+		goto end;
 	}
 
 	if(!(infb=rs_filebuf_new(asfd, bfd,
-		NULL, -1, ASYNC_BUF_LEN, bfd->datalen,
-		get_cntr(confs)))
+		NULL, -1, ASYNC_BUF_LEN, bfd->datalen, cntr))
 	  || !(outfb=rs_filebuf_new(asfd, NULL,
-		NULL, asfd->fd, ASYNC_BUF_LEN, -1,
-		get_cntr(confs))))
+		NULL, asfd->fd, ASYNC_BUF_LEN, -1, cntr)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
-		rs_filebuf_free(&infb);
-		return -1;
+		goto end;
 	}
 
 	while(1)
 	{
-		rs_result delresult;
-		delresult=rs_async(job, &rsbuf, infb, outfb);
-		if(delresult==RS_DONE)
+		rs_result result;
+		switch((result=rs_async(job, &rsbuf, infb, outfb)))
 		{
-			r=delresult;
-			break;
-		}
-		else if(delresult==RS_BLOCKED || delresult==RS_RUNNING)
-		{
-			// Keep going
-		}
-		else
-		{
-			logp("error in rs_async for delta: %d\n", delresult);
-			r=delresult;
-			break;
-		}
-		// FIX ME: get it to read stuff (errors, for example) here too.
-		if(asfd->as->write(asfd->as)) return -1;
-	}
-
-	if(r!=RS_DONE)
-		logp("delta loop returned: %d\n", r);
-
-	if(r==RS_DONE)
-	{
-		*bytes=infb->bytes;
-		*sentbytes=outfb->bytes;
-		if(!MD5_Final(checksum, &(infb->md5)))
-		{
-			logp("MD5_Final() failed\n");
-			r=RS_IO_ERROR;
+			case RS_DONE:
+				*bytes=infb->bytes;
+				*sentbytes=outfb->bytes;
+				if(!MD5_Final(checksum, &(infb->md5)))
+				{
+					logp("MD5_Final() failed\n");
+					goto end;
+				}
+				if(write_endfile(asfd, *bytes, checksum))
+					goto end;
+				ret=0;
+				goto end;
+			case RS_BLOCKED:
+			case RS_RUNNING:
+				// FIX ME: get it to read stuff here too.
+				// (errors, for example)
+				if(asfd->as->write(asfd->as))
+					goto end;
+				continue;
+			default:
+				logp("error in rs_async for delta: %d\n",
+					result);
+				goto end;
 		}
 	}
+end:
 	rs_filebuf_free(&infb);
 	rs_filebuf_free(&outfb);
-	rs_job_free(job);
-	rs_free_sumset(sumset);
-
-	if(r==RS_DONE && write_endfile(asfd, *bytes, checksum))
-		return -1;
-
-	return r;
+	if(job) rs_job_free(job);
+	if(sumset) rs_free_sumset(sumset);
+	return ret;
 }
 
 static int send_whole_file_w(struct asfd *asfd,
@@ -139,7 +174,7 @@ static int forget_file(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 		rs_signature_t *sumset=NULL;
 		// The server will be sending us a signature.
 		// Munch it up then carry on.
-		if(load_signature(asfd, &sumset, confs)) return -1;
+		if(load_signature(asfd, &sumset, get_cntr(confs))) return -1;
 		else rs_free_sumset(sumset);
 	}
 	return 0;
@@ -258,7 +293,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		  || asfd->write(asfd, &sb->attr)
 		  || asfd->write(asfd, &sb->path)
 		  || load_signature_and_send_delta(asfd, bfd,
-			&bytes, &sentbytes, confs))
+			&bytes, &sentbytes, cntr))
 		{
 			logp("error in sig/delta for %s (%s)\n",
 				sb->path.buf, sb->protocol1->datapth.buf);

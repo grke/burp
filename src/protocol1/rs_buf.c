@@ -476,6 +476,7 @@ rs_result rs_loadsig_network_run(struct asfd *asfd,
 	rs_buffers_t buf;
 	rs_result result;
 	rs_filebuf_t *in_fb=NULL;
+	memset(&buf, 0, sizeof(buf));
 
 	if(!(in_fb=rs_filebuf_new(asfd, NULL,
 		NULL, asfd->fd, ASYNC_BUF_LEN, -1, cntr)))

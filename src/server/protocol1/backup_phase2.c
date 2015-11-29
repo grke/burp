@@ -165,15 +165,15 @@ static int process_changed_file(struct asfd *asfd,
 		goto end;
 	}
 	//logp("sig begin: %s\n", p1b->protocol1->datapth.buf);
-	if(!(p1b->protocol1->infb=rs_filebuf_new(asfd, NULL,
+	if(!(p1b->protocol1->infb=rs_filebuf_new(NULL,
 		p1b->protocol1->sigfzp,
-		-1, blocklen, -1, get_cntr(cconfs))))
+		NULL, blocklen, -1)))
 	{
 		logp("could not rs_filebuf_new for infb.\n");
 		goto end;
 	}
-	if(!(p1b->protocol1->outfb=rs_filebuf_new(asfd, NULL, NULL,
-		asfd->fd, ASYNC_BUF_LEN, -1, get_cntr(cconfs))))
+	if(!(p1b->protocol1->outfb=rs_filebuf_new(NULL, NULL,
+		asfd, ASYNC_BUF_LEN, -1)))
 	{
 		logp("could not rs_filebuf_new for in_outfb.\n");
 		goto end;

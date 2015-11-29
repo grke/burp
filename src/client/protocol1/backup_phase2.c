@@ -12,37 +12,38 @@
 #include "../extrameta.h"
 #include "../find.h"
 
-/*
-static int load_signature(struct asfd *asfd,
-	rs_signature_t **sumset, struct cntr *cntr)
+static int rs_loadsig_network_run(struct asfd *asfd,
+	rs_job_t *job, struct cntr *cntr)
 {
 	int ret=-1;
+	rs_buffers_t buf;
 	rs_result result;
-	rs_buffers_t rsbuf;
-	rs_job_t *job=NULL;
-	rs_filebuf_t *infb=NULL;
-	memset(&rsbuf, 0, sizeof(rsbuf));
+	rs_filebuf_t *in_fb=NULL;
+	memset(&buf, 0, sizeof(buf));
 
-	if(!(job=rs_loadsig_begin(sumset)))
+	if(!(in_fb=rs_filebuf_new(NULL,
+		NULL, asfd, ASYNC_BUF_LEN, -1)))
 	{
-		logp("could not start sig job.\n");
+		result=RS_MEM_ERROR;
 		goto end;
 	}
 
-        if(!(infb=rs_filebuf_new(asfd, NULL,
-		NULL, asfd->fd, ASYNC_BUF_LEN, -1, cntr)))
-			goto end;
-
 	while(1)
 	{
-		switch((result=rs_async(job, &rsbuf, infb, NULL)))
+		iobuf_free_content(asfd->rbuf);
+		if(asfd->read(asfd)) goto end;
+		if(asfd->rbuf->cmd==CMD_MESSAGE
+		  || asfd->rbuf->cmd==CMD_WARNING)
+		{
+			log_recvd(asfd->rbuf, cntr, 0);
+			continue;
+		}
+		switch((result=rs_async(job, &buf, in_fb, NULL)))
 		{
 			case RS_BLOCKED:
 			case RS_RUNNING:
 				continue;
 			case RS_DONE:
-				if(rs_build_hash_table(*sumset))
-					goto end;
 				ret=0;
 				goto end;
 			default:
@@ -51,12 +52,12 @@ static int load_signature(struct asfd *asfd,
 				goto end;
 		}
 	}
+
 end:
-	if(job) rs_job_free(job);
-	rs_filebuf_free(&infb);
+	iobuf_free_content(asfd->rbuf);
+	rs_filebuf_free(&in_fb);
 	return ret;
 }
-*/
 
 static int load_signature(struct asfd *asfd,
 	rs_signature_t **sumset, struct cntr *cntr)
@@ -98,10 +99,10 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 		goto end;
 	}
 
-	if(!(infb=rs_filebuf_new(asfd, bfd,
-		NULL, -1, ASYNC_BUF_LEN, bfd->datalen, cntr))
-	  || !(outfb=rs_filebuf_new(asfd, NULL,
-		NULL, asfd->fd, ASYNC_BUF_LEN, -1, cntr)))
+	if(!(infb=rs_filebuf_new(bfd,
+		NULL, NULL, ASYNC_BUF_LEN, bfd->datalen))
+	  || !(outfb=rs_filebuf_new(NULL,
+		NULL, asfd, ASYNC_BUF_LEN, -1)))
 	{
 		logp("could not rs_filebuf_new for delta\n");
 		goto end;

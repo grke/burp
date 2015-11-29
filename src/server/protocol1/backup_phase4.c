@@ -27,7 +27,7 @@
 // FIX THIS: This stuff is very similar to make_rev_delta, can maybe share
 // some code.
 int do_patch(struct asfd *asfd, const char *dst, const char *del,
-	const char *upd, bool gzupd, int compression, struct conf **cconfs)
+	const char *upd, bool gzupd, int compression)
 {
 	struct fzp *dstp=NULL;
 	struct fzp *delfzp=NULL;
@@ -46,8 +46,7 @@ int do_patch(struct asfd *asfd, const char *dst, const char *del,
 
 	if(!upfzp) goto end;
 
-	result=rs_patch_gzfile(asfd,
-		dstp, delfzp, upfzp, get_cntr(cconfs));
+	result=rs_patch_gzfile(dstp, delfzp, upfzp);
 end:
 	fzp_close(&dstp);
 	fzp_close(&delfzp);
@@ -79,7 +78,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 
 	if(!dstfzp
 	  || !(sigp=fzp_open(sig, "wb"))
-	  || rs_sig_gzfile(NULL, dstfzp, sigp,
+	  || rs_sig_gzfile(dstfzp, sigp,
 		get_librsync_block_len(endfile),
 		RS_DEFAULT_STRONG_LEN, confs)!=RS_DONE)
 			goto end;
@@ -127,9 +126,8 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 		delfzp=fzp_open(del, "wb");
 	if(!delfzp) goto end;
 
-	if(rs_delta_gzfile(NULL, sumset, srcfzp,
-		delfzp, get_cntr(cconfs))!=RS_DONE)
-			goto end;
+	if(rs_delta_gzfile(sumset, srcfzp, delfzp)!=RS_DONE)
+		goto end;
 	ret=0;
 end:
 	if(sumset) rs_free_sumset(sumset);
@@ -309,8 +307,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		}
 
 		if((lrs=do_patch(NULL, infpath, deltafpath, newpath,
-			sb->compression, sb->compression /* from manifest */,
-			cconfs)))
+			sb->compression, sb->compression /* from manifest */)))
 		{
 			logp("WARNING: librsync error when patching %s: %d\n",
 				oldpath, lrs);

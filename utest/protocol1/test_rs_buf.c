@@ -7,13 +7,11 @@ static rs_filebuf_t *setup(rs_buffers_t *rsbuf, int data_len)
 	rs_filebuf_t *fb;
         if(rsbuf) memset(rsbuf, 0, sizeof(rs_buffers_t));
 	fail_unless((fb=rs_filebuf_new(
-		NULL, // asfd
 		NULL, // bfd
 		NULL, // fzp
-		-1,   // fd
+		NULL, // asfd
 		32,   // buf_len
-		data_len,
-		NULL  // cntr
+		data_len
 	))!=NULL);
 	return fb;
 }
@@ -44,13 +42,11 @@ START_TEST(test_protocol1_rs_buf_alloc_failure)
 	rs_filebuf_t *fb;
 	alloc_errors=1;
 	fail_unless((fb=rs_filebuf_new(
-		NULL, // asfd
 		NULL, // bfd
 		NULL, // fzp
-		-1,   // fd
+		NULL, // asfd
 		32,   // buf_len
-		20,   // data_len
-		NULL  // cntr
+		20    // data_len
 	))==NULL);
 }
 END_TEST

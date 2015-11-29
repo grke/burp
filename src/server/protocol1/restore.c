@@ -255,7 +255,7 @@ static int process_data_dir_file(struct asfd *asfd,
 
 		if(do_patch(asfd, best, dpath, tmp,
 			0 /* do not gzip the result */,
-			sb->compression /* from the manifest */, cconfs))
+			sb->compression /* from the manifest */))
 		{
 			logw(asfd, cntr, "problem when patching %s with %s\n", path, b->timestamp);
 			ret=0;

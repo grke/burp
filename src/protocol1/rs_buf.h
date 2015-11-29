@@ -39,44 +39,48 @@ struct rs_filebuf
 {
 	BFILE *bfd;
 	struct fzp *fzp;
-	int fd;
 	char *buf;
 	size_t buf_len;
 	uint64_t bytes;
 	size_t data_len;
 	int do_known_byte_count;
-	struct cntr *cntr;
 	MD5_CTX md5;
 	struct asfd *asfd;
 };
 
-// FIX THIS: Now that struct asfd is getting passed, probably do not need
-// fd as well,
-rs_filebuf_t *rs_filebuf_new(struct asfd *asfd,
-	BFILE *bfd, struct fzp *fzp,
-	int fd, size_t buf_len, size_t data_len, struct cntr *cntr);
+rs_filebuf_t *rs_filebuf_new(BFILE *bfd,
+	struct fzp *fzp,
+	struct asfd *asfd,
+	size_t buf_len,
+	size_t data_len);
+
 void rs_filebuf_free(rs_filebuf_t **fb);
-rs_result rs_infilebuf_fill(rs_job_t *, rs_buffers_t *buf, void *fb);
-rs_result rs_outfilebuf_drain(rs_job_t *, rs_buffers_t *, void *fb);
+
+rs_result rs_infilebuf_fill(rs_job_t *job,
+	rs_buffers_t *buf,
+	void *opaque);
+rs_result rs_outfilebuf_drain(rs_job_t *job,
+	rs_buffers_t *buf,
+	void *opaque);
 
 rs_result rs_async(rs_job_t *job,
 	rs_buffers_t *rsbuf, rs_filebuf_t *infb, rs_filebuf_t *outfb);
 
-rs_result rs_patch_gzfile(struct asfd *asfd,
-	struct fzp *basis_file, struct fzp *delta_file, struct fzp *new_file,
-	struct cntr *cntr);
-rs_result rs_sig_gzfile(struct asfd *asfd,
-	struct fzp *old_file, struct fzp *sig_file,
-	size_t new_block_len, size_t strong_len,
+rs_result rs_patch_gzfile(struct fzp *basis_file,
+	struct fzp *delta_file,
+	struct fzp *new_file);
+rs_result rs_sig_gzfile(struct fzp *old_file,
+	struct fzp *sig_file,
+	size_t new_block_len,
+	size_t strong_len,
 	struct conf **confs);
-rs_result rs_delta_gzfile(struct asfd *asfd, rs_signature_t *sig,
-	struct fzp *new_file, struct fzp *delta_file,
-	struct cntr *cntr);
+rs_result rs_delta_gzfile(rs_signature_t *sig,
+	struct fzp *new_file,
+	struct fzp *delta_file);
 
 rs_result rs_loadsig_fzp(struct fzp *fzp,
-	rs_signature_t **sig, rs_stats_t *stats);
-rs_result rs_loadsig_network_run(struct asfd *asfd,
-	rs_job_t *job, struct cntr *cntr);
+	rs_signature_t **sig,
+	rs_stats_t *stats);
 
 #ifndef RS_DEFAULT_STRONG_LEN
 extern rs_magic_number rshash_to_magic_number(enum rshash r);

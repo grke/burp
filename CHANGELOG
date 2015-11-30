@@ -1,4 +1,31 @@
+2015-11-30 Changes in burp-2.0.28:
   * Use the same maximum blocksize as rsync ((int32_t)1<<17).
+  * Clean up client side librsync load_signature code.
+  * Add freebsd to AWS automatic build (actual tests not working yet).
+  * Parallel test runs.
+  * Update Debian autoupgrade script.
+  * A lot more unit test coverage.
+  * Always flush asfd at the end of tasks.
+  * Make bad regexes produce error messages.
+  * Make bad restore regexes produce a message on the client side.
+  * Bug fix to make bad strlist regexes not match everything.
+  * Fix memory leaks in xattr.c.
+  * Fix memory leaks in cntr.c and cstat.c.
+  * Fix segfaults in cstat.c.
+  * Get basic diff to work.
+  * On restore, always open deltas via zlib, so it doesn't matter whether
+    they have been compressed or not.
+  * Make it possible to use '-b all' on restore/verify. Use '-b all' in
+    tests.
+  * Don't quit the restore if inflating or patching failed - move on to
+    the next file.
+  * Fix listing all backups.
+  * Remove json list option.
+  * Don't build separate .a files. Just use .o files.
+  * Fix protocol 1 EFS restore breakage.
+  * Add some EFS files to the Windows tests.
+  * Fix winattr values not being preserved on changed files.
+  * Fix for yajl sprintf_s.
 
 2015-10-31 Changes in burp-2.0.26:
   * Paid for by an anonymous user: add a new screen to the Windows installer

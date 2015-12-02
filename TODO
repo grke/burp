@@ -15,7 +15,9 @@ roughly in order of most important to least.
 
 * maybe_copy_data_files_across() is probably broken.
 
-* Make CMD_INTERRUPT work (on restore, maybe others too).
+* Make CMD_INTERRUPT work (on restore).
+
+* Make CMD_INTERRUPT work (on backup phase2).
 
 * Make the status monitor work.
 

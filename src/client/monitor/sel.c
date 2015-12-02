@@ -15,8 +15,9 @@ static void sel_free_content(struct sel *sel)
 {
 	if(!sel) return;
 	cstat_list_free(&sel->clist);
-	bu_list_free(&sel->backup);
 	llines_free(&sel->llines);
+	// Will be freed elsewhere.
+	//bu_list_free(&sel->backup);
 }
 
 void sel_free(struct sel **sel)

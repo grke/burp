@@ -50,6 +50,7 @@ SRCS = \
 	server/protocol2/champ_chooser/test_hash.c \
 	server/protocol2/champ_chooser/test_scores.c \
 	server/protocol2/champ_chooser/test_sparse.c \
+	server/protocol2/test_backup_phase2.c \
 	server/protocol2/test_backup_phase4.c \
 	server/protocol2/test_dpth.c \
 	server/test_bu_get.c \

@@ -149,6 +149,12 @@ int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	int ret=0;
 	char *tmp=NULL;
 
+	if(!base_path)
+	{
+		logp("No base_path supplied in %s()\n", __func__);
+		goto error;
+	}
+
 	dpth->max_storage_subdirs=max_storage_subdirs;
 
 	free_w(&dpth->base_path);

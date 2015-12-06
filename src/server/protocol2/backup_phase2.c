@@ -777,17 +777,44 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
 	uint64_t wrap_up=0;
-	struct asfd *asfd=as->asfd;
-	struct asfd *chfd;
-	struct cntr *cntr=get_cntr(confs);
+	struct asfd *asfd=NULL;
+	struct asfd *chfd=NULL;
+	struct cntr *cntr=NULL;
+
+	if(!as)
+	{
+		logp("async not provided to %s()\n", __func__);
+		goto end;
+	}
+	if(!sdirs)
+	{
+		logp("sdirs not provided to %s()\n", __func__);
+		goto end;
+	}
+	if(!confs)
+	{
+		logp("confs not provided to %s()\n", __func__);
+		goto end;
+	}
+	asfd=as->asfd;
+	if(!asfd)
+	{
+		logp("asfd not provided to %s()\n", __func__);
+		goto end;
+	}
+	chfd=get_asfd_from_list_by_fdtype(as, ASFD_FD_SERVER_TO_CHAMP_CHOOSER);
+	if(!chfd)
+	{
+		logp("chfd not provided to %s()\n", __func__);
+		goto end;
+	}
+	cntr=get_cntr(confs);
 	if(get_int(confs[OPT_BREAKPOINT])>=2000
 	  && get_int(confs[OPT_BREAKPOINT])<3000)
 	{
 		breaking=get_int(confs[OPT_BREAKPOINT]);
 		breakcount=breaking-2000;
 	}
-
-	chfd=get_asfd_from_list_by_fdtype(as, ASFD_FD_SERVER_TO_CHAMP_CHOOSER);
 
 	logp("Phase 2 begin (recv backup data)\n");
 
@@ -889,8 +916,8 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 end:
 	logp("End backup\n");
 	slist_free(&slist);
-	iobuf_free_content(asfd->rbuf);
-	iobuf_free_content(chfd->rbuf);
+	if(asfd) iobuf_free_content(asfd->rbuf);
+	if(chfd) iobuf_free_content(chfd->rbuf);
 	dpth_free(&dpth);
 	manios_close(&manios);
 	man_off_t_free(&p1pos);

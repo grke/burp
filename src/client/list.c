@@ -119,6 +119,11 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 	{
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:
+			if(browsedir && regex)
+			{
+				logp("You cannot specify both a directory and a regular expression when listing.\n");
+				goto end;
+			}
 			if(browsedir)
 				snprintf(msg, sizeof(msg), "listb %s:%s",
 					backup?backup:"", browsedir);
@@ -132,7 +137,7 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 				backup?backup:"", backup2?backup2:"");
 			break;
 		default:
-			fprintf(stderr, "unknown action %d\n", act);
+			logp("unknown action %d\n", act);
 			goto end;
 	}
 	if(asfd->write_str(asfd, CMD_GEN, msg)
@@ -204,7 +209,7 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 		}
 		else
 		{
-			fprintf(stderr, "unlistable %c:%s\n",
+			logp("unlistable %c:%s\n",
 				sb->path.cmd, sb->path.buf?sb->path.buf:"");
 		}
 	}

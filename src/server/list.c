@@ -58,7 +58,7 @@ int list_server_init(
 		goto error;
 	}
 	list_mode=LIST_MODE_BACKUPS;
-	if(regex)
+	if(regex || browsedir)
 		list_mode=LIST_MODE_CONTENTS_MANY;
 	if(backup && *backup)
 	{
@@ -176,7 +176,6 @@ static int list_manifest(const char *fullpath)
 
 	while(1)
 	{
-		int show=0;
 		sbuf_free_content(sb);
 
 		switch(manio_read(manio, sb))
@@ -205,22 +204,17 @@ static int list_manifest(const char *fullpath)
 				sb, bdlen, &last_bd_match))<0)
 					goto error;
 			if(!r) continue;
-			show++;
 		}
-		else
-		{
-			if(!regex || regex_check(regex, sb->path.buf))
-				show++;
-		}
-		if(show)
-		{
-			if(asfd_write_wrapper(asfd, &sb->attr)
-			  || asfd_write_wrapper(asfd, &sb->path))
-				goto error;
-			if(sbuf_is_link(sb)
-			  && asfd_write_wrapper(asfd, &sb->link))
-				goto error;
-		}
+
+		if(regex && !regex_check(regex, sb->path.buf))
+			continue;
+
+		if(asfd_write_wrapper(asfd, &sb->attr)
+		  || asfd_write_wrapper(asfd, &sb->path))
+			goto error;
+		if(sbuf_is_link(sb)
+		  && asfd_write_wrapper(asfd, &sb->link))
+			goto error;
 	}
 
 error:

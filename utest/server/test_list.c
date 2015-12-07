@@ -164,6 +164,7 @@ static void run_test(int expected_init_ret,
 	enum protocol protocol,
 	const char *backup_str,
 	const char *regex_str,
+	const char *browsedir_str,
 	struct sd *s,
 	int slen,
 	struct sd *fp,
@@ -186,7 +187,7 @@ static void run_test(int expected_init_ret,
 		protocol,
 		backup_str,
 		regex_str,
-		NULL /*browsedir*/)==expected_init_ret);
+		browsedir_str)==expected_init_ret);
 	if(!expected_init_ret)
 		fail_unless(do_list_server_work(
 			list_server_callback_mock)==expected_ret);
@@ -200,168 +201,196 @@ START_TEST(test_do_server_list)
 	list_server_callback_ret=0;
 
 	// No backups.
-	run_test(-1, 0, 0, PROTO_1, NULL, NULL,
+	run_test(-1, 0, 0, PROTO_1, NULL, NULL, NULL,
 		NULL, 0, NULL,
 		setup_asfd_bu_failure);
-	run_test(-1, 0, 0, PROTO_2, NULL, NULL,
+	run_test(-1, 0, 0, PROTO_2, NULL, NULL, NULL,
 		NULL, 0, NULL,
 		setup_asfd_bu_failure);
 
 	// Backup not specified. burp -a l
-	run_test(0, 0, 0, PROTO_1, NULL, NULL,
+	run_test(0, 0, 0, PROTO_1, NULL, NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 0, PROTO_1, NULL, NULL,
+	run_test(0, 0, 0, PROTO_1, NULL, NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 0, PROTO_2, NULL, NULL,
+	run_test(0, 0, 0, PROTO_2, NULL, NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1);
-	run_test(0, 0, 0, PROTO_2, NULL, NULL,
+	run_test(0, 0, 0, PROTO_2, NULL, NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1_2_3);
-	run_test(0, 0, 0, PROTO_1, "", NULL,
+	run_test(0, 0, 0, PROTO_1, "", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 0, PROTO_2, "", NULL,
+	run_test(0, 0, 0, PROTO_2, "", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1_2_3);
 
 	// Have backups, protocol 1. burp -a l -b x
-	run_test(0, 0, 1, PROTO_1, "1", NULL,
+	run_test(0, 0, 1, PROTO_1, "1", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "all", NULL,
+	run_test(0, 0, 1, PROTO_1, "all", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "current", NULL,
+	run_test(0, 0, 1, PROTO_1, "current", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "1", NULL,
+	run_test(0, 0, 1, PROTO_1, "1", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "2", NULL,
+	run_test(0, 0, 1, PROTO_1, "2", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp2,
 		setup_asfd_2);
-	run_test(0, 0, 1, PROTO_1, "3", NULL,
+	run_test(0, 0, 1, PROTO_1, "3", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
-	run_test(0, 0, 3, PROTO_1, "all", NULL,
+	run_test(0, 0, 3, PROTO_1, "all", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 1, PROTO_1, "current", NULL,
+	run_test(0, 0, 1, PROTO_1, "current", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
 
 	// Have backups, protocol 2. burp -a l -b x
-	run_test(0, 0, 1, PROTO_2, "1", NULL,
+	run_test(0, 0, 1, PROTO_2, "1", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "all", NULL,
+	run_test(0, 0, 1, PROTO_2, "all", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "current", NULL,
+	run_test(0, 0, 1, PROTO_2, "current", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "1", NULL,
+	run_test(0, 0, 1, PROTO_2, "1", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp1,
 		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "2", NULL,
+	run_test(0, 0, 1, PROTO_2, "2", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp2,
 		setup_asfd_2);
-	run_test(0, 0, 1, PROTO_2, "3", NULL,
+	run_test(0, 0, 1, PROTO_2, "3", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
-	run_test(0, 0, 3, PROTO_2, "all", NULL,
+	run_test(0, 0, 3, PROTO_2, "all", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1_2_3);
-	run_test(0, 0, 1, PROTO_2, "current", NULL,
+	run_test(0, 0, 1, PROTO_2, "current", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
 
 	// Add regex.
 	// burp -a l -r someregex
-	run_test(0, 0, 3, PROTO_1, NULL, "someregex",
+	run_test(0, 0, 3, PROTO_1, NULL, "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 3, PROTO_2, NULL, "someregex",
+	run_test(0, 0, 3, PROTO_2, NULL, "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1_2_3);
 	// burp -a l -b x -r someregex
-	run_test(0, 0, 3, PROTO_1, "all", "someregex",
+	run_test(0, 0, 3, PROTO_1, "all", "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 1, PROTO_1, "1", "someregex",
+	run_test(0, 0, 1, PROTO_1, "1", "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "current", "someregex",
+	run_test(0, 0, 1, PROTO_1, "current", "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
-	run_test(0, 0, 3, PROTO_2, "all", "someregex",
+	run_test(0, 0, 3, PROTO_2, "all", "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1_2_3);
-	run_test(0, 0, 1, PROTO_2, "1", "someregex",
+	run_test(0, 0, 1, PROTO_2, "1", "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp1,
 		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "current", "someregex",
+	run_test(0, 0, 1, PROTO_2, "current", "someregex", NULL,
+		sd123, ARR_LEN(sd123), fp3,
+		setup_asfd_3);
+
+	// Add browsedir.
+	// burp -a l -d browsedir
+	run_test(0, 0, 3, PROTO_1, NULL, NULL, "browsedir",
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1del_2_3);
+	run_test(0, 0, 3, PROTO_2, NULL, NULL, "browsedir",
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1_2_3);
+	// burp -a l -b x -d browsedir
+	run_test(0, 0, 3, PROTO_1, "all", NULL, "browsedir",
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1del_2_3);
+	run_test(0, 0, 1, PROTO_1, "1", NULL, "browsedir",
+		sd123, ARR_LEN(sd123), fp1,
+		setup_asfd_1del);
+	run_test(0, 0, 1, PROTO_1, "current", NULL, "browsedir",
+		sd123, ARR_LEN(sd123), fp3,
+		setup_asfd_3);
+	run_test(0, 0, 3, PROTO_2, "all", NULL, "browsedir",
+		sd123, ARR_LEN(sd123), fp123,
+		setup_asfd_1_2_3);
+	run_test(0, 0, 1, PROTO_2, "1", NULL, "browsedir",
+		sd123, ARR_LEN(sd123), fp1,
+		setup_asfd_1);
+	run_test(0, 0, 1, PROTO_2, "current", NULL, "browsedir",
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
 
 	// Not found. burp -a l -b y
-	run_test(0, -1, 0, PROTO_1, "4", NULL,
+	run_test(0, -1, 0, PROTO_1, "4", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "4", NULL,
+	run_test(0, -1, 0, PROTO_2, "4", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_1, "0", NULL,
+	run_test(0, -1, 0, PROTO_1, "0", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "0", NULL,
+	run_test(0, -1, 0, PROTO_2, "0", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_1, "junk", NULL,
+	run_test(0, -1, 0, PROTO_1, "junk", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "junk", NULL,
+	run_test(0, -1, 0, PROTO_2, "junk", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_1, "-1", NULL,
+	run_test(0, -1, 0, PROTO_1, "-1", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "-1", NULL,
+	run_test(0, -1, 0, PROTO_2, "-1", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
 
 	// Error from the list_server_callback.
 	list_server_callback_ret=-1;
-	run_test(0, -1, 1, PROTO_1, "1", NULL,
+	run_test(0, -1, 1, PROTO_1, "1", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, -1, 1, PROTO_1, "all", NULL,
+	run_test(0, -1, 1, PROTO_1, "all", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, -1, 1, PROTO_2, "1", NULL,
+	run_test(0, -1, 1, PROTO_2, "1", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1);
-	run_test(0, -1, 1, PROTO_2, "all", NULL,
+	run_test(0, -1, 1, PROTO_2, "all", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1);
 
 	// Write failure.
-	run_test(0, -1, 0, PROTO_1, NULL, NULL,
+	run_test(0, -1, 0, PROTO_1, NULL, NULL, NULL,
 		sd1, ARR_LEN(sd1), NULL,
 		setup_asfd_1del_write_failure);
-	run_test(0, -1, 0, PROTO_1, "1", NULL,
+	run_test(0, -1, 0, PROTO_1, "1", NULL, NULL,
 		sd1, ARR_LEN(sd1), NULL,
 		setup_asfd_1del_write_failure);
-	run_test(0, -1, 0, PROTO_1, "all", NULL,
+	run_test(0, -1, 0, PROTO_1, "all", NULL, NULL,
 		sd1, ARR_LEN(sd1), NULL,
 		setup_asfd_1del_write_failure);
 
 	// Bad regex.
 	// burp -a l -b x -r '*'
-	run_test(-1, 0, 0, PROTO_1, "1", "*",
+	run_test(-1, 0, 0, PROTO_1, "1", "*", NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_1);
 }

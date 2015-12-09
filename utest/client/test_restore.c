@@ -26,20 +26,20 @@ static void tear_down(struct asfd **asfd, struct conf ***confs)
 	fail_unless(recursive_delete(BASE)==0);
 }
 
-static void setup_bad_read(void)
+static void setup_bad_read(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "restore :");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "restore :");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
 }
 
-static void setup_no_files(void)
+static void setup_no_files(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "restore :");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
-	asfd_mock_read (&r, 0, CMD_GEN, "restoreend");
-	asfd_mock_write(&w, 0, CMD_GEN, "restoreend_ok");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "restore :");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "restoreend");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "restoreend_ok");
 }
 
 /*
@@ -65,7 +65,7 @@ static struct conf **setup_conf(void)
 	return confs;
 }
 
-static void run_test(int expected_ret, void setup_callback(void))
+static void run_test(int expected_ret, void setup_callback(struct asfd *asfd))
 {
 	int result;
 	const char *conffile=BASE "/burp.conf";
@@ -79,7 +79,7 @@ static void run_test(int expected_ret, void setup_callback(void))
 	build_file(conffile, buf);
 	fail_unless(!conf_load_global_only(conffile, confs));
 
-	setup_callback();
+	setup_callback(asfd);
 
 	result=do_restore_client(asfd, confs,
 		ACTION_RESTORE, 0 /* vss_restore */);

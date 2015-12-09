@@ -27,11 +27,11 @@ START_TEST(test_phase2_no_asfd)
 }
 END_TEST
 
-static void setup_phase2ok(void)
+static void setup_phase2ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
 }
 
 static int mock_async_read_write_error(struct async *as)
@@ -55,7 +55,7 @@ START_TEST(test_phase2_as_read_write_error)
 	as=async_mock_setup();
 	as->asfd_add(as, asfd);
 	asfd->as=as;
-	setup_phase2ok();
+	setup_phase2ok(asfd);
 	as->read_write=mock_async_read_write_error;
 	fail_unless(backup_phase2_client_protocol2(
 		asfd,
@@ -66,12 +66,12 @@ START_TEST(test_phase2_as_read_write_error)
 }
 END_TEST
 
-static void setup_phase2ok_then_cmd_error(void)
+static void setup_phase2ok_then_cmd_error(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
-	asfd_mock_read (&r, 0, CMD_ERROR, "some error");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read (asfd, &r, 0, CMD_ERROR, "some error");
 }
 
 static int mock_async_read(struct async *as)
@@ -87,7 +87,7 @@ START_TEST(test_phase2_error_from_server)
 	as=async_mock_setup();
 	as->asfd_add(as, asfd);
 	asfd->as=as;
-	setup_phase2ok_then_cmd_error();
+	setup_phase2ok_then_cmd_error(asfd);
 	as->read_write=mock_async_read;
 	fail_unless(backup_phase2_client_protocol2(
 		asfd,
@@ -98,13 +98,13 @@ START_TEST(test_phase2_error_from_server)
 }
 END_TEST
 
-static void setup_phase2ok_file_request_missing_file(void)
+static void setup_phase2ok_file_request_missing_file(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
-	asfd_mock_read (&r, 0, CMD_FILE, "some file");
-	asfd_mock_write(&w, 0, CMD_WARNING, "some file has vanished\n");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read (asfd, &r, 0, CMD_FILE, "some file");
+	asfd_mock_write(asfd, &w, 0, CMD_WARNING, "some file has vanished\n");
 }
 
 START_TEST(test_phase2_file_request_missing)
@@ -115,7 +115,7 @@ START_TEST(test_phase2_file_request_missing)
 	as=async_mock_setup();
 	as->asfd_add(as, asfd);
 	asfd->as=as;
-	setup_phase2ok_file_request_missing_file();
+	setup_phase2ok_file_request_missing_file(asfd);
 	as->read_write=mock_async_read;
 
 	// FIX THIS - a missing file should not cause a fatal error!

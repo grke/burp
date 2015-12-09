@@ -69,70 +69,70 @@ static struct sd fp123[] = {
 	{ "0000003 1970-01-03 00:00:00", 0, 0, 0 }
 };
 
-static void setup_asfd_bu_failure(void)
+static void setup_asfd_bu_failure(struct asfd *asfd)
 {
 }
 
-static void setup_asfd_1del(void)
+static void setup_asfd_1del(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00 (deletable)");
 }
 
-static void setup_asfd_1(void)
+static void setup_asfd_1(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00");
 }
 
-static void setup_asfd_2(void)
+static void setup_asfd_2(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000002 1970-01-02 00:00:00");
 }
 
-static void setup_asfd_3(void)
+static void setup_asfd_3(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000003 1970-01-03 00:00:00");
 }
 
-static void setup_asfd_1del_2_3(void)
+static void setup_asfd_1del_2_3(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00 (deletable)");
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000002 1970-01-02 00:00:00");
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000003 1970-01-03 00:00:00");
 }
 
-static void setup_asfd_1_2_3(void)
+static void setup_asfd_1_2_3(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00");
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000002 1970-01-02 00:00:00");
-	asfd_mock_write(&w, 0,
+	asfd_mock_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000003 1970-01-03 00:00:00");
 }
 
-static void setup_asfd_not_found(void)
+static void setup_asfd_not_found(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, 0, CMD_ERROR, "backup not found");
+	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "backup not found");
 }
 
-static void setup_asfd_1del_write_failure(void)
+static void setup_asfd_1del_write_failure(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, -1,
+	asfd_mock_write(asfd, &w, -1,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00 (deletable)");
 }
 
@@ -168,7 +168,7 @@ static void run_test(int expected_init_ret,
 	struct sd *s,
 	int slen,
 	struct sd *fp,
-	void setup_asfd_callback(void))
+	void setup_asfd_callback(struct asfd *asfd))
 {
 	struct asfd *asfd;
 	struct sdirs *sdirs=NULL;
@@ -176,7 +176,7 @@ static void run_test(int expected_init_ret,
 
 	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
 
-	setup_asfd_callback();
+	setup_asfd_callback(asfd);
 
 	list_server_callback_count=0;
 	list_server_callback_sd=fp;

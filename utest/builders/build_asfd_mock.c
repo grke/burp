@@ -6,9 +6,6 @@
 #include "build_asfd_mock.h"
 #include <check.h>
 
-static struct ioevent_list *reads;
-static struct ioevent_list *writes;
-
 static void ioevent_list_init(struct ioevent_list *list, unsigned int size)
 {
 	list->ioevent=(struct ioevent *)
@@ -20,6 +17,8 @@ static void ioevent_list_init(struct ioevent_list *list, unsigned int size)
 static int mock_asfd_read(struct asfd *asfd)
 {
 	struct ioevent *r;
+	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
+
 	r=&reads->ioevent[reads->cursor++];
 	iobuf_move(asfd->rbuf, &r->iobuf);
 	return r->ret;
@@ -41,8 +40,11 @@ static int mock_asfd_write_str(struct asfd *asfd,
 {
 	struct ioevent *w;
 	struct iobuf *expected;
+	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
 	w=&writes->ioevent[writes->cursor++];
 	expected=&w->iobuf;
+//printf("%c %c\n", wcmd, expected->cmd);
+//printf("%s %s\n", wsrc, expected->buf);
 	fail_unless(wcmd==expected->cmd);
 	ck_assert_str_eq(expected->buf, wsrc);
 	return w->ret;
@@ -51,8 +53,15 @@ static int mock_asfd_write_str(struct asfd *asfd,
 static enum append_ret mock_asfd_append_all_to_write_buffer(struct asfd *asfd,
 	struct iobuf *wbuf)
 {
-	return (enum append_ret)
-		mock_asfd_write_str(asfd, wbuf->cmd, wbuf->buf);
+	enum append_ret ret;
+	ret=(enum append_ret)mock_asfd_write_str(asfd, wbuf->cmd, wbuf->buf);
+	wbuf->len=0;
+	return ret;
+}
+
+static int mock_parse_readbuf(struct asfd *asfd)
+{
+	return 0;
 }
 
 struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
@@ -61,24 +70,25 @@ struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
 	unsigned int w_size)
 {
 	struct asfd *asfd=NULL;
-	reads=user_reads;
-	writes=user_writes;
 	fail_unless((asfd=asfd_alloc())!=NULL);
 	fail_unless((asfd->rbuf=iobuf_alloc())!=NULL);
 	asfd->read=mock_asfd_read;
 	asfd->read_expect=mock_asfd_read_expect;
 	asfd->write_str=mock_asfd_write_str;
 	asfd->append_all_to_write_buffer=mock_asfd_append_all_to_write_buffer;
-	ioevent_list_init(reads, r_size);
-	ioevent_list_init(writes, w_size);
+	asfd->parse_readbuf=mock_parse_readbuf;
+	ioevent_list_init(user_reads, r_size);
+	ioevent_list_init(user_writes, w_size);
+	asfd->data1=(void *)user_reads;
+	asfd->data2=(void *)user_writes;
 	return asfd;
 };
 
 void asfd_mock_teardown(struct ioevent_list *user_reads,
 	struct ioevent_list *user_writes)
 {
-	free_v((void **)&reads->ioevent);
-	free_v((void **)&writes->ioevent);
+	free_v((void **)&user_reads->ioevent);
+	free_v((void **)&user_writes->ioevent);
 }
 
 static void add_to_ioevent(struct ioevent *ioevent,
@@ -100,12 +110,16 @@ static void add_to_ioevent(struct ioevent *ioevent,
 	ioevent[*i].ret=-1;
 }
 
-void asfd_mock_read(int *r, int ret, enum cmd cmd, const char *str)
+void asfd_mock_read(struct asfd *asfd,
+	int *r, int ret, enum cmd cmd, const char *str)
 {
+	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
 	add_to_ioevent(reads->ioevent, r, ret, cmd, str, 1 /* dup */);
 }
 
-void asfd_mock_write(int *w, int ret, enum cmd cmd, const char *str)
+void asfd_mock_write(struct asfd *asfd,
+	int *w, int ret, enum cmd cmd, const char *str)
 {
+	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
 	add_to_ioevent(writes->ioevent, w, ret, cmd, str, 0 /* no dup */);
 }

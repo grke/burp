@@ -165,20 +165,28 @@ START_TEST(test_phase2_unset_chfd)
 }
 END_TEST
 
-static void setup_asfd(void)
+static void setup_asfd(struct asfd *asfd)
 {
-//	int r=0;
+	int r=0;
 	int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "requests_end");
-//	asfd_mock_read (&r, 0, CMD_GEN, "requests_end");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "requests_end");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "sigs_end");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backup_end");
+}
+
+static void setup_chfd(struct asfd *asfd)
+{
+	int w=0;
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "sigs_end");
 }
 
 static int my_async_read_write(struct async *as)
 {
-	return 0;
+	return as->asfd->read(as->asfd);
 }
 
-START_TEST(test_phase2_xxx)
+START_TEST(test_phase2_no_phase1_manifest)
 {
 	struct asfd *asfd;
 	struct asfd *chfd;
@@ -188,17 +196,19 @@ START_TEST(test_phase2_xxx)
 	setup(&as, &sdirs, &confs);
 	asfd=asfd_mock_setup(&areads, &awrites, 10, 10);
 	chfd=asfd_mock_setup(&creads, &cwrites, 10, 10);
+	chfd->fdtype=ASFD_FD_SERVER_TO_CHAMP_CHOOSER;
 	as->asfd_add(as, asfd);
 	as->asfd_add(as, chfd);
 	as->read_write=my_async_read_write;
 
-	setup_asfd();
-//	fail_unless(backup_phase2_server_protocol2(
-//		as,
-//		sdirs,
-//		0, // resume
-//		confs
-//	)==-1);
+	setup_asfd(asfd);
+	setup_chfd(chfd);
+	fail_unless(!backup_phase2_server_protocol2(
+		as,
+		sdirs,
+		0, // resume
+		confs
+	));
 	asfd_free(&asfd);
 	asfd_free(&chfd);
 	asfd_mock_teardown(&areads, &awrites);
@@ -222,7 +232,7 @@ Suite *suite_server_protocol2_backup_phase2(void)
 	tcase_add_test(tc_core, test_phase2_unset_sdirs);
 	tcase_add_test(tc_core, test_phase2_unset_asfd);
 	tcase_add_test(tc_core, test_phase2_unset_chfd);
-//	tcase_add_test(tc_core, test_phase2_xxx);
+	tcase_add_test(tc_core, test_phase2_no_phase1_manifest);
 
 	suite_add_tcase(s, tc_core);
 

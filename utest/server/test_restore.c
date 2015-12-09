@@ -23,10 +23,10 @@ static void tear_down(struct asfd **asfd, struct conf ***confs)
 
 // Tests that the client gets sent a suitable message when the server tried
 // to restore on a bad regex.
-static void setup_bad_regex(void)
+static void setup_bad_regex(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(&w, 0, CMD_ERROR, "unable to compile regex: *");
+	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "unable to compile regex: *");
 }
 
 START_TEST(test_send_regex_failure)
@@ -39,7 +39,7 @@ START_TEST(test_send_regex_failure)
 	set_string(confs[OPT_BACKUP], "1");
 
 	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
-	setup_bad_regex();
+	setup_bad_regex(asfd);
 	fail_unless(do_restore_server(
 		asfd,
 		NULL, // sdirs

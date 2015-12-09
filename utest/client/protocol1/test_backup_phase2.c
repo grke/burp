@@ -25,18 +25,18 @@ START_TEST(test_phase2_no_asfd)
 }
 END_TEST
 
-static void setup_phase2ok(void)
+static void setup_phase2ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
 }
 
 START_TEST(test_phase2_read_write_error)
 {
 	struct asfd *asfd;
 	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
-	setup_phase2ok();
+	setup_phase2ok(asfd);
 	fail_unless(backup_phase2_client_protocol1(
 		asfd,
 		NULL, // confs
@@ -46,20 +46,20 @@ START_TEST(test_phase2_read_write_error)
 }
 END_TEST
 
-static void setup_phase2_empty_backup_ok(void)
+static void setup_phase2_empty_backup_ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
-	asfd_mock_read (&r, 0, CMD_GEN, "backupphase2end");
-	asfd_mock_write(&w, 0, CMD_GEN, "okbackupphase2end");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
 }
 
 START_TEST(test_phase2_empty_backup_ok)
 {
 	struct asfd *asfd;
 	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
-	setup_phase2_empty_backup_ok();
+	setup_phase2_empty_backup_ok(asfd);
 	fail_unless(backup_phase2_client_protocol1(
 		asfd,
 		NULL, // confs
@@ -69,21 +69,21 @@ START_TEST(test_phase2_empty_backup_ok)
 }
 END_TEST
 
-static void setup_phase2_empty_backup_ok_with_warning(void)
+static void setup_phase2_empty_backup_ok_with_warning(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
-	asfd_mock_read (&r, 0, CMD_WARNING, "some warning");
-	asfd_mock_read (&r, 0, CMD_GEN, "backupphase2end");
-	asfd_mock_write(&w, 0, CMD_GEN, "okbackupphase2end");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read (asfd, &r, 0, CMD_WARNING, "some warning");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
 }
 
 START_TEST(test_phase2_empty_backup_ok_with_warning)
 {
 	struct asfd *asfd;
 	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
-	setup_phase2_empty_backup_ok_with_warning();
+	setup_phase2_empty_backup_ok_with_warning(asfd);
 	fail_unless(backup_phase2_client_protocol1(
 		asfd,
 		NULL, // confs

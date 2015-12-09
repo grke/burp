@@ -71,9 +71,9 @@ Revoking a client certificate will cause the server to reject a client
 connection, from the moment the 'ca_crl' option has been correctly configured
 in the burp-server.conf configuration file.
 
-Before you can revoke certificates with the following method, you to enable the
-Certificate Revocation List (CRL). See the documentation page on 'certificate
-authority and certificates' for details on this.
+Before you can revoke certificates with the following method, you need to
+enable the Certificate Revocation List (CRL). See the documentation page on
+'certificate authority and certificates' for details on this.
 
 The procedure below will revoke a client certificate which has been signed by
 the server certificate authority. These commands are run on the server.

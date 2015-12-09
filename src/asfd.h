@@ -110,6 +110,12 @@ struct asfd
 	int (*write)(struct asfd *, struct iobuf *);
 	int (*write_str)(struct asfd *, enum cmd, const char *);
 	int (*write_strn)(struct asfd *, enum cmd, const char *, size_t);
+
+#ifdef UTEST
+	// To assist mocking functions in unit tests.
+	void *data1;
+	void *data2;
+#endif
 };
 
 extern struct asfd *asfd_alloc(void);

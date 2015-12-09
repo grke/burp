@@ -199,24 +199,25 @@ static int add_data_to_store(struct cntr *cntr,
 	return 0;
 }
 
-static int set_up_for_sig_info(struct slist *slist, struct sbuf *inew)
+static int set_up_for_sig_info(struct slist *slist, struct iobuf *attr,
+	uint64_t index)
 {
 	struct sbuf *sb;
 
 	for(sb=slist->add_sigs_here; sb; sb=sb->next)
 	{
 		if(!sb->protocol2->index) continue;
-		if(inew->protocol2->index==sb->protocol2->index) break;
+		if(index==sb->protocol2->index) break;
 	}
 	if(!sb)
 	{
 		logp("Could not find %lu in request list %d\n",
-			inew->protocol2->index, sb->protocol2->index);
+			index, sb->protocol2->index);
 		return -1;
 	}
 	// Replace the attribs with the more recent values.
 	iobuf_free_content(&sb->attr);
-	iobuf_move(&sb->attr, &inew->attr);
+	iobuf_move(&sb->attr, attr);
 
 	// Mark the end of the previous file.
 	slist->add_sigs_here->protocol2->bend=slist->blist->tail;
@@ -263,9 +264,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 	struct cntr *cntr, uint8_t *end_flags, struct dpth *dpth)
 {
 	int ret=0;
-	static struct sbuf *inew=NULL;
-
-	if(!inew && !(inew=sbuf_alloc(PROTO_2))) goto error;
 
 	switch(rbuf->cmd)
 	{
@@ -277,14 +275,16 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 
 		/* Incoming block signatures. */
 		case CMD_ATTRIBS_SIGS:
-			// New set of stuff incoming. Clean up.
-			iobuf_free_content(&inew->attr);
-			iobuf_move(&inew->attr, rbuf);
-			inew->protocol2->index=decode_file_no(&inew->attr);
+			static struct iobuf attr;
+			static uint64_t index;
+
+			iobuf_init(&attr);
+			iobuf_move(&attr, rbuf);
+			index=decode_file_no(&attr);
 
 			// Need to go through slist to find the matching
 			// entry.
-			if(set_up_for_sig_info(slist, inew))
+			if(set_up_for_sig_info(slist, &attr, index))
 				goto error;
 			return 0;
 		case CMD_SIG:
@@ -319,7 +319,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 	iobuf_log_unexpected(rbuf, __func__);
 error:
 	ret=-1;
-	sbuf_free(&inew);
 end:
 	iobuf_free_content(rbuf);
 	return ret;
@@ -592,7 +591,7 @@ static int maybe_add_from_scan(struct manios *manios,
 		{
 			case 0: break;
 			case 1: manio_close(&manios->phase1);
-				return 0; // Finished.
+				ret=0; // Finished.
 			default: goto end;
 		}
 

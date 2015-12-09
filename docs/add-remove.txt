@@ -67,8 +67,10 @@ To make a particular certificate stop working, you need to revoke it.
 There is currently no automatic mechanism in burp that will let you do
 this (see https://github.com/grke/burp/issues/89).
 
+The following procedure is for burp-2 only.
+
 Revoking a client certificate will cause the server to reject a client
-connection, from the moment the 'ca_crl' option has been correctly configured
+connection, from the moment the 'ca_crl_check' option has been enabled
 in the burp-server.conf configuration file.
 
 Before you can revoke certificates with the following method, you need to

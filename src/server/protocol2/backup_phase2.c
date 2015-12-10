@@ -863,16 +863,20 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 		while(asfd->rbuf->buf)
 		{
 			if(deal_with_read(asfd->rbuf, slist, cntr,
-				&end_flags, dpth)) goto end;
+				&end_flags, dpth))
+					goto end;
 			// Get as much out of the readbuf as possible.
-			if(asfd->parse_readbuf(asfd)) goto end;
+			if(asfd->parse_readbuf(asfd))
+				goto end;
 		}
 		while(chfd->rbuf->buf)
 		{
 			if(deal_with_read_from_chfd(chfd,
-				slist->blist, &wrap_up, dpth, cntr)) goto end;
+				slist->blist, &wrap_up, dpth, cntr))
+					goto end;
 			// Get as much out of the readbuf as possible.
-			if(chfd->parse_readbuf(chfd)) goto end;
+			if(chfd->parse_readbuf(chfd))
+				goto end;
 		}
 
 		if(write_to_changed_file(asfd, chfd, manios,

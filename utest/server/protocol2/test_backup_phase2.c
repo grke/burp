@@ -165,28 +165,95 @@ START_TEST(test_phase2_unset_chfd)
 }
 END_TEST
 
-static void setup_asfd(struct asfd *asfd)
+static void setup_asfds_empty(struct asfd *asfd, struct asfd *chfd)
 {
-	int r=0;
-	int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "requests_end");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "sigs_end");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "blk_requests_end");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backup_end");
+	int ar=0, aw=0, cw=0;
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+
+	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
-static void setup_chfd(struct asfd *asfd)
+static void setup_asfds_empty_and_messages(struct asfd *asfd, struct asfd *chfd)
 {
-	int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "sigs_end");
+	int ar=0, aw=0, cw=0;
+	asfd_mock_read (asfd, &ar, 0, CMD_MESSAGE, "a message");
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read (asfd, &ar, 0, CMD_MESSAGE, "a message");
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read (asfd, &ar, 0, CMD_WARNING, "a warning");
+	asfd_mock_read (asfd, &ar, 0, CMD_WARNING, "another warning");
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read (asfd, &ar, 0, CMD_MESSAGE, "a message");
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+
+	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
-static int my_async_read_write(struct async *as)
+static void setup_asfds_data_too_soon(struct asfd *asfd, struct asfd *chfd)
+{
+	int ar=0, aw=0;
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read (asfd, &ar, 0, CMD_DATA, "some data");
+}
+
+static void setup_asfds_write_error(struct asfd *asfd, struct asfd *chfd)
+{
+	int aw=0;
+	asfd_mock_write(asfd, &aw, -1, CMD_GEN, "requests_end");
+}
+
+static void setup_asfds_write_error_chfd(struct asfd *asfd, struct asfd *chfd)
+{
+	int ar=0, aw=0, cw=0;
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+
+	asfd_mock_write(chfd, &cw, -1, CMD_GEN, "sigs_end");
+}
+
+static void setup_asfds_read_error(struct asfd *asfd, struct asfd *chfd)
+{
+	int ar=0, aw=0;
+	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
+	asfd_mock_read (asfd, &ar, -1, CMD_DATA, "some data");
+}
+
+static void setup_asfds_read_error_chfd(struct asfd *asfd, struct asfd *chfd)
+{
+	int aw=0, cr=0;
+	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
+	asfd_mock_read (chfd, &cr, -1, CMD_SIG, "some sig");
+}
+
+static void setup_asfds_chfd_bad_cmd(struct asfd *asfd, struct asfd *chfd)
+{
+	int aw=0, cr=0;
+	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
+	asfd_mock_read (chfd, &cr,  0, CMD_MESSAGE, "some message");
+}
+
+static int async_rw_simple(struct async *as)
 {
 	return as->asfd->read(as->asfd);
 }
 
-START_TEST(test_phase2_no_phase1_manifest)
+static int async_rw_both(struct async *as)
+{
+	int ret=0;
+	struct asfd *asfd=as->asfd;
+	struct asfd *chfd=asfd->next;
+	ret|=asfd->read(asfd);
+	ret|=chfd->read(chfd);
+	return ret;
+}
+
+static void run_test(int expected_ret,
+	int async_read_write_callback(struct async *as),
+	void setup_asfds_callback(struct asfd *asfd, struct asfd *chfd))
 {
 	struct asfd *asfd;
 	struct asfd *chfd;
@@ -199,21 +266,38 @@ START_TEST(test_phase2_no_phase1_manifest)
 	chfd->fdtype=ASFD_FD_SERVER_TO_CHAMP_CHOOSER;
 	as->asfd_add(as, asfd);
 	as->asfd_add(as, chfd);
-	as->read_write=my_async_read_write;
+	as->read_write=async_read_write_callback;
 
-	setup_asfd(asfd);
-	setup_chfd(chfd);
-	fail_unless(!backup_phase2_server_protocol2(
+	setup_asfds_callback(asfd, chfd);
+	fail_unless(backup_phase2_server_protocol2(
 		as,
 		sdirs,
 		0, // resume
 		confs
-	));
+	)==expected_ret);
+
+	if(!expected_ret)
+	{
+		// FIX THIS: Should check for the presence and correctness of
+		// changed and unchanged manios.
+	}
 	asfd_free(&asfd);
 	asfd_free(&chfd);
 	asfd_mock_teardown(&areads, &awrites);
 	asfd_mock_teardown(&creads, &cwrites);
 	tear_down(&as, &sdirs, &confs);
+}
+
+START_TEST(test_phase2)
+{
+	run_test( 0, async_rw_simple, setup_asfds_empty);
+	run_test( 0, async_rw_simple, setup_asfds_empty_and_messages);
+	run_test(-1, async_rw_simple, setup_asfds_data_too_soon);
+	run_test(-1, async_rw_simple, setup_asfds_write_error);
+	run_test(-1, async_rw_simple, setup_asfds_write_error_chfd);
+	run_test(-1, async_rw_simple, setup_asfds_read_error);
+	run_test(-1, async_rw_both,   setup_asfds_read_error_chfd);
+	run_test(-1, async_rw_both,   setup_asfds_chfd_bad_cmd);
 }
 END_TEST
 
@@ -225,6 +309,7 @@ Suite *suite_server_protocol2_backup_phase2(void)
 	s=suite_create("server_protocol2_backup_phase2");
 
 	tc_core=tcase_create("Core");
+	tcase_set_timeout(tc_core, 10);
 
 	tcase_add_test(tc_core, test_phase2_unset_as_sdirs_confs);
 	tcase_add_test(tc_core, test_phase2_unset_sdirs_confs);
@@ -232,7 +317,7 @@ Suite *suite_server_protocol2_backup_phase2(void)
 	tcase_add_test(tc_core, test_phase2_unset_sdirs);
 	tcase_add_test(tc_core, test_phase2_unset_asfd);
 	tcase_add_test(tc_core, test_phase2_unset_chfd);
-	tcase_add_test(tc_core, test_phase2_no_phase1_manifest);
+	tcase_add_test(tc_core, test_phase2);
 
 	suite_add_tcase(s, tc_core);
 

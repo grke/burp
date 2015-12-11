@@ -1,10 +1,12 @@
 #include "../test.h"
 #include "../builders/build.h"
 #include "../../src/alloc.h"
+#include "../../src/asfd.h"
 #include "../../src/bu.h"
 #include "../../src/conf.h"
 #include "../../src/conffile.h"
 #include "../../src/fsops.h"
+#include "../../src/iobuf.h"
 #include "../../src/lock.h"
 #include "../../src/prepend.h"
 #include "../../src/server/bu_get.h"
@@ -12,6 +14,7 @@
 #include "../../src/server/protocol1/fdirs.h"
 #include "../../src/server/sdirs.h"
 #include "../../src/server/timestamp.h"
+#include "../builders/build_asfd_mock.h"
 
 #define BASE		"utest_delete"
 #define CNAME		"utestclient"
@@ -56,7 +59,7 @@ static struct strlist *build_keep_strlist(long keep[], size_t len)
 	return list;
 }
 
-static void build_and_delete(enum protocol protocol,
+static void build_and_autodelete(enum protocol protocol,
 	long keep[], size_t klen, // Keep settings.
 	struct sd *s, size_t slen, // Starting backups.
 	struct sd *e, size_t elen) // Expected backups.
@@ -73,6 +76,9 @@ static void build_and_delete(enum protocol protocol,
 }
 
 static long keep4[] = { 4 };
+
+static struct sd ex0[] = {
+};
 
 static struct sd sd1[] = {
 	{ "0000001 1970-01-05 00:00:00", 1, 1, BU_CURRENT|BU_DELETABLE }
@@ -294,43 +300,128 @@ static struct sd ex12[] = {
 	{ "0000022 1970-01-22 00:00:00", 22,  6, BU_DELETABLE|BU_CURRENT },
 };
 
-static void do_tests(enum protocol protocol)
+static struct sd sd13[] = {
+	{ "0000012 1970-01-12 00:00:00", 12,  1, BU_HARDLINKED|BU_DELETABLE },
+	{ "0000022 1970-01-22 00:00:00", 22,  2, BU_CURRENT|BU_DELETABLE },
+};
+static struct sd ex13[] = {
+	{ "0000012 1970-01-12 00:00:00", 12,  1, BU_CURRENT|BU_HARDLINKED|BU_DELETABLE },
+};
+
+static void do_autodelete_tests(enum protocol protocol)
 {
-	build_and_delete(protocol, keep4, ARR_LEN(keep4),
+	build_and_autodelete(protocol, keep4, ARR_LEN(keep4),
 		sd1, ARR_LEN(sd1), sd1, ARR_LEN(sd1));
-	build_and_delete(protocol, keep4, ARR_LEN(keep4),
+	build_and_autodelete(protocol, keep4, ARR_LEN(keep4),
 		sd2, ARR_LEN(sd2), sd2, ARR_LEN(sd2));
-	build_and_delete(protocol, keep4, ARR_LEN(keep4),
+	build_and_autodelete(protocol, keep4, ARR_LEN(keep4),
 		sd3, ARR_LEN(sd3), ex3, ARR_LEN(ex3));
-	build_and_delete(protocol, keep4, ARR_LEN(keep4),
+	build_and_autodelete(protocol, keep4, ARR_LEN(keep4),
 		sd4, ARR_LEN(sd4), ex4, ARR_LEN(ex4));
-	build_and_delete(protocol, keep34, ARR_LEN(keep34),
+	build_and_autodelete(protocol, keep34, ARR_LEN(keep34),
 		sd5, ARR_LEN(sd5), ex5, ARR_LEN(ex5));
-	build_and_delete(protocol, keep34, ARR_LEN(keep34),
+	build_and_autodelete(protocol, keep34, ARR_LEN(keep34),
 		sd6, ARR_LEN(sd6), ex6, ARR_LEN(ex6));
-	build_and_delete(protocol, keep42, ARR_LEN(keep42),
+	build_and_autodelete(protocol, keep42, ARR_LEN(keep42),
 		sd7, ARR_LEN(sd7), ex7, ARR_LEN(ex7));
-	build_and_delete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
 		sd8, ARR_LEN(sd8), ex8, ARR_LEN(ex8));
-	build_and_delete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
 		sd9, ARR_LEN(sd9), ex9, ARR_LEN(ex9));
-	build_and_delete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
 		sd10, ARR_LEN(sd10), ex10, ARR_LEN(ex10));
-	build_and_delete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
 		sd11, ARR_LEN(sd11), ex11, ARR_LEN(ex11));
-	build_and_delete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
 		sd12, ARR_LEN(sd12), ex12, ARR_LEN(ex12));
 }
 
-START_TEST(test_delete_proto_1)
+START_TEST(test_autodelete_proto_1)
 {
-	do_tests(PROTO_1);
+	do_autodelete_tests(PROTO_1);
 }
 END_TEST
 
-START_TEST(test_delete_proto_2)
+START_TEST(test_autodelete_proto_2)
 {
-	do_tests(PROTO_2);
+	do_autodelete_tests(PROTO_2);
+}
+END_TEST
+
+static struct ioevent_list areads;
+static struct ioevent_list awrites;
+
+static void setup_asfd_ok(struct asfd *asfd)
+{
+	int w=0;
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "ok");
+}
+
+static void setup_asfd_not_found(struct asfd *asfd)
+{
+	int w=0;
+	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "backup not found");
+}
+
+static void setup_asfd_not_deletable(struct asfd *asfd)
+{
+	int w=0;
+	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "backup not deletable");
+}
+
+static void build_and_userdelete(
+	int expected_ret,
+	enum protocol protocol,
+	const char *backup_str,
+	struct sd *s, size_t slen, // Starting backups.
+	struct sd *e, size_t elen, // Expected backups.
+	void setup_asfd_callback(struct asfd *asfd))
+{
+	struct sdirs *sdirs;
+	struct asfd *asfd;
+	sdirs=setup();
+	asfd=asfd_mock_setup(&areads, &awrites, 10, 10);
+	setup_asfd_callback(asfd);
+	do_sdirs_init(sdirs, protocol);
+	build_storage_dirs(sdirs, s, slen);
+	fail_unless(do_delete_server(asfd,
+		sdirs,
+		NULL, // cntr
+		CNAME,
+		backup_str,
+		NULL // manual_delete
+	)==expected_ret);
+	assert_bu_list(sdirs, e, elen);
+        asfd_free(&asfd);
+        asfd_mock_teardown(&areads, &awrites);
+	tear_down(NULL, &sdirs);
+}
+
+static void do_userdelete_tests(enum protocol protocol)
+{
+	build_and_userdelete( 0, protocol, "1",
+		sd1, ARR_LEN(sd1), ex0, ARR_LEN(ex0), setup_asfd_ok);
+	build_and_userdelete( 0, protocol, "22",
+		sd13, ARR_LEN(sd13), ex13, ARR_LEN(ex13), setup_asfd_ok);
+	build_and_userdelete(-1, protocol, "2",
+		sd1, ARR_LEN(sd1), sd1, ARR_LEN(sd1), setup_asfd_not_found);
+	build_and_userdelete(-1, protocol, "2",
+		sd3, ARR_LEN(sd3), sd3, ARR_LEN(sd3), setup_asfd_not_deletable);
+	build_and_userdelete(-1, protocol, "5",
+		sd3, ARR_LEN(sd3), sd3, ARR_LEN(sd3), setup_asfd_not_deletable);
+	build_and_userdelete(-1, protocol, "junk",
+		sd3, ARR_LEN(sd3), sd3, ARR_LEN(sd3), setup_asfd_not_found);
+}
+
+START_TEST(test_userdelete_proto_1)
+{
+	do_userdelete_tests(PROTO_1);
+}
+END_TEST
+
+START_TEST(test_userdelete_proto_2)
+{
+	do_userdelete_tests(PROTO_2);
 }
 END_TEST
 
@@ -343,8 +434,10 @@ Suite *suite_server_delete(void)
 
 	tc_core=tcase_create("Core");
 
-	tcase_add_test(tc_core, test_delete_proto_1);
-	tcase_add_test(tc_core, test_delete_proto_2);
+	tcase_add_test(tc_core, test_autodelete_proto_1);
+	tcase_add_test(tc_core, test_autodelete_proto_2);
+	tcase_add_test(tc_core, test_userdelete_proto_1);
+	tcase_add_test(tc_core, test_userdelete_proto_2);
 	suite_add_tcase(s, tc_core);
 
 	return s;

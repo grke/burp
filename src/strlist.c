@@ -18,7 +18,9 @@ static void strlist_free(struct strlist *strlist)
 void strlists_free(struct strlist **strlist)
 {
 	struct strlist *s;
-	struct strlist *shead=*strlist;
+	struct strlist *shead;
+	if(!strlist) return;
+	shead=*strlist;
 	while(shead)
 	{
 		s=shead;

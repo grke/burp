@@ -95,7 +95,7 @@ static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu,
 			return -1;
 		// If interrupted here, there is a currenttmp and a current
 		// symlink, and the current link is dangling.
-		if(do_rename_w(sdirs->currenttmp, sdirs->current, cname, bu))
+		if(do_rename(sdirs->currenttmp, sdirs->current))
 			return -1;
 		// If interrupted here, moving the symlink could have failed
 		// after current was deleted but before currenttmp was renamed.

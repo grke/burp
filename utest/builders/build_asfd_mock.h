@@ -5,6 +5,7 @@ struct ioevent
 {
         struct iobuf iobuf;
         int ret;
+	int no_op;
 };
 
 struct ioevent_list
@@ -24,5 +25,6 @@ extern void asfd_mock_read(struct asfd *asfd,
 	int *r, int ret, enum cmd cmd, const char *str);
 extern void asfd_mock_write(struct asfd *asfd,
 	int *w, int ret, enum cmd cmd, const char *str);
+extern void asfd_mock_read_no_op(struct asfd *asfd, int *r, int count);
 
 #endif

@@ -1,4 +1,5 @@
 #include "../../burp.h"
+#include "../../alloc.h"
 #include "../../asfd.h"
 #include "../../async.h"
 #include "../../attribs.h"
@@ -102,17 +103,14 @@ static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
 static int entry_changed(struct sbuf *sb,
-	struct manios *manios, struct asfd *chfd)
+	struct manios *manios, struct asfd *chfd, struct sbuf **csb)
 {
 	static int finished=0;
-	static struct sbuf *csb=NULL;
 	static struct blk *blk=NULL;
 
 	if(finished) return 1;
 
-	if(!csb && !(csb=sbuf_alloc(PROTO_2))) return -1;
-
-	if(csb->path.buf)
+	if((*csb)->path.buf)
 	{
 		// Already have an entry.
 	}
@@ -121,16 +119,16 @@ static int entry_changed(struct sbuf *sb,
 		// Need to read another.
 		if(!blk && !(blk=blk_alloc())) return -1;
 		switch(manio_read_with_blk(manios->current,
-			csb, blk, NULL))
+			*csb, blk, NULL))
 		{
 			case 1: // Reached the end.
-				sbuf_free(&csb);
+				sbuf_free(csb);
 				blk_free(&blk);
 				finished=1;
 				return 1;
 			case -1: return -1;
 		}
-		if(!csb->path.buf)
+		if(!(*csb)->path.buf)
 		{
 			logp("Should have a path at this point, but do not, in %s\n", __func__);
 			return -1;
@@ -140,19 +138,19 @@ static int entry_changed(struct sbuf *sb,
 
 	while(1)
 	{
-		switch(sbuf_pathcmp(csb, sb))
+		switch(sbuf_pathcmp(*csb, sb))
 		{
-			case 0: return found_in_current_manifest(csb, sb,
+			case 0: return found_in_current_manifest(*csb, sb,
 					manios, &blk, chfd);
 			case 1: return 1;
 			case -1:
 				// Behind - need to read more data from the old
 				// manifest.
 				switch(manio_read_with_blk(manios->current,
-					csb, blk, NULL))
+					*csb, blk, NULL))
 				{
 					case 1: // Reached the end.
-						sbuf_free(&csb);
+						sbuf_free(csb);
 						blk_free(&blk);
 						return 1;
 					case -1: return -1;
@@ -570,13 +568,14 @@ static int write_to_changed_file(struct asfd *asfd,
 }
 
 static int maybe_add_from_scan(struct manios *manios,
-	struct slist *slist, struct asfd *chfd)
+	struct slist *slist, struct asfd *chfd, struct sbuf **csb)
 {
 	int ret=-1;
 	struct sbuf *snew=NULL;
 
 	while(1)
 	{
+		sbuf_free(&snew);
 		if(!manios->phase1) return 0;
 		// Limit the amount loaded into memory at any one time.
 		if(slist && slist->head)
@@ -595,9 +594,9 @@ static int maybe_add_from_scan(struct manios *manios,
 			default: goto end;
 		}
 
-		switch(entry_changed(snew, manios, chfd))
+		switch(entry_changed(snew, manios, chfd, csb))
 		{
-			case 0: continue; // No change, add to slist.
+			case 0: continue; // No change.
 			case 1: break;
 			default: goto end; // Error.
 		}
@@ -605,6 +604,7 @@ static int maybe_add_from_scan(struct manios *manios,
 		if(data_needed(snew)) snew->flags|=SBUF_NEED_DATA;
 
 		slist_add_sbuf(slist, snew);
+		snew=NULL;
 	}
 	return 0;
 end:
@@ -763,6 +763,29 @@ static struct asfd *get_asfd_from_list_by_fdtype(struct async *as,
 	return NULL;
 }
 
+static int check_for_missing_work_in_slist(struct slist *slist)
+{
+	struct sbuf *sb=NULL;
+
+	if(slist->blist->head)
+	{
+		logp("ERROR: finishing but still want block: %lu\n",
+			slist->blist->head->index);
+		return -1;
+	}
+
+	for(sb=slist->head; sb; sb=sb->next)
+	{
+		if(!(sb->flags & SBUF_END_WRITTEN_TO_MANIFEST))
+		{
+			logp("ERROR: finishing but still waiting for: %c:%s\n",
+				slist->head->path.cmd, slist->head->path.buf);
+			return -1;
+		}
+	}
+	return 0;
+}
+
 int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	int resume, struct conf **confs)
 {
@@ -779,6 +802,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	struct asfd *asfd=NULL;
 	struct asfd *chfd=NULL;
 	struct cntr *cntr=NULL;
+	struct sbuf *csb=NULL;
 
 	if(!as)
 	{
@@ -825,7 +849,8 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
                 goto end;
 
 	if(!(manios=manios_open_phase2(sdirs, p1pos, PROTO_2))
-	  || !(slist=slist_alloc()))
+	  || !(slist=slist_alloc())
+          || !(csb=sbuf_alloc(PROTO_2)))
 		goto end;
 
 	iobuf_free_content(asfd->rbuf);
@@ -833,7 +858,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	memset(&wbuf, 0, sizeof(struct iobuf));
 	while(!(end_flags&END_BACKUP))
 	{
-		if(maybe_add_from_scan(manios, slist, chfd))
+		if(maybe_add_from_scan(manios, slist, chfd, &csb))
 			goto end;
 
 		if(!wbuf.len)
@@ -890,7 +915,10 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	// sb->protocol2->bend set.
 	if(slist->head && slist->head->next)
 	{
-		slist->head=slist->head->next;
+		struct sbuf *sb=NULL;
+		sb=slist->head;
+		slist->head=sb->next;
+		sbuf_free(&sb);
 		if(write_to_changed_file(asfd, chfd, manios,
 			slist, end_flags))
 				goto end;
@@ -899,12 +927,8 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	if(manios_close(&manios))
 		goto end;
 
-	if(slist->blist->head)
-	{
-		logp("ERROR: finishing but still want block: %lu\n",
-			slist->blist->head->index);
+	if(check_for_missing_work_in_slist(slist))
 		goto end;
-	}
 
 	// Need to release the last left. There should be one at most.
 	if(dpth->head && dpth->head->next)
@@ -918,6 +942,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	ret=0;
 end:
 	logp("End backup\n");
+	sbuf_free(&csb);
 	slist_free(&slist);
 	if(asfd) iobuf_free_content(asfd->rbuf);
 	if(chfd) iobuf_free_content(chfd->rbuf);

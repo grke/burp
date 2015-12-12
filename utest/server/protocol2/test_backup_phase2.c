@@ -1,11 +1,16 @@
 #include "../../test.h"
+#include "../../builders/build.h"
+#include "../../prng.h"
 #include "../../../src/alloc.h"
 #include "../../../src/asfd.h"
 #include "../../../src/async.h"
+#include "../../../src/base64.h"
+#include "../../../src/hexmap.h"
 #include "../../../src/fsops.h"
 #include "../../../src/iobuf.h"
 #include "../../../src/server/protocol2/backup_phase2.h"
 #include "../../../src/server/sdirs.h"
+#include "../../../src/slist.h"
 #include "../../builders/build_asfd_mock.h"
 
 #define BASE	"utest_server_protocol2_backup_phase2"
@@ -165,7 +170,8 @@ START_TEST(test_phase2_unset_chfd)
 }
 END_TEST
 
-static void setup_asfds_empty(struct asfd *asfd, struct asfd *chfd)
+static void setup_asfds_empty(struct asfd *asfd, struct asfd *chfd,
+	struct slist *slist)
 {
 	int ar=0, aw=0, cw=0;
 	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
@@ -176,7 +182,8 @@ static void setup_asfds_empty(struct asfd *asfd, struct asfd *chfd)
 	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
-static void setup_asfds_empty_and_messages(struct asfd *asfd, struct asfd *chfd)
+static void setup_asfds_empty_and_messages(struct asfd *asfd, struct asfd *chfd,
+	struct slist *slist)
 {
 	int ar=0, aw=0, cw=0;
 	asfd_mock_read (asfd, &ar, 0, CMD_MESSAGE, "a message");
@@ -192,20 +199,23 @@ static void setup_asfds_empty_and_messages(struct asfd *asfd, struct asfd *chfd)
 	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
-static void setup_asfds_data_too_soon(struct asfd *asfd, struct asfd *chfd)
+static void setup_asfds_data_too_soon(struct asfd *asfd, struct asfd *chfd,
+	struct slist *slist)
 {
 	int ar=0, aw=0;
 	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read (asfd, &ar, 0, CMD_DATA, "some data");
 }
 
-static void setup_asfds_write_error(struct asfd *asfd, struct asfd *chfd)
+static void setup_asfds_write_error(struct asfd *asfd, struct asfd *chfd,
+	struct slist *slist)
 {
 	int aw=0;
 	asfd_mock_write(asfd, &aw, -1, CMD_GEN, "requests_end");
 }
 
-static void setup_asfds_write_error_chfd(struct asfd *asfd, struct asfd *chfd)
+static void setup_asfds_write_error_chfd(struct asfd *asfd, struct asfd *chfd,
+	struct slist *slist)
 {
 	int ar=0, aw=0, cw=0;
 	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
@@ -215,25 +225,50 @@ static void setup_asfds_write_error_chfd(struct asfd *asfd, struct asfd *chfd)
 	asfd_mock_write(chfd, &cw, -1, CMD_GEN, "sigs_end");
 }
 
-static void setup_asfds_read_error(struct asfd *asfd, struct asfd *chfd)
+static void setup_asfds_read_error(struct asfd *asfd, struct asfd *chfd,
+	struct slist *slist)
 {
 	int ar=0, aw=0;
 	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
 	asfd_mock_read (asfd, &ar, -1, CMD_DATA, "some data");
 }
 
-static void setup_asfds_read_error_chfd(struct asfd *asfd, struct asfd *chfd)
+static void setup_asfds_read_error_chfd(struct asfd *asfd, struct asfd *chfd,
+	struct slist *slist)
 {
 	int aw=0, cr=0;
 	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
 	asfd_mock_read (chfd, &cr, -1, CMD_SIG, "some sig");
 }
 
-static void setup_asfds_chfd_bad_cmd(struct asfd *asfd, struct asfd *chfd)
+static void setup_asfds_chfd_bad_cmd(struct asfd *asfd, struct asfd *chfd,
+	struct slist *slist)
 {
 	int aw=0, cr=0;
 	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
 	asfd_mock_read (chfd, &cr,  0, CMD_MESSAGE, "some message");
+}
+
+static void setup_asfds_no_blocks_from_client(struct asfd *asfd,
+	struct asfd *chfd, struct slist *slist)
+{
+	struct sbuf *s;
+	int ar=0, aw=0, cw=0;
+
+	if(slist) for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
+			asfd_mock_write(asfd,
+				&aw, 0, s->path.cmd, s->path.buf);
+	}
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read_no_op(asfd, &ar, 30);
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+
+	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
 static int async_rw_simple(struct async *as)
@@ -252,23 +287,30 @@ static int async_rw_both(struct async *as)
 }
 
 static void run_test(int expected_ret,
+	int manio_entries,
 	int async_read_write_callback(struct async *as),
-	void setup_asfds_callback(struct asfd *asfd, struct asfd *chfd))
+	void setup_asfds_callback(struct asfd *asfd, struct asfd *chfd,
+		struct slist *slist))
 {
 	struct asfd *asfd;
 	struct asfd *chfd;
 	struct async *as;
 	struct sdirs *sdirs;
 	struct conf **confs;
+	struct slist *slist=NULL;
 	setup(&as, &sdirs, &confs);
-	asfd=asfd_mock_setup(&areads, &awrites, 10, 10);
+	asfd=asfd_mock_setup(&areads, &awrites, 50, 50);
 	chfd=asfd_mock_setup(&creads, &cwrites, 10, 10);
 	chfd->fdtype=ASFD_FD_SERVER_TO_CHAMP_CHOOSER;
 	as->asfd_add(as, asfd);
 	as->asfd_add(as, chfd);
 	as->read_write=async_read_write_callback;
 
-	setup_asfds_callback(asfd, chfd);
+	if(manio_entries)
+		slist=build_manifest(sdirs->phase1data,
+			PROTO_2, manio_entries, 1 /*phase*/);
+	setup_asfds_callback(asfd, chfd, slist);
+
 	fail_unless(backup_phase2_server_protocol2(
 		as,
 		sdirs,
@@ -285,19 +327,24 @@ static void run_test(int expected_ret,
 	asfd_free(&chfd);
 	asfd_mock_teardown(&areads, &awrites);
 	asfd_mock_teardown(&creads, &cwrites);
+	slist_free(&slist);
 	tear_down(&as, &sdirs, &confs);
 }
 
 START_TEST(test_phase2)
 {
-	run_test( 0, async_rw_simple, setup_asfds_empty);
-	run_test( 0, async_rw_simple, setup_asfds_empty_and_messages);
-	run_test(-1, async_rw_simple, setup_asfds_data_too_soon);
-	run_test(-1, async_rw_simple, setup_asfds_write_error);
-	run_test(-1, async_rw_simple, setup_asfds_write_error_chfd);
-	run_test(-1, async_rw_simple, setup_asfds_read_error);
-	run_test(-1, async_rw_both,   setup_asfds_read_error_chfd);
-	run_test(-1, async_rw_both,   setup_asfds_chfd_bad_cmd);
+	prng_init(0);
+	base64_init();
+	hexmap_init();
+	run_test( 0, 0, async_rw_simple, setup_asfds_empty);
+	run_test( 0, 0, async_rw_simple, setup_asfds_empty_and_messages);
+	run_test(-1, 0, async_rw_simple, setup_asfds_data_too_soon);
+	run_test(-1, 0, async_rw_simple, setup_asfds_write_error);
+	run_test(-1, 0, async_rw_simple, setup_asfds_write_error_chfd);
+	run_test(-1, 0, async_rw_simple, setup_asfds_read_error);
+	run_test(-1, 0, async_rw_both,   setup_asfds_read_error_chfd);
+	run_test(-1, 0, async_rw_both,   setup_asfds_chfd_bad_cmd);
+	run_test(-1, 20, async_rw_simple, setup_asfds_no_blocks_from_client);
 }
 END_TEST
 

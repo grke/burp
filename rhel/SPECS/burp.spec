@@ -1,14 +1,16 @@
 Name:		burp
 Summary:	Burp is a network-based simple yet powerful backup and restore program for Unix and Windows.
-Version:	1.3.48
-Release:	2%{?dist}
+Version:	2.0.28
+Release:	4%{?dist}
 License:	GPL
 URL:		http://burp.grke.org/
-Source0:	https://github.com/grke/burp/archive/%{version}.tar.gz
+Source0:	https://github.com/grke/burp/archive/burp-%{version}.tar.bz2
 Source1:	burp.init
 Source2:	burp.service
 BuildRequires:	librsync-devel, zlib-devel, openssl-devel, ncurses-devel, libacl-devel, uthash
 Requires:	openssl-perl
+
+%define _unpackaged_files_terminate_build 0 
 
 %description
 Burp is a network backup and restore program, using client and server.
@@ -52,12 +54,20 @@ rm -rf %{buildroot}
 %endif
 
 %post
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 /sbin/chkconfig --add %{name}
+%endif
 
 %postun
+%if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 /sbin/chkconfig --del %{name} || :
+%endif
 
 %changelog
+* Thu Dec 10 2015 Marco Fretz <marco.fretz@gmail.com>
+- Trying to build quick and dirty rpm for CentOS 7
+- Version 2.0.28
+
 * Tue Nov 25 2014 Andrew Niemantsverdriet <andrewniemants@gmail.com>
 - Fixing spec file issues to clean up rpmlint output
 - Added support for systemd

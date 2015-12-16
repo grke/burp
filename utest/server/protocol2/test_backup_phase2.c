@@ -4,10 +4,12 @@
 #include "../../../src/alloc.h"
 #include "../../../src/asfd.h"
 #include "../../../src/async.h"
+#include "../../../src/attribs.h"
 #include "../../../src/base64.h"
 #include "../../../src/hexmap.h"
 #include "../../../src/fsops.h"
 #include "../../../src/iobuf.h"
+#include "../../../src/protocol2/blk.h"
 #include "../../../src/server/protocol2/backup_phase2.h"
 #include "../../../src/server/sdirs.h"
 #include "../../../src/slist.h"
@@ -249,25 +251,121 @@ static void setup_asfds_chfd_bad_cmd(struct asfd *asfd, struct asfd *chfd,
 	asfd_mock_read (chfd, &cr,  0, CMD_MESSAGE, "some message");
 }
 
-static void setup_asfds_no_blocks_from_client(struct asfd *asfd,
-	struct asfd *chfd, struct slist *slist)
+static void setup_writes_from_slist(struct asfd *asfd,
+	int *aw, struct slist *slist)
 {
 	struct sbuf *s;
-	int ar=0, aw=0, cw=0;
-
-	if(slist) for(s=slist->head; s; s=s->next)
+	if(!slist) return;
+	for(s=slist->head; s; s=s->next)
 	{
 		if(sbuf_is_filedata(s)
 		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
 			asfd_mock_write(asfd,
-				&aw, 0, s->path.cmd, s->path.buf);
+				aw, 0, s->path.cmd, s->path.buf);
 	}
+}
+
+static void setup_asfds_no_sigs_from_client(struct asfd *asfd,
+	struct asfd *chfd, struct slist *slist)
+{
+	int ar=0, aw=0, cw=0;
+
+	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 30);
 	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
 	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
 
+	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+}
+
+static void setup_reads_from_slist(struct asfd *asfd,
+	int *ar, struct slist *slist)
+{
+	int file_no=1;
+	struct sbuf *s;
+	struct blk blk;
+	struct iobuf iobuf;
+	if(!slist) return;
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
+		{
+			s->protocol2->index=file_no++;
+			attribs_encode(s);
+			asfd_mock_read(asfd,
+				ar, 0, CMD_ATTRIBS_SIGS, s->attr.buf);
+			blk.fingerprint=1;
+			memset(&blk.md5sum, 1, MD5_DIGEST_LENGTH);
+			blk_to_iobuf_sig(&blk, &iobuf);
+			asfd_mock_read_iobuf(asfd, ar, 0, &iobuf);
+		}
+	}
+}
+
+static void setup_chfd_writes_from_slist(struct asfd *chfd,
+	int *cw, struct slist *slist)
+{
+	struct sbuf *s;
+	struct blk blk;
+	struct iobuf iobuf;
+	if(!slist) return;
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
+		{
+			blk.fingerprint=1;
+			memset(&blk.md5sum, 1, MD5_DIGEST_LENGTH);
+			blk_to_iobuf_sig(&blk, &iobuf);
+			asfd_mock_write_iobuf(chfd, cw, 0, &iobuf);
+		}
+	}
+}
+
+static void setup_chfd_reads_from_slist(struct asfd *chfd,
+	int *cr, struct slist *slist)
+{
+	int blk_index=1;
+	struct blk blk;
+	struct iobuf iobuf;
+	struct sbuf *s;
+	if(!slist) return;
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
+		{
+			blk.index=blk_index++;
+			blk.savepath=0;
+			blk_to_iobuf_index_and_savepath(&blk, &iobuf);
+			iobuf.cmd=CMD_SIG;
+			asfd_mock_read_iobuf(chfd, cr, 0, &iobuf);
+		}
+	}
+}
+
+static void setup_asfds_happy_path_full_dedup(struct asfd *asfd,
+	struct asfd *chfd, struct slist *slist)
+{
+	int ar=0, aw=0, cr=0, cw=0;
+
+	setup_writes_from_slist(asfd, &aw, slist);
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read_no_op(asfd, &ar, 30);
+	setup_reads_from_slist(asfd, &ar, slist);
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+
+	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read_no_op(asfd, &ar, 100);
+	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+
+	setup_chfd_writes_from_slist(chfd, &cw, slist);
+	asfd_mock_read_no_op(chfd, &cr, 100);
+	setup_chfd_reads_from_slist(chfd, &cr, slist);
+	asfd_mock_read_no_op(chfd, &cr, 100);
 	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
@@ -300,7 +398,9 @@ static void run_test(int expected_ret,
 	struct slist *slist=NULL;
 	setup(&as, &sdirs, &confs);
 	asfd=asfd_mock_setup(&areads, &awrites, 50, 50);
-	chfd=asfd_mock_setup(&creads, &cwrites, 10, 10);
+	chfd=asfd_mock_setup(&creads, &cwrites, 50, 50);
+	fail_unless((asfd->desc=strdup_w("a", __func__))!=NULL);
+	fail_unless((chfd->desc=strdup_w("c", __func__))!=NULL);
 	chfd->fdtype=ASFD_FD_SERVER_TO_CHAMP_CHOOSER;
 	as->asfd_add(as, asfd);
 	as->asfd_add(as, chfd);
@@ -336,15 +436,17 @@ START_TEST(test_phase2)
 	prng_init(0);
 	base64_init();
 	hexmap_init();
-	run_test( 0, 0, async_rw_simple, setup_asfds_empty);
-	run_test( 0, 0, async_rw_simple, setup_asfds_empty_and_messages);
-	run_test(-1, 0, async_rw_simple, setup_asfds_data_too_soon);
-	run_test(-1, 0, async_rw_simple, setup_asfds_write_error);
-	run_test(-1, 0, async_rw_simple, setup_asfds_write_error_chfd);
-	run_test(-1, 0, async_rw_simple, setup_asfds_read_error);
-	run_test(-1, 0, async_rw_both,   setup_asfds_read_error_chfd);
-	run_test(-1, 0, async_rw_both,   setup_asfds_chfd_bad_cmd);
-	run_test(-1, 20, async_rw_simple, setup_asfds_no_blocks_from_client);
+
+	run_test( 0,  0, async_rw_simple, setup_asfds_empty);
+	run_test( 0,  0, async_rw_simple, setup_asfds_empty_and_messages);
+	run_test(-1,  0, async_rw_simple, setup_asfds_data_too_soon);
+	run_test(-1,  0, async_rw_simple, setup_asfds_write_error);
+	run_test(-1,  0, async_rw_simple, setup_asfds_write_error_chfd);
+	run_test(-1,  0, async_rw_simple, setup_asfds_read_error);
+	run_test(-1,  0, async_rw_both,   setup_asfds_read_error_chfd);
+	run_test(-1,  0, async_rw_both,   setup_asfds_chfd_bad_cmd);
+	run_test(-1, 20, async_rw_simple, setup_asfds_no_sigs_from_client);
+	run_test( 0, 20, async_rw_both,   setup_asfds_happy_path_full_dedup);
 }
 END_TEST
 
@@ -356,7 +458,7 @@ Suite *suite_server_protocol2_backup_phase2(void)
 	s=suite_create("server_protocol2_backup_phase2");
 
 	tc_core=tcase_create("Core");
-	tcase_set_timeout(tc_core, 10);
+	tcase_set_timeout(tc_core, 60);
 
 	tcase_add_test(tc_core, test_phase2_unset_as_sdirs_confs);
 	tcase_add_test(tc_core, test_phase2_unset_sdirs_confs);

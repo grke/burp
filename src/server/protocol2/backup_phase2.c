@@ -204,13 +204,14 @@ static int set_up_for_sig_info(struct slist *slist, struct iobuf *attr,
 
 	for(sb=slist->add_sigs_here; sb; sb=sb->next)
 	{
-		if(!sb->protocol2->index) continue;
-		if(index==sb->protocol2->index) break;
+		if(!sb->protocol2->index)
+			continue;
+		if(index==sb->protocol2->index)
+			break;
 	}
 	if(!sb)
 	{
-		logp("Could not find %lu in request list %d\n",
-			index, sb->protocol2->index);
+		logp("Could not find %lu in request list\n", index);
 		return -1;
 	}
 	// Replace the attribs with the more recent values.
@@ -391,9 +392,8 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist,
 }
 
 static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist,
-	struct manios *manios, uint8_t *end_flags)
+	struct manios *manios, uint8_t *end_flags, uint64_t *file_no)
 {
-	static uint64_t file_no=1;
 	struct sbuf *sb=slist->last_requested;
 	if(!sb)
 	{
@@ -414,7 +414,7 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist,
 	// Only need to request the path at this stage.
 	iobuf_copy(wbuf, &sb->path);
 	sb->flags |= SBUF_SENT_PATH;
-	sb->protocol2->index=file_no++;
+	sb->protocol2->index=(*file_no)++;
 }
 
 static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
@@ -450,6 +450,19 @@ static int write_endfile(struct sbuf *sb, struct manios *manios)
 	// FIX THIS: Should give a proper length and md5sum.
 	iobuf_from_str(&endfile, CMD_END_FILE, (char *)"0:0");
 	return iobuf_send_msg_fzp(&endfile, manios->changed->fzp);
+}
+
+static void blist_adjust_head(struct blist *blist, struct sbuf *sb)
+{
+	struct blk *b;
+	while(blist->head!=sb->protocol2->bstart)
+	{
+		b=blist->head->next;
+		blk_free(&blist->head);
+		blist->head=b;
+	}
+	if(!blist->head)
+		blist->tail=NULL;
 }
 
 static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
@@ -504,8 +517,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		if(blk==sb->protocol2->bend)
 		{
 			slist->head=sb->next;
-			if(!(blist->head=sb->protocol2->bstart))
-				blist->tail=NULL;
+			blist_adjust_head(blist, sb);
 			sanity_before_sbuf_free(slist, sb);
 			if(write_endfile(sb, manios)) return -1;
 			sbuf_free(&sb);
@@ -517,8 +529,6 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 		sb->protocol2->bstart=blk->next;
 		if(blk==blist->blk_from_champ_chooser)
 			blist->blk_from_champ_chooser=blk->next;
-
-		blk_free(&blk);
 	}
 	if(!blk && sb && !sb->protocol2->bend && (end_flags&END_BACKUP))
 	{
@@ -527,7 +537,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 	}
 	ret=0;
 end:
-	if(!(blist->head=sb->protocol2->bstart)) blist->tail=NULL;
+	blist_adjust_head(blist, sb);
 	return ret;
 }
 
@@ -803,6 +813,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	struct asfd *chfd=NULL;
 	struct cntr *cntr=NULL;
 	struct sbuf *csb=NULL;
+	uint64_t file_no=1;
 
 	if(!as)
 	{
@@ -868,7 +879,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 			if(!wbuf.len)
 			{
 				get_wbuf_from_files(&wbuf, slist,
-					manios, &end_flags);
+					manios, &end_flags, &file_no);
 			}
 		}
 
@@ -881,7 +892,7 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 		if(as->read_write(as))
 		{
-			logp("error in %s\n", __func__);
+			logp("error from as->read_write in %s\n", __func__);
 			goto end;
 		}
 

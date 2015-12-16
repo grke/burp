@@ -232,26 +232,31 @@ static void table_border(enum action act)
 
 static void incr_count_val(struct cntr *cntr, char ch, uint64_t val)
 {
+	if(!cntr) return;
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->count+=val;
 }
 
 static void incr_same_val(struct cntr *cntr, char ch, uint64_t val)
 {
+	if(!cntr) return;
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->same+=val;
 }
 
 static void incr_changed_val(struct cntr *cntr, char ch, uint64_t val)
 {
+	if(!cntr) return;
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->changed+=val;
 }
 
 static void incr_deleted_val(struct cntr *cntr, char ch, uint64_t val)
 {
+	if(!cntr) return;
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->deleted+=val;
 }
 
 static void incr_phase1_val(struct cntr *cntr, char ch, uint64_t val)
 {
+	if(!cntr) return;
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->phase1+=val;
 }
 

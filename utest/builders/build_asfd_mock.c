@@ -27,7 +27,7 @@ static int mock_asfd_read(struct asfd *asfd)
 			reads->cursor++;
 		return r->ret;
 	}
-//printf("r - %c:%s\n", r->iobuf.cmd, r->iobuf.buf);
+//printf("r %s - %c:%s\n", asfd->desc, r->iobuf.cmd, r->iobuf.buf);
 	iobuf_move(asfd->rbuf, &r->iobuf);
 	reads->cursor++;
 	return r->ret;
@@ -52,7 +52,7 @@ static int mock_asfd_write_str(struct asfd *asfd,
 	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
 	w=&writes->ioevent[writes->cursor++];
 	expected=&w->iobuf;
-//printf("w - %c:%s %c:%s\n", wcmd, wsrc, expected->cmd, expected->buf);
+//printf("w %s - %c:%s %c:%s\n", asfd->desc, wcmd, wsrc, expected->cmd, expected->buf);
 	fail_unless(wcmd==expected->cmd);
 	ck_assert_str_eq(expected->buf, wsrc);
 	return w->ret;
@@ -100,18 +100,23 @@ void asfd_mock_teardown(struct ioevent_list *user_reads,
 }
 
 static void add_to_ioevent(struct ioevent *ioevent,
-	int *i, int ret, enum cmd cmd, const char *str, int dup)
+	int *i, int ret, enum cmd cmd, void *data, int dlen, int dup)
 {
 	ioevent[*i].ret=ret;
 	ioevent[*i].iobuf.cmd=cmd;
-	if(str)
+	ioevent[*i].iobuf.len=dlen;
+	if(dlen)
 	{
-		ioevent[*i].iobuf.len=strlen(str);
 		if(dup)
-			fail_unless((ioevent[*i].iobuf.buf
-				=strdup_w(str, __func__))!=NULL);
+		{
+			fail_unless((ioevent[*i].iobuf.buf=
+				(char *)malloc_w(dlen+1, __func__))!=NULL);
+			fail_unless(memcpy(ioevent[*i].iobuf.buf,
+				data, dlen+1)!=NULL);
+			ioevent[*i].iobuf.buf[dlen+1]='\0';
+		}
 		else
-			ioevent[*i].iobuf.buf=(char *)str;
+			ioevent[*i].iobuf.buf=(char *)data;
 	}
 	(*i)++;
 	iobuf_init(&ioevent[*i].iobuf);
@@ -131,18 +136,40 @@ void asfd_mock_read(struct asfd *asfd,
 	int *r, int ret, enum cmd cmd, const char *str)
 {
 	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
-	add_to_ioevent(reads->ioevent, r, ret, cmd, str, 1 /* dup */);
+	add_to_ioevent(reads->ioevent, r, ret, cmd,
+		(void *)str, str?strlen(str):0,
+		1 /* dup */);
 }
 
 void asfd_mock_write(struct asfd *asfd,
 	int *w, int ret, enum cmd cmd, const char *str)
 {
 	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
-	add_to_ioevent(writes->ioevent, w, ret, cmd, str, 0 /* no dup */);
+	add_to_ioevent(writes->ioevent, w, ret, cmd,
+		(void *)str, str?strlen(str):0,
+		0 /* no dup */);
 }
 
 void asfd_mock_read_no_op(struct asfd *asfd, int *r, int count)
 {
 	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
 	add_no_op(reads->ioevent, r, count);
+}
+
+void asfd_mock_read_iobuf(struct asfd *asfd,
+	int *r, int ret, struct iobuf *iobuf)
+{
+	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
+	add_to_ioevent(reads->ioevent, r, ret,
+		iobuf->cmd, iobuf->buf, iobuf->len,
+		1 /* dup */);
+}
+
+void asfd_mock_write_iobuf(struct asfd *asfd,
+	int *w, int ret, struct iobuf *iobuf)
+{
+	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
+	add_to_ioevent(writes->ioevent, w, ret,
+		iobuf->cmd, iobuf->buf, iobuf->len,
+		0 /* no dup */);
 }

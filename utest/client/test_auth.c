@@ -109,7 +109,7 @@ static void setup_read_fail_2(struct asfd *asfd)
 static void run_test(int expected_ret, const char *expected_server_version,
 	void setup_callback(struct asfd *asfd))
 {
-	struct asfd *asfd=asfd_mock_setup(&reads, &writes, 10, 10);
+	struct asfd *asfd=asfd_mock_setup(&reads, &writes);
 	char *server_version=NULL;
 
 	setup_callback(asfd);

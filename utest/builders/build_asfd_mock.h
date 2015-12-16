@@ -11,13 +11,12 @@ struct ioevent
 struct ioevent_list
 {
         struct ioevent *ioevent;
+	size_t size;
         unsigned int cursor;
 };
 
 extern struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
-	struct ioevent_list *user_writes,
-	unsigned int r_size,
-	unsigned int w_size);
+	struct ioevent_list *user_writes);
 extern void asfd_mock_teardown(struct ioevent_list *user_reads,
 	struct ioevent_list *user_writes);
 

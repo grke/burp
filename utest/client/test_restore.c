@@ -31,6 +31,7 @@ static void setup_bad_read(struct asfd *asfd)
 	int r=0; int w=0;
 	asfd_mock_write(asfd, &w, 0, CMD_GEN, "restore :");
 	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read (asfd, &r, -1, CMD_GEN, "blah");
 }
 
 static void setup_no_files(struct asfd *asfd)
@@ -69,7 +70,7 @@ static void run_test(int expected_ret, void setup_callback(struct asfd *asfd))
 {
 	int result;
 	const char *conffile=BASE "/burp.conf";
-	struct asfd *asfd=asfd_mock_setup(&reads, &writes, 20, 20);
+	struct asfd *asfd=asfd_mock_setup(&reads, &writes);
 	struct conf **confs=setup_conf();
 	const char *buf=MIN_CLIENT_CONF
 		"protocol=1\n";
@@ -88,13 +89,25 @@ static void run_test(int expected_ret, void setup_callback(struct asfd *asfd))
 	tear_down(&asfd, &confs);
 }
 
-START_TEST(test_restore)
+START_TEST(test_restore_bad_read)
 {
 	run_test(-1, setup_bad_read);
-	run_test( 0, setup_no_files);
-	//run_test(-1, setup_one_file);
 }
 END_TEST
+
+START_TEST(test_restore_no_files)
+{
+	run_test( 0, setup_no_files);
+}
+END_TEST
+
+/*
+START_TEST(test_restore_one_file)
+{
+	run_test(-1, setup_one_file);
+}
+END_TEST
+*/
 
 Suite *suite_client_restore(void)
 {
@@ -105,7 +118,9 @@ Suite *suite_client_restore(void)
 
 	tc_core=tcase_create("Core");
 
-	tcase_add_test(tc_core, test_restore);
+	tcase_add_test(tc_core, test_restore_bad_read);
+	tcase_add_test(tc_core, test_restore_no_files);
+//	tcase_add_test(tc_core, test_restore_one_file);
 	suite_add_tcase(s, tc_core);
 
 	return s;

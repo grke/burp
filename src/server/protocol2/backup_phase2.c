@@ -430,7 +430,6 @@ static void get_wbuf_from_index(struct iobuf *wbuf, uint64_t index)
 {
 	static char *p;
 	static char tmp[32];
-//printf("%s: %d\n", __func__, index);
 	p=tmp;
 	p+=to_base64(index, tmp);
 	*p='\0';
@@ -458,6 +457,8 @@ static void blist_adjust_head(struct blist *blist, struct sbuf *sb)
 	while(blist->head!=sb->protocol2->bstart)
 	{
 		b=blist->head->next;
+		if(blist->head==blist->blk_from_champ_chooser)
+			blist->blk_from_champ_chooser=b;
 		blk_free(&blist->head);
 		blist->head=b;
 	}

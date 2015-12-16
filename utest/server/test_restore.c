@@ -38,7 +38,7 @@ START_TEST(test_send_regex_failure)
 	set_string(confs[OPT_REGEX], "*");
 	set_string(confs[OPT_BACKUP], "1");
 
-	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
+	asfd=asfd_mock_setup(&reads, &writes);
 	setup_bad_regex(asfd);
 	fail_unless(do_restore_server(
 		asfd,

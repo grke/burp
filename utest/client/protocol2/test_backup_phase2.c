@@ -51,7 +51,7 @@ START_TEST(test_phase2_as_read_write_error)
 {
 	struct asfd *asfd;
 	struct async *as;
-	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
+	asfd=asfd_mock_setup(&reads, &writes);
 	as=async_mock_setup();
 	as->asfd_add(as, asfd);
 	asfd->as=as;
@@ -83,7 +83,7 @@ START_TEST(test_phase2_error_from_server)
 {
 	struct asfd *asfd;
 	struct async *as;
-	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
+	asfd=asfd_mock_setup(&reads, &writes);
 	as=async_mock_setup();
 	as->asfd_add(as, asfd);
 	asfd->as=as;
@@ -111,7 +111,7 @@ START_TEST(test_phase2_file_request_missing)
 {
 	struct asfd *asfd;
 	struct async *as;
-	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
+	asfd=asfd_mock_setup(&reads, &writes);
 	as=async_mock_setup();
 	as->asfd_add(as, asfd);
 	asfd->as=as;

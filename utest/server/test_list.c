@@ -174,7 +174,7 @@ static void run_test(int expected_init_ret,
 	struct sdirs *sdirs=NULL;
 	if(slen) sdirs=setup_sdirs(s, slen, protocol);
 
-	asfd=asfd_mock_setup(&reads, &writes, 10, 10);
+	asfd=asfd_mock_setup(&reads, &writes);
 
 	setup_asfd_callback(asfd);
 

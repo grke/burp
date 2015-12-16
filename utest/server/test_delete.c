@@ -380,7 +380,7 @@ static void build_and_userdelete(
 	struct sdirs *sdirs;
 	struct asfd *asfd;
 	sdirs=setup();
-	asfd=asfd_mock_setup(&areads, &awrites, 10, 10);
+	asfd=asfd_mock_setup(&areads, &awrites);
 	setup_asfd_callback(asfd);
 	do_sdirs_init(sdirs, protocol);
 	build_storage_dirs(sdirs, s, slen);

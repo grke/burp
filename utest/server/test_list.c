@@ -69,8 +69,14 @@ static struct sd fp123[] = {
 	{ "0000003 1970-01-03 00:00:00", 0, 0, 0 }
 };
 
-static void setup_asfd_bu_failure(struct asfd *asfd)
+static void setup_asfd_none(struct asfd *asfd)
 {
+}
+
+static void setup_asfd_bad_regex(struct asfd *asfd)
+{
+	int w=0;
+	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "unable to compile regex: *\n");
 }
 
 static void setup_asfd_1del(struct asfd *asfd)
@@ -203,10 +209,10 @@ START_TEST(test_do_server_list)
 	// No backups.
 	run_test(-1, 0, 0, PROTO_1, NULL, NULL, NULL,
 		NULL, 0, NULL,
-		setup_asfd_bu_failure);
+		setup_asfd_none);
 	run_test(-1, 0, 0, PROTO_2, NULL, NULL, NULL,
 		NULL, 0, NULL,
-		setup_asfd_bu_failure);
+		setup_asfd_none);
 
 	// Backup not specified. burp -a l
 	run_test(0, 0, 0, PROTO_1, NULL, NULL, NULL,
@@ -392,7 +398,7 @@ START_TEST(test_do_server_list)
 	// burp -a l -b x -r '*'
 	run_test(-1, 0, 0, PROTO_1, "1", "*", NULL,
 		sd123, ARR_LEN(sd123), NULL,
-		setup_asfd_1);
+		setup_asfd_bad_regex);
 }
 END_TEST
 

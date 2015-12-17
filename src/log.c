@@ -246,7 +246,7 @@ int logw(struct asfd *asfd, struct cntr *cntr, const char *fmt, ...)
 void log_and_send(struct asfd *asfd, const char *msg)
 {
 	logp("%s\n", msg);
-	if(asfd && asfd->fd>0)
+	if(asfd)
 		asfd->write_str(asfd, CMD_ERROR, msg);
 }
 
@@ -255,7 +255,7 @@ void log_and_send_oom(struct asfd *asfd, const char *function)
 	char m[256]="";
         snprintf(m, sizeof(m), "out of memory in %s()\n", __func__);
         logp("%s", m);
-        if(asfd && asfd->fd>0)
+        if(asfd)
 		asfd->write_str(asfd, CMD_ERROR, m);
 }
 

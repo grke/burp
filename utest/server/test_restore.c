@@ -26,7 +26,7 @@ static void tear_down(struct asfd **asfd, struct conf ***confs)
 static void setup_bad_regex(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "unable to compile regex: *");
+	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "unable to compile regex: *\n");
 }
 
 START_TEST(test_send_regex_failure)

@@ -323,7 +323,10 @@ end:
 	return ret;
 }
 
-static int encode_req(struct blk *blk, char *req)
+#ifndef UTEST
+static
+#endif
+int encode_req(struct blk *blk, char *req)
 {
 	char *p=req;
 	p+=to_base64(blk->index, p);

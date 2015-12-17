@@ -66,6 +66,7 @@ static int mock_asfd_write_str(struct asfd *asfd,
 //printf("w %s - %c:%s %c:%s\n", asfd->desc, wcmd, wsrc, expected->cmd, expected->buf);
 	fail_unless(wcmd==expected->cmd);
 	ck_assert_str_eq(expected->buf, wsrc);
+	iobuf_free_content(expected);
 	return w->ret;
 }
 
@@ -115,7 +116,7 @@ void asfd_mock_teardown(struct ioevent_list *user_reads,
 }
 
 static void add_to_ioevent(struct ioevent_list *ioevent_list,
-	int *i, int ret, enum cmd cmd, void *data, int dlen, int dup)
+	int *i, int ret, enum cmd cmd, void *data, int dlen)
 {
 	struct ioevent *ioevent;
 	ioevent_list_grow(ioevent_list);
@@ -127,15 +128,10 @@ static void add_to_ioevent(struct ioevent_list *ioevent_list,
 	ioevent[*i].iobuf.buf=NULL;
 	if(dlen)
 	{
-		if(dup)
-		{
-			fail_unless((ioevent[*i].iobuf.buf=
-				(char *)malloc_w(dlen+1, __func__))!=NULL);
-			fail_unless(memcpy(ioevent[*i].iobuf.buf,
-				data, dlen+1)!=NULL);
-		}
-		else
-			ioevent[*i].iobuf.buf=(char *)data;
+		fail_unless((ioevent[*i].iobuf.buf=
+			(char *)malloc_w(dlen+1, __func__))!=NULL);
+		fail_unless(memcpy(ioevent[*i].iobuf.buf,
+			data, dlen+1)!=NULL);
 	}
 	(*i)++;
 }
@@ -155,8 +151,7 @@ void asfd_mock_read(struct asfd *asfd,
 {
 	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
 	add_to_ioevent(reads, r, ret, cmd,
-		(void *)str, str?strlen(str):0,
-		1 /* dup */);
+		(void *)str, str?strlen(str):0);
 }
 
 void asfd_mock_write(struct asfd *asfd,
@@ -164,8 +159,7 @@ void asfd_mock_write(struct asfd *asfd,
 {
 	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
 	add_to_ioevent(writes, w, ret, cmd,
-		(void *)str, str?strlen(str):0,
-		0 /* no dup */);
+		(void *)str, str?strlen(str):0);
 }
 
 void asfd_mock_read_no_op(struct asfd *asfd, int *r, int count)
@@ -179,8 +173,7 @@ void asfd_mock_read_iobuf(struct asfd *asfd,
 {
 	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
 	add_to_ioevent(reads, r, ret,
-		iobuf->cmd, iobuf->buf, iobuf->len,
-		1 /* dup */);
+		iobuf->cmd, iobuf->buf, iobuf->len);
 }
 
 void asfd_mock_write_iobuf(struct asfd *asfd,
@@ -188,6 +181,5 @@ void asfd_mock_write_iobuf(struct asfd *asfd,
 {
 	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
 	add_to_ioevent(writes, w, ret,
-		iobuf->cmd, iobuf->buf, iobuf->len,
-		0 /* no dup */);
+		iobuf->cmd, iobuf->buf, iobuf->len);
 }

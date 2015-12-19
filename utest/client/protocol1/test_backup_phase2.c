@@ -1,16 +1,34 @@
 #include "../../test.h"
+#include "../../builders/build.h"
+#include "../../prng.h"
+#include "../../../src/alloc.h"
 #include "../../../src/asfd.h"
+#include "../../../src/async.h"
+#include "../../../src/attribs.h"
+#include "../../../src/base64.h"
 #include "../../../src/client/protocol1/backup_phase2.h"
+#include "../../../src/fsops.h"
+#include "../../../src/hexmap.h"
 #include "../../../src/iobuf.h"
+#include "../../../src/slist.h"
 #include "../../builders/build_asfd_mock.h"
+
+#define BASE	"utest_client_protocol1_backup_phase2"
 
 static struct ioevent_list reads;
 static struct ioevent_list writes;
 
-static void tear_down(struct asfd **asfd)
+static void tear_down_asfd(struct asfd **asfd)
 {
 	asfd_free(asfd);
 	asfd_mock_teardown(&reads, &writes);
+	alloc_check();
+}
+
+static void tear_down_async(struct async **as, struct conf ***confs)
+{
+	async_free(as);
+	confs_free(confs);
 	alloc_check();
 }
 
@@ -43,7 +61,7 @@ START_TEST(test_phase2_read_write_error)
 		NULL, // confs
 		0 // resume
 	)==-1);
-	tear_down(&asfd);
+	tear_down_asfd(&asfd);
 }
 END_TEST
 
@@ -66,7 +84,7 @@ START_TEST(test_phase2_empty_backup_ok)
 		NULL, // confs
 		0 // resume
 	)==0);
-	tear_down(&asfd);
+	tear_down_asfd(&asfd);
 }
 END_TEST
 
@@ -90,7 +108,202 @@ START_TEST(test_phase2_empty_backup_ok_with_warning)
 		NULL, // confs
 		0 // resume
 	)==0);
-	tear_down(&asfd);
+	tear_down_asfd(&asfd);
+}
+END_TEST
+
+static struct async *setup_async(void)
+{
+	struct async *as;
+	fail_unless((as=async_alloc())!=NULL);
+	as->init(as, 0 /* estimate */);
+	return as;
+}
+
+static struct conf **setup_conf(void)
+{
+	struct conf **confs=NULL;
+	fail_unless((confs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(confs));
+	set_int(confs[OPT_COMPRESSION], 0);
+	return confs;
+}
+
+static int async_rw_simple(struct async *as)
+{
+	return as->asfd->read(as->asfd);
+}
+
+static int async_write_simple(struct async *as)
+{
+	return 0;
+}
+
+static void make_file(const char *path)
+{
+	FILE *fp;
+	fail_unless(build_path_w(path)==0);
+	fail_unless((fp=fopen(path, "wb"))!=NULL);
+	fail_unless(!fclose(fp));
+}
+
+static void setup_asfds_with_slist_new_files(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0; int w=0;
+	struct sbuf *s;
+
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  || sbuf_is_vssdata(s))
+		{
+			make_file(s->path.buf);
+			fail_unless(!lstat(s->path.buf, &s->statp));
+			s->winattr=0;
+			s->compression=0;
+			attribs_encode(s);
+			asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
+			asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
+		}
+	}
+
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backupphase2end");
+
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  || sbuf_is_vssdata(s))
+		{
+			asfd_mock_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_mock_write_iobuf(asfd, &w, 0, &s->path);
+			asfd_mock_write(asfd, &w, 0, CMD_END_FILE,
+				"0:d41d8cd98f00b204e9800998ecf8427e");
+		}
+	}
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
+}
+
+static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0; int w=0;
+	struct sbuf *s;
+	char empty_sig[12]={'r', 's', '', '6',
+		'\0', '\0', '\0', '@', '\0', '\0', '\0', ''};
+	char empty_delta[4]={'r','s','','6'};
+
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  || sbuf_is_vssdata(s))
+		{
+			struct iobuf rbuf;
+			make_file(s->path.buf);
+			fail_unless(!lstat(s->path.buf, &s->statp));
+			s->winattr=0;
+			s->compression=0;
+			attribs_encode(s);
+			if(sbuf_is_encrypted(s))
+			{
+				asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
+				asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
+				continue;
+			}
+			asfd_mock_read(asfd, &r, 0, CMD_DATAPTH, "somepath");
+			asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
+			asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
+			iobuf_set(&rbuf, CMD_APPEND,
+				empty_sig, sizeof(empty_sig));
+			asfd_mock_read_iobuf(asfd, &r, 0, &rbuf);
+			asfd_mock_read(asfd, &r, 0, CMD_END_FILE, "endfile");
+		}
+	}
+
+	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backupphase2end");
+
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  || sbuf_is_vssdata(s))
+		{
+			struct iobuf wbuf;
+			if(sbuf_is_encrypted(s))
+			{
+				asfd_mock_write_iobuf(asfd, &w, 0, &s->attr);
+				asfd_mock_write_iobuf(asfd, &w, 0, &s->path);
+				asfd_mock_write(asfd, &w, 0, CMD_END_FILE,
+					"0:d41d8cd98f00b204e9800998ecf8427e");
+				continue;
+			}
+			asfd_mock_write(asfd, &w, 0, CMD_DATAPTH, "somepath");
+			asfd_mock_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_mock_write_iobuf(asfd, &w, 0, &s->path);
+			iobuf_set(&wbuf, CMD_APPEND,
+				empty_delta, sizeof(empty_delta));
+			asfd_mock_write_iobuf(asfd, &w, 0, &wbuf);
+			iobuf_set(&wbuf, CMD_APPEND, (char *)"", 1);
+			asfd_mock_write_iobuf(asfd, &w, 0, &wbuf);
+			asfd_mock_write(asfd, &w, 0, CMD_END_FILE,
+				"0:d41d8cd98f00b204e9800998ecf8427e");
+		}
+	}
+	asfd_mock_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
+}
+
+static void run_test(int expected_ret,
+	int slist_entries,
+	void setup_asfds_callback(struct asfd *asfd, struct slist *slist))
+{
+	struct asfd *asfd;
+	struct async *as;
+	struct conf **confs;
+	struct slist *slist=NULL;
+
+	fail_unless(!recursive_delete(BASE));
+
+	prng_init(0);
+	base64_init();
+	hexmap_init();
+
+	as=setup_async();
+	confs=setup_conf();
+	asfd=asfd_mock_setup(&reads, &writes);
+	as->asfd_add(as, asfd);
+	asfd->as=as;
+	as->read_write=async_rw_simple;
+	as->write=async_write_simple;
+
+	if(slist_entries)
+		slist=build_slist_phase1(BASE, PROTO_1, slist_entries);
+	setup_asfds_callback(asfd, slist);
+
+	fail_unless(backup_phase2_client_protocol1(asfd,
+		confs, 0 /* resume */)==expected_ret);
+
+	asfd_free(&asfd);
+	asfd_mock_teardown(&reads, &writes);
+	slist_free(&slist);
+	tear_down_async(&as, &confs);
+
+	fail_unless(!recursive_delete(BASE));
+}
+
+START_TEST(test_phase2_with_slist_new_files)
+{
+	run_test(0, 10, setup_asfds_with_slist_new_files);
+}
+END_TEST
+
+START_TEST(test_phase2_with_slist_changed_files)
+{
+	run_test(0, 10, setup_asfds_with_slist_changed_files);
 }
 END_TEST
 
@@ -107,6 +320,9 @@ Suite *suite_client_protocol1_backup_phase2(void)
 	tcase_add_test(tc_core, test_phase2_read_write_error);
 	tcase_add_test(tc_core, test_phase2_empty_backup_ok);
 	tcase_add_test(tc_core, test_phase2_empty_backup_ok_with_warning);
+	tcase_add_test(tc_core, test_phase2_with_slist_new_files);
+	tcase_add_test(tc_core, test_phase2_with_slist_changed_files);
+
 	suite_add_tcase(s, tc_core);
 
 	return s;

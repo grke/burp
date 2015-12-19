@@ -6,6 +6,7 @@
 #include "../../cmd.h"
 #include "../../cstat.h"
 #include "../../fzp.h"
+#include "../../iobuf.h"
 #include "../../prepend.h"
 #include "../../yajl_gen_w.h"
 #include "browse.h"
@@ -24,20 +25,24 @@ static int write_all(struct asfd *asfd)
 	size_t w=0;
 	size_t len=0;
 	const unsigned char *buf;
+	struct iobuf wbuf;
 
 	yajl_gen_get_buf(yajl, &buf, &len);
 	while(len)
 	{
 		w=len;
 		if(w>ASYNC_BUF_LEN) w=ASYNC_BUF_LEN;
-		if((ret=asfd->write_strn(asfd, CMD_GEN /* not used */,
-			(const char *)buf, w)))
-				break;
+		iobuf_set(&wbuf, CMD_GEN /* not used */, (char *)buf, w);
+		if((ret=asfd->write(asfd, &wbuf)))
+			break;
 		buf+=w;
 		len-=w;
 	}
 	if(!ret && !pretty_print)
-		ret=asfd->write_strn(asfd, CMD_GEN /* not used */, "\n", 1);
+	{
+		iobuf_set(&wbuf, CMD_GEN /* not used */, (char *)"\n", 1);
+		ret=asfd->write(asfd, &wbuf);
+	}
 
 	yajl_gen_clear(yajl);
 	return ret;

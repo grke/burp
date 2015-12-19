@@ -437,19 +437,13 @@ static int asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 	return 0;
 }
 
-static int asfd_write_strn(struct asfd *asfd,
-	enum cmd wcmd, const char *wsrc, size_t len)
+static int asfd_write_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
 {
 	struct iobuf wbuf;
 	wbuf.cmd=wcmd;
 	wbuf.buf=(char *)wsrc;
-	wbuf.len=len;
+	wbuf.len=strlen(wsrc);
 	return asfd->write(asfd, &wbuf);
-}
-
-static int asfd_write_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
-{
-	return asfd_write_strn(asfd, wcmd, wsrc, strlen(wsrc));
 }
 
 static int asfd_simple_loop(struct asfd *asfd,
@@ -540,7 +534,6 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 	asfd->simple_loop=asfd_simple_loop;
 	asfd->write=asfd_write;
 	asfd->write_str=asfd_write_str;
-	asfd->write_strn=asfd_write_strn;
 
 	switch(asfd->streamtype)
 	{

@@ -41,6 +41,7 @@ SRCS = \
 	server/monitor/test_browse.c \
 	server/monitor/test_cstat.c \
 	server/monitor/test_json_output.c \
+	server/protocol1/test_backup_phase2.c \
 	server/protocol1/test_bedup.c \
 	server/protocol1/test_blocklen.c \
 	server/protocol1/test_dpth.c \

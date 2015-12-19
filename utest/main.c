@@ -40,6 +40,7 @@ int main(void)
 	srunner_add_suite(sr, suite_server_monitor_browse());
 	srunner_add_suite(sr, suite_server_monitor_cstat());
 	srunner_add_suite(sr, suite_server_monitor_json_output());
+	srunner_add_suite(sr, suite_server_protocol1_backup_phase2());
 	srunner_add_suite(sr, suite_server_protocol1_bedup());
 	srunner_add_suite(sr, suite_server_protocol1_blocklen());
 	srunner_add_suite(sr, suite_server_protocol1_dpth());

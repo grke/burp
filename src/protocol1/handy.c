@@ -6,6 +6,7 @@
 #include "../cmd.h"
 #include "../handy.h"
 #include "../hexmap.h"
+#include "../iobuf.h"
 #include "../log.h"
 #include "handy.h"
 
@@ -21,8 +22,10 @@ static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	}
 	if(*outlen>0)
 	{
-		if(asfd->write_strn(asfd, CMD_APPEND,
-			(char *)outbuf, (size_t)*outlen)) return -1;
+		struct iobuf wbuf;
+		iobuf_set(&wbuf, CMD_APPEND, (char *)outbuf, *outlen);
+		if(asfd->write(asfd, &wbuf))
+			return -1;
 		if(!MD5_Update(md5, outbuf, *outlen))
 		{
 			logp("MD5_Update() failed\n");
@@ -117,6 +120,7 @@ int send_whole_file_gzl(struct asfd *asfd,
 	MD5_CTX md5;
 	size_t metalen=0;
 	const char *metadata=NULL;
+	struct iobuf wbuf;
 
 	int have;
 	z_stream strm;
@@ -249,8 +253,8 @@ int send_whole_file_gzl(struct asfd *asfd,
 			}
 			else
 			{
-				if(asfd->write_strn(asfd, CMD_APPEND,
-					(char *)out, (size_t)have))
+				iobuf_set(&wbuf, CMD_APPEND, (char *)out, have);
+				if(asfd->write(asfd, &wbuf))
 				{
 					ret=-1;
 					break;
@@ -300,9 +304,10 @@ int send_whole_file_gzl(struct asfd *asfd,
 			}
 			else if(eoutlen>0)
 			{
-			  if(asfd->write_strn(asfd, CMD_APPEND,
-				(char *)eoutbuf, (size_t)eoutlen))
-					ret=-1;
+			  iobuf_set(&wbuf, CMD_APPEND,
+				(char *)eoutbuf, (size_t)eoutlen);
+			  if(asfd->write(asfd, &wbuf))
+				ret=-1;
 			  else if(!MD5_Update(&md5, eoutbuf, eoutlen))
 			  {
 				logp("MD5_Update() failed\n");
@@ -350,6 +355,7 @@ struct winbuf
 static DWORD WINAPI write_efs(PBYTE pbData,
 	PVOID pvCallbackContext, ULONG ulLength)
 {
+	struct iobuf wbuf;
 	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
 	(*(mybuf->bytes))+=ulLength;
 	if(!MD5_Update(mybuf->md5, pbData, ulLength))
@@ -357,8 +363,8 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 		logp("MD5_Update() failed\n");
 		return ERROR_FUNCTION_FAILED;
 	}
-	if(mybuf->asfd->write_strn(mybuf->asfd,
-		CMD_APPEND, (const char *)pbData, ulLength))
+	iobuf_set(&wbuf, CMD_APPEND, (char *)pbData, (size_t)ulLength);
+	if(mybuf->asfd->write(mybuf->asfd, &wbuf))
 	{
 		return ERROR_FUNCTION_FAILED;
 	}
@@ -384,6 +390,7 @@ int send_whole_filel(struct asfd *asfd,
 	size_t s=0;
 	MD5_CTX md5;
 	char buf[4096]="";
+	struct iobuf wbuf;
 
 	if(!bfd)
 	{
@@ -416,7 +423,8 @@ int send_whole_filel(struct asfd *asfd,
 				logp("MD5_Update() failed\n");
 				ret=-1;
 			}
-			if(asfd->write_strn(asfd, CMD_APPEND, metadata, s))
+			iobuf_set(&wbuf, CMD_APPEND, (char *)metadata, s);
+			if(asfd->write(asfd, &wbuf))
 			{
 				ret=-1;
 			}
@@ -485,7 +493,8 @@ int send_whole_filel(struct asfd *asfd,
 				ret=-1;
 				break;
 			}
-			if(asfd->write_strn(asfd, CMD_APPEND, buf, s))
+			iobuf_set(&wbuf, CMD_APPEND, buf, s);
+			if(asfd->write(asfd, &wbuf))
 			{
 				ret=-1;
 				break;

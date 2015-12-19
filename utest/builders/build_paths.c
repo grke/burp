@@ -36,13 +36,18 @@ static char *comp_gen(void)
 
 #define COMP_SIZE	20
 
-static char *gen_fullpath(char **comps)
+static char *gen_fullpath(const char *prefix, char **comps)
 {
 	uint32_t i;
 	uint32_t number_of_components;
 	char *path=NULL;
 	char *file=NULL;
 	number_of_components=prng_next()%6;
+	if(prefix)
+	{
+		fail_unless(!astrcat(&path, "", __func__));
+		fail_unless(!astrcat(&path, prefix, __func__));
+	}
 	for(i=0; i<number_of_components; i++)
 	{
 		uint32_t choice;
@@ -65,7 +70,7 @@ static int mypathcmp(const void *a, const void *b)
 	return pathcmp(x, y);
 }
 
-char **build_paths(int wanted)
+char **build_paths(const char *prefix, int wanted)
 {
 	uint32_t i=0;
 	char **paths;
@@ -76,7 +81,7 @@ char **build_paths(int wanted)
 		fail_unless((comps[i]=comp_gen())!=NULL);
 
 	for(int j=0; j<wanted; j++)
-		paths[j]=gen_fullpath(comps);
+		paths[j]=gen_fullpath(prefix, comps);
 
 	qsort(paths, wanted, sizeof(char *), mypathcmp);
 

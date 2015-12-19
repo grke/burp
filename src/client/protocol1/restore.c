@@ -67,7 +67,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 		}
 #endif
 		if(!ret) attribs_set(asfd, rpath,
-			&(sb->statp), sb->winattr, cntr);
+			&sb->statp, sb->winattr, cntr);
 	}
 
 	ret=0;

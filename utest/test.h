@@ -77,6 +77,7 @@ Suite *suite_server_monitor_json_output(void);
 Suite *suite_server_resume(void);
 Suite *suite_server_restore(void);
 Suite *suite_server_sdirs(void);
+Suite *suite_server_protocol1_backup_phase2(void);
 Suite *suite_server_protocol1_bedup(void);
 Suite *suite_server_protocol1_blocklen(void);
 Suite *suite_server_protocol1_dpth(void);

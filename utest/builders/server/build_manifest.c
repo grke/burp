@@ -21,7 +21,8 @@ static void link_data(struct sbuf *sb, enum cmd cmd)
 	sb->link.len=strlen(sb->link.buf);
 }
 
-static struct slist *build_slist_phase1(enum protocol protocol, int entries)
+struct slist *build_slist_phase1(const char *prefix,
+	enum protocol protocol, int entries)
 {
 	int i=0;
 	char **paths;
@@ -29,7 +30,7 @@ static struct slist *build_slist_phase1(enum protocol protocol, int entries)
 	struct slist *slist;
 
 	fail_unless((slist=slist_alloc())!=NULL);
-	paths=build_paths(entries);
+	paths=build_paths(prefix, entries);
 	for(i=0; i<entries; i++)
 	{
 		sb=build_attribs_reduce(protocol);
@@ -83,7 +84,7 @@ static struct slist *build_manifest_phase1(const char *path,
 	struct slist *slist=NULL;
 	struct manio *manio=NULL;
 
-	slist=build_slist_phase1(protocol, entries);
+	slist=build_slist_phase1(NULL /*prefix*/, protocol, entries);
 
 	fail_unless((manio=manio_open_phase1(path, "wb", protocol))!=NULL);
 
@@ -156,7 +157,7 @@ static struct slist *build_slist(enum protocol protocol, int entries)
 {
 	struct sbuf *sb;
 	struct slist *slist;
-	slist=build_slist_phase1(protocol, entries);
+	slist=build_slist_phase1(NULL /* prefix */, protocol, entries);
 	for(sb=slist->head; sb; sb=sb->next)
 		set_sbuf(slist, sb);
 	return slist;

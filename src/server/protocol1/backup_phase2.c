@@ -776,10 +776,34 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	struct sbuf *cb=NULL; // file list in current manifest
 	struct sbuf *p1b=NULL; // file list from client
 	struct sbuf *rb=NULL; // receiving file from client
-	struct asfd *asfd=as->asfd;
+	struct asfd *asfd=NULL;
 	int breaking=0;
 	int breakcount=0;
-	struct cntr *cntr=get_cntr(cconfs);
+	struct cntr *cntr=NULL;
+
+	if(!as)
+	{
+		logp("async not provided to %s()\n", __func__);
+		goto error;
+	}
+	if(!sdirs)
+	{
+		logp("sdirs not provided to %s()\n", __func__);
+		goto error;
+	}
+	if(!cconfs)
+	{
+		logp("cconfs not provided to %s()\n", __func__);
+		goto error;
+	}
+	asfd=as->asfd;
+	if(!asfd)
+	{
+		logp("asfd not provided to %s()\n", __func__);
+		goto error;
+	}
+	cntr=get_cntr(cconfs);
+
 	if(get_int(cconfs[OPT_BREAKPOINT])>=2000
 	  && get_int(cconfs[OPT_BREAKPOINT])<3000)
 	{
@@ -933,7 +957,7 @@ end:
 	manio_close(&cmanio);
 	dpth_free(&dpth);
 	man_off_t_free(&p1pos);
-	if(!ret) unlink(sdirs->phase1data);
+	if(!ret && sdirs) unlink(sdirs->phase1data);
 
 	logp("End phase2 (receive file data)\n");
 

@@ -8,7 +8,9 @@
 
 static int copy_input_to_output(struct asfd *in, struct asfd *out)
 {
-	return out->write_strn(out, CMD_GEN, in->rbuf->buf, in->rbuf->len);
+	struct iobuf wbuf;
+	iobuf_set(&wbuf, CMD_GEN, in->rbuf->buf, in->rbuf->len);
+	return out->write(out, &wbuf);
 }
 
 static int main_loop(struct async *as, struct conf **confs)

@@ -53,8 +53,7 @@ static int mock_asfd_read_expect(struct asfd *asfd,
 	return ret;
 }
 
-static int mock_asfd_write_str(struct asfd *asfd,
-	enum cmd wcmd, const char *wsrc)
+static int mock_asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 {
 	struct ioevent *w;
 	struct iobuf *expected;
@@ -63,23 +62,28 @@ static int mock_asfd_write_str(struct asfd *asfd,
 	fail_unless(writes->cursor<writes->size);
 	w=&writes->ioevent[writes->cursor++];
 	expected=&w->iobuf;
-//printf("w %s - %c:%s %c:%s\n", asfd->desc, wcmd, wsrc, expected->cmd, expected->buf);
-	fail_unless(wcmd==expected->cmd);
-	ck_assert_str_eq(expected->buf, wsrc);
+//printf("w %s - %c:%s %c:%s\n", asfd->desc, wbuf->cmd, wbuf->buf,
+//		expected->cmd, expected->buf);
+	fail_unless(wbuf->len==expected->len);
+	fail_unless(wbuf->cmd==expected->cmd);
+	fail_unless(!memcmp(expected->buf, wbuf->buf, wbuf->len));
 	iobuf_free_content(expected);
 	return w->ret;
 }
 
-static int mock_asfd_write(struct asfd *asfd, struct iobuf *wbuf)
+static int mock_asfd_write_str(struct asfd *asfd,
+	enum cmd wcmd, const char *wsrc)
 {
-	return mock_asfd_write_str(asfd, wbuf->cmd, wbuf->buf);
+	struct iobuf wbuf;
+	iobuf_set(&wbuf, wcmd, (char *)wsrc, strlen(wsrc));
+	return mock_asfd_write(asfd, &wbuf);
 }
 
 static enum append_ret mock_asfd_append_all_to_write_buffer(struct asfd *asfd,
 	struct iobuf *wbuf)
 {
 	enum append_ret ret;
-	ret=(enum append_ret)mock_asfd_write_str(asfd, wbuf->cmd, wbuf->buf);
+	ret=(enum append_ret)mock_asfd_write(asfd, wbuf);
 	wbuf->len=0;
 	return ret;
 }

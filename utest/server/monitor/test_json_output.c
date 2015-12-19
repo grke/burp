@@ -26,10 +26,9 @@ static void tear_down(struct asfd **asfd)
 	alloc_check();
 }
 
-static int my_asfd_write_strn(struct asfd *asfd,
-	enum cmd wcmd, const char *wsrc, size_t len)
+static int my_asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 {
-	fail_unless(fzp_write(output, wsrc, len)==len);
+	fail_unless(fzp_write(output, wbuf->buf, wbuf->len)==wbuf->len);
 	return 0;
 }
 
@@ -38,7 +37,7 @@ static struct asfd *asfd_setup(const char *outputpath)
 	struct asfd *asfd;
 	fail_unless((asfd=asfd_alloc())!=NULL);
 	fail_unless((asfd->rbuf=iobuf_alloc())!=NULL);
-	asfd->write_strn=my_asfd_write_strn;
+	asfd->write=my_asfd_write;
 	fail_unless(!build_path_w(outputpath));
 	fail_unless((output=fzp_open(outputpath, "wb"))!=NULL);
 	json_set_pretty_print(1);

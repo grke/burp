@@ -282,13 +282,10 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		if(fb->asfd)
 		{
 			size_t w=wlen;
-			static struct iobuf *wbuf=NULL;
-			if(!wbuf && !(wbuf=iobuf_alloc())) return RS_IO_ERROR;
-			wbuf->cmd=CMD_APPEND;
-			wbuf->buf=fb->buf;
-			wbuf->len=wlen;
+			struct iobuf wbuf;
+			iobuf_set(&wbuf, CMD_APPEND, fb->buf, wlen);
 			switch(fb->asfd->append_all_to_write_buffer(
-				fb->asfd, wbuf))
+				fb->asfd, &wbuf))
 			{
 				case APPEND_OK: break;
 				case APPEND_BLOCKED: return RS_BLOCKED;

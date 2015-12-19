@@ -141,7 +141,7 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 			goto end;
 	}
 	if(asfd->write_str(asfd, CMD_GEN, msg)
-	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
+	  || asfd_read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
 
 	if(!(sb=sbuf_alloc(get_protocol(confs)))) goto end;

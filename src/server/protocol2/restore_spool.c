@@ -115,7 +115,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	printf("Client is using restore_spool: %s\n", restore_spool);
 
 	if(asfd->write_str(asfd, CMD_GEN, "restore_spool")
-	  || asfd->read_expect(asfd, CMD_GEN, "restore_spool_ok"))
+	  || asfd_read_expect(asfd, CMD_GEN, "restore_spool_ok"))
 		goto end;
 
 	// Send each of the data files that we found to the client.
@@ -141,7 +141,7 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "datfilesend")
-	  || asfd->read_expect(asfd, CMD_GEN, "datfilesend_ok"))
+	  || asfd_read_expect(asfd, CMD_GEN, "datfilesend_ok"))
 		goto end;
 
 	manio_close(&manio);

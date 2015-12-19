@@ -42,7 +42,7 @@ int authorise_client(struct asfd *asfd,
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, cname)
-	  || asfd->read_expect(asfd, CMD_GEN, "okpassword")
+	  || asfd_read_expect(asfd, CMD_GEN, "okpassword")
 	  || asfd->write_str(asfd, CMD_GEN, password)
 	  || asfd->read(asfd))
 	{

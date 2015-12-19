@@ -165,7 +165,7 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 	  || !lstat(ssl_key, &statp))
 	{
 		if(asfd->write_str(asfd, CMD_GEN, "nocsr")
-		  || asfd->read_expect(asfd, CMD_GEN, "nocsr ok"))
+		  || asfd_read_expect(asfd, CMD_GEN, "nocsr ok"))
 		{
 			logp("problem reading from server nocsr\n");
 			goto end;

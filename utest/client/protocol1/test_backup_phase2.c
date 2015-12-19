@@ -46,9 +46,9 @@ END_TEST
 static void setup_phase2_read_write_error(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read (asfd, &r, -1, CMD_GEN, "blah");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, -1, CMD_GEN, "blah");
 }
 
 START_TEST(test_phase2_read_write_error)
@@ -68,10 +68,10 @@ END_TEST
 static void setup_phase2_empty_backup_ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backupphase2end");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backupphase2end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
 }
 
 START_TEST(test_phase2_empty_backup_ok)
@@ -91,11 +91,11 @@ END_TEST
 static void setup_phase2_empty_backup_ok_with_warning(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read (asfd, &r, 0, CMD_WARNING, "some warning");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backupphase2end");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, 0, CMD_WARNING, "some warning");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backupphase2end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
 }
 
 START_TEST(test_phase2_empty_backup_ok_with_warning)
@@ -153,8 +153,8 @@ static void setup_asfds_with_slist_new_files(struct asfd *asfd,
 	int r=0; int w=0;
 	struct sbuf *s;
 
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 
 	for(s=slist->head; s; s=s->next)
 	{
@@ -171,20 +171,20 @@ static void setup_asfds_with_slist_new_files(struct asfd *asfd,
 		}
 	}
 
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backupphase2end");
 
 	for(s=slist->head; s; s=s->next)
 	{
 		if(sbuf_is_filedata(s)
 		  || sbuf_is_vssdata(s))
 		{
-			asfd_mock_write_iobuf(asfd, &w, 0, &s->attr);
-			asfd_mock_write_iobuf(asfd, &w, 0, &s->path);
-			asfd_mock_write(asfd, &w, 0, CMD_END_FILE,
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+			asfd_assert_write(asfd, &w, 0, CMD_END_FILE,
 				"0:d41d8cd98f00b204e9800998ecf8427e");
 		}
 	}
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
 }
 
 static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
@@ -196,8 +196,8 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 		'\0', '\0', '\0', '@', '\0', '\0', '\0', ''};
 	char empty_delta[4]={'r','s','','6'};
 
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 
 	for(s=slist->head; s; s=s->next)
 	{
@@ -226,7 +226,7 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 		}
 	}
 
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backupphase2end");
 
 	for(s=slist->head; s; s=s->next)
 	{
@@ -236,25 +236,25 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 			struct iobuf wbuf;
 			if(sbuf_is_encrypted(s))
 			{
-				asfd_mock_write_iobuf(asfd, &w, 0, &s->attr);
-				asfd_mock_write_iobuf(asfd, &w, 0, &s->path);
-				asfd_mock_write(asfd, &w, 0, CMD_END_FILE,
+				asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+				asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+				asfd_assert_write(asfd, &w, 0, CMD_END_FILE,
 					"0:d41d8cd98f00b204e9800998ecf8427e");
 				continue;
 			}
-			asfd_mock_write(asfd, &w, 0, CMD_DATAPTH, "somepath");
-			asfd_mock_write_iobuf(asfd, &w, 0, &s->attr);
-			asfd_mock_write_iobuf(asfd, &w, 0, &s->path);
+			asfd_assert_write(asfd, &w, 0, CMD_DATAPTH, "somepath");
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
 			iobuf_set(&wbuf, CMD_APPEND,
 				empty_delta, sizeof(empty_delta));
-			asfd_mock_write_iobuf(asfd, &w, 0, &wbuf);
+			asfd_assert_write_iobuf(asfd, &w, 0, &wbuf);
 			iobuf_set(&wbuf, CMD_APPEND, (char *)"", 1);
-			asfd_mock_write_iobuf(asfd, &w, 0, &wbuf);
-			asfd_mock_write(asfd, &w, 0, CMD_END_FILE,
+			asfd_assert_write_iobuf(asfd, &w, 0, &wbuf);
+			asfd_assert_write(asfd, &w, 0, CMD_END_FILE,
 				"0:d41d8cd98f00b204e9800998ecf8427e");
 		}
 	}
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okbackupphase2end");
 }
 
 static void run_test(int expected_ret,

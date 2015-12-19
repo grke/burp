@@ -410,7 +410,7 @@ static int asfd_read(struct asfd *asfd)
 	return 0;
 }
 
-static int asfd_read_expect(struct asfd *asfd, enum cmd cmd, const char *expect)
+int asfd_read_expect(struct asfd *asfd, enum cmd cmd, const char *expect)
 {
 	int ret=0;
 	if(asfd->read(asfd)) return -1;
@@ -530,7 +530,6 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 #endif
 	}
 	asfd->read=asfd_read;
-	asfd->read_expect=asfd_read_expect;
 	asfd->simple_loop=asfd_simple_loop;
 	asfd->write=asfd_write;
 	asfd->write_str=asfd_write_str;

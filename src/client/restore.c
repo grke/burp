@@ -571,7 +571,7 @@ int do_restore_client(struct asfd *asfd,
 		backup?backup:"", regex?regex:"");
 	logp("doing %s\n", msg);
 	if(asfd->write_str(asfd, CMD_GEN, msg)
-	  || asfd->read_expect(asfd, CMD_GEN, "ok"))
+	  || asfd_read_expect(asfd, CMD_GEN, "ok"))
 		goto error;
 	logp("doing %s confirmed\n", act_str(act));
 

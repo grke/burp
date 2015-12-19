@@ -76,69 +76,70 @@ static void setup_asfd_none(struct asfd *asfd)
 static void setup_asfd_bad_regex(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "unable to compile regex: *\n");
+	asfd_assert_write(asfd, &w, 0,
+		CMD_ERROR, "unable to compile regex: *\n");
 }
 
 static void setup_asfd_1del(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00 (deletable)");
 }
 
 static void setup_asfd_1(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00");
 }
 
 static void setup_asfd_2(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000002 1970-01-02 00:00:00");
 }
 
 static void setup_asfd_3(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000003 1970-01-03 00:00:00");
 }
 
 static void setup_asfd_1del_2_3(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00 (deletable)");
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000002 1970-01-02 00:00:00");
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000003 1970-01-03 00:00:00");
 }
 
 static void setup_asfd_1_2_3(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00");
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000002 1970-01-02 00:00:00");
-	asfd_mock_write(asfd, &w, 0,
+	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000003 1970-01-03 00:00:00");
 }
 
 static void setup_asfd_not_found(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "backup not found");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "backup not found");
 }
 
 static void setup_asfd_1del_write_failure(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, -1,
+	asfd_assert_write(asfd, &w, -1,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00 (deletable)");
 }
 

@@ -380,7 +380,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			rs_sent=1;
 			if(asfd->write_str(asfd,
 				CMD_GEN, "restore_stream")
-			  || asfd->read_expect(asfd,
+			  || asfd_read_expect(asfd,
 				CMD_GEN, "restore_stream_ok"))
 					goto end;
 		}

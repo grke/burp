@@ -22,13 +22,13 @@ extern void asfd_mock_teardown(struct ioevent_list *user_reads,
 
 extern void asfd_mock_read(struct asfd *asfd,
 	int *r, int ret, enum cmd cmd, const char *str);
-extern void asfd_mock_write(struct asfd *asfd,
+extern void asfd_assert_write(struct asfd *asfd,
 	int *w, int ret, enum cmd cmd, const char *str);
 extern void asfd_mock_read_no_op(struct asfd *asfd, int *r, int count);
 
 extern void asfd_mock_read_iobuf(struct asfd *asfd,
 	int *r, int ret, struct iobuf *iobuf);
-extern void asfd_mock_write_iobuf(struct asfd *asfd,
+extern void asfd_assert_write_iobuf(struct asfd *asfd,
 	int *w, int ret, struct iobuf *iobuf);
 
 #endif

@@ -29,32 +29,32 @@ static void tear_down(struct asfd **asfd, struct conf ***confs)
 static void setup_bad_read(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "restore :");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read (asfd, &r, -1, CMD_GEN, "blah");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, -1, CMD_GEN, "blah");
 }
 
 static void setup_no_files(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "restore :");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "restoreend");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "restoreend_ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend_ok");
 }
 
 /*
 static void setup_one_file(void)
 {
 	int r=0; int w=0;
-	asfd_mock_write(&w, 0, CMD_GEN, "restore :");
-	asfd_mock_read (&r, 0, CMD_GEN, "ok");
-	asfd_mock_read (&r, 0, CMD_DATAPTH, "datapth");
-	asfd_mock_read (&r, 0, CMD_ATTRIBS, "attribs");
-	asfd_mock_read (&r, 0, CMD_FILE, BASE);
-	asfd_mock_read (&r, 0, CMD_APPEND, "0123456789");
-	asfd_mock_read (&w, 0, CMD_WARNING, "Unable to set file owner utest_restore: ERR=Operation not permitted\n");
-	asfd_mock_read (&r, 0, CMD_ERROR, NULL);
+	asfd_assert_write(&w, 0, CMD_GEN, "restore :");
+	asfd_mock_read(&r, 0, CMD_GEN, "ok");
+	asfd_mock_read(&r, 0, CMD_DATAPTH, "datapth");
+	asfd_mock_read(&r, 0, CMD_ATTRIBS, "attribs");
+	asfd_mock_read(&r, 0, CMD_FILE, BASE);
+	asfd_mock_read(&r, 0, CMD_APPEND, "0123456789");
+	asfd_mock_read(&w, 0, CMD_WARNING, "Unable to set file owner utest_restore: ERR=Operation not permitted\n");
+	asfd_mock_read(&r, 0, CMD_ERROR, NULL);
 }
 */
 

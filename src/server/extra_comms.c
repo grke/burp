@@ -359,7 +359,7 @@ int extra_comms(struct async *as,
 	// this section for them.
 	if(vers.cli<vers.min) return 0;
 
-	if(asfd->read_expect(asfd, CMD_GEN, "extra_comms_begin"))
+	if(asfd_read_expect(asfd, CMD_GEN, "extra_comms_begin"))
 	{
 		logp("problem reading in extra_comms\n");
 		goto error;

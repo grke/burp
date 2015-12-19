@@ -30,8 +30,8 @@ END_TEST
 static void setup_phase2ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 }
 
 static int mock_async_read_write_error(struct async *as)
@@ -69,9 +69,9 @@ END_TEST
 static void setup_phase2ok_then_cmd_error(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read (asfd, &r, 0, CMD_ERROR, "some error");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, 0, CMD_ERROR, "some error");
 }
 
 static int mock_async_read(struct async *as)
@@ -101,10 +101,10 @@ END_TEST
 static void setup_phase2ok_file_request_missing_file(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "backupphase2");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read (asfd, &r, 0, CMD_FILE, "some file");
-	asfd_mock_write(asfd, &w, 0, CMD_WARNING, "some file has vanished\n");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, 0, CMD_FILE, "some file");
+	asfd_assert_write(asfd, &w, 0, CMD_WARNING, "some file has vanished\n");
 }
 
 START_TEST(test_phase2_file_request_missing)

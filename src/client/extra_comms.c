@@ -108,7 +108,7 @@ int extra_comms(struct async *as, struct conf **confs,
 			goto end;
 		}
 		if(asfd->write_str(asfd, CMD_GEN, str)
-		  || asfd->read_expect(asfd, CMD_GEN, "orig_client ok"))
+		  || asfd_read_expect(asfd, CMD_GEN, "orig_client ok"))
 		{
 			logp("Problem requesting %s\n", str);
 			goto end;
@@ -232,7 +232,7 @@ int extra_comms(struct async *as, struct conf **confs,
 		set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")
-	  || asfd->read_expect(asfd, CMD_GEN, "extra_comms_end ok"))
+	  || asfd_read_expect(asfd, CMD_GEN, "extra_comms_end ok"))
 	{
 		logp("Problem requesting extra_comms_end\n");
 		goto end;

@@ -103,7 +103,6 @@ struct asfd
 	int (*do_read)(struct asfd *);
 	int (*do_write)(struct asfd *);
 	int (*read)(struct asfd *);
-	int (*read_expect)(struct asfd *, enum cmd, const char *);
 	int (*simple_loop)(struct asfd *, struct conf **, void *,
 		const char *, enum asl_ret callback(struct asfd *,
 			struct conf **, void *));
@@ -130,5 +129,8 @@ extern int asfd_flush_asio(struct asfd *asfd);
 extern int asfd_write_wrapper(struct asfd *asfd, struct iobuf *wbuf);
 extern int asfd_write_wrapper_str(struct asfd *asfd,
 	enum cmd wcmd, const char *wsrc);
+
+extern int asfd_read_expect(struct asfd *asfd,
+	enum cmd cmd, const char *expect);
 
 #endif

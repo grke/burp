@@ -126,7 +126,7 @@ struct asfd *champ_chooser_connect(struct async *as,
 			goto error;
 
 	if(chfd->write_str(chfd, CMD_GEN, champname)
-	  || chfd->read_expect(chfd, CMD_GEN, "cname ok"))
+	  || asfd_read_expect(chfd, CMD_GEN, "cname ok"))
 		goto error;
 
 	free_w(&champname);

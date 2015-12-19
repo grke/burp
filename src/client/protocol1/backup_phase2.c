@@ -411,7 +411,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	{
 		// Only do this bit if the server did not tell us to resume.
 		if(asfd->write_str(asfd, CMD_GEN, "backupphase2")
-		  || asfd->read_expect(asfd, CMD_GEN, "ok"))
+		  || asfd_read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
 	else if(get_int(confs[OPT_SEND_CLIENT_CNTR]))

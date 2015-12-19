@@ -96,7 +96,7 @@ static int do_request_response(struct asfd *asfd,
 	const char *reqstr, const char *repstr)
 {
 	return (asfd->write_str(asfd, CMD_GEN, reqstr)
-	  || asfd->read_expect(asfd, CMD_GEN, repstr));
+	  || asfd_read_expect(asfd, CMD_GEN, repstr));
 }
 
 int incexc_send_client(struct asfd *asfd, struct conf **confs)

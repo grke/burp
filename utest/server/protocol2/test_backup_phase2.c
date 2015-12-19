@@ -176,81 +176,81 @@ static void setup_asfds_empty(struct asfd *asfd, struct asfd *chfd,
 	struct slist *slist)
 {
 	int ar=0, aw=0, cw=0;
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
 static void setup_asfds_empty_and_messages(struct asfd *asfd, struct asfd *chfd,
 	struct slist *slist)
 {
 	int ar=0, aw=0, cw=0;
-	asfd_mock_read (asfd, &ar, 0, CMD_MESSAGE, "a message");
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
-	asfd_mock_read (asfd, &ar, 0, CMD_MESSAGE, "a message");
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
-	asfd_mock_read (asfd, &ar, 0, CMD_WARNING, "a warning");
-	asfd_mock_read (asfd, &ar, 0, CMD_WARNING, "another warning");
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
-	asfd_mock_read (asfd, &ar, 0, CMD_MESSAGE, "a message");
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_MESSAGE, "a message");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_MESSAGE, "a message");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_WARNING, "a warning");
+	asfd_mock_read(asfd, &ar, 0, CMD_WARNING, "another warning");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_MESSAGE, "a message");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
 static void setup_asfds_data_too_soon(struct asfd *asfd, struct asfd *chfd,
 	struct slist *slist)
 {
 	int ar=0, aw=0;
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
-	asfd_mock_read (asfd, &ar, 0, CMD_DATA, "some data");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_DATA, "some data");
 }
 
 static void setup_asfds_write_error(struct asfd *asfd, struct asfd *chfd,
 	struct slist *slist)
 {
 	int aw=0;
-	asfd_mock_write(asfd, &aw, -1, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, -1, CMD_GEN, "requests_end");
 }
 
 static void setup_asfds_write_error_chfd(struct asfd *asfd, struct asfd *chfd,
 	struct slist *slist)
 {
 	int ar=0, aw=0, cw=0;
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 
-	asfd_mock_write(chfd, &cw, -1, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, -1, CMD_GEN, "sigs_end");
 }
 
 static void setup_asfds_read_error(struct asfd *asfd, struct asfd *chfd,
 	struct slist *slist)
 {
 	int ar=0, aw=0;
-	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
-	asfd_mock_read (asfd, &ar, -1, CMD_DATA, "some data");
+	asfd_assert_write(asfd, &aw,  0, CMD_GEN, "requests_end");
+	asfd_mock_read(asfd, &ar, -1, CMD_DATA, "some data");
 }
 
 static void setup_asfds_read_error_chfd(struct asfd *asfd, struct asfd *chfd,
 	struct slist *slist)
 {
 	int ar=0, aw=0, cr=0;
-	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw,  0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 1);
-	asfd_mock_read (chfd, &cr, -1, CMD_SIG, "some sig");
+	asfd_mock_read(chfd, &cr, -1, CMD_SIG, "some sig");
 }
 
 static void setup_asfds_chfd_bad_cmd(struct asfd *asfd, struct asfd *chfd,
 	struct slist *slist)
 {
 	int ar=0, aw=0, cr=0;
-	asfd_mock_write(asfd, &aw,  0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw,  0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 1);
-	asfd_mock_read (chfd, &cr,  0, CMD_MESSAGE, "some message");
+	asfd_mock_read(chfd, &cr,  0, CMD_MESSAGE, "some message");
 }
 
 static void setup_writes_from_slist(struct asfd *asfd,
@@ -263,7 +263,7 @@ static void setup_writes_from_slist(struct asfd *asfd,
 		if(sbuf_is_filedata(s)
 		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
 		{
-			asfd_mock_write(asfd,
+			asfd_assert_write(asfd,
 				aw, 0, s->path.cmd, s->path.buf);
 		}
 	}
@@ -275,13 +275,13 @@ static void setup_asfds_no_sigs_from_client(struct asfd *asfd,
 	int ar=0, aw=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 30);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
 static void setup_reads_from_slist(struct asfd *asfd,
@@ -329,7 +329,7 @@ static void setup_chfd_writes_from_slist(struct asfd *chfd,
 			memset(&blk.md5sum, 1, MD5_DIGEST_LENGTH);
 			blk_to_iobuf_sig(&blk, &iobuf);
 			for(b=0; b<number_of_blks; b++)
-				asfd_mock_write_iobuf(chfd, cw, 0, &iobuf);
+				asfd_assert_write_iobuf(chfd, cw, 0, &iobuf);
 		}
 	}
 }
@@ -403,7 +403,7 @@ static void setup_writes_from_slist_blk_requests(struct asfd *asfd,
 				blk.index=blk_index++;
 				encode_req(&blk, req);
 				iobuf_from_str(&iobuf, CMD_DATA_REQ, req);
-				asfd_mock_write_iobuf(asfd, aw, 0, &iobuf);
+				asfd_assert_write_iobuf(asfd, aw, 0, &iobuf);
 			}
 		}
 	}
@@ -439,20 +439,20 @@ static void setup_asfds_happy_path_one_blk_per_file_full_dedup(
 	int ar=0, aw=0, cr=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 30);
 	setup_reads_from_slist(asfd, &ar, slist, 1);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 60);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
 	asfd_mock_read_no_op(chfd, &cr, 60);
 	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 1);
 	asfd_mock_read_no_op(chfd, &cr, 60);
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
 static void setup_asfds_happy_path_one_blk_per_file_full_dedup_big(
@@ -462,22 +462,22 @@ static void setup_asfds_happy_path_one_blk_per_file_full_dedup_big(
 	int ar=0, aw=0, cr=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 12800);
 	setup_reads_from_slist(asfd, &ar, slist, 1);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	asfd_mock_write(asfd, &aw, 0, CMD_WRAP_UP, "BAA");
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "BAA");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
 	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 1);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
-	asfd_mock_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
 }
 
 static void setup_asfds_happy_path_three_blks_per_file_full_dedup(
@@ -486,20 +486,20 @@ static void setup_asfds_happy_path_three_blks_per_file_full_dedup(
 	int ar=0, aw=0, cr=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 200);
 	setup_reads_from_slist(asfd, &ar, slist, 3);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 1000);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 3);
 	asfd_mock_read_no_op(chfd, &cr, 1000);
 	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 3);
 	asfd_mock_read_no_op(chfd, &cr, 1000);
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
 static void setup_asfds_happy_path_three_blks_per_file_full_dedup_big(
@@ -509,22 +509,22 @@ static void setup_asfds_happy_path_three_blks_per_file_full_dedup_big(
 	int ar=0, aw=0, cr=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 12800);
 	setup_reads_from_slist(asfd, &ar, slist, 3);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	asfd_mock_write(asfd, &aw, 0, CMD_WRAP_UP, "BAA");
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "BAA");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 3);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
 	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 3);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
-	asfd_mock_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
 }
 
 static void setup_asfds_happy_path_one_blk_per_file_no_dedup(
@@ -533,22 +533,22 @@ static void setup_asfds_happy_path_one_blk_per_file_no_dedup(
 	int ar=0, aw=0, cr=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 30);
 	setup_reads_from_slist(asfd, &ar, slist, 1);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
 	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 60);
 	setup_reads_from_slist_blks(asfd, &ar, slist, 1);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
 	asfd_mock_read_no_op(chfd, &cr, 60);
 	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1);
 	asfd_mock_read_no_op(chfd, &cr, 60);
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
 static void setup_asfds_happy_path_one_blk_per_file_no_dedup_big(
@@ -557,23 +557,23 @@ static void setup_asfds_happy_path_one_blk_per_file_no_dedup_big(
 	int ar=0, aw=0, cr=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 12800);
 	setup_reads_from_slist(asfd, &ar, slist, 1);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
 	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
 	setup_reads_from_slist_blks(asfd, &ar, slist, 1);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
 	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
-	asfd_mock_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
 }
 
 static void setup_asfds_happy_path_three_blks_per_file_no_dedup(
@@ -582,22 +582,22 @@ static void setup_asfds_happy_path_three_blks_per_file_no_dedup(
 	int ar=0, aw=0, cr=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 200);
 	setup_reads_from_slist(asfd, &ar, slist, 3);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
 	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 3);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 1000);
 	setup_reads_from_slist_blks(asfd, &ar, slist, 3);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 3);
 	asfd_mock_read_no_op(chfd, &cr, 1000);
 	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 3);
 	asfd_mock_read_no_op(chfd, &cr, 1000);
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
 
 static void setup_asfds_happy_path_three_blks_per_file_no_dedup_big(
@@ -606,23 +606,23 @@ static void setup_asfds_happy_path_three_blks_per_file_no_dedup_big(
 	int ar=0, aw=0, cr=0, cw=0;
 
 	setup_writes_from_slist(asfd, &aw, slist);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 12800);
 	setup_reads_from_slist(asfd, &ar, slist, 3);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "sigs_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
 	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 3);
-	asfd_mock_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
 	setup_reads_from_slist_blks(asfd, &ar, slist, 3);
-	asfd_mock_read (asfd, &ar, 0, CMD_GEN, "backup_end");
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 3);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
 	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 3);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
-	asfd_mock_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
-	asfd_mock_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
 }
 
 static int async_rw_simple(struct async *as)

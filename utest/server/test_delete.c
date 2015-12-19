@@ -354,19 +354,19 @@ static struct ioevent_list awrites;
 static void setup_asfd_ok(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
 }
 
 static void setup_asfd_not_found(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "backup not found");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "backup not found");
 }
 
 static void setup_asfd_not_deletable(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_ERROR, "backup not deletable");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "backup not deletable");
 }
 
 static void build_and_userdelete(

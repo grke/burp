@@ -19,91 +19,91 @@ static void tear_down(struct asfd **asfd)
 static void setup_all_ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "whoareyou");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "testclient");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "okpassword");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "password");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "password");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 }
 
 static void setup_all_ok_server_version(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "whoareyou:" VERSION);
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "testclient");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "okpassword");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "password");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "password");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 }
 
 static void setup_all_ok_server_version_empty(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "whoareyou:");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "testclient");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "okpassword");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "password");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou:");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "password");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 }
 
 static void setup_all_ok_version_warning(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "whoareyou:" VERSION);
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "testclient");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "okpassword");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "password");
-	asfd_mock_read (asfd, &r, 0, CMD_WARNING, "This is a version warning");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "password");
+	asfd_mock_read(asfd, &r, 0, CMD_WARNING, "This is a version warning");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 }
 
 static void setup_all_ok_version_warning_read_error(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read (asfd, &r,  0, CMD_GEN, "whoareyou:" VERSION);
-	asfd_mock_write(asfd, &w,  0, CMD_GEN, "testclient");
-	asfd_mock_read (asfd, &r,  0, CMD_GEN, "okpassword");
-	asfd_mock_write(asfd, &w,  0, CMD_GEN, "password");
-	asfd_mock_read (asfd, &r,  0, CMD_WARNING, "This is a version warning");
-	asfd_mock_read (asfd, &r, -1, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
+	asfd_mock_read(asfd, &r,  0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "testclient");
+	asfd_mock_read(asfd, &r,  0, CMD_GEN, "okpassword");
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "password");
+	asfd_mock_read(asfd, &r,  0, CMD_WARNING, "This is a version warning");
+	asfd_mock_read(asfd, &r, -1, CMD_GEN, "ok");
 }
 
 static void setup_not_ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "whoareyou");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "testclient");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "okpassword");
-	asfd_mock_write(asfd, &w, 0, CMD_GEN, "password");
-	asfd_mock_read (asfd, &r, 0, CMD_GEN, "notok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "password");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "notok");
 }
 
 static void setup_write_fail(struct asfd *asfd)
 {
 	int w=0;
-	asfd_mock_write(asfd, &w, -1, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, -1, CMD_GEN, "hello:" VERSION);
 }
 
 static void setup_read_fail(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read (asfd, &r, -1, CMD_GEN, "whoareyou");
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
+	asfd_mock_read(asfd, &r, -1, CMD_GEN, "whoareyou");
 }
 
 static void setup_read_fail_2(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_mock_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read (asfd, &r,  0, CMD_GEN, "whoareyou");
-	asfd_mock_write(asfd, &w,  0, CMD_GEN, "testclient");
-	asfd_mock_read (asfd, &r, -1, CMD_GEN, "okpassword");
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
+	asfd_mock_read(asfd, &r,  0, CMD_GEN, "whoareyou");
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "testclient");
+	asfd_mock_read(asfd, &r, -1, CMD_GEN, "okpassword");
 }
 
 static void run_test(int expected_ret, const char *expected_server_version,

@@ -32,6 +32,7 @@ static void tear_down_async(struct async **as, struct conf ***confs)
 {
 	async_free(as);
 	confs_free(confs);
+//printf("%d %d\n", alloc_count, free_count);
 	alloc_check();
 }
 
@@ -120,6 +121,8 @@ static void setup_phase2_ok_file_request_missing_file(struct asfd *asfd)
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 	asfd_mock_read(asfd, &r, 0, CMD_FILE, "some file");
 	asfd_assert_write(asfd, &w, 0, CMD_WARNING, "some file has vanished\n");
+	asfd_assert_write(asfd, &w, 0, CMD_INTERRUPT, "some file");
+	asfd_mock_read(asfd, &r, 0, CMD_ERROR, "some error");
 }
 
 static void run_error_test(int expected_ret,
@@ -207,6 +210,37 @@ static void run_test(int expected_ret,
 	fail_unless(!recursive_delete(BASE));
 }
 
+static void ask_for_blk(int blk_index, struct asfd *asfd, int *r, int *w)
+{
+	struct blk blk;
+	char req[32]="";
+	struct iobuf iobuf;
+	blk.index=blk_index;
+	encode_req(&blk, req);
+	iobuf_from_str(&iobuf, CMD_DATA_REQ, req);
+	asfd_mock_read_iobuf(asfd, r, 0, &iobuf);
+	asfd_assert_write(asfd, w, 0, CMD_DATA, "1");
+}
+
+static void build_file_and_assert_writes(struct sbuf *s,
+	struct asfd *asfd, int *w)
+{
+	struct blk blk;
+	struct iobuf iobuf;
+	build_file(s->path.buf, "1");
+	fail_unless(!lstat(s->path.buf, &s->statp));
+	s->winattr=0;
+	s->compression=0;
+	s->protocol2->encryption=0;
+	attribs_encode(s);
+	s->attr.cmd=CMD_ATTRIBS_SIGS;
+	asfd_assert_write_iobuf(asfd, w, 0, &s->attr);
+	blk.fingerprint=0x0000000000000031;
+	md5str_to_bytes("c4ca4238a0b923820dcc509a6f75849b", blk.md5sum);
+	blk_to_iobuf_sig(&blk, &iobuf);
+	asfd_assert_write_iobuf(asfd, w, 0, &iobuf);
+}
+
 static void setup_asfds_happy_path(struct asfd *asfd, struct slist *slist)
 {
 	int r=0, w=0;
@@ -224,21 +258,10 @@ static void setup_asfds_happy_path(struct asfd *asfd, struct slist *slist)
 		if(sbuf_is_filedata(s)
 		  || sbuf_is_vssdata(s))
 		{
-			build_file(s->path.buf, "1");
-			fail_unless(!lstat(s->path.buf, &s->statp));
-			s->winattr=0;
-			s->compression=0;
-			s->protocol2->encryption=0;
-			s->protocol2->index=file_no++;
-			attribs_encode(s);
 			asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
-			s->attr.cmd=CMD_ATTRIBS_SIGS;
-			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
-			blk.fingerprint=0x0000000000000031;
-			md5str_to_bytes("c4ca4238a0b923820dcc509a6f75849b",
-				blk.md5sum);
-			blk_to_iobuf_sig(&blk, &iobuf);
-			asfd_assert_write_iobuf(asfd, &w, 0, &iobuf);
+			s->protocol2->index=file_no++;
+
+			build_file_and_assert_writes(s, asfd, &w);
 		}
 	}
 
@@ -253,21 +276,87 @@ static void setup_asfds_happy_path(struct asfd *asfd, struct slist *slist)
 	iobuf_from_str(&iobuf, CMD_WRAP_UP, req);
 	asfd_mock_read_iobuf(asfd, &r, 0, &iobuf);
 
-	// Ask for block 3.
-	blk.index=3;
-	encode_req(&blk, req);
-	iobuf_from_str(&iobuf, CMD_DATA_REQ, req);
-	asfd_mock_read_iobuf(asfd, &r, 0, &iobuf);
-	asfd_assert_write(asfd, &w, 0, CMD_DATA, "1");
+	ask_for_blk(3, asfd, &r, &w);
 
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backup_end");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backup_end");
 }
 
+static void setup_asfds_happy_path_missing_file_index(struct asfd *asfd,
+	struct slist *slist, uint64_t index)
+{
+	int r=0, w=0;
+	int file_no=1;
+	struct sbuf *s;
+
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  || sbuf_is_vssdata(s))
+		{
+			if(sbuf_is_encrypted(s)) continue;
+			asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
+			asfd_mock_read_no_op(asfd, &r, 2);
+			s->protocol2->index=file_no++;
+			if(s->protocol2->index==index)
+			{
+				char warn[256]="";
+				snprintf(warn, sizeof(warn),
+					"%s has vanished\n", s->path.buf);
+				asfd_assert_write(asfd, &w, 0, CMD_WARNING,
+					warn);
+				asfd_assert_write(asfd, &w, 0, CMD_INTERRUPT,
+					s->path.buf);
+			}
+			else
+			{
+				build_file_and_assert_writes(s, asfd, &w);
+			}
+		}
+	}
+
+	asfd_mock_read_no_op(asfd, &r, 10);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "requests_end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "sigs_end");
+
+	ask_for_blk(3, asfd, &r, &w);
+
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backup_end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backup_end");
+}
+
+static void setup_asfds_happy_path_missing_file_1(struct asfd *asfd,
+	struct slist *slist)
+{
+	setup_asfds_happy_path_missing_file_index(asfd, slist, 1);
+}
+
+static void setup_asfds_happy_path_missing_file_2(struct asfd *asfd,
+	struct slist *slist)
+{
+	setup_asfds_happy_path_missing_file_index(asfd, slist, 2);
+}
+
 START_TEST(test_phase2_happy_path)
 {
 	run_test(0, 10, setup_asfds_happy_path);
+}
+END_TEST
+
+START_TEST(test_phase2_happy_path_missing_file_1)
+{
+	run_test(0, 10, setup_asfds_happy_path_missing_file_1);
+}
+END_TEST
+
+START_TEST(test_phase2_happy_path_missing_file_2)
+{
+	run_test(0, 10, setup_asfds_happy_path_missing_file_2);
 }
 END_TEST
 
@@ -279,6 +368,7 @@ Suite *suite_client_protocol2_backup_phase2(void)
 	s=suite_create("client_protocol2_backup_phase2");
 
 	tc_core=tcase_create("Core");
+	tcase_set_timeout(tc_core, 60);
 
 	tcase_add_test(tc_core, test_phase2_no_asfd);
 	tcase_add_test(tc_core, test_phase2_as_read_write_error);
@@ -286,6 +376,8 @@ Suite *suite_client_protocol2_backup_phase2(void)
 	tcase_add_test(tc_core, test_phase2_server_bad_initial_response);
 	tcase_add_test(tc_core, test_phase2_ok_file_request_missing_file);
 	tcase_add_test(tc_core, test_phase2_happy_path);
+	tcase_add_test(tc_core, test_phase2_happy_path_missing_file_1);
+	tcase_add_test(tc_core, test_phase2_happy_path_missing_file_2);
 
 	suite_add_tcase(s, tc_core);
 

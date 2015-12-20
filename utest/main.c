@@ -56,6 +56,7 @@ int main(void)
 	srunner_add_suite(sr, suite_server_restore());
 	srunner_add_suite(sr, suite_server_resume());
 	srunner_add_suite(sr, suite_server_sdirs());
+	srunner_add_suite(sr, suite_slist());
 
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);

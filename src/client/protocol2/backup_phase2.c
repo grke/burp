@@ -140,12 +140,43 @@ end:
 static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 	struct slist *slist)
 {
+	int just_opened=0;
 	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
-	if(blks_generate(asfd, confs, sb, slist->blist)) return -1;
 
-	// If it closed the file, move to the next one.
-	if(sb->protocol2->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
+	if(sb->protocol2->bfd.mode==BF_CLOSED)
+	{
+		struct cntr *cntr=NULL;
+		if(confs) cntr=get_cntr(confs);
+		switch(sbuf_open_file(sb, asfd, cntr, confs))
+		{
+			case 1: // All OK.
+				break;
+			case 0: // Could not open file. Tell the server.
+				if(asfd->write_str(asfd,
+					CMD_INTERRUPT, sb->path.buf))
+						return -1;
+				if(slist_del_sbuf(slist, sb))
+					return -1;
+				sbuf_free(&sb);
+				return 0;
+			default:
+				return -1;
+		}
+		just_opened=1;
+	}
+
+	switch(blks_generate(asfd, confs, sb, slist->blist, just_opened))
+	{
+		case 0: // All OK.
+			break;
+		case 1: // File ended.
+			sbuf_close_file(sb, asfd);
+			slist->last_requested=sb->next;
+			break;
+		default:
+			return -1;
+	}
 
 	return 0;
 }
@@ -185,9 +216,7 @@ static void get_wbuf_from_data(struct conf **confs,
 	{
 		if(blk->requested)
 		{
-			wbuf->cmd=CMD_DATA;
-			wbuf->buf=blk->data;
-			wbuf->len=blk->length;
+			iobuf_set(wbuf, CMD_DATA, blk->data, blk->length);
 			blk->requested=0;
 			blist->last_sent=blk;
 			cntr_add(get_cntr(confs), CMD_DATA, 1);

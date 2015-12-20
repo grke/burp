@@ -164,7 +164,8 @@ static void free_stuff(struct slist *slist)
 			struct sbuf *sb;
 			sb=slist->head;
 			sb->protocol2->bend=NULL;
-			if(!(slist->head=slist->head->next))
+			slist->head=slist->head->next;
+			if(!slist->head)
 				slist->tail=NULL;
 			sbuf_free(&sb);
 		}

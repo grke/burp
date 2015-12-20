@@ -24,6 +24,7 @@ SRCS = \
 	test_hexmap.c \
 	test_lock.c \
 	test_pathcmp.c \
+	test_slist.c \
 	protocol1/test_handy.c \
 	protocol1/test_rs_buf.c \
 	protocol2/test_blist.c \

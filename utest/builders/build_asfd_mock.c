@@ -42,6 +42,9 @@ static int mock_asfd_read(struct asfd *asfd)
 	return r->ret;
 }
 
+//#include "../../src/protocol2/blk.h"
+//#include "../../src/hexmap.h"
+
 static int asfd_assert_write(struct asfd *asfd, struct iobuf *wbuf)
 {
 	struct ioevent *w;
@@ -51,8 +54,20 @@ static int asfd_assert_write(struct asfd *asfd, struct iobuf *wbuf)
 	fail_unless(writes->cursor<writes->size);
 	w=&writes->ioevent[writes->cursor++];
 	expected=&w->iobuf;
-//printf("w %s - %c:%s %c:%s\n", asfd->desc, wbuf->cmd, wbuf->buf,
-//		expected->cmd, expected->buf);
+/*
+if(wbuf->cmd==CMD_SIG)
+{
+	struct blk blk;
+                        blk_set_from_iobuf_sig(&blk, wbuf);
+                        printf("%016"PRIX64" %s\n",
+                                blk.fingerprint,
+                                bytes_to_md5str(blk.md5sum));
+
+}
+printf("%d\n", wbuf->len);
+printf("w %s - %c:%s %c:%s\n", asfd->desc, wbuf->cmd, wbuf->buf,
+		expected->cmd, expected->buf);
+*/
 	fail_unless(wbuf->len==expected->len);
 	fail_unless(wbuf->cmd==expected->cmd);
 	fail_unless(!memcmp(expected->buf, wbuf->buf, wbuf->len));

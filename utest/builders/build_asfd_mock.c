@@ -25,7 +25,7 @@ static int mock_asfd_read(struct asfd *asfd)
 	struct ioevent *r;
 	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
 
-printf("r %s %d %d\n", asfd->desc, reads->cursor, reads->size);
+//printf("r %s %d %d\n", asfd->desc, reads->cursor, reads->size);
 	fail_unless(reads->cursor<reads->size);
 
 	r=&reads->ioevent[reads->cursor];
@@ -36,7 +36,7 @@ printf("r %s %d %d\n", asfd->desc, reads->cursor, reads->size);
 			reads->cursor++;
 		return r->ret;
 	}
-printf("r %s - %c:%s\n", asfd->desc, r->iobuf.cmd, r->iobuf.buf);
+//printf("r %s - %c:%s\n", asfd->desc, r->iobuf.cmd, r->iobuf.buf);
 	iobuf_move(asfd->rbuf, &r->iobuf);
 	reads->cursor++;
 	return r->ret;
@@ -50,7 +50,7 @@ static int asfd_assert_write(struct asfd *asfd, struct iobuf *wbuf)
 	struct ioevent *w;
 	struct iobuf *expected;
 	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
-printf("w %s %d %d\n", asfd->desc, writes->cursor, writes->size);
+//printf("w %s %d %d\n", asfd->desc, writes->cursor, writes->size);
 	fail_unless(writes->cursor<writes->size);
 	w=&writes->ioevent[writes->cursor++];
 	expected=&w->iobuf;
@@ -64,10 +64,10 @@ if(wbuf->cmd==CMD_SIG)
                                 bytes_to_md5str(blk.md5sum));
 
 }
-*/
 printf("%d\n", wbuf->len);
 printf("w %s - %c:%s %c:%s\n", asfd->desc, wbuf->cmd, wbuf->buf,
 		expected->cmd, expected->buf);
+*/
 	fail_unless(wbuf->len==expected->len);
 	fail_unless(wbuf->cmd==expected->cmd);
 	fail_unless(!memcmp(expected->buf, wbuf->buf, wbuf->len));

@@ -129,7 +129,6 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 	return iobuf_pathcmp(&a->path, &b->path);
 }
 
-// Return -1 for error, 0 for could not open file, 1 for success.
 int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
 	struct conf **confs)
 {
@@ -142,7 +141,7 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
 	{
 		// This file is no longer available.
 		logw(asfd, cntr, "%s has vanished\n", sb->path.buf);
-		return 0;
+		return -1;
 	}
 	sb->compression=get_int(confs[OPT_COMPRESSION]);
 	// Encryption not yet implemented in protocol2.
@@ -155,9 +154,9 @@ int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
 	{
 		logw(asfd, get_cntr(confs),
 			"Could not open %s\n", sb->path.buf);
-		return 0;
+		return -1;
 	}
-	return 1;
+	return 0;
 }
 
 void sbuf_close_file(struct sbuf *sb, struct asfd *asfd)

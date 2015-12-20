@@ -420,15 +420,6 @@ static void get_wbuf_from_files(struct iobuf *wbuf, struct slist *slist,
 	sb->protocol2->index=(*file_no)++;
 }
 
-static void sanity_before_sbuf_free(struct slist *slist, struct sbuf *sb)
-{
-	// It is possible for the markers to drop behind.
-	if(slist->tail==sb) slist->tail=sb->next;
-	if(slist->last_requested==sb) slist->last_requested=sb->next;
-	if(slist->add_sigs_here==sb) slist->add_sigs_here=sb->next;
-	if(slist->blks_to_request==sb) slist->blks_to_request=sb->next;
-}
-
 static void get_wbuf_from_index(struct iobuf *wbuf, uint64_t index)
 {
 	static char *p;
@@ -520,11 +511,9 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 
 		if(blk==sb->protocol2->bend)
 		{
-			slist->head=sb->next;
 			blist_adjust_head(blist, sb);
-			sanity_before_sbuf_free(slist, sb);
 			if(write_endfile(sb, manios)) return -1;
-			sbuf_free(&sb);
+			slist_advance(slist);
 			return 1;
 		}
 
@@ -572,10 +561,7 @@ static int write_to_changed_file(struct asfd *asfd,
 			if(write_endfile(sb, manios)) return -1;
 
 			// Move along.
-			slist->head=sb->next;
-
-			sanity_before_sbuf_free(slist, sb);
-			sbuf_free(&sb);
+			slist_advance(slist);
 		}
 	}
 	return 0;

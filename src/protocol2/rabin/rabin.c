@@ -84,18 +84,12 @@ static int blk_read_to_list(struct sbuf *sb, struct blist *blist)
 }
 
 // The client uses this.
+// Return 0 for OK. 1 for OK, and file ended, -1 for error.
 int blks_generate(struct asfd *asfd, struct conf **confs,
-	struct sbuf *sb, struct blist *blist)
+	struct sbuf *sb, struct blist *blist, int just_opened)
 {
 	static ssize_t bytes;
-
-	if(sb->protocol2->bfd.mode==BF_CLOSED)
-	{
-		struct cntr *cntr=NULL;
-		if(confs) cntr=get_cntr(confs);
-		if(sbuf_open_file(sb, asfd, cntr, confs)) return -1;
-		first=1;
-	}
+	first=just_opened;
 
 	if(!blk && !(blk=blk_alloc_with_data(rconf.blk_max)))
 		return -1;
@@ -151,8 +145,7 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 		blk=NULL;
 	}
 	if(blist->tail) sb->protocol2->bend=blist->tail;
-	sbuf_close_file(sb, asfd);
-	return 0;
+	return 1;
 }
 
 // The server uses this for verification.

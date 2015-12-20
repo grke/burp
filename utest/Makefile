@@ -1,5 +1,5 @@
 
-LIBS = -lcheck -lpthread -lm -lssl -lcrypto -lrt -lacl -lcrypt
+LIBS = -lcheck -lpthread -lm -lssl -lcrypto -lrt -lacl -lcrypt -lduma
 CFLAGS+=-Wall -g -fprofile-arcs -ftest-coverage -x c++
 
 SRCS = \

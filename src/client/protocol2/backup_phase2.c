@@ -140,12 +140,51 @@ end:
 static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 	struct slist *slist)
 {
+	int just_opened=0;
 	struct sbuf *sb=slist->last_requested;
 	if(!sb) return 0;
-	if(blks_generate(asfd, confs, sb, slist->blist)) return -1;
 
-	// If it closed the file, move to the next one.
-	if(sb->protocol2->bfd.mode==BF_CLOSED) slist->last_requested=sb->next;
+	if(sb->protocol2->bfd.mode==BF_CLOSED)
+	{
+		struct cntr *cntr=NULL;
+		if(confs) cntr=get_cntr(confs);
+		switch(sbuf_open_file(sb, asfd, cntr, confs))
+		{
+			case 1: // All OK.
+				break;
+			case 0: // Could not open file. Tell the server.
+				if(asfd->write_str(asfd,
+					CMD_INTERRUPT, sb->path.buf))
+						return -1;
+				// Move to next file and carry on.
+				slist->last_requested=sb->next;
+				if(sb==slist->add_sigs_here)
+					slist->add_sigs_here=sb->next;
+				if(sb==slist->blks_to_send)
+					slist->blks_to_send=sb->next;
+				if(sb==slist->head)
+					slist->head=sb->next;
+				if(sb==slist->tail)
+					slist->tail=sb->next;
+				sbuf_free(&sb);
+				return 0;
+			default:
+				return -1;
+		}
+		just_opened=1;
+	}
+
+	switch(blks_generate(asfd, confs, sb, slist->blist, just_opened))
+	{
+		case 0: // All OK.
+			break;
+		case 1: // File ended.
+			sbuf_close_file(sb, asfd);
+			slist->last_requested=sb->next;
+			break;
+		default:
+			return -1;
+	}
 
 	return 0;
 }
@@ -184,9 +223,7 @@ static void get_wbuf_from_data(struct conf **confs,
 	{
 		if(blk->requested)
 		{
-			wbuf->cmd=CMD_DATA;
-			wbuf->buf=blk->data;
-			wbuf->len=blk->length;
+			iobuf_set(wbuf, CMD_DATA, blk->data, blk->length);
 			blk->requested=0;
 			blist->last_sent=blk;
 			cntr_add(get_cntr(confs), CMD_DATA, 1);
@@ -300,15 +337,18 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 
 	while(!(end_flags&END_BACKUP))
 	{
+printf("wbla %d\n", wbuf->len);
 		if(!wbuf->len)
 		{
 			get_wbuf_from_data(confs, wbuf, slist,
 				end_flags);
+printf("wblb %d\n", wbuf->len);
 			if(!wbuf->len)
 			{
 				if(get_wbuf_from_blks(wbuf, slist,
 					&end_flags)) goto end;
 			}
+printf("wblc %d\n", wbuf->len);
 		}
 
 		if(wbuf->len)

@@ -625,6 +625,64 @@ static void setup_asfds_happy_path_three_blks_per_file_no_dedup_big(
 	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
 }
 
+static void setup_reads_from_slist_interrupt(struct asfd *asfd,
+	int *ar, struct slist *slist, int number_of_blks)
+{
+	int file_no=1;
+	struct sbuf *s;
+	struct blk blk;
+	struct iobuf iobuf;
+	if(!slist) return;
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_filedata(s)
+		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
+		{
+			int b;
+			s->protocol2->index=file_no++;
+			if(file_no==2)
+			{
+				asfd_mock_read(asfd,
+					ar, 0, CMD_WARNING, s->attr.buf);
+				continue;
+			}
+			iobuf_free_content(&s->attr);
+			attribs_encode(s);
+			asfd_mock_read(asfd,
+				ar, 0, CMD_ATTRIBS_SIGS, s->attr.buf);
+			blk.fingerprint=1;
+			memset(&blk.md5sum, 1, MD5_DIGEST_LENGTH);
+			blk_to_iobuf_sig(&blk, &iobuf);
+			for(b=0; b<number_of_blks; b++)
+				asfd_mock_read_iobuf(asfd, ar, 0, &iobuf);
+		}
+	}
+}
+
+static void setup_asfds_happy_path_one_blk_per_file_no_dedup_interrupt(
+	struct asfd *asfd, struct asfd *chfd, struct slist *slist)
+{
+	int ar=0, aw=0, cr=0, cw=0;
+
+	setup_writes_from_slist(asfd, &aw, slist);
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
+	asfd_mock_read_no_op(asfd, &ar, 30);
+	setup_reads_from_slist(asfd, &ar, slist, 1);
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
+
+	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1);
+	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
+	asfd_mock_read_no_op(asfd, &ar, 60);
+	setup_reads_from_slist_blks(asfd, &ar, slist, 1);
+	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
+
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
+	asfd_mock_read_no_op(chfd, &cr, 60);
+	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1);
+	asfd_mock_read_no_op(chfd, &cr, 60);
+	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
+}
+
 static int async_rw_simple(struct async *as)
 {
 	return as->asfd->read(as->asfd);
@@ -800,6 +858,13 @@ START_TEST(asfds_happy_path_three_blks_per_file_no_dedup_big)
 }
 END_TEST
 
+START_TEST(asfds_happy_path_one_blk_per_file_no_dedup_interrupt)
+{
+	run_test(0, 20, async_rw_both,
+		setup_asfds_happy_path_one_blk_per_file_no_dedup_interrupt);
+}
+END_TEST
+
 Suite *suite_server_protocol2_backup_phase2(void)
 {
 	Suite *s;
@@ -809,7 +874,7 @@ Suite *suite_server_protocol2_backup_phase2(void)
 
 	tc_core=tcase_create("Core");
 	tcase_set_timeout(tc_core, 60);
-
+/*
 	tcase_add_test(tc_core, test_phase2_unset_as_sdirs_confs);
 	tcase_add_test(tc_core, test_phase2_unset_sdirs_confs);
 	tcase_add_test(tc_core, test_phase2_unset_confs);
@@ -844,6 +909,9 @@ Suite *suite_server_protocol2_backup_phase2(void)
 		asfds_happy_path_three_blks_per_file_no_dedup);
 	tcase_add_test(tc_core,
 		asfds_happy_path_three_blks_per_file_no_dedup_big);
+*/
+	tcase_add_test(tc_core,
+		asfds_happy_path_one_blk_per_file_no_dedup_interrupt);
 
 	suite_add_tcase(s, tc_core);
 

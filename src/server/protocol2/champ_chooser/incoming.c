@@ -8,6 +8,19 @@ struct incoming *incoming_alloc(void)
 		sizeof(struct incoming), __func__);
 }
 
+static void incoming_free_content(struct incoming *in)
+{
+	free_v((void **)&in->fingerprints);
+	free_v((void **)&in->found);
+}
+
+void incoming_free(struct incoming **in)
+{
+	if(!in || !*in) return;
+	incoming_free_content(*in);
+	free_v((void **)in);
+}
+
 int incoming_grow_maybe(struct incoming *in)
 {
 	if(++in->size<in->allocated) return 0;

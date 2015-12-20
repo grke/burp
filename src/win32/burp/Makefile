@@ -90,6 +90,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/run_script.o \
 	$(OBJDIR)/sbuf.o \
+	$(OBJDIR)/server/protocol2/champ_chooser/incoming.o \
 	$(OBJDIR)/slist.o \
 	$(OBJDIR)/ssl.o \
 	$(OBJDIR)/strlist.o \

@@ -48,6 +48,8 @@ int main(void)
 	srunner_add_suite(sr, suite_server_protocol2_backup_phase2());
 	srunner_add_suite(sr, suite_server_protocol2_backup_phase4());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_candidate());
+	srunner_add_suite(sr,
+		suite_server_protocol2_champ_chooser_champ_server());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_dindex());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_hash());
 	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_scores());

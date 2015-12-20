@@ -12,6 +12,7 @@ struct incoming
 };
 
 extern struct incoming *incoming_alloc(void);
+extern void incoming_free(struct incoming **in);
 extern int incoming_grow_maybe(struct incoming *in);
 extern void incoming_found_reset(struct incoming *in);
 

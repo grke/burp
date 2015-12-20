@@ -124,8 +124,11 @@ static int deduplicate_maybe(struct asfd *asfd,
 	return 0;
 }
 
-static int deal_with_rbuf_sig(struct asfd *asfd, const char *directory,
-	struct scores *scores)
+#ifndef UTEST
+static
+#endif
+int champ_server_deal_with_rbuf_sig(struct asfd *asfd,
+	const char *directory, struct scores *scores)
 {
 	struct blk *blk;
 	if(!(blk=blk_alloc())) return -1;
@@ -175,7 +178,7 @@ static int deal_with_client_rbuf(struct asfd *asfd, const char *directory,
 	}
 	else if(asfd->rbuf->cmd==CMD_SIG)
 	{
-		if(deal_with_rbuf_sig(asfd, directory, scores))
+		if(champ_server_deal_with_rbuf_sig(asfd, directory, scores))
 			goto error;
 	}
 	else if(asfd->rbuf->cmd==CMD_MANIFEST)

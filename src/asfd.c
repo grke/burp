@@ -7,6 +7,7 @@
 #include "handy.h"
 #include "iobuf.h"
 #include "log.h"
+#include "server/protocol2/champ_chooser/incoming.h"
 
 // For IPTOS / IPTOS_THROUGHPUT.
 #ifdef HAVE_WIN32
@@ -596,16 +597,21 @@ void asfd_close(struct asfd *asfd)
 	close_fd(&asfd->fd);
 }
 
+static void asfd_free_content(struct asfd *asfd)
+{
+	asfd_close(asfd);
+	iobuf_free(&asfd->rbuf);
+	free_w(&asfd->readbuf);
+	free_w(&asfd->writebuf);
+	free_w(&asfd->desc);
+	incoming_free(&asfd->in);
+	blist_free(&asfd->blist);
+}
+
 void asfd_free(struct asfd **asfd)
 {
 	if(!asfd || !*asfd) return;
-	asfd_close(*asfd);
-	iobuf_free(&((*asfd)->rbuf));
-	free_w(&((*asfd)->readbuf));
-	free_w(&((*asfd)->writebuf));
-	free_w(&((*asfd)->desc));
-	// FIX THIS: free incoming?
-	blist_free(&((*asfd)->blist));
+	asfd_free_content(*asfd);
 	free_v((void **)asfd);
 }
 

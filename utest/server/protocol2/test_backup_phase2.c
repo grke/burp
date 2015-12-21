@@ -648,40 +648,6 @@ static void setup_asfds_happy_path_three_blks_per_file_no_dedup_big(
 	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
 }
 
-static void setup_reads_from_slist_interrupt(struct asfd *asfd,
-	int *ar, struct slist *slist, int number_of_blks)
-{
-	int file_no=1;
-	struct sbuf *s;
-	struct blk blk;
-	struct iobuf iobuf;
-	if(!slist) return;
-	for(s=slist->head; s; s=s->next)
-	{
-		if(sbuf_is_filedata(s)
-		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
-		{
-			int b;
-			s->protocol2->index=file_no++;
-			if(file_no==2)
-			{
-				asfd_mock_read(asfd,
-					ar, 0, CMD_WARNING, s->attr.buf);
-				continue;
-			}
-			iobuf_free_content(&s->attr);
-			attribs_encode(s);
-			asfd_mock_read(asfd,
-				ar, 0, CMD_ATTRIBS_SIGS, s->attr.buf);
-			blk.fingerprint=1;
-			memset(&blk.md5sum, 1, MD5_DIGEST_LENGTH);
-			blk_to_iobuf_sig(&blk, &iobuf);
-			for(b=0; b<number_of_blks; b++)
-				asfd_mock_read_iobuf(asfd, ar, 0, &iobuf);
-		}
-	}
-}
-
 static void setup_asfds_happy_path_one_blk_per_file_no_dedup_interrupt(
 	struct asfd *asfd, struct asfd *chfd, struct slist *slist)
 {

@@ -62,7 +62,6 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
 		{
 			logp("error closing %s in %s\n",
 				fname, __func__);
-			ret=-1;
 			goto end;
 		}
 #endif
@@ -196,6 +195,15 @@ int restore_switch_protocol1(struct asfd *asfd, struct sbuf *sb,
 		case CMD_ENC_FILE:
 		case CMD_ENC_VSS_T:
 		case CMD_EFS_FILE:
+			if(!sb->protocol1->datapth.buf)
+			{
+				char msg[256];
+				snprintf(msg, sizeof(msg),
+				  "datapth not supplied for %c:%s in %s\n",
+					sb->path.cmd, sb->path.buf, __func__);
+				log_and_send(asfd, msg);
+				return -1;
+			}
 			return restore_file_or_get_meta(asfd, bfd, sb,
 				fullpath, act,
 				NULL, NULL, vss_restore, cntr,

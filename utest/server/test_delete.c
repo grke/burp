@@ -433,7 +433,7 @@ Suite *suite_server_delete(void)
 	s=suite_create("server_delete");
 
 	tc_core=tcase_create("Core");
-
+        tcase_set_timeout(tc_core, 20);
 	tcase_add_test(tc_core, test_autodelete_proto_1);
 	tcase_add_test(tc_core, test_autodelete_proto_2);
 	tcase_add_test(tc_core, test_userdelete_proto_1);

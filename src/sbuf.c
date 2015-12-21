@@ -222,7 +222,7 @@ static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			if(!sb->attr.buf)
 			{
 				log_and_send(asfd, "read cmd with no attribs");
-				return PARSE_RET_NEED_MORE;
+				return PARSE_RET_ERROR;
 			}
 			if(sb->flags & SBUF_NEED_LINK)
 			{

@@ -22,11 +22,12 @@ static void tear_down(struct asfd **asfd, struct conf ***confs)
 	asfd_free(asfd);
 	confs_free(confs);
 	asfd_mock_teardown(&reads, &writes);
+//printf("%d %d\n", alloc_count, free_count);
 	alloc_check();
 	fail_unless(recursive_delete(BASE)==0);
 }
 
-static void setup_bad_read(struct asfd *asfd)
+static void setup_proto1_bad_read(struct asfd *asfd)
 {
 	int r=0; int w=0;
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
@@ -34,7 +35,7 @@ static void setup_bad_read(struct asfd *asfd)
 	asfd_mock_read(asfd, &r, -1, CMD_GEN, "blah");
 }
 
-static void setup_no_files(struct asfd *asfd)
+static void setup_proto1_no_files(struct asfd *asfd)
 {
 	int r=0; int w=0;
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
@@ -43,20 +44,25 @@ static void setup_no_files(struct asfd *asfd)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend_ok");
 }
 
-/*
-static void setup_one_file(void)
+static void setup_proto1_no_datapth(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(&w, 0, CMD_GEN, "restore :");
-	asfd_mock_read(&r, 0, CMD_GEN, "ok");
-	asfd_mock_read(&r, 0, CMD_DATAPTH, "datapth");
-	asfd_mock_read(&r, 0, CMD_ATTRIBS, "attribs");
-	asfd_mock_read(&r, 0, CMD_FILE, BASE);
-	asfd_mock_read(&r, 0, CMD_APPEND, "0123456789");
-	asfd_mock_read(&w, 0, CMD_WARNING, "Unable to set file owner utest_restore: ERR=Operation not permitted\n");
-	asfd_mock_read(&r, 0, CMD_ERROR, NULL);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, 0, CMD_ATTRIBS, "attribs");
+	asfd_mock_read(asfd, &r, 0, CMD_FILE, BASE "/afile");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "datapth not supplied for f:utest_restore/afile in restore_switch_protocol1\n");
 }
-*/
+
+static void setup_proto1_no_attribs(struct asfd *asfd)
+{
+	int r=0; int w=0;
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+	asfd_mock_read(asfd, &r, 0, CMD_DATAPTH, "datapth");
+	asfd_mock_read(asfd, &r, 0, CMD_FILE, BASE "/afile");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "read cmd with no attribs");
+}
 
 static struct conf **setup_conf(void)
 {
@@ -66,7 +72,8 @@ static struct conf **setup_conf(void)
 	return confs;
 }
 
-static void run_test(int expected_ret, void setup_callback(struct asfd *asfd))
+static void run_test_proto1(int expected_ret,
+	void setup_callback(struct asfd *asfd))
 {
 	int result;
 	const char *conffile=BASE "/burp.conf";
@@ -89,25 +96,29 @@ static void run_test(int expected_ret, void setup_callback(struct asfd *asfd))
 	tear_down(&asfd, &confs);
 }
 
-START_TEST(test_restore_bad_read)
+START_TEST(test_restore_proto1_bad_read)
 {
-	run_test(-1, setup_bad_read);
+	run_test_proto1(-1, setup_proto1_bad_read);
 }
 END_TEST
 
-START_TEST(test_restore_no_files)
+START_TEST(test_restore_proto1_no_files)
 {
-	run_test( 0, setup_no_files);
+	run_test_proto1( 0, setup_proto1_no_files);
 }
 END_TEST
 
-/*
-START_TEST(test_restore_one_file)
+START_TEST(test_restore_proto1_no_datapth)
 {
-	run_test(-1, setup_one_file);
+	run_test_proto1(-1, setup_proto1_no_datapth);
 }
 END_TEST
-*/
+
+START_TEST(test_restore_proto1_no_attribs)
+{
+	run_test_proto1(-1, setup_proto1_no_attribs);
+}
+END_TEST
 
 Suite *suite_client_restore(void)
 {
@@ -118,9 +129,10 @@ Suite *suite_client_restore(void)
 
 	tc_core=tcase_create("Core");
 
-	tcase_add_test(tc_core, test_restore_bad_read);
-	tcase_add_test(tc_core, test_restore_no_files);
-//	tcase_add_test(tc_core, test_restore_one_file);
+	tcase_add_test(tc_core, test_restore_proto1_bad_read);
+	tcase_add_test(tc_core, test_restore_proto1_no_files);
+	tcase_add_test(tc_core, test_restore_proto1_no_datapth);
+	tcase_add_test(tc_core, test_restore_proto1_no_attribs);
 	suite_add_tcase(s, tc_core);
 
 	return s;

@@ -17,8 +17,6 @@ roughly in order of most important to least.
 
 * Make CMD_INTERRUPT work (on restore).
 
-* Make CMD_INTERRUPT work (on backup phase2).
-
 * Make the status monitor work.
 
 * Make the status monitor and counters use JSON.

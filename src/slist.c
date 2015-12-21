@@ -114,6 +114,22 @@ int slist_del_sbuf(struct slist *slist, struct sbuf *sb)
 	return 0;
 }
 
+int slist_del_sbuf_by_index(struct slist *slist, uint64_t index)
+{
+	struct sbuf *sb;
+	for(sb=slist->head; sb; sb=sb->next)
+	{
+		if(sb->protocol2->index==index)
+		{
+			if(slist_del_sbuf(slist, sb))
+				return -1;
+			sbuf_free(&sb);
+			break;
+		}
+	}
+	return 0;
+}
+
 void slist_advance(struct slist *slist)
 {
 	struct sbuf *sb;

@@ -116,12 +116,14 @@ static void setup_phase2_ok_then_cmd_error(struct asfd *asfd)
 
 static void setup_phase2_ok_file_request_missing_file(struct asfd *asfd)
 {
+	char buf[32];
 	int r=0; int w=0;
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 	asfd_mock_read(asfd, &r, 0, CMD_FILE, "some file");
 	asfd_assert_write(asfd, &w, 0, CMD_WARNING, "some file has vanished\n");
-	asfd_assert_write(asfd, &w, 0, CMD_INTERRUPT, "some file");
+	base64_from_uint64(1, buf);
+	asfd_assert_write(asfd, &w, 0, CMD_INTERRUPT, buf);
 	asfd_mock_read(asfd, &r, 0, CMD_ERROR, "some error");
 }
 
@@ -212,11 +214,9 @@ static void run_test(int expected_ret,
 
 static void ask_for_blk(int blk_index, struct asfd *asfd, int *r, int *w)
 {
-	struct blk blk;
 	char req[32]="";
 	struct iobuf iobuf;
-	blk.index=blk_index;
-	encode_req(&blk, req);
+	base64_from_uint64(blk_index, req);
 	iobuf_from_str(&iobuf, CMD_DATA_REQ, req);
 	asfd_mock_read_iobuf(asfd, r, 0, &iobuf);
 	asfd_assert_write(asfd, w, 0, CMD_DATA, "1");
@@ -246,7 +246,6 @@ static void setup_asfds_happy_path(struct asfd *asfd, struct slist *slist)
 	int r=0, w=0;
 	int file_no=1;
 	struct sbuf *s;
-	struct blk blk;
 	char req[32]="";
 	struct iobuf iobuf;
 
@@ -271,8 +270,7 @@ static void setup_asfds_happy_path(struct asfd *asfd, struct slist *slist)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "sigs_end");
 
 	// Wrap up to block 2.
-	blk.index=2;
-	encode_req(&blk, req);
+	base64_from_uint64(2, req);
 	iobuf_from_str(&iobuf, CMD_WRAP_UP, req);
 	asfd_mock_read_iobuf(asfd, &r, 0, &iobuf);
 
@@ -304,13 +302,15 @@ static void setup_asfds_happy_path_missing_file_index(struct asfd *asfd,
 			s->protocol2->index=file_no++;
 			if(s->protocol2->index==index)
 			{
+				char buf[32]="";
 				char warn[256]="";
 				snprintf(warn, sizeof(warn),
 					"%s has vanished\n", s->path.buf);
 				asfd_assert_write(asfd, &w, 0, CMD_WARNING,
 					warn);
+				base64_from_uint64(s->protocol2->index, buf);
 				asfd_assert_write(asfd, &w, 0, CMD_INTERRUPT,
-					s->path.buf);
+					buf);
 			}
 			else
 			{

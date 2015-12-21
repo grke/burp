@@ -17,14 +17,6 @@
 #define END_REQUESTS            0x04
 #define END_BLK_REQUESTS        0x08
 
-static uint64_t decode_req(const char *buf)
-{
-	int64_t val;
-	const char *p=buf;
-	p+=from_base64(&val, p);
-	return (uint64_t)val;
-}
-
 static int add_to_file_requests(struct slist *slist, struct iobuf *rbuf)
 {
 	static uint64_t file_no=1;
@@ -44,7 +36,7 @@ static int add_to_data_requests(struct blist *blist, struct iobuf *rbuf)
 {
 	uint64_t index;
 	struct blk *blk;
-	index=decode_req(rbuf->buf);
+	index=base64_to_uint64(rbuf->buf);
 
 //printf("last_requested: %d\n", blist->last_requested->index);
 
@@ -153,9 +145,10 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 			case 1: // All OK.
 				break;
 			case 0: // Could not open file. Tell the server.
-				if(asfd->write_str(asfd,
-					CMD_INTERRUPT, sb->path.buf))
-						return -1;
+				char buf[32];
+				base64_from_uint64(sb->protocol2->index, buf);
+				if(asfd->write_str(asfd, CMD_INTERRUPT, buf))
+					return -1;
 				if(slist_del_sbuf(slist, sb))
 					return -1;
 				sbuf_free(&sb);

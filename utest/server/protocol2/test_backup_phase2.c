@@ -285,7 +285,7 @@ static void setup_asfds_no_sigs_from_client(struct asfd *asfd,
 }
 
 static void setup_reads_from_slist(struct asfd *asfd,
-	int *ar, struct slist *slist, int number_of_blks)
+	int *ar, struct slist *slist, int number_of_blks, uint64_t interrupt)
 {
 	int file_no=1;
 	struct sbuf *s;
@@ -299,6 +299,16 @@ static void setup_reads_from_slist(struct asfd *asfd,
 		{
 			int b;
 			s->protocol2->index=file_no++;
+			if(interrupt==s->protocol2->index)
+			{
+				char buf[32]="";
+				asfd_mock_read(asfd,
+					ar, 0, CMD_WARNING, "path vanished\n");
+				base64_from_uint64(interrupt, buf);
+				asfd_mock_read(asfd, ar, 0, CMD_INTERRUPT,
+					buf);
+				continue;
+			}
 			iobuf_free_content(&s->attr);
 			attribs_encode(s);
 			asfd_mock_read(asfd,
@@ -313,11 +323,12 @@ static void setup_reads_from_slist(struct asfd *asfd,
 }
 
 static void setup_chfd_writes_from_slist(struct asfd *chfd,
-	int *cw, struct slist *slist, int number_of_blks)
+	int *cw, struct slist *slist, int number_of_blks, uint64_t interrupt)
 {
 	struct sbuf *s;
 	struct blk blk;
 	struct iobuf iobuf;
+	uint64_t file_no=1;
 	if(!slist) return;
 	for(s=slist->head; s; s=s->next)
 	{
@@ -325,6 +336,8 @@ static void setup_chfd_writes_from_slist(struct asfd *chfd,
 		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
 		{
 			int b;
+			if(interrupt==file_no++)
+				continue;
 			blk.fingerprint=1;
 			memset(&blk.md5sum, 1, MD5_DIGEST_LENGTH);
 			blk_to_iobuf_sig(&blk, &iobuf);
@@ -335,8 +348,9 @@ static void setup_chfd_writes_from_slist(struct asfd *chfd,
 }
 
 static void setup_chfd_reads_from_slist_blks_got(struct asfd *chfd,
-	int *cr, struct slist *slist, int number_of_blks)
+	int *cr, struct slist *slist, int number_of_blks, uint64_t interrupt)
 {
+	uint64_t file_no=1;
 	int blk_index=1;
 	struct blk blk;
 	struct iobuf iobuf;
@@ -348,6 +362,8 @@ static void setup_chfd_reads_from_slist_blks_got(struct asfd *chfd,
 		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
 		{
 			int b;
+			if(interrupt==file_no++)
+				continue;
 			for(b=0; b<number_of_blks; b++)
 			{
 				blk.index=blk_index++;
@@ -360,9 +376,10 @@ static void setup_chfd_reads_from_slist_blks_got(struct asfd *chfd,
 }
 
 static void setup_chfd_reads_from_slist_blks_not_got(struct asfd *chfd,
-	int *cr, struct slist *slist, int number_of_blks)
+	int *cr, struct slist *slist, int number_of_blks, uint64_t interrupt)
 {
 	int blk_index=1;
+	uint64_t file_no=1;
 	struct blk blk;
 	struct iobuf iobuf;
 	struct sbuf *s;
@@ -373,6 +390,8 @@ static void setup_chfd_reads_from_slist_blks_not_got(struct asfd *chfd,
 		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
 		{
 			int b;
+			if(interrupt==file_no++)
+				continue;
 			for(b=0; b<number_of_blks; b++)
 			{
 				blk.index=blk_index++;
@@ -384,13 +403,13 @@ static void setup_chfd_reads_from_slist_blks_not_got(struct asfd *chfd,
 }
 
 static void setup_writes_from_slist_blk_requests(struct asfd *asfd,
-	int *aw, struct slist *slist, int number_of_blks)
+	int *aw, struct slist *slist, int number_of_blks, uint64_t interrupt)
 {
 	struct sbuf *s;
-	struct blk blk;
 	struct iobuf iobuf;
 	char req[32]="";
 	int blk_index=1;
+	uint64_t file_no=1;
 	if(!slist) return;
 	for(s=slist->head; s; s=s->next)
 	{
@@ -398,10 +417,11 @@ static void setup_writes_from_slist_blk_requests(struct asfd *asfd,
 		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
 		{
 			int b;
+			if(interrupt==file_no++)
+				continue;
 			for(b=0; b<number_of_blks; b++)
 			{
-				blk.index=blk_index++;
-				encode_req(&blk, req);
+				base64_from_uint64(blk_index++, req);
 				iobuf_from_str(&iobuf, CMD_DATA_REQ, req);
 				asfd_assert_write_iobuf(asfd, aw, 0, &iobuf);
 			}
@@ -410,11 +430,12 @@ static void setup_writes_from_slist_blk_requests(struct asfd *asfd,
 }
 
 static void setup_reads_from_slist_blks(struct asfd *asfd,
-	int *ar, struct slist *slist, int number_of_blks)
+	int *ar, struct slist *slist, int number_of_blks, uint64_t interrupt)
 {
 	struct sbuf *s;
 	struct blk blk;
 	struct iobuf iobuf;
+	uint64_t file_no=1;
 	if(!slist) return;
 	for(s=slist->head; s; s=s->next)
 	{
@@ -422,6 +443,8 @@ static void setup_reads_from_slist_blks(struct asfd *asfd,
 		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
 		{
 			int b;
+			if(interrupt==file_no++)
+				continue;
 			blk_to_iobuf_sig(&blk, &iobuf);
 			for(b=0; b<number_of_blks; b++)
 			{
@@ -441,16 +464,16 @@ static void setup_asfds_happy_path_one_blk_per_file_full_dedup(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 30);
-	setup_reads_from_slist(asfd, &ar, slist, 1);
+	setup_reads_from_slist(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 60);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 1, 0);
 	asfd_mock_read_no_op(chfd, &cr, 60);
-	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 1);
+	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 1, 0);
 	asfd_mock_read_no_op(chfd, &cr, 60);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
@@ -464,7 +487,7 @@ static void setup_asfds_happy_path_one_blk_per_file_full_dedup_big(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 12800);
-	setup_reads_from_slist(asfd, &ar, slist, 1);
+	setup_reads_from_slist(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
 	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "BAA");
@@ -472,9 +495,9 @@ static void setup_asfds_happy_path_one_blk_per_file_full_dedup_big(
 	asfd_mock_read_no_op(asfd, &ar, 25600);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 1, 0);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
-	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 1);
+	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 1, 0);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
@@ -488,16 +511,16 @@ static void setup_asfds_happy_path_three_blks_per_file_full_dedup(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 200);
-	setup_reads_from_slist(asfd, &ar, slist, 3);
+	setup_reads_from_slist(asfd, &ar, slist, 3, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 1000);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 3);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 3, 0);
 	asfd_mock_read_no_op(chfd, &cr, 1000);
-	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 3);
+	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 3, 0);
 	asfd_mock_read_no_op(chfd, &cr, 1000);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
@@ -511,7 +534,7 @@ static void setup_asfds_happy_path_three_blks_per_file_full_dedup_big(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 12800);
-	setup_reads_from_slist(asfd, &ar, slist, 3);
+	setup_reads_from_slist(asfd, &ar, slist, 3, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
 	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "BAA");
@@ -519,9 +542,9 @@ static void setup_asfds_happy_path_three_blks_per_file_full_dedup_big(
 	asfd_mock_read_no_op(asfd, &ar, 25600);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 3);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 3, 0);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
-	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 3);
+	setup_chfd_reads_from_slist_blks_got(chfd, &cr, slist, 3, 0);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
@@ -535,18 +558,18 @@ static void setup_asfds_happy_path_one_blk_per_file_no_dedup(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 30);
-	setup_reads_from_slist(asfd, &ar, slist, 1);
+	setup_reads_from_slist(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1);
+	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1, 0);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 60);
-	setup_reads_from_slist_blks(asfd, &ar, slist, 1);
+	setup_reads_from_slist_blks(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 1, 0);
 	asfd_mock_read_no_op(chfd, &cr, 60);
-	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1);
+	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1, 0);
 	asfd_mock_read_no_op(chfd, &cr, 60);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
@@ -559,18 +582,18 @@ static void setup_asfds_happy_path_one_blk_per_file_no_dedup_big(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 12800);
-	setup_reads_from_slist(asfd, &ar, slist, 1);
+	setup_reads_from_slist(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1);
+	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1, 0);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
-	setup_reads_from_slist_blks(asfd, &ar, slist, 1);
+	setup_reads_from_slist_blks(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 1, 0);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
-	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1);
+	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1, 0);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
@@ -584,18 +607,18 @@ static void setup_asfds_happy_path_three_blks_per_file_no_dedup(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 200);
-	setup_reads_from_slist(asfd, &ar, slist, 3);
+	setup_reads_from_slist(asfd, &ar, slist, 3, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 3);
+	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 3, 0);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 1000);
-	setup_reads_from_slist_blks(asfd, &ar, slist, 3);
+	setup_reads_from_slist_blks(asfd, &ar, slist, 3, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 3);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 3, 0);
 	asfd_mock_read_no_op(chfd, &cr, 1000);
-	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 3);
+	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 3, 0);
 	asfd_mock_read_no_op(chfd, &cr, 1000);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
@@ -608,18 +631,18 @@ static void setup_asfds_happy_path_three_blks_per_file_no_dedup_big(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 12800);
-	setup_reads_from_slist(asfd, &ar, slist, 3);
+	setup_reads_from_slist(asfd, &ar, slist, 3, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 3);
+	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 3, 0);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
-	setup_reads_from_slist_blks(asfd, &ar, slist, 3);
+	setup_reads_from_slist_blks(asfd, &ar, slist, 3, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 3);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 3, 0);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
-	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 3);
+	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 3, 0);
 	asfd_mock_read_no_op(chfd, &cr, 25600);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
@@ -658,7 +681,7 @@ static void setup_reads_from_slist_interrupt(struct asfd *asfd,
 		}
 	}
 }
-/*
+
 static void setup_asfds_happy_path_one_blk_per_file_no_dedup_interrupt(
 	struct asfd *asfd, struct asfd *chfd, struct slist *slist)
 {
@@ -667,22 +690,23 @@ static void setup_asfds_happy_path_one_blk_per_file_no_dedup_interrupt(
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 30);
-	setup_reads_from_slist(asfd, &ar, slist, 1);
+	setup_reads_from_slist(asfd, &ar, slist, 1, 2 /* interrupt */);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1);
+	setup_writes_from_slist_blk_requests(asfd,
+		&aw, slist, 1, 2 /* interrupt */);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 60);
-	setup_reads_from_slist_blks(asfd, &ar, slist, 1);
+	setup_reads_from_slist_blks(asfd, &ar, slist, 1, 2 /* interrupt */);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
-	setup_chfd_writes_from_slist(chfd, &cw, slist, 1);
+	setup_chfd_writes_from_slist(chfd, &cw, slist, 1, 2 /* interrupt */);
 	asfd_mock_read_no_op(chfd, &cr, 60);
-	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1);
+	setup_chfd_reads_from_slist_blks_not_got(chfd,
+		&cr, slist, 1, 2 /* interrupt */);
 	asfd_mock_read_no_op(chfd, &cr, 60);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 }
-*/
 
 static int async_rw_simple(struct async *as)
 {
@@ -858,14 +882,14 @@ START_TEST(asfds_happy_path_three_blks_per_file_no_dedup_big)
 		setup_asfds_happy_path_three_blks_per_file_no_dedup_big);
 }
 END_TEST
-/*
+
 START_TEST(asfds_happy_path_one_blk_per_file_no_dedup_interrupt)
 {
 	run_test(0, 20, async_rw_both,
 		setup_asfds_happy_path_one_blk_per_file_no_dedup_interrupt);
 }
 END_TEST
-*/
+
 
 Suite *suite_server_protocol2_backup_phase2(void)
 {
@@ -912,8 +936,8 @@ Suite *suite_server_protocol2_backup_phase2(void)
 	tcase_add_test(tc_core,
 		asfds_happy_path_three_blks_per_file_no_dedup_big);
 
-//	tcase_add_test(tc_core,
-//		asfds_happy_path_one_blk_per_file_no_dedup_interrupt);
+	tcase_add_test(tc_core,
+		asfds_happy_path_one_blk_per_file_no_dedup_interrupt);
 
 	suite_add_tcase(s, tc_core);
 

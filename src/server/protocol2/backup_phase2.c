@@ -311,6 +311,14 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 				goto end;
 			}
 			break;
+		case CMD_INTERRUPT:
+		{
+			uint64_t file_no;
+			file_no=base64_to_uint64(rbuf->buf);
+			if(slist_del_sbuf_by_index(slist, file_no))
+				goto error;
+			goto end;
+		}
 		default:
 			break;
 	}
@@ -321,17 +329,6 @@ error:
 end:
 	iobuf_free_content(rbuf);
 	return ret;
-}
-
-#ifndef UTEST
-static
-#endif
-int encode_req(struct blk *blk, char *req)
-{
-	char *p=req;
-	p+=to_base64(blk->index, p);
-	*p=0;
-	return 0;
 }
 
 static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist,
@@ -376,7 +373,7 @@ static int get_wbuf_from_sigs(struct iobuf *wbuf, struct slist *slist,
 
 	if(sb->protocol2->bsighead->got==BLK_NOT_GOT)
 	{
-		encode_req(sb->protocol2->bsighead, req);
+		base64_from_uint64(sb->protocol2->bsighead->index, req);
 		iobuf_from_str(wbuf, CMD_DATA_REQ, req);
 		sb->protocol2->bsighead->requested=1;
 	}

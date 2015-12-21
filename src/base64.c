@@ -127,3 +127,18 @@ int from_base64(int64_t *value, const char *where)
 	*value=neg?-(int64_t)val:(int64_t)val;
 	return i;
 }
+
+uint64_t base64_to_uint64(const char *buf)
+{
+	int64_t val;
+	const char *p=buf;
+	p+=from_base64(&val, p);
+	return (uint64_t)val;
+}
+
+void base64_from_uint64(uint64_t src, char *buf)
+{
+	char *p=buf;
+	p+=to_base64(src, p);
+	*p=0;
+}

@@ -51,6 +51,7 @@ static int asfd_assert_write(struct asfd *asfd, struct iobuf *wbuf)
 	struct iobuf *expected;
 	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
 //printf("w %s %d %d\n", asfd->desc, writes->cursor, writes->size);
+//printf("%c:%s\n", wbuf->cmd, wbuf->buf);
 	fail_unless(writes->cursor<writes->size);
 	w=&writes->ioevent[writes->cursor++];
 	expected=&w->iobuf;

@@ -6,6 +6,7 @@
 #include "../../../src/async.h"
 #include "../../../src/attribs.h"
 #include "../../../src/base64.h"
+#include "../../../src/bu.h"
 #include "../../../src/hexmap.h"
 #include "../../../src/fsops.h"
 #include "../../../src/iobuf.h"
@@ -16,8 +17,8 @@
 
 #define BASE	"utest_server_protocol1_backup_phase2"
 
-//static struct ioevent_list areads;
-//static struct ioevent_list awrites;
+static struct ioevent_list reads;
+static struct ioevent_list writes;
 
 static void do_sdirs_init(struct sdirs *sdirs)
 {
@@ -152,6 +153,75 @@ START_TEST(test_phase2_unset_asfd)
 }
 END_TEST
 
+static int async_rw_simple(struct async *as)
+{
+	return as->asfd->read(as->asfd);
+}
+
+static struct sd sd1[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_WORKING },
+};
+
+static void setup_asfds_happy_path_no_files(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0, w=0;
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
+}
+
+static void run_test(int expected_ret,
+        int manio_entries,
+        void setup_asfds_callback(struct asfd *asfd, struct slist *slist))
+{
+	struct asfd *asfd;
+	struct async *as;
+	struct sdirs *sdirs;
+	struct conf **confs;
+	struct slist *slist=NULL;
+	prng_init(0);
+	base64_init();
+	hexmap_init();
+	setup(&as, &sdirs, &confs);
+	asfd=asfd_mock_setup(&reads, &writes);
+	as->asfd_add(as, asfd);
+	as->read_write=async_rw_simple;
+	asfd->as=as;
+
+	build_storage_dirs(sdirs, sd1, ARR_LEN(sd1));
+	fail_unless(!sdirs_get_real_working_from_symlink(sdirs));
+	if(manio_entries)
+	{
+		slist=build_manifest(sdirs->phase1data,
+				PROTO_2, manio_entries, 1 /*phase*/);
+	}
+	setup_asfds_callback(asfd, slist);
+
+	fail_unless(backup_phase2_server_protocol1(
+		as,
+		sdirs,
+		NULL, // incexc
+		0, // resume
+		confs
+	)==expected_ret);
+
+	if(!expected_ret)
+	{
+		// FIX THIS: Should check for the presence and correctness of
+		// changed and unchanged manios.
+	}
+	asfd_free(&asfd);
+	asfd_mock_teardown(&reads, &writes);
+	slist_free(&slist);
+	tear_down(&as, &sdirs, &confs);
+}
+
+START_TEST(test_phase2_happy_path_no_files)
+{
+	run_test(0, 0, setup_asfds_happy_path_no_files);
+}
+END_TEST
+
 Suite *suite_server_protocol1_backup_phase2(void)
 {
 	Suite *s;
@@ -167,6 +237,8 @@ Suite *suite_server_protocol1_backup_phase2(void)
 	tcase_add_test(tc_core, test_phase2_unset_confs);
 	tcase_add_test(tc_core, test_phase2_unset_sdirs);
 	tcase_add_test(tc_core, test_phase2_unset_asfd);
+
+	tcase_add_test(tc_core, test_phase2_happy_path_no_files);
 
 	suite_add_tcase(s, tc_core);
 

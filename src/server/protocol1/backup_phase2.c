@@ -423,7 +423,7 @@ static int do_stuff_to_send(struct asfd *asfd,
 			default: return -1;
 		}
 		p1b->flags &= ~SBUF_SEND_PATH;
-		if(*last_requested) free(*last_requested);
+		free_w(last_requested);
 		if(!(*last_requested=strdup_w(p1b->path.buf, __func__)))
 			return -1;
 	}
@@ -492,8 +492,8 @@ static int finish_delta(struct sdirs *sdirs, struct sbuf *rb)
 	// just get recreated.
 	  || do_rename(sdirs->deltmppath, delpath))
 		ret=-1;
-	if(delpath) free(delpath);
-	if(deltmp) free(deltmp);
+	free_w(&delpath);
+	free_w(&deltmp);
 	return ret;
 }
 
@@ -527,10 +527,7 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 		cntr_add(cntr, rb->path.cmd, 0);
 
 	if(*last_requested && !strcmp(rb->path.buf, *last_requested))
-	{
-		free(*last_requested);
-		*last_requested=NULL;
-	}
+		free_w(last_requested);
 
 	cp=strchr(rb->endfile.buf, ':');
 	if(rb->endfile.buf)
@@ -950,6 +947,7 @@ end:
 		ret=-1;
 	}
 	free_w(&deltmppath);
+	free_w(&last_requested);
 	sbuf_free(&cb);
 	sbuf_free(&p1b);
 	sbuf_free(&rb);
@@ -957,7 +955,8 @@ end:
 	manio_close(&cmanio);
 	dpth_free(&dpth);
 	man_off_t_free(&p1pos);
-	if(!ret && sdirs) unlink(sdirs->phase1data);
+	if(!ret && sdirs)
+		unlink(sdirs->phase1data);
 
 	logp("End phase2 (receive file data)\n");
 

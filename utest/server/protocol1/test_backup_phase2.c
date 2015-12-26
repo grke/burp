@@ -170,6 +170,68 @@ static void setup_asfds_happy_path_no_files(struct asfd *asfd,
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
 }
 
+static void setup_writes_from_slist(struct asfd *asfd,
+	int *w, struct slist *slist)
+{
+	struct sbuf *s;
+	for(s=slist->head; s; s=s->next)
+	{
+		if(!sbuf_is_filedata(s))
+			continue;
+		asfd_assert_write_iobuf(asfd, w, 0, &s->attr);
+		asfd_assert_write_iobuf(asfd, w, 0, &s->path);
+	}
+}
+
+static void setup_asfds_happy_path_nothing_from_client(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0, w=0;
+	setup_writes_from_slist(asfd, &w, slist);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_read_no_op(asfd, &r, 20);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
+}
+
+static void setup_asfds_happy_path_interrupts_from_client(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0, w=0;
+	struct sbuf *s;
+	setup_writes_from_slist(asfd, &w, slist);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_read_no_op(asfd, &r, 200);
+	for(s=slist->head; s; s=s->next)
+	{
+		if(!sbuf_is_filedata(s))
+			continue;
+		asfd_mock_read(asfd, &r, 0, CMD_INTERRUPT, s->path.buf);
+	}
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
+}
+
+static void setup_asfds_happy_path_new_files(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0, w=0;
+	struct sbuf *s;
+	setup_writes_from_slist(asfd, &w, slist);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_read_no_op(asfd, &r, 200);
+	for(s=slist->head; s; s=s->next)
+	{
+		if(!sbuf_is_filedata(s))
+			continue;
+		asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
+		asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
+		asfd_mock_read(asfd, &r, 0, CMD_APPEND, "some data");
+		asfd_mock_read(asfd, &r, 0, CMD_END_FILE,
+			"0:d41d8cd98f00b204e9800998ecf8427e");
+
+	}
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
+}
+
 static void run_test(int expected_ret,
         int manio_entries,
         void setup_asfds_callback(struct asfd *asfd, struct slist *slist))
@@ -222,6 +284,24 @@ START_TEST(test_phase2_happy_path_no_files)
 }
 END_TEST
 
+START_TEST(test_phase2_happy_path_nothing_from_client)
+{
+	run_test(0, 10, setup_asfds_happy_path_nothing_from_client);
+}
+END_TEST
+
+START_TEST(test_phase2_happy_path_interrupts_from_client)
+{
+	run_test(0, 100, setup_asfds_happy_path_interrupts_from_client);
+}
+END_TEST
+
+START_TEST(test_phase2_happy_path_new_files)
+{
+	run_test(0, 10, setup_asfds_happy_path_new_files);
+}
+END_TEST
+
 Suite *suite_server_protocol1_backup_phase2(void)
 {
 	Suite *s;
@@ -239,6 +319,9 @@ Suite *suite_server_protocol1_backup_phase2(void)
 	tcase_add_test(tc_core, test_phase2_unset_asfd);
 
 	tcase_add_test(tc_core, test_phase2_happy_path_no_files);
+	tcase_add_test(tc_core, test_phase2_happy_path_nothing_from_client);
+	tcase_add_test(tc_core, test_phase2_happy_path_interrupts_from_client);
+	tcase_add_test(tc_core, test_phase2_happy_path_new_files);
 
 	suite_add_tcase(s, tc_core);
 

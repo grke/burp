@@ -66,7 +66,7 @@ if(wbuf->cmd==CMD_SIG)
 
 }
 */
-//printf("%d\n", wbuf->len);
+//printf("%d %d\n", wbuf->len, expected->len);
 //printf("w %s - '%c:%s' '%c:%s'\n", asfd->desc, wbuf->cmd, wbuf->buf,
 //		expected->cmd, expected->buf);
 	fail_unless(wbuf->len==expected->len);

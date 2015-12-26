@@ -1,7 +1,5 @@
 DEBUG=@DEBUG@
 
-GETTEXT_LIBS = @LIBINTL@
-
 first_rule: all
 dummy:
 

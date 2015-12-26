@@ -24,42 +24,6 @@
 	#endif
 #endif
 
-#ifdef ENABLE_NLS
-	#include <libintl.h>
-	#include <locale.h>
-	#ifndef _
-		#define _(s) gettext((s))
-	#endif
-	#ifndef N_
-		#define N_(s) (s)
-	#endif
-#else
-	#undef _
-	#undef N_
-	#undef textdomain
-	#undef bindtextdomain
-	#undef setlocale
-
-	#ifndef _
-		#define _(s) (s)
-	#endif
-	#ifndef N_
-		#define N_(s) (s)
-	#endif
-	#ifndef textdomain
-		#define textdomain(d)
-	#endif
-	#ifndef bindtextdomain
-		#define bindtextdomain(p, d)
-	#endif
-	#ifndef setlocale
-		#define setlocale(p, d)
-	#endif
-#endif
-
-// Use the following for strings not to be translated.
-#define NT_(s) (s)
-
 #ifndef S_ISLNK
 #define S_ISLNK(m) (((m) & S_IFM) == S_IFLNK)
 #endif

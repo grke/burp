@@ -218,12 +218,6 @@ dnl Burp OPSys Distribution determination (see aclocal.m4)
 dnl ----------------------------------------------------------
 BA_CHECK_OPSYS_DISTNAME
 
-dnl --------------------------------------------------
-dnl Suppport for gettext (translations)
-dnl By default, $datarootdir is ${prefix}/share
-dnl --------------------------------------------------
-AM_GNU_GETTEXT([external])
-
 dnl ------------------------------------------------------------------
 dnl If the user has not set --prefix, we set our default to nothing.
 dnl In this case, if the user has not set --sysconfdir, we set it
@@ -1151,8 +1145,6 @@ AC_CHECK_FUNCS(getmntinfo, [AC_DEFINE(HAVE_GETMNTINFO)])
 AC_FUNC_CLOSEDIR_VOID
 # AC_FUNC_SETPGRP 	    dnl check for BSD setpgrp.
 # AC_FUNC_FNMATCH    dnl use local version
-
-AC_CHECK_LIB(intl, gettext, [LIBS="$LIBS -lintl"])
 
 AC_CHECK_LIB(sun, getpwnam)
 

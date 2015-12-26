@@ -51,7 +51,7 @@ static int bstrerror(int errnum, char *buf, size_t bufsiz)
 
 	if(!(msg=strerror(errnum)))
 	{
-		msg=_("Bad errno");
+		msg="Bad errno";
 		stat=-1;
 	}
 	snprintf(buf, bufsiz, "%s", msg);
@@ -89,7 +89,7 @@ const char *berrno_bstrerror(struct berrno *b, int errnum)
 #endif
 	// Normal errno.
 	if(bstrerror(b->m_berrno, b->m_buf, sizeof(b->m_buf))<0)
-		return _("Invalid errno. No error message possible.");
+		return "Invalid errno. No error message possible.";
 
 	return b->m_buf;
 }

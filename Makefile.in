@@ -67,12 +67,12 @@ burp: Makefile
 
 #-------------------------------------------------------------------------
 
-autoconf/aclocal.m4: autoconf/configure.in autoconf/burp-macros/* autoconf/gettext-macros/* autoconf/libtool/*
+autoconf/aclocal.m4: autoconf/configure.in autoconf/burp-macros/* autoconf/libtool/*
 
 #  Note, the following is needed in the above if ever any new macro is added.
 #   However, at the current time, the -I libtool causes the autoconf/aclocal.m4
 #   get messed up, so this is commented out
-#	cd autoconf && aclocal -I burp-macros -I gettext-macros -I libtool
+#	cd autoconf && aclocal -I burp-macros -I libtool
 
 configure: autoconf/configure.in autoconf/aclocal.m4 autoconf/acconfig.h autoconf/config.h.in
 	cd $(srcdir);

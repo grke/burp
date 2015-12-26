@@ -98,8 +98,8 @@ static int bfile_open_encrypted(BFILE *bfd,
 	}
 
 end:
-   	if(win32_fname_wchar) free(win32_fname_wchar);
-   	if(win32_fname) free(win32_fname);
+	free_w(&win32_fname_wchar);
+	free_w(&win32_fname);
 	return bfd->mode==BF_CLOSED;
 }
 
@@ -272,8 +272,8 @@ static int bfile_open(BFILE *bfd, struct asfd *asfd,
 			return -1;
 	}
 	bfd->lpContext=NULL;
-	if(win32_fname_wchar) free(win32_fname_wchar);
-	if(win32_fname) free(win32_fname);
+	free_w(&win32_fname_wchar);
+	free_w(&win32_fname);
 	return bfd->mode==BF_CLOSED;
 }
 
@@ -285,11 +285,7 @@ static int bfile_close_encrypted(BFILE *bfd, struct asfd *asfd)
 			bfd->path, &bfd->statp, bfd->winattr, bfd->cntr);
 	bfd->pvContext=NULL;
 	bfd->mode=BF_CLOSED;
-	if(bfd->path)
-	{
-		free(bfd->path);
-		bfd->path=NULL;
-	}
+	free_w(&bfd->path);
 	return 0;
 }
 
@@ -356,11 +352,7 @@ static int bfile_close(BFILE *bfd, struct asfd *asfd)
 
 	ret=0;
 end:
-	if(bfd->path)
-	{
-		free(bfd->path);
-		bfd->path=NULL;
-	}
+	free_w(&bfd->path);
 	return ret;
 }
 

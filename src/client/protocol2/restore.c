@@ -92,11 +92,11 @@ static int restore_metadata(
 			if(set_extrameta(bfd, fname, sb->path.cmd,
 				&(sb->statp), metadata, metalen, confs))
 			{
-				free(metadata);
+				free_w(&metadata);
 				// carry on if we could not do it
 				return 0;
 			}
-			free(metadata);
+			free_w(&metadata);
 #ifndef HAVE_WIN32
 			// set attributes again, since we just diddled with
 			// the file

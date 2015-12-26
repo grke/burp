@@ -134,10 +134,10 @@ int maybe_restore_spool(struct asfd *asfd, const char *manifest,
 			goto end;
 		if(send_a_file(asfd, fdatpath, get_cntr(confs)))
 		{
-			free(fdatpath);
+			free_w(&fdatpath);
 			goto end;
 		}
-		free(fdatpath);
+		free_w(&fdatpath);
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "datfilesend")

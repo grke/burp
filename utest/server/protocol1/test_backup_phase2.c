@@ -14,6 +14,7 @@
 #include "../../../src/server/sdirs.h"
 #include "../../../src/slist.h"
 #include "../../builders/build_asfd_mock.h"
+#include "../../builders/build_file.h"
 
 #define BASE	"utest_server_protocol1_backup_phase2"
 
@@ -162,24 +163,30 @@ static struct sd sd1[] = {
 	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_WORKING },
 };
 
-static void setup_asfds_happy_path_no_files(struct asfd *asfd,
-	struct slist *slist)
-{
-	int r=0, w=0;
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
-}
-
 static void setup_writes_from_slist(struct asfd *asfd,
-	int *w, struct slist *slist)
+	int *w, struct slist *slist, int changed)
 {
 	struct sbuf *s;
+	if(!slist) return;
 	for(s=slist->head; s; s=s->next)
 	{
 		if(!sbuf_is_filedata(s))
 			continue;
+		if(changed && !sbuf_is_encrypted(s))
+			asfd_assert_write_iobuf(asfd,
+				w, 0, &s->protocol1->datapth);
 		asfd_assert_write_iobuf(asfd, w, 0, &s->attr);
 		asfd_assert_write_iobuf(asfd, w, 0, &s->path);
+		if(changed && !sbuf_is_encrypted(s))
+		{
+			struct iobuf wbuf;
+			char empty_sig[12]={'r', 's', 0x01, '6',
+				0, 0x02, 0, 0, 0, 0, 0, 0x08};
+			iobuf_set(&wbuf, CMD_APPEND,
+				empty_sig, sizeof(empty_sig));
+			asfd_assert_write_iobuf(asfd, w, 0, &wbuf);
+			asfd_assert_write(asfd, w, 0, CMD_END_FILE, "endfile");
+		}
 	}
 }
 
@@ -187,7 +194,7 @@ static void setup_asfds_happy_path_nothing_from_client(struct asfd *asfd,
 	struct slist *slist)
 {
 	int r=0, w=0;
-	setup_writes_from_slist(asfd, &w, slist);
+	setup_writes_from_slist(asfd, &w, slist, 0 /* not changed */);
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
 	asfd_mock_read_no_op(asfd, &r, 20);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
@@ -198,7 +205,7 @@ static void setup_asfds_happy_path_interrupts_from_client(struct asfd *asfd,
 {
 	int r=0, w=0;
 	struct sbuf *s;
-	setup_writes_from_slist(asfd, &w, slist);
+	setup_writes_from_slist(asfd, &w, slist, 0 /* not changed */);
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
 	asfd_mock_read_no_op(asfd, &r, 200);
 	for(s=slist->head; s; s=s->next)
@@ -215,7 +222,7 @@ static void setup_asfds_happy_path_new_files(struct asfd *asfd,
 {
 	int r=0, w=0;
 	struct sbuf *s;
-	setup_writes_from_slist(asfd, &w, slist);
+	setup_writes_from_slist(asfd, &w, slist, 0 /* not changed */);
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
 	asfd_mock_read_no_op(asfd, &r, 200);
 	for(s=slist->head; s; s=s->next)
@@ -227,7 +234,6 @@ static void setup_asfds_happy_path_new_files(struct asfd *asfd,
 		asfd_mock_read(asfd, &r, 0, CMD_APPEND, "some data");
 		asfd_mock_read(asfd, &r, 0, CMD_END_FILE,
 			"0:d41d8cd98f00b204e9800998ecf8427e");
-
 	}
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
 }
@@ -255,7 +261,126 @@ static void run_test(int expected_ret,
 	if(manio_entries)
 	{
 		slist=build_manifest(sdirs->phase1data,
-				PROTO_2, manio_entries, 1 /*phase*/);
+				PROTO_1, manio_entries, 1 /*phase*/);
+	}
+	setup_asfds_callback(asfd, slist);
+
+	fail_unless(backup_phase2_server_protocol1(
+		as,
+		sdirs,
+		NULL, // incexc
+		0, // resume
+		confs
+	)==expected_ret);
+
+	if(!expected_ret)
+	{
+		// FIX THIS: Should check for the presence and correctness of
+		// changed and unchanged manios.
+	}
+	asfd_free(&asfd);
+	asfd_mock_teardown(&reads, &writes);
+	slist_free(&slist);
+	tear_down(&as, &sdirs, &confs);
+}
+
+START_TEST(test_phase2_happy_path_nothing_from_client)
+{
+	run_test(0, 10, setup_asfds_happy_path_nothing_from_client);
+}
+END_TEST
+
+START_TEST(test_phase2_happy_path_interrupts_from_client)
+{
+	run_test(0, 100, setup_asfds_happy_path_interrupts_from_client);
+}
+END_TEST
+
+START_TEST(test_phase2_happy_path_new_files)
+{
+	run_test(0, 10, setup_asfds_happy_path_new_files);
+}
+END_TEST
+
+static struct sd sd2[] = {
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_CURRENT },
+	{ "0000002 1970-01-01 00:00:00", 2, 2, BU_WORKING },
+};
+
+static void setup_asfds_happy_path_changed_files(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0, w=0;
+	struct sbuf *s;
+	char empty_delta[4]={'r', 's', 0x02, '6'};
+	setup_writes_from_slist(asfd, &w, slist, 1 /* changed */);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2end");
+	asfd_mock_read_no_op(asfd, &r, 200);
+	if(slist) for(s=slist->head; s; s=s->next)
+	{
+		struct iobuf rbuf;
+		if(!sbuf_is_filedata(s))
+			continue;
+		asfd_mock_read_iobuf(asfd, &r, 0, &s->protocol1->datapth);
+		asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
+		asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
+		if(sbuf_is_encrypted(s))
+		{
+			asfd_mock_read(asfd, &r, 0, CMD_APPEND, "some data");
+		}
+		else
+		{
+			iobuf_set(&rbuf, CMD_APPEND,
+				empty_delta, sizeof(empty_delta));
+			asfd_mock_read_iobuf(asfd, &r, 0, &rbuf);
+		}
+		asfd_mock_read_iobuf(asfd, &r, 0, &s->endfile);
+	}
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okbackupphase2end");
+}
+
+static void run_test_changed(int expected_ret,
+        int manio_entries,
+        void setup_asfds_callback(struct asfd *asfd, struct slist *slist))
+{
+	struct asfd *asfd;
+	struct async *as;
+	struct sdirs *sdirs;
+	struct conf **confs;
+	struct slist *slist=NULL;
+	prng_init(0);
+	base64_init();
+	hexmap_init();
+	setup(&as, &sdirs, &confs);
+	asfd=asfd_mock_setup(&reads, &writes);
+	as->asfd_add(as, asfd);
+	as->read_write=async_rw_simple;
+	asfd->as=as;
+
+	build_storage_dirs(sdirs, sd2, ARR_LEN(sd2));
+	fail_unless(!sdirs_get_real_working_from_symlink(sdirs));
+	if(manio_entries)
+	{
+		struct sbuf *s;
+		slist=build_manifest(sdirs->cmanifest,
+			PROTO_1, manio_entries, 0 /*phase*/);
+		for(s=slist->head; s; s=s->next)
+		{
+			char path[256];
+			if(!sbuf_is_filedata(s))
+				continue;
+			snprintf(path, sizeof(path), "%s/%s%s",
+				sdirs->currentdata, TREE_DIR, s->path.buf);
+			build_file(path, "");
+			// Adjust mtimes so that differences are detected.
+			fail_unless(!lstat(path, &s->statp));
+			s->winattr=0;
+			s->compression=0;
+			attribs_encode(s);
+		}
+		build_manifest_phase1_from_slist(sdirs->phase1data,
+			slist, PROTO_1);
+		build_file(sdirs->cincexc, NULL);
 	}
 	setup_asfds_callback(asfd, slist);
 
@@ -280,25 +405,13 @@ static void run_test(int expected_ret,
 
 START_TEST(test_phase2_happy_path_no_files)
 {
-	run_test(0, 0, setup_asfds_happy_path_no_files);
+	run_test_changed(0, 0, setup_asfds_happy_path_changed_files);
 }
 END_TEST
 
-START_TEST(test_phase2_happy_path_nothing_from_client)
+START_TEST(test_phase2_happy_path_changed_files)
 {
-	run_test(0, 10, setup_asfds_happy_path_nothing_from_client);
-}
-END_TEST
-
-START_TEST(test_phase2_happy_path_interrupts_from_client)
-{
-	run_test(0, 100, setup_asfds_happy_path_interrupts_from_client);
-}
-END_TEST
-
-START_TEST(test_phase2_happy_path_new_files)
-{
-	run_test(0, 10, setup_asfds_happy_path_new_files);
+	run_test_changed(0, 10, setup_asfds_happy_path_changed_files);
 }
 END_TEST
 
@@ -318,10 +431,12 @@ Suite *suite_server_protocol1_backup_phase2(void)
 	tcase_add_test(tc_core, test_phase2_unset_sdirs);
 	tcase_add_test(tc_core, test_phase2_unset_asfd);
 
-	tcase_add_test(tc_core, test_phase2_happy_path_no_files);
 	tcase_add_test(tc_core, test_phase2_happy_path_nothing_from_client);
 	tcase_add_test(tc_core, test_phase2_happy_path_interrupts_from_client);
 	tcase_add_test(tc_core, test_phase2_happy_path_new_files);
+
+	tcase_add_test(tc_core, test_phase2_happy_path_no_files);
+	tcase_add_test(tc_core, test_phase2_happy_path_changed_files);
 
 	suite_add_tcase(s, tc_core);
 

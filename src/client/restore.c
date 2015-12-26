@@ -92,7 +92,7 @@ static int make_link(struct asfd *asfd,
 		}
 		//printf("%s -> %s\n", fname, flnk);
 		ret=link(flnk, fname);
-		free(flnk);
+		free_w(&flnk);
 	}
 	else if(cmd==CMD_SOFT_LINK)
 	{
@@ -401,7 +401,7 @@ static int strip_path_components(struct asfd *asfd,
 	}
 	if(!(tmp=strdup_w(cp, __func__)))
 		return -1;
-	free(sb->path.buf);
+	free_w(&sb->path.buf);
 	sb->path.buf=tmp;
 	return 1;
 }

@@ -283,12 +283,8 @@ int get_vss(BFILE *bfd, struct sbuf *sb, char **vssdata, size_t *vlen)
 	(*vlen)+=9;
 	return 0;
 error:
-	if(tmp) free(tmp);
-	if(*vssdata)
-	{
-		free(*vssdata);
-		*vssdata=NULL;
-	}
+	free_w(&tmp);
+	free_w(vssdata);
 	*vlen=0;
 	return -1;
 }

@@ -309,7 +309,7 @@ int ca_server_setup(struct conf **confs)
 	ret=0;
 end:
 	// Keeping it in gca_dir for later.
-	//if(ca_dir) free(ca_dir);
+	//free_w(&ca_dir);
 	if(setup_stuff_done)
 	{
 		if(ret) logp("CA setup failed\n");

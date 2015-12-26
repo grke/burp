@@ -582,9 +582,9 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 end:
 	log_fzp_set(NULL, cconfs);
 	compress_file(logpath, logpathz, get_int(cconfs[OPT_COMPRESSION]));
-	if(manifest) free(manifest);
-	if(logpath) free(logpath);
-	if(logpathz) free(logpathz);
+	free_w(&manifest);
+	free_w(&logpath);
+	free_w(&logpathz);
 	return ret;
 }
 

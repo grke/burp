@@ -179,8 +179,8 @@ static int setenv_x509(X509_NAME *x509, const char *type)
 		sanitise(name_expand);
 		sanitise((char*)buf);
 		setenv(name_expand, (char*)buf, 1);
-		free (name_expand);
-		OPENSSL_free (buf);
+		free_w(&name_expand);
+		OPENSSL_free(buf);
 	}
 	return 0;
 }

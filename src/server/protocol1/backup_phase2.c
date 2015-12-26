@@ -748,15 +748,13 @@ static int open_previous_manifest(struct manio **cmanio,
 	struct stat statp;
 	if(!lstat(sdirs->cmanifest, &statp)
 	  && !vss_opts_changed(sdirs, cconfs, incexc)
-	  && !(*cmanio=manio_open(sdirs->cmanifest,
-		"rb", get_protocol(cconfs))))
+	  && !(*cmanio=manio_open(sdirs->cmanifest, "rb", PROTO_1)))
 	{
 		logp("could not open old manifest %s\n", sdirs->cmanifest);
 		return -1;
 	}
 	return 0;
 }
-
 
 int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf **cconfs)

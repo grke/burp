@@ -17,7 +17,7 @@ static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 	char *incoming=NULL;
 	if(!(incoming=prepend_s(autoupgrade_dir, file))) return -1;
 	ret=receive_a_file(asfd, incoming, cntr);
-	if(incoming) free(incoming);
+	free_w(&incoming);
 	return ret;
 }
 
@@ -129,8 +129,8 @@ int autoupgrade_client(struct async *as, struct conf **confs)
 
 	exit(0);
 end:
-	if(copy) free(copy);
-	if(script_path) free(script_path);
+	free_w(&copy);
+	free_w(&script_path);
 	iobuf_free(&rbuf);
 	return ret;
 }

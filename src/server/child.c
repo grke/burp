@@ -112,7 +112,7 @@ static int run_server_script(struct asfd *asfd,
 			cconfs, 1, 1, 0);
 	}
 end:
-	if(logbuf) free(logbuf);
+	free_w(&logbuf);
 	return ret;
 }
 

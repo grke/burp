@@ -856,7 +856,6 @@ START_TEST(asfds_happy_path_one_blk_per_file_no_dedup_interrupt)
 }
 END_TEST
 
-
 Suite *suite_server_protocol2_backup_phase2(void)
 {
 	Suite *s;

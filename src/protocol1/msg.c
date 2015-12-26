@@ -1,4 +1,5 @@
 #include "../burp.h"
+#include "../alloc.h"
 #include "../asfd.h"
 #include "../async.h"
 #include "../cmd.h"
@@ -224,7 +225,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 			if(enc_ctx)
 			{
 				EVP_CIPHER_CTX_cleanup(enc_ctx);
-				free(enc_ctx);
+				free_v((void **)&enc_ctx);
 			}
 			inflateEnd(&zstrm);
 			return -1;
@@ -358,7 +359,7 @@ int transfer_gzfile_inl(struct asfd *asfd,
 	if(enc_ctx)
 	{
 		EVP_CIPHER_CTX_cleanup(enc_ctx);
-		free(enc_ctx);
+		free_v((void **)&enc_ctx);
 	}
 
 	iobuf_free_content(rbuf);

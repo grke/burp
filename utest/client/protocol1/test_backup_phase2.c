@@ -12,6 +12,7 @@
 #include "../../../src/iobuf.h"
 #include "../../../src/slist.h"
 #include "../../builders/build_asfd_mock.h"
+#include "../../builders/build_file.h"
 
 #define BASE	"utest_client_protocol1_backup_phase2"
 
@@ -139,14 +140,6 @@ static int async_write_simple(struct async *as)
 	return 0;
 }
 
-static void make_file(const char *path)
-{
-	FILE *fp;
-	fail_unless(build_path_w(path)==0);
-	fail_unless((fp=fopen(path, "wb"))!=NULL);
-	fail_unless(!fclose(fp));
-}
-
 static void setup_asfds_with_slist_new_files(struct asfd *asfd,
 	struct slist *slist)
 {
@@ -161,7 +154,7 @@ static void setup_asfds_with_slist_new_files(struct asfd *asfd,
 		if(sbuf_is_filedata(s)
 		  || sbuf_is_vssdata(s))
 		{
-			make_file(s->path.buf);
+			build_file(s->path.buf, NULL);
 			fail_unless(!lstat(s->path.buf, &s->statp));
 			s->winattr=0;
 			s->compression=0;
@@ -192,9 +185,9 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 {
 	int r=0; int w=0;
 	struct sbuf *s;
-	char empty_sig[12]={'r', 's', '', '6',
-		'\0', '\0', '\0', '@', '\0', '\0', '\0', ''};
-	char empty_delta[4]={'r','s','','6'};
+	char empty_sig[12]={'r', 's', 0x01, '6',
+		0, 0, 0, '@', 0, 0, 0, 0x08};
+	char empty_delta[4]={'r', 's', 0x02, '6'};
 
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
@@ -205,7 +198,7 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 		  || sbuf_is_vssdata(s))
 		{
 			struct iobuf rbuf;
-			make_file(s->path.buf);
+			build_file(s->path.buf, NULL);
 			fail_unless(!lstat(s->path.buf, &s->statp));
 			s->winattr=0;
 			s->compression=0;

@@ -120,7 +120,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 
 	ret=0;
 end:
-	if(feat) free(feat);
+	free_w(&feat);
 	return ret;
 }
 

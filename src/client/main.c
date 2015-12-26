@@ -284,7 +284,7 @@ error:
 reconnect:
 	ret=CLIENT_RECONNECT; goto end;
 end:
-	if(server_version) free(server_version);
+	free_w(&server_version);
 	return ret;
 }
 

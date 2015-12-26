@@ -13,7 +13,7 @@ static int add_to_incexc(char **incexc, const char *src, size_t len, const char 
 {
 	char *tmp;
 	if(!(tmp=prepend_n(*incexc?:"", src, len, *incexc?"\n":""))) return -1;
-	if(*incexc) free(*incexc);
+	free_w(incexc);
 	*incexc=tmp;
 	return 0;
 }

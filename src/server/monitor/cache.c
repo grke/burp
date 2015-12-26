@@ -21,8 +21,8 @@ struct ent
 static void ent_free(struct ent **ent)
 {
 	if(!ent || !*ent) return;
-	if((*ent)->name) free((*ent)->name);
-	if((*ent)->ents) free((*ent)->ents);
+	free_w(&(*ent)->name);
+	free_v((void **)&(*ent)->ents);
 	free_v((void **)ent);
 }
 

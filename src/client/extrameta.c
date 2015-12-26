@@ -165,7 +165,7 @@ int set_extrameta(struct asfd *asfd,
 				break;
 				
 		}
-		free(m);
+		free_w(&m);
 	}
 
 	return errors;

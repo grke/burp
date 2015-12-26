@@ -1,5 +1,6 @@
 #include "../../burp.h"
 #include "../../action.h"
+#include "../../alloc.h"
 #include "../../asfd.h"
 #include "../../async.h"
 #include "../../attribs.h"
@@ -271,8 +272,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 #ifdef HAVE_WIN32
 	  		if(get_int(confs[OPT_STRIP_VSS]))
 			{
-				free(extrameta);
-				extrameta=NULL;
+				free_w(&extrameta);
 				elen=0;
 			}
 #endif
@@ -340,7 +340,7 @@ error:
 	bfd->close(bfd, asfd);
 #endif
 	sbuf_free_content(sb);
-	if(extrameta) free(extrameta);
+	free_w(&extrameta);
 	return ret;
 }
 

@@ -374,7 +374,7 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 		{
 			logp("could not find group '%s': %s\n", group,
 				strerror(errno));
-			free(username);
+			free_w(&username);
 			return -1;
 		}
 		gid=grp->gr_gid;
@@ -386,10 +386,10 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 			logp("could not initgroups for group '%s', user '%s': %s\n", group, user, strerror(errno));
 		else
 			logp("could not initgroups for user '%s': %s\n", user, strerror(errno));
-		free(username);
+		free_w(&username);
 		return -1;
 	}
-	free(username);
+	free_w(&username);
 	if(grp)
 	{
 		if(gid!=getgid() // do not do it if we already have the same gid
@@ -508,13 +508,13 @@ long version_to_long(const char *version)
 	  || !(tok2=strtok(NULL, "."))
 	  || !(tok3=strtok(NULL, ".")))
 	{
-		free(copy);
+		free_w(&copy);
 		return -1;
 	}
 	ret+=atol(tok3);
 	ret+=atol(tok2)*100;
 	ret+=atol(tok1)*100*100;
-	free(copy);
+	free_w(&copy);
 	return ret;
 }
 

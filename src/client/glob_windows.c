@@ -12,11 +12,11 @@ static void xfree_list(char **list, int size)
 {
 	if(!list) return;
 	if(size<0)
-		for(; *list; list++) if(*list) free(*list);
+		for(; *list; list++) if(*list) free_w(list);
 	else
 	{
 		int i;
-		for (i=0; i<size; i++) if(list[i]) free(list[i]);
+		for(i=0; i<size; i++) if(list[i]) free_w(&list[i]);
 	}
 	free_w(list);
 }

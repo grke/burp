@@ -180,7 +180,7 @@ static int gen_rev_delta(const char *sigpath, const char *deltadir,
 
 	ret=0;
 end:
-	if(delpath) free(delpath);
+	free_w(&delpath);
 	return ret;
 }
 
@@ -302,7 +302,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 			sb->compression, cconfs))
 		{
 			logp("error when inflating old file: %s\n", oldpath);
-			free(infpath);
+			free_w(&infpath);
 			goto end;
 		}
 
@@ -318,7 +318,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 			// Remove anything that got written.
 			unlink(newpath);
 			unlink(infpath);
-			free(infpath);
+			free_w(&infpath);
 
 			// First, note that we want to remove this entry from
 			// the manifest.
@@ -342,7 +342,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 
 		// Get rid of the inflated old file.
 		unlink(infpath);
-		free(infpath);
+		free_w(&infpath);
 
 		// Need to generate a reverse diff, unless we are keeping a
 		// hardlinked archive.

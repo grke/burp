@@ -115,6 +115,7 @@ static void set_sbuf_protocol1(struct sbuf *sb)
 	if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
 	{
 		char *endfile=gen_endfile_str();
+		iobuf_free_content(&sb->endfile);
 		sb->endfile.cmd=CMD_END_FILE;
 		sb->endfile.len=strlen(endfile);
 		fail_unless((sb->endfile.buf
@@ -125,6 +126,7 @@ static void set_sbuf_protocol1(struct sbuf *sb)
 	{
 		char *datapth;
 		fail_unless((datapth=prepend_s(TREE_DIR, sb->path.buf))!=NULL);
+		iobuf_free_content(&sb->protocol1->datapth);
 		iobuf_from_str(&sb->protocol1->datapth, CMD_DATAPTH, datapth);
 	}
 }
@@ -300,6 +302,10 @@ void build_manifest_phase1_from_slist(const char *path,
 {
 	struct sbuf *sb;
 	struct manio *manio=NULL;
+	struct iobuf datapth;
+	struct iobuf endfile;
+	iobuf_init(&datapth);
+	iobuf_init(&endfile);
 
 	for(sb=slist->head; sb; sb=sb->next)
 		set_sbuf(slist, sb);
@@ -307,7 +313,20 @@ void build_manifest_phase1_from_slist(const char *path,
 	fail_unless((manio=manio_open_phase1(path, "wb", protocol))!=NULL);
 
 	for(sb=slist->head; sb; sb=sb->next)
+	{
+		// Might be given an slist that has datapth or endfile set,
+		// which should not go into a phase1 scan. Deal with it.
+		if(sb->protocol1
+		  && sb->protocol1->datapth.buf)
+			iobuf_move(&datapth, &sb->protocol1->datapth);
+		if(sb->endfile.buf)
+			iobuf_move(&endfile, &sb->endfile);
 		fail_unless(!manio_write_sbuf(manio, sb));
+		if(datapth.buf)
+			iobuf_move(&sb->protocol1->datapth, &datapth);
+		if(endfile.buf)
+			iobuf_move(&sb->endfile, &endfile);
+	}
 
 	fail_unless(!send_msg_fzp(manio->fzp,
 		CMD_GEN, "phase1end", strlen("phase1end")));

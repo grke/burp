@@ -107,10 +107,10 @@ int autoupgrade_server(struct async *as,
 	asfd_free(&as->asfd);
 	exit(0);
 end:
-	if(path) free(path);
-	if(base_path) free(base_path);
-	if(script_path_specific) free(script_path_specific);
-	if(script_path_top) free(script_path_top);
-	if(package_path) free(package_path);
+	free_w(&path);
+	free_w(&base_path);
+	free_w(&script_path_specific);
+	free_w(&script_path_top);
+	free_w(&package_path);
 	return ret;
 }

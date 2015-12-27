@@ -116,6 +116,8 @@ case $host in
     ;;
   *-*-netbsd*)
     AC_DEFINE([HAVE_NETBSD_OS], [1], [Set to 1 if the OS is NetBSD])
+    CPPFLAGS="-I/usr/pkg/include"
+    LDFLAGS="-L/usr/pkg/lib"
     ;;
   *-*-openbsd*)
     AC_DEFINE([HAVE_OPENBSD_OS], [1], [Set to 1 if the OS is OpenBSD])

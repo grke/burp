@@ -70,29 +70,8 @@ dnl of strange output of the configure script (like things don't exist etc.).
 dnl So we name it REMOVE (more software has run into this problem)
 AC_PATH_PROG(REMOVE, rm, rm)
 AC_PATH_PROG(CP, cp, cp)
-AC_PATH_PROG(SED, sed, sed)
 AC_PATH_PROG(ECHO, echo, echo)
 AC_PATH_PROG(CMP, cmp, cmp)
-AC_PATH_PROG(TBL, tbl, tbl)
-AC_PATH_PROG(AR, ar, ar)
-AC_PATH_PROG(OPENSSL, openssl, none)
-AC_PATH_PROG(PKGCONFIG, pkg-config, pkg-config)
-AC_PATH_PROG(PIDOF, pidof, pidof)
-AC_PROG_AWK
-# Some AWK programs fail, so test it and warn the user
-if echo xfoo | $AWK 'BEGIN { prog=ARGV[1]; ARGC=1 }
-      { if ((prog == $2) || (("(" prog ")") == $2) ||
-      (("[" prog "]") == $2) ||
-      ((prog ":") == $2)) { print $1 ; exit 0 } }' xfoo>/dev/null; then :;
-else
-  AC_MSG_ERROR([!!!!!!!!! WARNING !!!!!!!!!!!!!!
-   The regex engine of $AWK is too broken to be used you
-   might want to install GNU AWK.
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!])
-fi
-THE_AWK=$AWK
-AC_PATH_PROG(AWK, $THE_AWK, $THE_AWK)
-
 
 test -n "$ARFLAG" || ARFLAGS="cr"
 AC_SUBST(ARFLAGS)

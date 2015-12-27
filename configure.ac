@@ -1222,7 +1222,7 @@ Configuration on `date`:
    C Compiler:			${CC}
    C++ Compiler:		${CXX}
    Preprocessor flags:		${CPPFLAGS}
-   Compiler flags:		${WCFLAGS} ${CFLAGS}
+   Compiler flags:		${WCFLAGS} ${CFLAGS} ${CXXFLAGS}
    Linker flags:		${WLDFLAGS} ${LDFLAGS}
    Libraries:			${LIBS}
    Static:			${support_static}

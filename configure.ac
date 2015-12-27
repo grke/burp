@@ -62,11 +62,6 @@ if test "x$BASECC" = xgcc; then
    AC_DEFINE(HAVE_GCC, 1, [Define if you have GCC])
    have_gcc=yes
 fi
-# This stuff interferes with ccache, so do not do it.
-#AC_PATH_PROG(CXX, $CXX, $CXX)
-#if test ! -e $CXX; then
-#   AC_MSG_ERROR(Unable to find C++ compiler)
-#fi
 
 dnl -------------------------------------------------------
 dnl Check for programs.

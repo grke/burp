@@ -400,6 +400,7 @@ AC_ARG_WITH(openssl,
 	with_openssl_directory=${withval}
     ]
 )
+AC_MSG_RESULT([$withval])
 
 if test "x$with_openssl_directory" != "xno"; then
    OPENSSL_LIBS="-lssl -lcrypto"
@@ -488,8 +489,6 @@ else
    OPENSSL_LIBS=""
    OPENSSL_INC=""
 fi
-AC_MSG_RESULT([$support_tls])
-
 if test "$support_tls" = "no"; then
    OPENSSL_LIBS=""
    OPENSSL_INC=""

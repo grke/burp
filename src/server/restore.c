@@ -436,6 +436,9 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		{
 			if(sb->endfile.buf)
 			{
+				if(act==ACTION_RESTORE
+				  && asfd->write(asfd, &sb->endfile))
+					goto end;
 				sbuf_free_content(sb);
 				continue;
 			}

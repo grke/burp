@@ -58,6 +58,7 @@ int restore_interrupt(struct asfd *asfd,
 		switch(rbuf->cmd)
 		{
 			case CMD_APPEND:
+			case CMD_DATA:
 				continue;
 			case CMD_END_FILE:
 				ret=0;
@@ -617,17 +618,24 @@ int do_restore_client(struct asfd *asfd,
 			case -1: goto error;
 		}
 
-		if(protocol==PROTO_2 && blk->data)
+		if(protocol==PROTO_2)
 		{
-			int wret=0;
-			if(act==ACTION_VERIFY)
-				cntr_add(cntr, CMD_DATA, 1);
-			else
-				wret=write_data(asfd, bfd, blk);
-			if(!datpath) blk_free_content(blk);
-			blk->data=NULL;
-			if(wret) goto error;
-			continue;
+			if(blk->data)
+			{
+				int wret=0;
+				if(act==ACTION_VERIFY)
+					cntr_add(cntr, CMD_DATA, 1);
+				else
+					wret=write_data(asfd, bfd, blk);
+				if(!datpath) blk_free_content(blk);
+				blk->data=NULL;
+				if(wret) goto error;
+				continue;
+			}
+			else if(sb->endfile.buf)
+			{
+				continue;
+			}
 		}
 
 		switch(sb->path.cmd)
@@ -753,6 +761,7 @@ error:
 		free_w(&datpath);
 	}
 	free_w(&fullpath);
+	blk_free(&blk);
 
 	return ret;
 }

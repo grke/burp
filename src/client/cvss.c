@@ -91,7 +91,7 @@ int win32_start_vss(struct conf **confs)
 			  logp("VSS drive letters: %d\n", i);
 			  if(islower(szWinDriveLetters[i]))
 			  {
-				logp(_("Generate VSS snapshot of drive \"%c:\\\" failed.\n"), szWinDriveLetters[i]);
+				logp("Generate VSS snapshot of drive \"%c:\\\" failed.\n", szWinDriveLetters[i]);
 				errors++;
 			  }
 			}

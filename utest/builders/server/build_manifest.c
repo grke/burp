@@ -15,9 +15,20 @@
 
 static void link_data(struct sbuf *sb, enum cmd cmd)
 {
+	char path[256];
 	sb->path.cmd=cmd;
 	sb->link.cmd=cmd;
-	fail_unless((sb->link.buf=strdup_w("some link", __func__))!=NULL);
+	if(cmd==CMD_SOFT_LINK)
+		snprintf(path, sizeof(path), "some link");
+	else
+	{
+		char *cp;
+		snprintf(path, sizeof(path), "%s", sb->path.buf);
+		fail_unless((cp=strrchr(path, '/'))!=NULL);
+		cp++;
+		snprintf(cp, strlen("some link")+1, "some link");
+	}
+	fail_unless((sb->link.buf=strdup_w(path, __func__))!=NULL);
 	sb->link.len=strlen(sb->link.buf);
 }
 

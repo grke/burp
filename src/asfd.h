@@ -133,4 +133,11 @@ extern int asfd_write_wrapper_str(struct asfd *asfd,
 extern int asfd_read_expect(struct asfd *asfd,
 	enum cmd cmd, const char *expect);
 
+#ifdef UTEST
+extern int asfd_simple_loop(struct asfd *asfd,
+	struct conf **confs, void *param, const char *caller,
+	enum asl_ret callback(struct asfd *asfd,
+		struct conf **confs, void *param));
+#endif
+
 #endif

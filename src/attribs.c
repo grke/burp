@@ -327,8 +327,10 @@ int attribs_set(struct asfd *asfd, const char *path,
 	{
 		berrno be;
 		berrno_init(&be);
-		logw(asfd, cntr, "Unable to set file owner %s: ERR=%s\n",
-			path, berrno_bstrerror(&be, errno));
+		logw(asfd, cntr,
+			"Unable to set file owner of %s to %d:%d: ERR=%s\n",
+			path, statp->st_uid, statp->st_gid,
+			berrno_bstrerror(&be, errno));
 		return -1;
 	}
 

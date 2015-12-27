@@ -66,7 +66,7 @@ char *sm_get_pool_memory(int pool)
 
 	if(pool>PM_MAX)
 	{
-		fprintf(stderr, _("MemPool index %d larger than max %d\n"),
+		fprintf(stderr, "MemPool index %d larger than max %d\n",
 			pool, PM_MAX);
 		exit(1);
 	}
@@ -82,7 +82,7 @@ char *sm_get_pool_memory(int pool)
 
 	if(!(buf=(struct abufhead *)malloc(pool_ctl[pool].size+HEAD_SIZE)))
 	{
-		fprintf(stderr, _("Out of memory requesting %d bytes\n"),
+		fprintf(stderr, "Out of memory requesting %d bytes\n",
 			pool_ctl[pool].size);
 		exit(1);
 	}

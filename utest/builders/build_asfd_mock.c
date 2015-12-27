@@ -110,6 +110,7 @@ struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
 	asfd->append_all_to_write_buffer=
 		mock_asfd_assert_append_all_to_write_buffer;
 	asfd->parse_readbuf=mock_parse_readbuf;
+	asfd->simple_loop=asfd_simple_loop;
 	ioevent_list_init(user_reads);
 	ioevent_list_init(user_writes);
 	asfd->data1=(void *)user_reads;

@@ -447,7 +447,10 @@ static int asfd_write_str(struct asfd *asfd, enum cmd wcmd, const char *wsrc)
 	return asfd->write(asfd, &wbuf);
 }
 
-static int asfd_simple_loop(struct asfd *asfd,
+#ifndef UTEST
+static
+#endif
+int asfd_simple_loop(struct asfd *asfd,
 	struct conf **confs, void *param, const char *caller,
   enum asl_ret callback(struct asfd *asfd, struct conf **confs, void *param))
 {

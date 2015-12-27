@@ -4,6 +4,13 @@
 
 #ifdef UTEST
 int alloc_debug=0;
+/*
+   To use alloc_debug:
+   make > /tmp/out
+   grep freed   /tmp/out | cut -f 1 -d ' ' | sort > /tmp/freed && \
+   grep alloced /tmp/out | cut -f 1 -d ' ' | sort > /tmp/alloced && \
+   diff -u /tmp/alloced /tmp/freed
+*/
 int alloc_errors=0;
 uint64_t alloc_count=0;
 uint64_t free_count=0;

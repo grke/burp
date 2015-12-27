@@ -4,6 +4,7 @@
 *.swo
 autoconf/Make.common
 autoconf/Make.common2
+autoconf/ltmain.sh
 config.log
 config.out
 config.status

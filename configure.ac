@@ -180,31 +180,6 @@ AC_SUBST(LIBTOOL_UNINSTALL_TARGET)
 AC_SUBST(LIBTOOL_CLEAN_TARGET)
 
 dnl --------------------------------------------------
-dnl Include file handling
-dnl --------------------------------------------------
-AC_ARG_ENABLE(includes,
-   AS_HELP_STRING([--enable-includes],[enable installing of include files @<:@default=no@:>@]),
-   [
-       if test x$enableval = xyes; then
-	  install_includes=yes
-       fi
-   ]
-)
-
-dnl It only makes sense to install include files when you install libraries which only happens when
-dnl libtool is enabled
-
-if test x$use_libtool != xno -a x$install_includes = xyes; then
-   INCLUDE_INSTALL_TARGET="install-includes"
-   INCLUDE_UNINSTALL_TARGET="uninstall-includes"
-else
-   INCLUDE_INSTALL_TARGET=""
-   INCLUDE_UNINSTALL_TARGET=""
-fi
-AC_SUBST(INCLUDE_INSTALL_TARGET)
-AC_SUBST(INCLUDE_UNINSTALL_TARGET)
-
-dnl --------------------------------------------------
 dnl Burp OP Sys determination (see aclocal.m4)
 dnl --------------------------------------------------
 BA_CHECK_OPSYS

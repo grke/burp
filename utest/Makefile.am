@@ -1,8 +1,33 @@
+TESTS = $(check_PROGRAMS)
 
-LIBS = -lcheck -lpthread -lm -lssl -lcrypto -lrt -lacl -lcrypt
-CFLAGS+=-Wall -g -fprofile-arcs -ftest-coverage -x c++
+check_PROGRAMS = runner
 
-SRCS = \
+runner_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	-DUTEST \
+	-DSYSCONFDIR=\"$(sysconfdir)\" \
+	$(OPENSSL_INC)
+
+runner_CXXFLAGS = \
+	$(AM_CXXFLAGS) \
+	-Wall \
+	-g \
+	-fprofile-arcs \
+	-ftest-coverage \
+	-x c++
+
+runner_LDADD = \
+	-lcheck \
+	-lpthread \
+	-lm \
+	$(CRYPT_LIBS) \
+	$(FDLIBS) \
+	$(NCURSES_LIBS) \
+	$(RSYNC_LIBS) \
+	$(OPENSSL_LIBS) \
+	$(ZLIBS)
+
+runner_SOURCES = \
 	builders/build_attribs.c \
 	builders/build_asfd_mock.c \
 	builders/build_clientconfdir.c \
@@ -63,8 +88,6 @@ SRCS = \
 	server/test_resume.c \
 	server/test_restore.c \
 	server/test_sdirs.c \
-
-BURP_SRCS = \
 	../src/alloc.c \
 	../src/asfd.c \
 	../src/async.c \
@@ -200,67 +223,3 @@ BURP_SRCS = \
 	../src/yajl/yajl_version.c \
 	../src/yajl_gen_w.c
 
-OBJS = $(SRCS:.c=.o)
-BURP_OBJS = $(BURP_SRCS:.c=.o)
-#BURP_STRIP = $(subst ../src/,,${BURP_OBJS})
-
-.SUFFIXES:      .c .o
-
-.c.o:
-	$(ECHO_CMD)$(CXX) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(CFLAGS) -DUTEST $< -o $@
-
-test: Makefile $(OBJS) $(BURP_OBJS)
-	@echo "Linking $@ ..."
-	$(LIBTOOL_LINK) $(CXX) $(WLDFLAGS) $(LDFLAGS) -o $@ \
-	  $(OBJS) $(BURP_OBJS) $(WIN32LIBS) $(FDLIBS) -lm $(LIBS) \
-	  $(DLIB) -lz -lrsync -lgcov -lncurses
-	@echo "Running $<"
-	./$@ || exit 1
-	rm -rf /tmp/burp-coverage /tmp/burp-coverage.info || exit 1
-	lcov --capture -d .. -b . --output-file /tmp/burp-coverage.info || exit 1
-	lcov -r /tmp/burp-coverage.info \
-		/usr/include/bits/* \
-		/usr/include/x86_64-linux-gnu/bits/* \
-		src/yajl/* \
-		utest/* \
-		-o /tmp/burp-coverage-clean.info
-	genhtml /tmp/burp-coverage-clean.info --output-directory /tmp/burp-coverage || exit 1
-#	make clean
-	@echo OK
-
-clean:
-	rm -f test *.o
-	rm -rf utest_*
-	rm -f builders/*.o builders/protocol2/*.o builders/server/*.o
-	rm -f builders/server/protocol2/champ_chooser/*.o
-	rm -f client/*.o server/*.o server/protocol1/*.o server/protocol2/*.o
-	rm -f server/protocol2/champ_chooser/*.o
-	rm -f protocol1/*.o
-	rm -f protocol2/*.o
-	rm -f protocol2/rabin/*.o
-	rm -f *.gcda *.gcno
-	rm -f builders/*.gcda builders/*.gcno
-	rm -f builders/protocol2/*.gcda builders/protocol2/*.gcno
-	rm -f builders/server/*.gcda builders/protocol2/*.gcno
-	rm -f builders/server/*.gcda builders/server/*.gcno
-	rm -f builders/server/protocol2/champ_chooser/*.gcda
-	rm -f builders/server/protocol2/champ_chooser/*.gcno
-	rm -f protocol1/*.gcda protocol1/*.gcno
-	rm -f protocol2/*.gcda protocol2/*.gcno
-	rm -f protocol2/rabin/*.gcda protocol2/rabin/*.gcno
-	rm -f client/*.gcda client/*.gcno
-	rm -f client/monitor/*.gcda client/monitor/*.gcno
-	rm -f client/monitor/*.o
-	rm -f client/protocol1/*.gcda client/protocol1/*.gcno
-	rm -f client/protocol1/*.o
-	rm -f client/protocol2/*.gcda client/protocol2/*.gcno
-	rm -f client/protocol2/*.o
-	rm -f server/*.gcda server/*.gcno
-	rm -f server/monitor/*.gcda server/monitor/*.gcno
-	rm -f server/monitor/*.o
-	rm -f server/protocol1/*.gcda server/protocol1/*.gcno
-	rm -f server/protocol2/*.gcda server/protocol2/*.gcno
-	rm -f server/protocol2/champ_chooser/*.gcda
-	rm -f server/protocol2/champ_chooser/*.gcno
-	rm -f /tmp/burp-coverage.info
-	rm -f /tmp/burp-coverage-clean.info

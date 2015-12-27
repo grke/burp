@@ -15,4 +15,4 @@ src/config.h
 /configure
 /aclocal.m4
 Makefile
-
+/src/server/protocol1/vss_strip

@@ -1163,7 +1163,7 @@ AC_SUBST(FDLIBS)
 CFLAGS=${CFLAGS--O}
 
 if test x$have_gcc = xyes ; then
-   CPPFLAGS="$CXXFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
+   CXXFLAGS="$CXXFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
 fi
 LDFLAGS=${LDFLAGS--O}
 AC_SUBST(DEBUG)

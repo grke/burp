@@ -718,7 +718,6 @@ dnl --------------------------------------------------------------------------
 dnl CHECKING FOR TYPEDEFS, STRUCTURES, AND COMPILER CHARACTERISTICS.
 dnl --------------------------------------------------------------------------
 AC_TYPE_SIGNAL
-SIGNAL_CHECK
 AC_TYPE_MODE_T
 AC_TYPE_UID_T
 AC_TYPE_SIZE_T

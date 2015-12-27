@@ -1,4 +1,5 @@
-bin_PROGRAMS = burp
+sbin_PROGRAMS = burp
+
 burp_SOURCES = \
 	action.h \
 	alloc.c \

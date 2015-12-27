@@ -1565,7 +1565,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi 
 
-AC_OUTPUT([autoconf/Make.common \
+AC_CONFIG_FILES([autoconf/Make.common \
 	   autoconf/Make.common2 \
 	   Makefile \
 	   manpages/Makefile \
@@ -1583,9 +1583,9 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/server/protocol2/champ_chooser/Makefile \
 	   src/server/monitor/Makefile \
 	   src/yajl/Makefile \
-	   $PFILES ],  
-     [ ]
+	   $PFILES]
 )
+AC_OUTPUT
 
 dnl
 dnl if CC is gcc, we can rebuild the dependencies (since the depend rule

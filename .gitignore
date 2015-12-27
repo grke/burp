@@ -12,3 +12,4 @@ src/burp
 src/config.h
 /autom4te.cache
 /configure
+/aclocal.m4

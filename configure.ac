@@ -14,7 +14,7 @@ AC_SUBST(TOP_DIR)
 AC_USE_SYSTEM_EXTENSIONS
 AC_CONFIG_AUX_DIR(autoconf)
 AC_CONFIG_HEADERS(src/config.h:config.h.in)
-AC_CONFIG_MACRO_DIR([autoconf/m4])
+AC_CONFIG_MACRO_DIR([m4])
 
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32

@@ -207,7 +207,7 @@ BURP_OBJS = $(BURP_SRCS:.c=.o)
 .SUFFIXES:      .c .o
 
 .c.o:
-	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) -DUTEST $< -o $@
+	$(ECHO_CMD)$(CXX) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(CFLAGS) -DUTEST $< -o $@
 
 test: Makefile $(OBJS) $(BURP_OBJS)
 	@echo "Linking $@ ..."

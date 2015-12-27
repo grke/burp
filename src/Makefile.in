@@ -176,7 +176,7 @@ WIN32LIBS = $(@WIN32@)
 # inference rules
 .c.o:
 #	@echo "Compiling $<"
-	$(ECHO_CMD)$(CXX) $(DEFS) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(DINCLUDE) $(CFLAGS) $<
+	$(ECHO_CMD)$(CXX) $(DEBUG) -c $(WCFLAGS) $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(CFLAGS) $<
 #-------------------------------------------------------------------------
 all: Makefile @WIN32@ burp @STATIC@
 	@echo "==== Make of burp is good ===="
@@ -273,7 +273,7 @@ uninstall:
 # `semi'-automatic since dependencies are generated at distribution time.
 
 depend:
-	@$(CXX) -S -M $(CPPFLAGS) $(XINC) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
+	@$(CXX) -S -M $(CPPFLAGS) -I$(srcdir) -I$(basedir) $(SQL_INC) *.c >> Makefile
 	@if ! test -f Makefile ; then \
 	   echo " ===== Something went wrong in make depend ====="; \
 	fi

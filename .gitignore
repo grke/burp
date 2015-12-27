@@ -16,6 +16,7 @@
 /autoconf/ltmain.sh
 /autoconf/missing
 /autoconf/mkinstalldirs
+/autoconf/test-driver
 /autom4te.cache
 /configure
 /src/server/protocol1/vss_strip

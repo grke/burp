@@ -4,7 +4,10 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = src manpages
+SUBDIRS = \
+	src \
+	manpages \
+	utest
 
 EXTRA_DIST = \
 	CHANGELOG \

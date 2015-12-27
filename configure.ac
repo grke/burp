@@ -3,8 +3,8 @@ dnl
 dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl require a recent autoconf
-AC_PREREQ(2.61)
-AC_INIT(src/version.h)
+AC_PREREQ([2.61])
+AC_INIT
 BUILD_DIR=`pwd`
 cd ..
 TOP_DIR=`pwd`
@@ -15,6 +15,7 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_CONFIG_AUX_DIR([autoconf])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([src/version.h])
 
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32

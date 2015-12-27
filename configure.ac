@@ -37,14 +37,9 @@ if test "x$BURP" != x; then
 fi
 BURP=${BURP:-Burp}
 VERSION=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
-DATE=`sed -n -e 's/^.*[ \t]*BDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
-LSMDATE=`sed -n -e 's/^.*LSMDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
-AC_SUBST(VERSION)dnl
-AC_SUBST(DATE)dnl
-AC_SUBST(LSMDATE)dnl
-AC_SUBST(BURP)dnl
-AC_SUBST(post_host)dnl
-AC_SUBST(BDB_VERSION)dnl
+AC_SUBST([VERSION])
+AC_SUBST([BURP])
+AC_SUBST([post_host])
 
 
 dnl -------------------------------------------------------

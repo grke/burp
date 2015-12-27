@@ -3,8 +3,6 @@
 #   so it has all the "common" definitions
 #
 
-DATE="@DATE@"
-LSMDATE=@LSMDATE@
 VERSION=@VERSION@
 VERNAME=burp-$(VERSION)#
 MAINT=Graham Keeling#

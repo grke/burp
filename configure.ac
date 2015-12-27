@@ -117,6 +117,8 @@ case $host in
     ;;
   *-*-openbsd*)
     AC_DEFINE([HAVE_OPENBSD_OS], [1], [Set to 1 if the OS is OpenBSD])
+    CPPFLAGS="-I/usr/local/include $CPPFLAGS"
+    LDFLAGS="-L/usr/local/lib $LDFLAGS"
     ;;
   *-*-solaris*)
     AC_DEFINE([HAVE_SUN_OS], [1], [Set to 1 if the OS is Solaris])

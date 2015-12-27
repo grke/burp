@@ -187,17 +187,15 @@ dnl --includedir, we set it to the package default of /usr/include.
 dnl If either --prefix or --includedir is set, we leave includedir
 dnl alone except to eval it
 dnl ------------------------------------------------------------------
-os_name=`uname -s 2>/dev/null`
 if test x${prefix} = xNONE ; then
    if test `eval echo ${sysconfdir}` = NONE/etc ; then
       sysconfdir=/etc/burp
    fi
 
    if test `eval echo ${libdir}` = NONE/lib ; then
-      case ${os_name} in
-      Linux)
-	 os_processor=`uname -p 2>/dev/null`
-	 case ${os_processor} in
+      case ${host} in
+      *-*-linux*)
+	 case ${host_cpu} in
 	 x86_64)
 	    libdir=/usr/lib64
 	    ;;

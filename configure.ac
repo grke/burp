@@ -1221,6 +1221,7 @@ Configuration on `date`:
    Install config files:	${sysconfdir}
    C Compiler:			${CC}
    C++ Compiler:		${CXX}
+   Preprocessor flags:		${CPPFLAGS}
    Compiler flags:		${WCFLAGS} ${CFLAGS}
    Linker flags:		${WLDFLAGS} ${LDFLAGS}
    Libraries:			${LIBS}

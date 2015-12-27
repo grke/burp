@@ -16,6 +16,7 @@ AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/version.h])
 
+AC_CANONICAL_HOST
 AC_USE_SYSTEM_EXTENSIONS
 
 dnl minimal Win32 stuff for "make clean"
@@ -150,14 +151,29 @@ AC_SUBST(LIBTOOL_UNINSTALL_TARGET)
 AC_SUBST(LIBTOOL_CLEAN_TARGET)
 
 dnl --------------------------------------------------
-dnl Burp OP Sys determination (see aclocal.m4)
+dnl OS determination
 dnl --------------------------------------------------
-BA_CHECK_OPSYS
 
-dnl -----------------------------------------------------------
-dnl Burp OPSys Distribution determination (see aclocal.m4)
-dnl ----------------------------------------------------------
-BA_CHECK_OPSYS_DISTNAME
+case $host in
+  *-*-linux*)
+    AC_DEFINE([HAVE_LINUX_OS], [1], [Set to 1 if the OS is Linux])
+    ;;
+  *-*-darwin*)
+    AC_DEFINE([HAVE_DARWIN_OS], [1], [Set to 1 if the OS is Darwin])
+    ;;
+  *-*-freebsd*)
+    AC_DEFINE([HAVE_FREEBSD_OS], [1], [Set to 1 if the OS is FreeBSD])
+    ;;
+  *-*-netbsd*)
+    AC_DEFINE([HAVE_NETBSD_OS], [1], [Set to 1 if the OS is NetBSD])
+    ;;
+  *-*-openbsd*)
+    AC_DEFINE([HAVE_OPENBSD_OS], [1], [Set to 1 if the OS is OpenBSD])
+    ;;
+  *-*-solaris*)
+    AC_DEFINE([HAVE_SUN_OS], [1], [Set to 1 if the OS is Solaris])
+    ;;
+esac
 
 dnl ------------------------------------------------------------------
 dnl If the user has not set --prefix, we set our default to nothing.
@@ -1429,8 +1445,6 @@ AC_DEFINE_UNQUOTED(llu, "$llu", [Set to correct scanf format for unsigned long l
 AC_SUBST(PSCMD)
 AC_SUBST(WIN32)
 AC_SUBST(MACOSX)
-AC_SUBST(DISTNAME)
-AC_SUBST(DISTVER)
 
 dnl common parts of the Makefile
 MCOMMON=./autoconf/Make.common
@@ -1512,7 +1526,7 @@ fi
 echo "
 Configuration on `date`:
 
-   Host:			${host}${post_host} -- ${DISTNAME} ${DISTVER}
+   Host:			${host}${post_host}
    Burp version:		${BURP} ${VERSION}
    Source code location:	${srcdir}
    Install binaries:		${sbindir}

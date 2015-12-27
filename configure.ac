@@ -301,11 +301,7 @@ dnl Find where sockets are (especially for Solaris)
 dnl Do this before the TCP Wrappers test since tcp wrappers
 dnl uses the socket library and some linkers are stupid.
 dnl
-AC_CHECK_FUNC(socket,
-    AC_MSG_RESULT(using libc's socket),
-    AC_CHECK_LIB(xnet,socket)
-    AC_CHECK_LIB(socket,socket)
-    AC_CHECK_LIB(inet,socket))
+AC_SEARCH_LIBS([socket], [xnet socket inet])
 
 dnl -----------------------------------------------------------
 dnl Check whether user wants TCP wrappers support (default off)
@@ -1051,10 +1047,7 @@ dnl --------------------------------------------------------------------------
 AC_CHECK_FUNCS(localtime_r readdir_r strerror_r gethostbyname_r)
 
 # If resolver functions are not in libc check for -lnsl or -lresolv.
-AC_CHECK_FUNC(gethostbyname_r,
-    AC_MSG_RESULT(using libc's resolver),
-    AC_CHECK_LIB(nsl,gethostbyname_r)
-    AC_CHECK_LIB(resolv,gethostbyname_r))
+AC_SEARCH_LIBS([gethostbyname_r], [nsl resolv])
 
 AC_CHECK_FUNCS(inet_pton, [AC_DEFINE(HAVE_INET_PTON)])
 AC_CHECK_FUNCS(inet_ntop, [AC_DEFINE(HAVE_INET_NTOP)])
@@ -1091,10 +1084,10 @@ AC_FUNC_CLOSEDIR_VOID
 # AC_FUNC_SETPGRP 	    dnl check for BSD setpgrp.
 # AC_FUNC_FNMATCH    dnl use local version
 
-AC_CHECK_LIB(sun, getpwnam)
+AC_SEARCH_LIBS([getpwnam], [sun])
 
 AC_CHECK_HEADERS(zlib.h)
-AC_CHECK_LIB(z, deflate, [ZLIBS="-lz"])
+AC_CHECK_LIB([z], [deflate], [ZLIBS="-lz"])
 have_zlib=no
 if test x$ZLIBS = x-lz; then
    AC_DEFINE(HAVE_LIBZ, 1, [Define if you have zlib])

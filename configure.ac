@@ -3,8 +3,8 @@ dnl
 dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl require a recent autoconf
-AC_PREREQ(2.61)
-AC_INIT(src/version.h)
+AC_PREREQ([2.61])
+AC_INIT
 BUILD_DIR=`pwd`
 cd ..
 TOP_DIR=`pwd`
@@ -12,9 +12,10 @@ cd ${BUILD_DIR}
 AC_SUBST(BUILD_DIR)
 AC_SUBST(TOP_DIR)
 AC_USE_SYSTEM_EXTENSIONS
-AC_CONFIG_AUX_DIR(autoconf)
-AC_CONFIG_HEADERS(src/config.h:config.h.in)
-AC_CONFIG_MACRO_DIR([autoconf/m4])
+AC_CONFIG_AUX_DIR([autoconf])
+AC_CONFIG_HEADERS([src/config.h])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([src/version.h])
 
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32
@@ -1564,7 +1565,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    exit 1
 fi 
 
-AC_OUTPUT([autoconf/Make.common \
+AC_CONFIG_FILES([autoconf/Make.common \
 	   autoconf/Make.common2 \
 	   Makefile \
 	   manpages/Makefile \
@@ -1582,9 +1583,9 @@ AC_OUTPUT([autoconf/Make.common \
 	   src/server/protocol2/champ_chooser/Makefile \
 	   src/server/monitor/Makefile \
 	   src/yajl/Makefile \
-	   $PFILES ],  
-     [ ]
+	   $PFILES]
 )
+AC_OUTPUT
 
 dnl
 dnl if CC is gcc, we can rebuild the dependencies (since the depend rule

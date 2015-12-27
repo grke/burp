@@ -119,7 +119,7 @@ dnl -------------------------------------------
 dnl static    (default off)
 dnl -------------------------------------------
 AC_ARG_ENABLE(static,
-   AC_HELP_STRING([--enable-static], [enable static burp @<:@default=no@:>@]),
+   AS_HELP_STRING([--enable-static],[enable static burp @<:@default=no@:>@]),
    [
        if test x$enableval = xyes; then
           if test x$use_libtool = xyes; then
@@ -146,7 +146,7 @@ dnl Libtool config
 dnl --------------------------------------------------
 use_libtool=yes
 AC_ARG_ENABLE(libtool,
-   AC_HELP_STRING([--enable-libtool], [enable building using GNU libtool @<:@default=yes@:>@]),
+   AS_HELP_STRING([--enable-libtool],[enable building using GNU libtool @<:@default=yes@:>@]),
    [
        if test x$enableval = xno; then
 	  use_libtool=no
@@ -188,7 +188,7 @@ dnl --------------------------------------------------
 dnl Include file handling
 dnl --------------------------------------------------
 AC_ARG_ENABLE(includes,
-   AC_HELP_STRING([--enable-includes], [enable installing of include files @<:@default=no@:>@]),
+   AS_HELP_STRING([--enable-includes],[enable installing of include files @<:@default=no@:>@]),
    [
        if test x$enableval = xyes; then
 	  install_includes=yes
@@ -322,7 +322,7 @@ dnl allow setting default executable permissions
 dnl
 SBINPERM=0755
 AC_ARG_WITH(sbin-perm,
-   AC_HELP_STRING([--with-sbin-perm=MODE], [specify permissions for sbin binaries @<:@default=0755@:>@]),
+   AS_HELP_STRING([--with-sbin-perm=MODE],[specify permissions for sbin binaries @<:@default=0755@:>@]),
    [
        if test "x$withval" != "x" ; then
           SBINPERM=$withval
@@ -353,7 +353,7 @@ dnl -----------------------------------------------------------
 TCPW_MSG="no" 
 WRAPLIBS=""
 AC_ARG_WITH(tcp-wrappers,
-   AC_HELP_STRING([--with-tcp-wrappers@<:@=DIR@:>@], [enable tcpwrappers support]),
+   AS_HELP_STRING([--with-tcp-wrappers@<:@=DIR@:>@],[enable tcpwrappers support]),
    [
        if test "x$withval" != "xno" ; then
 	  saved_LIBS="$LIBS"
@@ -403,7 +403,7 @@ AC_ARG_WITH(tcp-wrappers,
    ]
 )
 
-AC_ARG_ENABLE(ipv6, AC_HELP_STRING([--disable-ipv6],[disable IPv6 support]),[want_v6=$enableval],[want_v6=yes])
+AC_ARG_ENABLE(ipv6, AS_HELP_STRING([--disable-ipv6],[disable IPv6 support]),[want_v6=$enableval],[want_v6=yes])
 
 if test "x$want_v6" = "xno"; then
         have_ipv6="no"
@@ -447,7 +447,7 @@ dnl The following uses quadrigraphs:
 dnl '@<:@' = '['
 dnl '@:>@' = ']'
 AC_ARG_WITH(openssl,
-    AC_HELP_STRING([--with-openssl@<:@=DIR@:>@], [Include OpenSSL support. DIR is the OpenSSL base]),
+    AS_HELP_STRING([--with-openssl@<:@=DIR@:>@],[Include OpenSSL support. DIR is the OpenSSL base]),
     [
 	with_openssl_directory=${withval}
     ]
@@ -1208,7 +1208,7 @@ AFS_CFLAGS=""
 AFS_LIBS=""
 support_afs=auto
 AC_ARG_ENABLE(afs,
-   AC_HELP_STRING([--disable-afs], [disable afs support @<:@default=auto@:>@]),
+   AS_HELP_STRING([--disable-afs],[disable afs support @<:@default=auto@:>@]),
    [
        if test x$enableval = xyes; then
 	  support_afs=yes
@@ -1221,7 +1221,7 @@ AC_ARG_ENABLE(afs,
 have_afs=no
 if test x$support_afs = xyes -o x$support_afs = xauto; then
    AC_ARG_WITH(afsdir,
-      AC_HELP_STRING([--with-afsdir@<:@=DIR@:>@], [Directory holding AFS includes/libs]),
+      AS_HELP_STRING([--with-afsdir@<:@=DIR@:>@],[Directory holding AFS includes/libs]),
       with_afsdir=$withval
    )
 
@@ -1282,7 +1282,7 @@ dnl Check for ACL support and libraries
 dnl
 support_acl=auto
 AC_ARG_ENABLE(acl,
-   AC_HELP_STRING([--disable-acl], [disable acl support @<:@default=auto@:>@]),
+   AS_HELP_STRING([--disable-acl],[disable acl support @<:@default=auto@:>@]),
    [
        if test x$enableval = xyes; then
 	  support_acl=yes
@@ -1359,7 +1359,7 @@ dnl Check for XATTR support
 dnl
 support_xattr=auto
 AC_ARG_ENABLE(xattr,
-   AC_HELP_STRING([--disable-xattr], [disable xattr support @<:@default=auto@:>@]),
+   AS_HELP_STRING([--disable-xattr],[disable xattr support @<:@default=auto@:>@]),
    [
        if test x$enableval = xyes; then
 	  support_xattr=yes

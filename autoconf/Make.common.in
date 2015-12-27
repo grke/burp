@@ -45,7 +45,6 @@ RMF = $(RM) -f
 CP = @CP@
 SED = @SED@
 ECHO = @ECHO@
-CMP = @CMP@
 AR = @AR@
 GMAKE = @GMAKE@
 RANLIB = @RANLIB@

@@ -1437,9 +1437,6 @@ AC_SUBST(hostname)
 
 AC_DEFINE_UNQUOTED(lld, "$lld", [Set to correct scanf format for long long int])
 AC_DEFINE_UNQUOTED(llu, "$llu", [Set to correct scanf format for unsigned long long int])
-AC_SUBST(PSCMD)
-AC_SUBST(WIN32)
-AC_SUBST(MACOSX)
 
 dnl common parts of the Makefile
 MCOMMON=./autoconf/Make.common

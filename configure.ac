@@ -100,11 +100,6 @@ AC_SUBST(ARFLAGS)
 MAKE_SHELL=/bin/sh
 AC_SUBST(MAKE_SHELL)
 
-AC_SUBST(LOCAL_LIBS)
-AC_SUBST(LOCAL_CFLAGS)
-AC_SUBST(LOCAL_LDFLAGS)
-AC_SUBST(LOCAL_DEFS)
-
 dnl -------------------------------------------
 dnl static    (default off)
 dnl -------------------------------------------
@@ -521,13 +516,6 @@ fi
 AC_SUBST(OPENSSL_LIBS)
 AC_SUBST(OPENSSL_INC)
 
-#dnl -----------------------------------------------------------
-#dnl dlopen is needed for plugins
-#dnl -----------------------------------------------------------
-#AC_SEARCH_LIBS(dlopen, [dl])
-
-AC_DEFINE(PROTOTYPES, 1, [Define if you need function prototypes])
-
 dnl --------------------------------------------------------------------------
 dnl Supply default CFLAGS, if not specified by `CFLAGS=flags ./configure'
 dnl
@@ -580,14 +568,8 @@ AC_CHECK_HEADERS( \
    sys/tape.h \
    regex.h \
 )
-AC_HEADER_STDC
-AC_HEADER_MAJOR
 AC_HEADER_DIRENT
-AC_HEADER_STAT
-AC_HEADER_SYS_WAIT
 AC_HEADER_TIME
-AC_STRUCT_ST_BLKSIZE
-AC_STRUCT_ST_BLOCKS
 AC_STRUCT_TIMEZONE
 
 dnl --------------------------------------------------------------------------
@@ -758,7 +740,6 @@ AC_CHECK_TYPE(daddr_t, long)
 AC_CHECK_TYPE(major_t, int)
 AC_CHECK_TYPE(minor_t, int)
 AC_CHECK_TYPE(ssize_t, int)
-AC_STRUCT_ST_BLOCKS
 AC_STRUCT_ST_RDEV
 AC_STRUCT_TM
 AC_C_CONST
@@ -1437,7 +1418,6 @@ CFLAGS=${CFLAGS--O}
 
 if test x$have_gcc = xyes ; then
    CPPFLAGS="$CPPFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
-   #CFLAGS="$CFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
 fi
 LDFLAGS=${LDFLAGS--O}
 DB_LIBS="${SQL_LFLAGS}"

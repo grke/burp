@@ -79,7 +79,10 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	int ret=-1;
 	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
-	struct cntr *cntr=get_cntr(cconfs);
+	struct cntr *cntr=NULL;
+
+	cntr=get_cntr(cconfs);
+	if(!cntr) return 0;
 
 // FIX THIS: this is only trying to work for protocol1.
 	if(get_protocol(cconfs)!=PROTO_1) return 0;
@@ -489,6 +492,7 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
         // For out-of-sequence directory restoring so that the
         // timestamps come out right:
         struct slist *slist=NULL;
+	struct cntr *cntr=NULL;
 
 	if(linkhash_init()
           || !(slist=slist_alloc()))
@@ -512,8 +516,9 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 	if(restore_remaining_dirs(asfd, bu, slist,
 		act, sdirs, cntr_status, cconfs)) goto end;
 
-	cntr_print(get_cntr(cconfs), act);
-	cntr_stats_to_file(get_cntr(cconfs), bu->path, act, cconfs);
+	if(cconfs) cntr=get_cntr(cconfs);
+	cntr_print(cntr, act);
+	cntr_stats_to_file(cntr, bu->path, act, cconfs);
 end:
         slist_free(&slist);
 	linkhash_free();

@@ -72,13 +72,11 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 	int patches, const char *best,
 	uint64_t *bytes, struct cntr *cntr)
 {
-	int ret=0;
-	static BFILE *bfd=NULL;
+	int ret=-1;
+	BFILE bfd;
 
-	if(!bfd && !(bfd=bfile_alloc())) return -1;
-
-	bfile_init(bfd, 0, cntr);
-	if(bfd->open_for_send(bfd, asfd, best, sb->winattr,
+	bfile_init(&bfd, 0, cntr);
+	if(bfd.open_for_send(&bfd, asfd, best, sb->winattr,
 		1 /* no O_NOATIME */, cntr, PROTO_1)) return -1;
 	//logp("sending: %s\n", best);
 	if(asfd->write(asfd, &sb->path))
@@ -88,7 +86,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
 		ret=send_whole_file_gzl(asfd, best, sb->protocol1->datapth.buf,
-			1, bytes, NULL, cntr, 9, bfd, NULL, 0);
+			1, bytes, NULL, cntr, 9, &bfd, NULL, 0);
 	}
 	else
 	{
@@ -99,7 +97,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		{
 			ret=send_whole_filel(asfd, sb->path.cmd,
 				sb->protocol1->datapth.buf, 1, bytes,
-				cntr, bfd, NULL, 0);
+				cntr, &bfd, NULL, 0);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
@@ -109,7 +107,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		{
 			ret=send_whole_file_gzl(asfd,
 				best, sb->protocol1->datapth.buf, 1, bytes,
-				NULL, cntr, 9, bfd, NULL, 0);
+				NULL, cntr, 9, &bfd, NULL, 0);
 		}
 		else
 		{
@@ -117,10 +115,10 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 			// file might already be gzipped. Send it as it is.
 			ret=send_whole_filel(asfd, sb->path.cmd,
 				sb->protocol1->datapth.buf, 1, bytes,
-				cntr, bfd, NULL, 0);
+				cntr, &bfd, NULL, 0);
 		}
 	}
-	bfd->close(bfd, asfd);
+	bfd.close(&bfd, asfd);
 	return ret;
 }
 
@@ -290,6 +288,8 @@ static int process_data_dir_file(struct asfd *asfd,
 	ret=0;
 end:
 	free_w(&dpath);
+	free_w(&tmppath1);
+	free_w(&tmppath2);
 	return ret;
 }
 

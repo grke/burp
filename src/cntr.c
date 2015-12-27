@@ -544,6 +544,8 @@ int cntr_stats_to_file(struct cntr *cntr,
 	const char *fname=NULL;
 	struct async *as=NULL;
 	struct asfd *wfd=NULL;
+	if(!cntr)
+		return 0;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count
 		=(uint64_t)time(NULL);
 

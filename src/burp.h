@@ -33,6 +33,7 @@
 #include <arpa/inet.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
@@ -91,10 +92,6 @@
 #ifndef HAVE_WIN32
 	#include <sys/stat.h>
 	#include <glob.h>
-#endif
-
-#if HAVE_SYS_WAIT_H
-	#include <sys/wait.h>
 #endif
 
 #ifdef HAVE_OPENSSL

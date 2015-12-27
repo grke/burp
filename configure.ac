@@ -27,11 +27,6 @@ AC_SUBST(WIN32BUILDDIR)
 AC_SUBST(WIN32MAINDIR)
 AC_SUBST(WIN32TOPDIR)
 
-dnl search for true and false programs.
-AC_PATH_PROGS(TRUEPRG, true, :)
-AC_PATH_PROGS(FALSEPRG, false, :)
-
-
 dnl burp version
 post_host=
 if test "x$BURP" != x; then
@@ -74,9 +69,6 @@ AC_PATH_PROG(REMOVE, rm, rm)
 AC_PATH_PROG(CP, cp, cp)
 AC_PATH_PROG(ECHO, echo, echo)
 AC_PATH_PROG(GMAKE, gmake, gmake)
-
-test -n "$ARFLAG" || ARFLAGS="cr"
-AC_SUBST(ARFLAGS)
 
 MAKE_SHELL=/bin/sh
 AC_SUBST(MAKE_SHELL)
@@ -233,9 +225,7 @@ docdir=`eval echo ${docdir}`
 htmldir=`eval echo ${htmldir}`
 libdir=`eval echo ${libdir}`
 includedir=`eval echo ${includedir}`
-localedir=`eval echo ${datarootdir}/locale`
 AC_DEFINE_UNQUOTED(SYSCONFDIR, "$sysconfdir", [Define to system config directory])
-AC_DEFINE_UNQUOTED(LOCALEDIR, "$localedir", [LOCALEDIR])
 
 dnl ------------------------------------------------------------------
 dnl If the user has not set --sbindir, we set our default as /usr/sbin
@@ -518,8 +508,6 @@ AC_EXEEXT
 
 dnl See if we can use 64 bit file addresses
 AC_SYS_LARGEFILE
-
-AC_PATH_XTRA
 
 dnl --------------------------------------------------------------------------
 dnl CHECKING FOR HEADER FILES
@@ -1125,82 +1113,6 @@ fi
 AC_SUBST(NCURSES_LIBS)
 
 dnl
-dnl Check if we have AFS on this system
-dnl
-AFS_CFLAGS=""
-AFS_LIBS=""
-support_afs=auto
-AC_ARG_ENABLE(afs,
-   AS_HELP_STRING([--disable-afs],[disable afs support @<:@default=auto@:>@]),
-   [
-       if test x$enableval = xyes; then
-	  support_afs=yes
-       elif test x$enableval = xno; then
-	  support_afs=no
-       fi
-   ]
-)
-
-have_afs=no
-if test x$support_afs = xyes -o x$support_afs = xauto; then
-   AC_ARG_WITH(afsdir,
-      AS_HELP_STRING([--with-afsdir@<:@=DIR@:>@],[Directory holding AFS includes/libs]),
-      with_afsdir=$withval
-   )
-
-   dnl
-   dnl Search in standard places, or --with-afsdir not specified
-   dnl
-   if test x$with_afsdir = x; then
-      for root in /usr /usr/local; do
-	 if test -d ${root}/include/afs/ ; then
-	    with_afsdir=${root}
-	    break
-	 fi
-      done
-   fi
-
-   AFS_CFLAGS="-I${with_afsdir}/include"
-
-   saved_CFLAGS="${CFLAGS}"
-   CFLAGS="${AFS_CFLAGS} ${saved_CFLAGS}"
-
-   AC_CHECK_HEADERS(afs/stds.h)
-
-   CFLAGS="${saved_CFLAGS}"
-
-   dnl
-   dnl See if we can find a libsys with the pioctl symbol in there
-   dnl
-   for dir in ${with_afsdir}/lib ${with_afsdir}/lib/afs
-   do
-      for arch_type in .a .so
-      do
-	 A=`test -f ${dir}/libsys${arch_type} && nm ${dir}/libsys${arch_type} | grep pioctl`
-	 pkg=$?
-	 if test $pkg = 0; then
-	    have_afs=yes
-	    AFS_LIBS="-L${dir} -lsys -lrx -llwp ${dir}/util.a"
-	    break
-	 fi
-      done
-   done
-
-   if test x$support_afs = xyes -a $have_afs != yes; then
-      AC_MSG_ERROR([afs support explicitly enabled but no supported afs implementation found, 
-  please either load the afs libraries or rerun configure without --enable-afs])
-   else
-      if test $have_afs = yes; then
-	 AC_DEFINE([HAVE_AFS],1,[Defines if your system has AFS support])
-	 AC_DEFINE([HAVE_AFS_ACL],1,[Andrew FileSystem ACL support])
-      fi
-   fi
-fi
-
-AC_SUBST(AFS_CFLAGS)
-AC_SUBST(AFS_LIBS)
-
-dnl
 dnl Check for ACL support and libraries
 dnl
 support_acl=auto
@@ -1226,17 +1138,10 @@ if test x$support_acl = xyes -o x$support_acl = xauto; then
 	  AC_CHECK_LIB(acl, acl_get_file,
 	     [
 		 have_acl=yes;
-		 if test $have_afs = yes; then
-		    dnl
-		    dnl Because of possible naming conflict with AFS libacl make sure we use the one in /usr/lib64 or /usr/lib !!!
-		    dnl
-		    if test -d /usr/lib64/; then
-		       FDLIBS="-L/usr/lib64 -lacl $FDLIBS"
-		    else
-		       FDLIBS="-L/usr/lib -lacl $FDLIBS"
-		    fi
+		 if test -d /usr/lib64/; then
+		    FDLIBS="-L/usr/lib64 -lacl $FDLIBS"
 		 else
-		    FDLIBS="-lacl $FDLIBS"
+		    FDLIBS="-L/usr/lib -lacl $FDLIBS"
 		 fi
 	     ], [
 		 AC_CHECK_LIB(pacl, acl_get_file,
@@ -1399,21 +1304,13 @@ if test x$have_gcc = xyes ; then
    CPPFLAGS="$CPPFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
 fi
 LDFLAGS=${LDFLAGS--O}
-DB_LIBS="${SQL_LFLAGS}"
 CPPFLAGS="$CPPFLAGS"
 CFLAGS="$CFLAGS"
 AC_SUBST(DEBUG)
-AC_SUBST(DINCLUDE)
 AC_SUBST(CFLAGS)
 AC_SUBST(CPPFLAGS)
 AC_SUBST(LDFLAGS)
-AC_SUBST(X_CFLAGS)
-AC_SUBST(DEFS)
 AC_SUBST(LIBS)
-AC_SUBST(DLIB)
-AC_SUBST(DB_LIBS)
-AC_SUBST(X_LIBS)
-AC_SUBST(X_EXTRA_LIBS)
 AC_SUBST(WCFLAGS)
 AC_SUBST(WLDFLAGS)
 AC_SUBST(WRAPLIBS)
@@ -1432,6 +1329,7 @@ AC_SUBST(hostname)
 
 AC_DEFINE_UNQUOTED(lld, "$lld", [Set to correct scanf format for long long int])
 AC_DEFINE_UNQUOTED(llu, "$llu", [Set to correct scanf format for unsigned long long int])
+AC_SUBST(WIN32)
 
 dnl common parts of the Makefile
 MCOMMON=./autoconf/Make.common

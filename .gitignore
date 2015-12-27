@@ -3,6 +3,7 @@
 *.swp
 *.swo
 autoconf/Make.common
+autoconf/Make.common2
 config.log
 config.out
 config.status
@@ -13,3 +14,5 @@ src/config.h
 /autom4te.cache
 /configure
 /aclocal.m4
+Makefile
+

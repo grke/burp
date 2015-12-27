@@ -111,6 +111,8 @@ case $host in
     ;;
   *-*-freebsd*)
     AC_DEFINE([HAVE_FREEBSD_OS], [1], [Set to 1 if the OS is FreeBSD])
+    CPPFLAGS="-I/usr/local/include $CPPFLAGS"
+    LDFLAGS="-L/usr/local/lib $LDFLAGS"
     ;;
   *-*-netbsd*)
     AC_DEFINE([HAVE_NETBSD_OS], [1], [Set to 1 if the OS is NetBSD])

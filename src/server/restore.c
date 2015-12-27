@@ -20,6 +20,7 @@
 #include "manio.h"
 #include "protocol1/restore.h"
 #include "protocol2/dpth.h"
+#include "protocol2/rblk.h"
 #include "protocol2/restore.h"
 #include "protocol2/restore_spool.h"
 #include "sdirs.h"
@@ -500,6 +501,8 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 
 	if(get_protocol(cconfs)==PROTO_2)
 	{
+		if(rblk_init())
+			goto end;
 		switch(maybe_restore_spool(asfd, manifest, sdirs, bu,
 			srestore, regex, cconfs, slist, act, cntr_status))
 		{
@@ -522,6 +525,7 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 end:
         slist_free(&slist);
 	linkhash_free();
+	rblk_free();
         return ret;
 }
 

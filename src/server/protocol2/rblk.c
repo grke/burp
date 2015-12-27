@@ -7,6 +7,8 @@
 #include "../../log.h"
 #include "../../protocol2/blk.h"
 
+#define RBLK_MAX	10
+
 // For retrieving stored data.
 struct rblk
 {
@@ -15,7 +17,26 @@ struct rblk
 	uint16_t readbuflen;
 };
 
-#define RBLK_MAX	10
+static struct rblk *rblks=NULL;
+
+int rblk_init(void)
+{
+	rblks=(struct rblk *)calloc_w(RBLK_MAX, sizeof(struct rblk), __func__);
+	if(!rblks) return -1;
+	return 0;
+}
+
+void rblk_free(void)
+{
+	if(!rblks) return;
+	for(int i=0; i<RBLK_MAX; i++)
+	{
+		free_w(&rblks[i].datpath);
+		for(int j=0; j<DATA_FILE_SIG_MAX; j++)
+			iobuf_free_content(&rblks[i].readbuf[j]);
+	}
+	free_v((void **)&rblks);
+}
 
 static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 {
@@ -100,17 +121,11 @@ static struct rblk *get_rblk(struct rblk *rblks, const char *datpath)
 int rblk_retrieve_data(const char *datpath, struct blk *blk)
 {
 	static char fulldatpath[256]="";
-	static struct rblk *rblks=NULL;
 	uint16_t datno;
 	struct rblk *rblk;
 
 	snprintf(fulldatpath, sizeof(fulldatpath), "%s/%s", datpath,
 		uint64_to_savepathstr_with_sig_uint(blk->savepath, &datno));
-
-	if(!rblks
-	  && !(rblks=(struct rblk *)
-		calloc_w(RBLK_MAX, sizeof(struct rblk), __func__)))
-			return -1;
 
 	if(!(rblk=get_rblk(rblks, fulldatpath)))
 	{

@@ -459,6 +459,7 @@ int asfd_simple_loop(struct asfd *asfd,
 	{
 		iobuf_free_content(rbuf);
 		if(asfd->read(asfd)) goto error;
+		if(!rbuf->buf) continue;
 		if(rbuf->cmd!=CMD_GEN)
 		{
 			if(rbuf->cmd==CMD_WARNING

@@ -3,7 +3,10 @@
 #include "../../prng.h"
 #include "../../../src/alloc.h"
 #include "../../../src/attribs.h"
+#include "../../../src/fsops.h"
+#include "../../../src/fzp.h"
 #include "../../../src/handy.h"
+#include "../../../src/hexmap.h"
 #include "../../../src/msg.h"
 #include "../../../src/pathcmp.h"
 #include "../../../src/protocol1/handy.h"
@@ -142,14 +145,15 @@ static void set_sbuf_protocol1(struct sbuf *sb)
 	}
 }
 
-static void set_sbuf_protocol2(struct slist *slist, struct sbuf *sb)
+static void set_sbuf_protocol2(struct slist *slist, struct sbuf *sb,
+	int with_data_files)
 {
 	struct blk *tail=NULL;
 	struct blist *blist=slist->blist;
 	if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
 	{
 		if(blist->tail) tail=blist->tail;
-		build_blks(blist, prng_next()%50);
+		build_blks(blist, prng_next()%50, with_data_files);
 		if(tail)
 			sb->protocol2->bstart=tail->next;
 		else
@@ -160,29 +164,30 @@ static void set_sbuf_protocol2(struct slist *slist, struct sbuf *sb)
 	}
 }
 
-static void set_sbuf(struct slist *slist, struct sbuf *sb)
+static void set_sbuf(struct slist *slist, struct sbuf *sb, int with_data_files)
 {
 	if(sb->protocol1) set_sbuf_protocol1(sb);
-	else set_sbuf_protocol2(slist, sb);
+	else set_sbuf_protocol2(slist, sb, with_data_files);
 }
 
-static struct slist *build_slist(enum protocol protocol, int entries)
+static struct slist *build_slist(enum protocol protocol, int entries,
+	int with_data_files)
 {
 	struct sbuf *sb;
 	struct slist *slist;
 	slist=build_slist_phase1(NULL /* prefix */, protocol, entries);
 	for(sb=slist->head; sb; sb=sb->next)
-		set_sbuf(slist, sb);
+		set_sbuf(slist, sb, with_data_files);
 	return slist;
 }
 
 static struct slist *do_build_manifest(struct manio *manio,
-	enum protocol protocol, int entries)
+	enum protocol protocol, int entries, int with_data_files)
 {
 	struct sbuf *sb;
 	struct slist *slist=NULL;
 
-	slist=build_slist(protocol, entries);
+	slist=build_slist(protocol, entries, with_data_files);
 
 	for(sb=slist->head; sb; sb=sb->next)
 	{
@@ -218,7 +223,8 @@ static struct slist *build_manifest_phase2(const char *path,
 	struct manio *manio=NULL;
 
 	fail_unless((manio=manio_open_phase2(path, "wb", protocol))!=NULL);
-	slist=do_build_manifest(manio, protocol, entries);
+	slist=do_build_manifest(manio,
+		protocol, entries, 0 /*with_data_files*/);
 	fail_unless(!manio_close(&manio));
 
 	return slist;
@@ -232,7 +238,8 @@ static struct slist *build_manifest_phase3(const char *path,
 
 	fail_unless((manio=manio_open_phase3(path, "wb", protocol,
 		RMANIFEST_RELATIVE))!=NULL);
-	slist=do_build_manifest(manio, protocol, entries);
+	slist=do_build_manifest(manio,
+		protocol, entries, 0 /*with_data_files*/);
 	fail_unless(!manio_close(&manio));
 
 	return slist;
@@ -261,6 +268,42 @@ struct slist *build_manifest(const char *path,
 	}
 }
 
+struct slist *build_manifest_with_data_files(const char *path,
+	const char *datapath, int entries, int data_files)
+{
+	struct blk *b=NULL;
+	struct slist *slist=NULL;
+	struct manio *manio=NULL;
+	struct fzp *fzp=NULL;
+	char spath[256]="";
+	char cpath[256]="";
+
+	fail_unless((manio=manio_open_phase3(path, "wb", PROTO_2,
+		RMANIFEST_RELATIVE))!=NULL);
+	slist=do_build_manifest(manio, PROTO_2, entries, data_files);
+	fail_unless(!manio_close(&manio));
+
+	for(b=slist->blist->head; b; b=b->next)
+	{
+		snprintf(spath, sizeof(spath), "%s/%s", datapath,
+			uint64_to_savepathstr(b->savepath));
+		if(strcmp(spath, cpath))
+		{
+			snprintf(cpath, sizeof(cpath), "%s", spath);
+			fzp_close(&fzp);
+		}
+		if(!fzp)
+		{
+			fail_unless(!build_path_w(cpath));
+			fail_unless((fzp=fzp_open(cpath, "wb"))!=NULL);
+		}
+		fzp_printf(fzp, "%c%04X%s", CMD_DATA, strlen("data"), "data");
+	}
+	fzp_close(&fzp);
+
+	return slist;
+}
+
 void build_manifest_phase2_from_slist(const char *path,
 	struct slist *slist, enum protocol protocol, int short_write)
 {
@@ -268,7 +311,7 @@ void build_manifest_phase2_from_slist(const char *path,
 	struct manio *manio=NULL;
 
 	for(sb=slist->head; sb; sb=sb->next)
-		set_sbuf(slist, sb);
+		set_sbuf(slist, sb, 0 /* with_data_files */);
 
 	fail_unless((manio=manio_open_phase2(path, "wb", protocol))!=NULL);
 
@@ -319,7 +362,7 @@ void build_manifest_phase1_from_slist(const char *path,
 	iobuf_init(&endfile);
 
 	for(sb=slist->head; sb; sb=sb->next)
-		set_sbuf(slist, sb);
+		set_sbuf(slist, sb, 0 /* with_data_files */);
 
 	fail_unless((manio=manio_open_phase1(path, "wb", protocol))!=NULL);
 

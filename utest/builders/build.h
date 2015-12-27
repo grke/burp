@@ -13,13 +13,14 @@ extern struct sbuf *build_attribs(enum protocol protocol);
 extern struct sbuf *build_attribs_reduce(enum protocol protocol);
 extern struct slist *build_manifest(const char *path,
         enum protocol protocol, int entries, int phase);
+extern struct slist *build_manifest_with_data_files(const char *path,
+	const char *datadir, int entries, int data_files);
 
 extern struct slist *build_slist_phase1(const char *prefix,
 	enum protocol protocol, int entries);
 
 extern struct blist *build_blist(int wanted);
-extern void build_blks(struct blist *blist, int wanted);
-
+extern void build_blks(struct blist *blist, int wanted, int with_data_files);
 
 extern void build_manifest_phase2_from_slist(const char *path,
 	struct slist *slist, enum protocol protocol, int short_write);

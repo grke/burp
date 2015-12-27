@@ -492,14 +492,12 @@ fi
 if test "$support_tls" = "no"; then
    OPENSSL_LIBS=""
    OPENSSL_INC=""
-	echo "Please install openssl"
-	exit 1
+   AC_MSG_ERROR([Please install openssl])
 fi
 if test "$support_crypto" = "no"; then
    OPENSSL_LIBS=""
    OPENSSL_INC=""
-	echo "Please install openssl"
-	exit 1
+   AC_MSG_ERROR([Please install openssl])
 fi
 
 AC_SUBST(OPENSSL_LIBS)
@@ -999,7 +997,7 @@ AC_CHECK_FUNCS( \
    strncpy \
    vfprintf \
    ,,
-   [echo 'configure: cannot find needed function.'; exit 1]
+   [AC_MSG_ERROR([cannot find needed function])]
 )
 
 AC_CHECK_FUNCS(lockf, [AC_DEFINE(HAVE_LOCKF)])
@@ -1087,8 +1085,7 @@ fi
 AC_SUBST(ZLIBS)
 
 if test $have_zlib = no  ; then
-	echo "Please install zlib"
-	exit 1
+	AC_MSG_ERROR([Please install zlib])
 fi
 
 AC_CHECK_HEADERS(crypt.h)
@@ -1102,8 +1099,7 @@ AC_SUBST(CRYPT_LIBS)
 
 AC_CHECK_HEADERS(uthash.h, [have_uthash=yes], [have_uthash=no])
 if test $have_uthash = no  ; then
-        echo "Please install uthash"
-	exit 1
+        AC_MSG_ERROR([Please install uthash])
 fi
 
 AC_CHECK_HEADERS(librsync.h)
@@ -1116,8 +1112,7 @@ fi
 AC_SUBST(RSYNC_LIBS)
 
 if test $have_librsync = no  ; then
-        echo "Please install librsync"
-        exit 1
+        AC_MSG_ERROR([Please install librsync])
 fi
 
 AC_CHECK_HEADERS(ncurses.h)

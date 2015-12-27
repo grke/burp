@@ -19,7 +19,6 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
 	if(protocol==PROTO_2) return 0;
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 
 #ifdef HAVE_ACL
@@ -28,7 +27,6 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
 #endif
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS) || \
     defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
@@ -52,7 +50,6 @@ int get_extrameta(struct asfd *asfd,
 	// some entries if acls were set.
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
 	if(get_acl(asfd, sb, extrameta, elen, cntr)) return -1;
@@ -60,7 +57,6 @@ int get_extrameta(struct asfd *asfd,
 #endif
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS) || \
     defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
@@ -115,7 +111,6 @@ int set_extrameta(struct asfd *asfd,
 #endif
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
 			case META_ACCESS_ACL:
@@ -138,7 +133,6 @@ int set_extrameta(struct asfd *asfd,
 #endif
 #endif
 #if defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR_BSD:

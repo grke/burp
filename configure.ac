@@ -1445,35 +1445,6 @@ if test x$support_xattr = xyes -o x$support_xattr = xauto; then
       fi
    fi
 
-   dnl
-   dnl If we failed to find *BSD support and the Linux or OSX implementation of xattr try the Solaris xattr implementation
-   dnl
-   if test $have_xattr = no; then
-      AC_CHECK_HEADER(sys/attr.h, [ AC_DEFINE(HAVE_SYS_ATTR_H,1,[Defines if your system have the sys/attr.h header file])] , )
-      AC_CHECK_HEADER(sys/nvpair.h, [ AC_DEFINE(HAVE_SYS_NVPAIR_H,1,[Defines if your system have the sys/nvpair.h header file])] , )
-      AC_CHECK_HEADER(attr.h, [ AC_DEFINE(HAVE_ATTR_H,1,[Defines if your system have the attr.h header file])] , )
-
-      AC_CHECK_FUNCS(openat fstatat unlinkat fchownat futimesat,
-	 [
-	     have_xattr=yes
-	     AC_DEFINE([HAVE_OPENAT],1,[Define to 1 if you have the 'openat' function.])
-	     AC_DEFINE([HAVE_FSTATAT],1,[Define to 1 if you have the 'fstatat' function.])
-	     AC_DEFINE([HAVE_UNLINKAT],1,[Define to 1 if you have the 'unlinkat' function.])
-	     AC_DEFINE([HAVE_FCHOWNAT],1,[Define to 1 if you have the 'fchownat' function.])
-	     AC_DEFINE([HAVE_FUTIMESAT],1,[Define to 1 if you have the 'futimesat' function.])
-	 ]
-      )
-
-      if test $have_xattr = yes; then
-	 AC_CHECK_LIB(nvpair, nvlist_next_nvpair,
-	    [
-		AC_DEFINE([HAVE_NVLIST_NEXT_NVPAIR],1,[Define to 1 if you have the 'nvlist_next_nvpair' function.])
-		FDLIBS="-lnvpair $FDLIBS"
-	    ]
-	 )
-      fi
-   fi
-
    if test x$support_xattr = xyes -a $have_xattr != yes; then
       AC_MSG_ERROR([xattr support explicitly enabled but no supported xattr implementation found, 
   please either load the xattr libraries or rerun configure without --enable-xattr])

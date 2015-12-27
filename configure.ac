@@ -72,6 +72,7 @@ AC_PATH_PROG(REMOVE, rm, rm)
 AC_PATH_PROG(CP, cp, cp)
 AC_PATH_PROG(ECHO, echo, echo)
 AC_PATH_PROG(CMP, cmp, cmp)
+AC_PATH_PROG(GMAKE, gmake, gmake)
 
 test -n "$ARFLAG" || ARFLAGS="cr"
 AC_SUBST(ARFLAGS)

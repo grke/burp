@@ -156,4 +156,7 @@ burp_LDADD = \
 	$(RSYNC_LIBS) \
 	$(ZLIBS)
 
-burp_CPPFLAGS = $(AM_CPPFLAGS) -DSYSCONFDIR=\"$(sysconfdir)\"
+burp_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	-DSYSCONFDIR=\"$(sysconfdir)\" \
+	$(OPENSSL_INC)

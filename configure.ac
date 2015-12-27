@@ -20,7 +20,7 @@ AC_CONFIG_SRCDIR([src/version.h])
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32
 WIN32MAINDIR=${BUILD_DIR}
-WIN32TOPDIR=${TOP_DIR}	  
+WIN32TOPDIR=${TOP_DIR}
 AC_SUBST(WIN32BUILDDIR)
 AC_SUBST(WIN32MAINDIR)
 AC_SUBST(WIN32TOPDIR)
@@ -39,9 +39,9 @@ BURP=${BURP:-Burp}
 VERSION=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 DATE=`sed -n -e 's/^.*[ \t]*BDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
 LSMDATE=`sed -n -e 's/^.*LSMDATE.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
-AC_SUBST(VERSION)dnl 
-AC_SUBST(DATE)dnl 
-AC_SUBST(LSMDATE)dnl 
+AC_SUBST(VERSION)dnl
+AC_SUBST(DATE)dnl
+AC_SUBST(LSMDATE)dnl
 AC_SUBST(BURP)dnl
 AC_SUBST(post_host)dnl
 AC_SUBST(BDB_VERSION)dnl
@@ -90,13 +90,13 @@ AC_PATH_PROG(PKGCONFIG, pkg-config, pkg-config)
 AC_PATH_PROG(PIDOF, pidof, pidof)
 AC_PROG_AWK
 # Some AWK programs fail, so test it and warn the user
-if echo xfoo | $AWK 'BEGIN { prog=ARGV[1]; ARGC=1 } 
+if echo xfoo | $AWK 'BEGIN { prog=ARGV[1]; ARGC=1 }
       { if ((prog == $2) || (("(" prog ")") == $2) ||
       (("[" prog "]") == $2) ||
       ((prog ":") == $2)) { print $1 ; exit 0 } }' xfoo>/dev/null; then :;
 else
   AC_MSG_ERROR([!!!!!!!!! WARNING !!!!!!!!!!!!!!
-   The regex engine of $AWK is too broken to be used you 
+   The regex engine of $AWK is too broken to be used you
    might want to install GNU AWK.
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!])
 fi
@@ -281,7 +281,7 @@ libdir=`eval echo ${libdir}`
 includedir=`eval echo ${includedir}`
 localedir=`eval echo ${datarootdir}/locale`
 AC_DEFINE_UNQUOTED(SYSCONFDIR, "$sysconfdir", [Define to system config directory])
-AC_DEFINE_UNQUOTED(LOCALEDIR, "$localedir", [LOCALEDIR]) 
+AC_DEFINE_UNQUOTED(LOCALEDIR, "$localedir", [LOCALEDIR])
 
 dnl ------------------------------------------------------------------
 dnl If the user has not set --sbindir, we set our default as /usr/sbin
@@ -350,7 +350,7 @@ AC_CHECK_FUNC(socket,
 dnl -----------------------------------------------------------
 dnl Check whether user wants TCP wrappers support (default off)
 dnl -----------------------------------------------------------
-TCPW_MSG="no" 
+TCPW_MSG="no"
 WRAPLIBS=""
 AC_ARG_WITH(tcp-wrappers,
    AS_HELP_STRING([--with-tcp-wrappers@<:@=DIR@:>@],[enable tcpwrappers support]),
@@ -361,7 +361,7 @@ AC_ARG_WITH(tcp-wrappers,
 	  AC_SEARCH_LIBS(nanosleep, [rt])
 	  AC_MSG_CHECKING(for libwrap)
 	  AC_TRY_LINK(
-	     [ 
+	     [
 	       #include <sys/types.h>
 	       #include <tcpd.h>
 	       int deny_severity = 0;
@@ -372,7 +372,7 @@ AC_ARG_WITH(tcp-wrappers,
 	     ], [
 		 AC_MSG_RESULT(yes)
 		 AC_DEFINE(HAVE_LIBWRAP, 1, [Set to enable libwraper support])
-		 TCPW_MSG="yes" 
+		 TCPW_MSG="yes"
 		 LIBS="$saved_LIBS"
 		 WRAPLIBS="-lwrap"
 	     ], [
@@ -390,7 +390,7 @@ AC_ARG_WITH(tcp-wrappers,
 		   ], [
 		      AC_MSG_RESULT(yes)
 		      AC_DEFINE(HAVE_LIBWRAP, 1, [Set to enable libwraper support])
-		      TCPW_MSG="yes" 
+		      TCPW_MSG="yes"
 		      LIBS="$saved_LIBS"
 		      WRAPLIBS="-lwrap"
 		   ], [
@@ -412,25 +412,23 @@ else
     have_ipv6="no"
     AC_RUN_IFELSE([
         AC_LANG_PROGRAM(
-              [[ 
+              [[
                 #include <sys/types.h>
                 #include <sys/socket.h>
                 #include <netinet/in.h>
               ]],
               [[
-                
-             		int fd; 
-             		struct sockaddr_in6 foo; 
-             		fd = socket(AF_INET6, SOCK_STREAM, 0); 
-             		return(fd >= 0 ? 0 : 1); 
-             		
+                 int fd;
+                 struct sockaddr_in6 foo;
+                 fd = socket(AF_INET6, SOCK_STREAM, 0);
+                 return(fd >= 0 ? 0 : 1);
              ]]
           	)
           ],
           have_ipv6=yes,
           have_ipv6=no,
           have_ipv6=no)
-    
+
     AC_MSG_RESULT($have_ipv6)
 
     if test $have_ipv6 = yes ; then
@@ -575,7 +573,7 @@ if test -z "$CFLAGS" -o "$CFLAGS" = "-g -O0"; then
    CFLAGS="$CCOPTS"
 fi
 
-dnl A few others 
+dnl A few others
 AC_EXEEXT
 
 dnl See if we can use 64 bit file addresses
@@ -628,7 +626,7 @@ AC_STRUCT_ST_BLOCKS
 AC_STRUCT_TIMEZONE
 
 dnl --------------------------------------------------------------------------
-dnl Check for utime.h structure 
+dnl Check for utime.h structure
 dnl --------------------------------------------------------------------------
 AC_CACHE_CHECK(for utime.h, ba_cv_header_utime_h,
    [
@@ -695,7 +693,7 @@ test $ba_cv_header_ioctl_req_t = yes && AC_DEFINE(HAVE_IOCTL_ULINT_REQUEST, 1, [
 
 dnl Note: it is more correct to use AC_LANG(C++) but some of the older
 dnl   *BSD systems still use old style C prototypes, which are wrong with
-dnl   compiled with a C++ compiler. 
+dnl   compiled with a C++ compiler.
 AC_LANG(C)
 
 dnl --------------------------------------------------------------------------
@@ -753,7 +751,7 @@ if test $fstype = no; then
       AC_DEFINE(FSTYPE_AIX_STATFS, 1, [Define to use AIX3 statfs to get filesystem type]) fstype=AIX
    )
 fi
-if test $fstype = no; then  
+if test $fstype = no; then
    AC_TRY_CPP(
       [
 	  #include <mntent.h>
@@ -761,10 +759,10 @@ if test $fstype = no; then
       AC_DEFINE(FSTYPE_MNTENT, 1, [Define to use 4.3BSD getmntent to get filesystem type]) fstype=4.3BSD
    )
 fi
-if test $fstype = no; then  
+if test $fstype = no; then
    AC_EGREP_HEADER(f_type;, sys/mount.h, AC_DEFINE(FSTYPE_STATFS, 1, [Define to use 4.4BSD and OSF1 statfs to get filesystem type]) fstype=4.4BSD/OSF1)
 fi
-if test $fstype = no; then  
+if test $fstype = no; then
    AC_TRY_CPP(
       [
 	  #include <sys/mount.h>
@@ -837,7 +835,7 @@ AC_CACHE_CHECK([for intmax_t type], ac_cv_have_intmax_t,
 	      intmax_t a; a = 1;
 	  ], [
 	      ac_cv_have_intmax_t="yes"
-	  ], [ 
+	  ], [
 	      AC_TRY_COMPILE(
 		 [
 		     #include <stdint.h>
@@ -850,7 +848,7 @@ AC_CACHE_CHECK([for intmax_t type], ac_cv_have_intmax_t,
 		 ]
 	      )
 	  ]
-       )       
+       )
    ]
 )
 if test "x$ac_cv_have_intmax_t" = "xyes" ; then
@@ -867,7 +865,7 @@ AC_CACHE_CHECK([for u_intmax_t type], ac_cv_have_u_intmax_t,
 	      u_intmax_t a; a = 1;
 	  ], [
 	      ac_cv_have_u_intmax_t="yes"
-	  ], [ 
+	  ], [
 	      AC_TRY_COMPILE(
 		 [
 		     #include <stdint.h>
@@ -907,7 +905,7 @@ if test "x$ac_cv_have_intxx_t" = "xyes" ; then
    AC_DEFINE(HAVE_INTXX_T, 1, [type is defined: intXX_t])
    have_intxx_t=1
 fi
-   
+
 AC_CACHE_CHECK([for int64_t type], ac_cv_have_int64_t,
    [
        AC_TRY_COMPILE(
@@ -927,7 +925,7 @@ if test "x$ac_cv_have_int64_t" = "xyes" ; then
    AC_DEFINE(HAVE_INT64_T, 1, [type is defined: int64_t])
    have_int64_t=1
 fi
-   
+
 AC_CACHE_CHECK([for u_intXX_t types], ac_cv_have_u_intxx_t,
    [
        AC_TRY_COMPILE(
@@ -987,7 +985,7 @@ then
       ], [
 	  AC_MSG_RESULT(no)
       ]
-   ) 
+   )
 fi
 
 if test -z "$have_u_intxx_t" ; then
@@ -997,7 +995,7 @@ if test -z "$have_u_intxx_t" ; then
 	     [
 		 #include <sys/types.h>
 	     ], [
-		 uint8_t a; uint16_t b; 
+		 uint8_t a; uint16_t b;
 		 uint32_t c; a = b = c = 1;
 	     ], [
 		ac_cv_have_uintxx_t="yes"
@@ -1020,7 +1018,7 @@ then
       [
 	  #include <sys/bitypes.h>
       ], [
-	  int64_t a; u_int64_t b; 
+	  int64_t a; u_int64_t b;
 	  a = b = 1;
       ], [
 	  AC_DEFINE(HAVE_U_INT64_T)
@@ -1029,7 +1027,7 @@ then
       ], [
 	  AC_MSG_RESULT(no)
       ]
-   ) 
+   )
 fi
 
 if (test -z "$have_uintxx_t" && \
@@ -1040,7 +1038,7 @@ then
       [
 	  #include <sys/bitypes.h>
       ], [
-	  uint8_t a; uint16_t b; 
+	  uint8_t a; uint16_t b;
 	  uint32_t c; a = b = c = 1;
       ], [
 	  AC_DEFINE(HAVE_UINTXX_T)
@@ -1048,7 +1046,7 @@ then
       ], [
 	  AC_MSG_RESULT(no)
       ]
-   ) 
+   )
 fi
 
 dnl --------------------------------------------------------------------------
@@ -1078,7 +1076,7 @@ AC_CHECK_FUNCS(lutimes, [AC_DEFINE(HAVE_LUTIMES)])
 AC_CHECK_FUNCS(posix_fadvise)
 AC_CHECK_FUNCS(fdatasync)
 
-AC_CHECK_FUNCS(chflags) 
+AC_CHECK_FUNCS(chflags)
 
 AC_CHECK_FUNCS(snprintf vsnprintf gethostid fseeko)
 
@@ -1384,7 +1382,7 @@ if test x$support_xattr = xyes -o x$support_xattr = xauto; then
 	  AC_DEFINE([HAVE_EXTATTR_LIST_LINK],1,[Define to 1 if you have the 'extattr_list_link' function.])
       ]
    )
-   
+
    if test $have_xattr = no; then
       AC_CHECK_FUNCS(extattr_get_file extattr_set_file extattr_list_file,
 	 [
@@ -1395,7 +1393,7 @@ if test x$support_xattr = xyes -o x$support_xattr = xauto; then
 	 ]
       )
    fi
-   
+
    if test $have_xattr = yes; then
       have_extattr_string_in_libc=no
       AC_CHECK_FUNCS(extattr_namespace_to_string extattr_string_to_namespace,
@@ -1534,7 +1532,7 @@ if test "x${subsysdir}" = "x${sbindir}" ; then
    echo " "
    echo " "
    exit 1
-fi 
+fi
 
 AC_CONFIG_FILES([autoconf/Make.common \
 	   autoconf/Make.common2 \
@@ -1603,11 +1601,11 @@ Configuration on `date`:
    Install config files:	${sysconfdir}
    C Compiler:			${CC}
    C++ Compiler:		${CXX}
-   Compiler flags:		${WCFLAGS} ${CFLAGS} 
+   Compiler flags:		${WCFLAGS} ${CFLAGS}
    Linker flags:		${WLDFLAGS} ${LDFLAGS}
    Libraries:			${LIBS}
    Static:			${support_static}
- 
+
    zlib:			${have_zlib}
    openssl:			${support_tls}
    ipv6:			${have_ipv6}

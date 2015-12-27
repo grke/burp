@@ -4,20 +4,16 @@ dnl Process this file with autoconf to produce a configure script.
 dnl
 dnl require a recent autoconf
 AC_PREREQ([2.61])
-AC_INIT
-BUILD_DIR=`pwd`
-cd ..
-TOP_DIR=`pwd`
-cd ${BUILD_DIR}
-AC_SUBST(BUILD_DIR)
-AC_SUBST(TOP_DIR)
+AC_INIT([burp], [2.0.8])
 AC_CONFIG_AUX_DIR([autoconf])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
-AC_CONFIG_SRCDIR([src/version.h])
+AC_CONFIG_SRCDIR([src/prog.c])
 
 AC_CANONICAL_HOST
 AC_USE_SYSTEM_EXTENSIONS
+
+AM_INIT_AUTOMAKE([foreign -Wall dist-bzip2 no-dist-gzip tar-ustar subdir-objects silent-rules parallel-tests 1.11])
 
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32
@@ -70,9 +66,6 @@ AC_PATH_PROG(CP, cp, cp)
 AC_PATH_PROG(ECHO, echo, echo)
 AC_PATH_PROG(GMAKE, gmake, gmake)
 
-MAKE_SHELL=/bin/sh
-AC_SUBST(MAKE_SHELL)
-
 dnl -------------------------------------------
 dnl static    (default off)
 dnl -------------------------------------------
@@ -102,45 +95,8 @@ AC_SUBST(STATIC_DEDUP)
 dnl --------------------------------------------------
 dnl Libtool config
 dnl --------------------------------------------------
-use_libtool=yes
-AC_ARG_ENABLE(libtool,
-   AS_HELP_STRING([--enable-libtool],[enable building using GNU libtool @<:@default=yes@:>@]),
-   [
-       if test x$enableval = xno; then
-	  use_libtool=no
-       fi
-   ]
-)
-LT_INIT([shared disable-static])
+LT_INIT([disable-static])
 LT_LANG([C++])
-
-if test x$use_libtool != xno; then
-   DEFAULT_OBJECT_TYPE=".lo"
-   DEFAULT_ARCHIVE_TYPE=".la"
-   DEFAULT_SHARED_OBJECT_TYPE=".la"
-   LIBTOOL="\$(LIBTOOL)"
-   LIBTOOL_INSTALL_TARGET="libtool-install"
-   LIBTOOL_UNINSTALL_TARGET="libtool-uninstall"
-   LIBTOOL_CLEAN_TARGET="libtool-clean"
-   have_plugins=yes
-else
-   DEFAULT_OBJECT_TYPE=".o"
-   DEFAULT_ARCHIVE_TYPE=".a"
-   DEFAULT_SHARED_OBJECT_TYPE=".so"
-   LIBTOOL="# \$(LIBTOOL)"
-   LIBTOOL_INSTALL_TARGET=""
-   LIBTOOL_UNINSTALL_TARGET=""
-   LIBTOOL_CLEAN_TARGET=""
-   have_plugins=no
-fi
-
-AC_SUBST(DEFAULT_OBJECT_TYPE)
-AC_SUBST(DEFAULT_ARCHIVE_TYPE)
-AC_SUBST(DEFAULT_SHARED_OBJECT_TYPE)
-AC_SUBST(LIBTOOL)
-AC_SUBST(LIBTOOL_INSTALL_TARGET)
-AC_SUBST(LIBTOOL_UNINSTALL_TARGET)
-AC_SUBST(LIBTOOL_CLEAN_TARGET)
 
 dnl --------------------------------------------------
 dnl OS determination
@@ -166,100 +122,6 @@ case $host in
     AC_DEFINE([HAVE_SUN_OS], [1], [Set to 1 if the OS is Solaris])
     ;;
 esac
-
-dnl ------------------------------------------------------------------
-dnl If the user has not set --prefix, we set our default to nothing.
-dnl In this case, if the user has not set --sysconfdir, we set it
-dnl to the package default of /etc/burp.  If either --prefix or
-dnl --sysconfdir is set, we leave sysconfdir alone except to eval it.
-dnl If the user has not set --libdir, we set it to the package
-dnl default of /usr/lib. If either --prefix or --libdir is set,
-dnl we leave libdir alone except to eval it. If the user has not set
-dnl --includedir, we set it to the package default of /usr/include.
-dnl If either --prefix or --includedir is set, we leave includedir
-dnl alone except to eval it
-dnl ------------------------------------------------------------------
-if test x${prefix} = xNONE ; then
-   if test `eval echo ${sysconfdir}` = NONE/etc ; then
-      sysconfdir=/etc/burp
-   fi
-
-   if test `eval echo ${libdir}` = NONE/lib ; then
-      case ${host} in
-      *-*-linux*)
-	 case ${host_cpu} in
-	 x86_64)
-	    libdir=/usr/lib64
-	    ;;
-	 *)
-	    libdir=/usr/lib
-	    ;;
-	 esac
-	 ;;
-      *)
-	 libdir=/usr/lib
-	 ;;
-      esac
-   fi
-
-   if test `eval echo ${includedir}` = NONE/include ; then
-      includedir=/usr/include
-   fi
-
-   if test `eval echo ${datarootdir}` = NONE/share ; then
-      datarootdir=/usr/share
-   fi
-   prefix=
-fi
-
-dnl -------------------------------------------------------------------------
-dnl  If the user has not set --exec-prefix, we default to ${prefix}
-dnl -------------------------------------------------------------------------
-if test x${exec_prefix} = xNONE ; then
-   exec_prefix=${prefix}
-fi
-
-sysconfdir=`eval echo ${sysconfdir}`
-datarootdir=`eval echo ${datarootdir}`
-docdir=`eval echo ${docdir}`
-htmldir=`eval echo ${htmldir}`
-libdir=`eval echo ${libdir}`
-includedir=`eval echo ${includedir}`
-AC_DEFINE_UNQUOTED(SYSCONFDIR, "$sysconfdir", [Define to system config directory])
-
-dnl ------------------------------------------------------------------
-dnl If the user has not set --sbindir, we set our default as /usr/sbin
-dnl ------------------------------------------------------------------
-if test x$sbindir = x'${exec_prefix}/sbin' ; then
-   sbindir=${exec_prefix}/usr/sbin
-fi
-sbindir=`eval echo ${sbindir}`
-
-dnl -------------------------------------------------------------------------
-dnl  If the user has not set --mandir, we default to /usr/share/man
-dnl -------------------------------------------------------------------------
-if test x$mandir = x'${prefix}/man' ; then
-   mandir=/usr/share/man
-fi
-
-dnl -------------------------------------------------------------------------
-dnl  If the user has not set --htmldir, we default to /usr/share/doc/burp/html
-dnl -------------------------------------------------------------------------
-if test x$htmldir = x${docdir} ; then
-   htmldir=`eval echo ${docdir}burp/html`
-fi
-
-dnl -------------------------------------------------------------------------
-dnl  If the user has not set --docdir, we default to /usr/share/doc/
-dnl -------------------------------------------------------------------------
-if test x$docdir = x'/usr/share/doc/' ; then
-   docdir=`eval echo ${docdir}burp`
-fi
-
-support_readline=yes
-support_conio=yes
-support_tls=no
-support_crypto=no
 
 dnl
 dnl allow setting default executable permissions
@@ -1301,19 +1163,22 @@ AC_SUBST(FDLIBS)
 CFLAGS=${CFLAGS--O}
 
 if test x$have_gcc = xyes ; then
-   CPPFLAGS="$CPPFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
+   CPPFLAGS="$CXXFLAGS -fno-strict-aliasing -fno-exceptions -fno-rtti -Wall"
 fi
 LDFLAGS=${LDFLAGS--O}
-CPPFLAGS="$CPPFLAGS"
-CFLAGS="$CFLAGS"
 AC_SUBST(DEBUG)
 AC_SUBST(CFLAGS)
 AC_SUBST(CPPFLAGS)
+AC_SUBST(CXXFLAGS)
 AC_SUBST(LDFLAGS)
 AC_SUBST(LIBS)
 AC_SUBST(WCFLAGS)
 AC_SUBST(WLDFLAGS)
 AC_SUBST(WRAPLIBS)
+
+# we only build with a c++ compiler at the moment
+CC=${CXX}
+AC_SUBST([CC])
 
 dnl extra configurable objects
 OBJLIST=
@@ -1337,76 +1202,12 @@ AC_SUBST_FILE(MCOMMON)
 MCOMMON2=./autoconf/Make.common2
 AC_SUBST_FILE(MCOMMON2)
 
-dnl Insanity check
-if test "x${subsysdir}" = "x${sbindir}" ; then
-   echo " "
-   echo " "
-   echo "You have set both --sbindir and --with-subsys-dir"
-   echo "  equal to: ${subsysdir} "
-   echo "This is not permitted. Please reconfigure."
-   echo " "
-   echo "Aborting configuration ..."
-   echo " "
-   echo " "
-   exit 1
-fi
-
-AC_CONFIG_FILES([autoconf/Make.common \
-	   autoconf/Make.common2 \
-	   Makefile \
-	   manpages/Makefile \
-	   src/Makefile \
-	   src/protocol1/Makefile \
-	   src/protocol2/rabin/Makefile \
-	   src/protocol2/Makefile \
-	   src/client/Makefile \
-	   src/client/protocol1/Makefile \
-	   src/client/protocol2/Makefile \
-	   src/client/monitor/Makefile \
-	   src/server/Makefile \
-	   src/server/protocol1/Makefile \
-	   src/server/protocol2/Makefile \
-	   src/server/protocol2/champ_chooser/Makefile \
-	   src/server/monitor/Makefile \
-	   src/yajl/Makefile \
-	   $PFILES]
-)
+AC_CONFIG_FILES([
+  Makefile
+  manpages/Makefile
+  src/Makefile
+])
 AC_OUTPUT
-
-dnl
-dnl if CC is gcc, we can rebuild the dependencies (since the depend rule
-dnl requires gcc).  If it's not, don't rebuild dependencies
-dnl
-if test X"$GCC" = "Xyes" ; then
-  echo "Doing make of dependencies"
-  ${MAKE:-make} depend
-fi
-
-if test "x$ac_cv_sys_largefile_CFLAGS" != "xno" ; then
-   largefile_support="yes"
-fi
-
-dnl Only try to find out the version number of the compiler when we know its some kind of GCC compiler
-if test X"$GCC" = "Xyes" ; then
-   dnl
-   dnl A whole lot of hand springs to get the compiler version.
-   dnl	This is because gcc changed the output in version 3.0
-   dnl
-   CCVERSION=`${CC} --version | tr '\n' ' ' | cut -f 3 -d ' '`
-   if test "x${CCVERSION}" = "x" ; then
-      CCVERSION=`${CC} --version | tr '\n' ' ' | cut -f 1 -d ' '`
-   fi
-   CXXVERSION=`${CXX} --version | tr '\n' ' ' | cut -f 3 -d ' '`
-   if test x"${CXXVERSION}" = x ; then
-      CXXVERSION=`${CXX} --version | tr '\n' ' ' | cut -f 1 -d ' '`
-   fi
-fi
-
-# clean up any old junk
-#echo " "
-#echo "Cleaning up"
-#echo " "
-#${MAKE:-make} clean
 
 echo "
 Configuration on `date`:
@@ -1430,6 +1231,5 @@ Configuration on `date`:
    xattr:			${have_xattr}
    ncurses:			${have_ncurses}
 
-  " > config.out
+  "
 
-cat config.out

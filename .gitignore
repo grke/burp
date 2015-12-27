@@ -11,3 +11,4 @@ src/bedup
 src/burp
 src/config.h
 /autom4te.cache
+/configure

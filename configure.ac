@@ -982,6 +982,11 @@ if test x$NCURSES_LIBS = x-lncurses; then
 fi
 AC_SUBST(NCURSES_LIBS)
 
+dnl check for 'Check', needed for the test suite
+m4_ifdef([PKG_CHECK_MODULES], [
+  PKG_CHECK_MODULES([CHECK], [check])
+])
+
 dnl
 dnl Check for ACL support and libraries
 dnl

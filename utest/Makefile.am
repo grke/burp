@@ -4,6 +4,7 @@ check_PROGRAMS = runner
 
 runner_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
+	$(CHECK_CFLAGS) \
 	-DUTEST \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(OPENSSL_INC)
@@ -17,9 +18,9 @@ runner_CXXFLAGS = \
 	-x c++
 
 runner_LDADD = \
-	-lcheck \
 	-lpthread \
 	-lm \
+	$(CHECK_LIBS) \
 	$(CRYPT_LIBS) \
 	$(FDLIBS) \
 	$(NCURSES_LIBS) \

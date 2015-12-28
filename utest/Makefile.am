@@ -18,8 +18,6 @@ runner_CXXFLAGS = \
 	-x c++
 
 runner_LDADD = \
-	-lpthread \
-	-lm \
 	$(CHECK_LIBS) \
 	$(CRYPT_LIBS) \
 	$(FDLIBS) \

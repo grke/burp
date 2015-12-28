@@ -4,7 +4,6 @@
 #ifdef HAVE_XATTR
 #if defined(HAVE_LINUX_OS) \
  || defined(HAVE_FREEBSD_OS) \
- || defined(HAVE_OPENBSD_OS) \
  || defined(HAVE_NETBSD_OS) \
  || defined(HAVE_DARWIN_OS)
 extern int has_xattr(const char *path);

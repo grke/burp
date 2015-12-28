@@ -4,7 +4,6 @@
 #ifdef HAVE_ACL
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 extern int has_acl(const char *path, enum cmd cmd);
 extern int get_acl(struct asfd *asfd, struct sbuf *sb,

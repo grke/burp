@@ -12,7 +12,6 @@
 #if defined(HAVE_LINUX_OS) \
  || defined(HAVE_FREEBSD_OS) \
  || defined(HAVE_NETBSD_OS) \
- || defined(HAVE_OPENBSD_OS) \
  || defined(HAVE_DARWIN_OS)
 
 static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
@@ -299,8 +298,7 @@ int set_xattr(struct asfd *asfd, const char *path,
 #endif // HAVE_LINUX_OS
 
 #if defined(HAVE_FREEBSD_OS) \
- || defined(HAVE_NETBSD_OS) \
- || defined(HAVE_OPENBSD_OS)
+ || defined(HAVE_NETBSD_OS)
 
 
 #include <sys/extattr.h>
@@ -583,6 +581,6 @@ int set_xattr(struct asfd *asfd, const char *path,
 	return -1;
 }
 
-#endif // HAVE_FREE/NET/OPENBSD_OS
+#endif // HAVE_FREE/NETBSD_OS
 
 #endif // HAVE_XATTR

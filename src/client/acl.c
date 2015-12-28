@@ -10,7 +10,6 @@
 #ifdef HAVE_ACL
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_OPENBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #include "sys/acl.h"
 
@@ -25,7 +24,6 @@ static int acl_is_trivial(acl_t acl)
 {
 #if defined(HAVE_LINUX_OS) \
  || defined(HAVE_FREEBSD_OS) \
- || defined(HAVE_OPENBSD_OS) \
  || defined(HAVE_NETBSD_OS)
 	/*
 	 * acl is trivial if it has only the following entries:

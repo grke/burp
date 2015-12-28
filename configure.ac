@@ -13,7 +13,7 @@ AC_CONFIG_SRCDIR([src/prog.c])
 AC_CANONICAL_HOST
 AC_USE_SYSTEM_EXTENSIONS
 
-AM_INIT_AUTOMAKE([foreign -Wall dist-bzip2 no-dist-gzip tar-ustar subdir-objects silent-rules serial-tests 1.11])
+AM_INIT_AUTOMAKE([foreign -Wall dist-bzip2 no-dist-gzip tar-ustar subdir-objects silent-rules 1.11])
 
 dnl minimal Win32 stuff for "make clean"
 WIN32BUILDDIR=${BUILD_DIR}/src/win32

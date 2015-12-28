@@ -36,7 +36,7 @@ static void build_blks_with_data_files(struct blist *blist,
 	for(i=0; i<wanted; i++)
 	{
 		snprintf(savepathstr, sizeof(savepathstr),
-			"0000/0000/%04d/%04d", data_file, b++);
+			"0000/0000/%04X/%04X", data_file, b++);
 		if(b==blks_per_data_file)
 		{
 			b=0;

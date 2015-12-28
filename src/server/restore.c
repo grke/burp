@@ -373,6 +373,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	struct sbuf *need_data=NULL;
 	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
+	struct iobuf interrupt;
+	iobuf_init(&interrupt);
 
 	if(protocol==PROTO_2)
 	{
@@ -412,16 +414,16 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				continue;
 			}
 			case CMD_INTERRUPT:
+				if(protocol==PROTO_2)
+				{
+					iobuf_free_content(&interrupt);
+					iobuf_move(&interrupt, rbuf);
+				}
+				// PROTO_1:
 				// Client wanted to interrupt the
 				// sending of a file. But if we are
 				// here, we have already moved on.
 				// Ignore.
-				if(protocol==PROTO_2)
-				{
-					// FIX THIS:
-					// Suspect the case is different for
-					// PROTO_2.
-				}
 				continue;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);
@@ -444,7 +446,22 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				  && asfd->write(asfd, &sb->endfile))
 					goto end;
 				sbuf_free_content(sb);
+				iobuf_free_content(&interrupt);
 				continue;
+			}
+			if(interrupt.buf)
+			{
+				if(!need_data->path.buf)
+				{
+					iobuf_free_content(&interrupt);
+				}
+				else if(!iobuf_pathcmp(&need_data->path,
+					&interrupt))
+				{
+					if(blk->data)
+						blk->data=NULL;
+					continue;
+				}
 			}
 			if(blk->data)
 			{
@@ -480,6 +497,7 @@ end:
 	sbuf_free(&sb);
 	sbuf_free(&need_data);
 	iobuf_free_content(rbuf);
+	iobuf_free_content(&interrupt);
 	manio_close(&manio);
 	return ret;
 }

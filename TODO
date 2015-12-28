@@ -15,8 +15,6 @@ roughly in order of most important to least.
 
 * maybe_copy_data_files_across() is probably broken.
 
-* Make CMD_INTERRUPT work (on restore).
-
 * Make the status monitor work.
 
 * Make the status monitor and counters use JSON.

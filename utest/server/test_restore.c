@@ -126,6 +126,7 @@ static int async_rw_simple(struct async *as)
 static void run_test(int expected_ret,
 	enum protocol protocol,
 	int manio_entries,
+	int blocks_per_file,
 	void setup_asfds_callback(struct asfd *asfd, struct slist *slist))
 {
         struct async *as;
@@ -149,42 +150,45 @@ static void run_test(int expected_ret,
 	build_storage_dirs(sdirs, sd1, ARR_LEN(sd1));
 	if(manio_entries)
 	{
-	       struct sbuf *s;
-	       if(protocol==PROTO_2)
-		       slist=build_manifest_with_data_files(sdirs->cmanifest,
-			       sdirs->data, manio_entries, manio_entries/2);
-	       else
-		       slist=build_manifest(sdirs->cmanifest,
-			       protocol, manio_entries, 0 /*phase*/);
-	       for(s=slist->head; s; s=s->next)
-	       {
-		       char path[256];
-		       if(!sbuf_is_filedata(s))
-			       continue;
-		       snprintf(path, sizeof(path), "%s/%s%s",
-			       sdirs->currentdata, TREE_DIR, s->path.buf);
-		       build_file(path, "data");
-	       }
+		struct sbuf *s;
+		if(protocol==PROTO_2)
+			slist=build_manifest_with_data_files(sdirs->cmanifest,
+				sdirs->data, manio_entries, blocks_per_file);
+		else
+		{
+			slist=build_manifest(sdirs->cmanifest,
+				protocol, manio_entries, 0 /*phase*/);
+			for(s=slist->head; s; s=s->next)
+			{
+				char path[256];
+				if(!sbuf_is_filedata(s))
+					continue;
+				snprintf(path, sizeof(path), "%s/%s%s",
+					sdirs->currentdata,
+					TREE_DIR, s->path.buf);
+				build_file(path, "data");
+			}
+		}
 	}
-        setup_asfds_callback(asfd, slist);
+	setup_asfds_callback(asfd, slist);
 
-        fail_unless(do_restore_server(
-                asfd,
-                sdirs,
+	fail_unless(do_restore_server(
+		asfd,
+		sdirs,
 		ACTION_RESTORE,
 		0, // srestore
 		&dir_for_notify,
-                confs
-        )==expected_ret);
+		confs
+	)==expected_ret);
 
-        if(!expected_ret)
-        {
-                // FIX THIS: Should check for the presence and correctness of
-                // changed and unchanged manios.
-        }
-        slist_free(&slist);
+	if(!expected_ret)
+	{
+		// FIX THIS: Should check for the presence and correctness of
+		// changed and unchanged manios.
+	}
+	slist_free(&slist);
 	free_w(&dir_for_notify);
-        tear_down(&as, &asfd, &sdirs, &confs);
+	tear_down(&as, &asfd, &sdirs, &confs);
 }
 
 static void setup_asfds_proto1_stuff(struct asfd *asfd, struct slist *slist)
@@ -247,7 +251,7 @@ static void setup_asfds_proto1_stuff(struct asfd *asfd, struct slist *slist)
 
 START_TEST(test_proto1_stuff)
 {
-	run_test(0, PROTO_1, 10, setup_asfds_proto1_stuff);
+	run_test(0, PROTO_1, 10, 0, setup_asfds_proto1_stuff);
 }
 END_TEST
 
@@ -287,9 +291,138 @@ static void setup_asfds_proto2_stuff(struct asfd *asfd, struct slist *slist)
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
 }
 
+static void setup_asfds_proto2_interrupt(struct asfd *asfd, struct slist *slist)
+{
+	int r=0; int w=0;
+	struct sbuf *s;
+	int count=0;
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore_stream");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restore_stream_ok");
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_link(s))
+		{
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->link);
+		}
+		else if(sbuf_is_filedata(s))
+		{
+			struct blk *b;
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+			if(count++==1)
+			{
+				asfd_assert_write(asfd,
+					&w, 0, CMD_DATA, "data");
+				asfd_assert_write(asfd,
+					&w, 0, CMD_DATA, "data");
+				asfd_mock_read_no_op(asfd, &r, 6);
+				asfd_mock_read(asfd, &r, 0, CMD_INTERRUPT,
+					s->path.buf);
+				asfd_assert_write(asfd, &w, 0,
+					CMD_END_FILE, "0:0");
+				continue;
+			}
+			for(b=s->protocol2->bstart;
+			  b && b!=s->protocol2->bend; b=b->next)
+				asfd_assert_write(asfd,
+					&w, 0, CMD_DATA, "data");
+			asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
+		}
+		else
+		{
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+		}
+	}
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
+	asfd_mock_read_no_op(asfd, &r, 200);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
+}
+
+static void setup_asfds_proto2_interrupt_no_match(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0; int w=0;
+	struct sbuf *s;
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore_stream");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restore_stream_ok");
+	asfd_mock_read_no_op(asfd, &r, 10);
+	asfd_mock_read(asfd, &r, 0, CMD_INTERRUPT, "00000");
+	asfd_mock_read(asfd, &r, 0, CMD_INTERRUPT, "00001");
+	asfd_mock_read(asfd, &r, 0, CMD_INTERRUPT, "00002");
+	for(s=slist->head; s; s=s->next)
+	{
+		if(sbuf_is_link(s))
+		{
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->link);
+		}
+		else if(sbuf_is_filedata(s))
+		{
+			struct blk *b;
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+			for(b=s->protocol2->bstart;
+			  b && b!=s->protocol2->bend; b=b->next)
+				asfd_assert_write(asfd,
+					&w, 0, CMD_DATA, "data");
+			asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
+		}
+		else
+		{
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+		}
+	}
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
+	asfd_mock_read_no_op(asfd, &r, 200);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
+}
+
+static void setup_asfds_proto2_interrupt_on_non_filedata(struct asfd *asfd,
+	struct slist *slist)
+{
+	int r=0; int w=0;
+	struct sbuf *s;
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore_stream");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restore_stream_ok");
+	for(s=slist->head; s; s=s->next)
+	{
+		asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
+		asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+	}
+	asfd_mock_read_no_op(asfd, &r, 1);
+	asfd_mock_read(asfd, &r, 0, CMD_INTERRUPT, "00000");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
+	asfd_mock_read_no_op(asfd, &r, 200);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
+}
+
 START_TEST(test_proto2_stuff)
 {
-	run_test(0, PROTO_2, 10, setup_asfds_proto2_stuff);
+	run_test(0, PROTO_2, 10, 5, setup_asfds_proto2_stuff);
+}
+END_TEST
+
+START_TEST(test_proto2_interrupt)
+{
+	run_test(0, PROTO_2, 10, 100, setup_asfds_proto2_interrupt);
+}
+END_TEST
+
+START_TEST(test_proto2_interrupt_no_match)
+{
+	run_test(0, PROTO_2, 10, 5, setup_asfds_proto2_interrupt_no_match);
+}
+END_TEST
+
+START_TEST(test_proto2_interrupt_on_non_filedata)
+{
+	run_test(0, PROTO_2,
+		2, 1, setup_asfds_proto2_interrupt_on_non_filedata);
 }
 END_TEST
 
@@ -306,6 +439,9 @@ Suite *suite_server_restore(void)
 	tcase_add_test(tc_core, test_send_regex_failure);
 	tcase_add_test(tc_core, test_proto1_stuff);
 	tcase_add_test(tc_core, test_proto2_stuff);
+	tcase_add_test(tc_core, test_proto2_interrupt);
+	tcase_add_test(tc_core, test_proto2_interrupt_no_match);
+	tcase_add_test(tc_core, test_proto2_interrupt_on_non_filedata);
 
 	suite_add_tcase(s, tc_core);
 

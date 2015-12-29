@@ -226,18 +226,20 @@ dnl -----------------------------------------------------------
 dnl Check whether zlib is available
 dnl -----------------------------------------------------------
 
-AC_CHECK_HEADERS([zlib.h])
-AC_CHECK_LIB([z], [deflate], [ZLIBS="-lz"])
-have_zlib=no
-if test "$ZLIBS" = "-lz"; then
-  AC_DEFINE([HAVE_LIBZ], [1], [Define to 1 if you have zlib])
-  have_zlib=yes
-fi
+AC_CHECK_HEADERS([zlib.h],
+  [
+    AC_CHECK_LIB([z], [deflate],
+      [
+        ZLIBS="-lz"
+      ],
+      [AC_MSG_ERROR([Unable to find libz])]
+    )
+  ],
+  [AC_MSG_ERROR([Unable to find zlib.h])]
+)
+
 AC_SUBST([ZLIBS])
 
-if test "$have_zlib" = "no"; then
-  AC_MSG_ERROR([Please install zlib])
-fi
 
 AC_CHECK_HEADERS([crypt.h])
 AC_CHECK_LIB([crypt], [crypt], [CRYPT_LIBS="-lcrypt"])

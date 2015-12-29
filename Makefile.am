@@ -31,8 +31,8 @@ dist_man8_MANS = \
 sbin_PROGRAMS = burp
 
 burp_LDADD = \
+	$(ACL_LIBS) \
 	$(CRYPT_LIBS) \
-	$(FDLIBS) \
 	$(NCURSES_LIBS) \
 	$(OPENSSL_LIBS) \
 	$(RSYNC_LIBS) \
@@ -286,9 +286,9 @@ runner_LDFLAGS = \
 	$(OPENSSL_LDFLAGS)
 
 runner_LDADD = \
+	$(ACL_LIBS) \
 	$(CHECK_LIBS) \
 	$(CRYPT_LIBS) \
-	$(FDLIBS) \
 	$(NCURSES_LIBS) \
 	$(RSYNC_LIBS) \
 	$(OPENSSL_LIBS) \

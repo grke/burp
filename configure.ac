@@ -209,10 +209,12 @@ AC_LINK_IFELSE(
     [[SSL_new(NULL)]]
   )],
   [
+    have_ssl=yes
     AC_MSG_RESULT([yes])
     AC_DEFINE([HAVE_OPENSSL], [1], [Define to 1 if OpenSSL library is available])
   ],
   [
+    have_ssl=no
     AC_MSG_RESULT([no])
     AC_MSG_ERROR([Unable to find OpenSSL library])
   ]
@@ -505,9 +507,9 @@ Configuration on `date`:
    Libraries:			${LIBS}
    Static:			${support_static}
 
-   zlib:			${have_zlib}
-   openssl:			${support_tls}
-   ipv6:			${have_ipv6}
+   zlib:			${ac_cv_header_zlib_h}
+   openssl:			${have_ssl}
+   ipv6:			${enable_ipv6}
    acl:				${have_acl}
    xattr:			${have_xattr}
    ncurses:			${have_ncurses}

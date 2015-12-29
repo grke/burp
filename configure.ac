@@ -518,12 +518,6 @@ CXXFLAGS="-fno-strict-aliasing -fno-exceptions -fno-rtti ${CXXFLAGS}"
 # we only build with a c++ compiler at the moment
 CC=${CXX}
 
-lld="lld"
-llu="llu"
-
-AC_DEFINE_UNQUOTED(lld, "$lld", [Set to correct scanf format for long long int])
-AC_DEFINE_UNQUOTED(llu, "$llu", [Set to correct scanf format for unsigned long long int])
-
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 

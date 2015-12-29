@@ -88,10 +88,6 @@
 	#include "winhost.h"
 #endif
 
-#ifndef HAVE_ZLIB_H
-	#undef HAVE_LIBZ // No good without headers.
-#endif
-
 #if HAVE_UTIME_H
 	#include <utime.h>
 #else

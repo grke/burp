@@ -323,72 +323,39 @@ dnl Check for ACL support and libraries
 dnl -----------------------------------------------------------
 
 
-support_acl=auto
+AC_MSG_CHECKING([whether to enable ACL support])
 AC_ARG_ENABLE([acl],
-  [AS_HELP_STRING([--disable-acl],
-    [disable acl support @<:@default=auto@:>@]
-  )],
-  [
-    if test "$enableval" = "yes"; then
-      support_acl=yes
-    elif test "$enableval" = "no"; then
-      support_acl=no
-    fi
-  ]
+  [AS_HELP_STRING([--enable-acl],
+    [enable acl support @<:@default=auto@:>@])],
+  [],
+  [enable_acl=auto]
 )
+AC_MSG_RESULT([$enable_acl])
 
 have_acl=no
-have_extended_acl=no
-if test "$support_acl" = "yes" -o "$support_acl" = "auto"; then
-  AC_CHECK_HEADER([sys/acl.h],
-    [AC_DEFINE([HAVE_SYS_ACL_H],[1],[Define to 1 if your system has the sys/acl.h header file])]
-  )
-  AC_CHECK_FUNC([acl_get_file],
-    [have_acl=yes],
+if test "$enable_acl" != "no"; then
+  AC_CHECK_HEADERS([sys/acl.h],
     [
-      AC_CHECK_LIB([acl], [acl_get_file],
+      save_LIBS="$LIBS"
+      AC_SEARCH_LIBS([acl_get_file], [acl],
         [
-          have_acl=yes;
-          if test -d /usr/lib64/; then
-            FDLIBS="-L/usr/lib64 -lacl $FDLIBS"
-          else
-            FDLIBS="-L/usr/lib -lacl $FDLIBS"
-          fi
-        ],
-        [
-          AC_CHECK_LIB([pacl], [acl_get_file],
-            [have_acl=yes; FDLIBS="-lpacl $FDLIBS"],
-            [
-              AC_CHECK_LIB([sec], [acltotext],
-                [
-                  have_acl=yes
-                  FDLIBS="-lsec $FDLIBS"
-                  AC_CHECK_LIB([sec], [acl_totext],
-                    [have_extended_acl=yes]
-                  )
-                ]
-              )
-            ]
-          )
-        ]
+	  have_acl=yes
+	  ACL_LIBS="$LIBS"
+          AC_DEFINE([HAVE_ACL], [1],[Define to 1 if we have ACL support])
+	],
+	[
+	  AC_MSG_ERROR([function 'acl_get_file not found'. Perhaps you need to install libacl?])
+	]
       )
-    ]
+      ACL_LIBS="$LIBS"
+      LIBS="$save_LIBS"
+    ],
+    [AC_MSG_ERROR([sys/acl.h not found])]
   )
-
-  if test "$support_acl" = "yes" -a "$have_acl" != "yes"; then
-    AC_MSG_ERROR([acl support explicitly enabled but no supported acl implementation found, 
-      please either load the acl libraries or rerun configure without --enable-acl]
-    )
-  else
-    if test "$have_acl" = "yes"; then
-      AC_DEFINE([HAVE_ACL], [1],[Define to 1 if we have normal acl support])
-    fi
-
-    if test "$have_extended_acl" = "yes"; then
-      AC_DEFINE([HAVE_EXTENDED_ACL], [1],[Define to 1 if we have extended acl support])
-    fi
-  fi
 fi
+
+AC_SUBST([ACL_LIBS])
+
 
 dnl
 dnl Check for XATTR support

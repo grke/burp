@@ -8,14 +8,12 @@ enum lockstat
 	GET_LOCK_GOT
 };
 
-typedef struct lock lock_t;
-
 struct lock
 {
 	int fd;
 	enum lockstat status;
 	char *path;
-	lock_t *next;
+	struct lock *next;
 };
 
 extern struct lock *lock_alloc(void);

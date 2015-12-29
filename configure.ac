@@ -971,7 +971,9 @@ AC_SUBST(NCURSES_LIBS)
 
 dnl check for 'Check', needed for the test suite
 m4_ifdef([PKG_CHECK_MODULES], [
-  PKG_CHECK_MODULES([CHECK], [check])
+   PKG_CHECK_MODULES([CHECK], [check], [], [
+      AC_MSG_NOTICE([You will need to install 'Check' to run the test suite])
+   ])
 ])
 
 dnl

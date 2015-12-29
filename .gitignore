@@ -26,6 +26,8 @@
 /src/stamp-h1
 /test-suite.log
 /utest_find/
+/utest_lockfile
+/utest_restore/
 /utest_xattr/
 Makefile
 Makefile.in

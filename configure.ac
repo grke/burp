@@ -70,45 +70,46 @@ dnl See if we can use 64 bit file addresses
 AC_SYS_LARGEFILE
 
 dnl --------------------------------------------------------------------------
-dnl Check for utime.h structure
+dnl Check for utimebuf structure
 dnl --------------------------------------------------------------------------
-AC_CACHE_CHECK(for utime.h, ba_cv_header_utime_h,
-   [
-       AC_TRY_COMPILE(
-	  [
-	      #include <sys/types.h>
-	      #include <utime.h>
-	  ], [
-	      struct utimbuf foo
-	  ], [
-	      ba_cv_header_utime_h=yes
-	  ], [
-	      ba_cv_header_utime_h=no
-	  ]
-       )
-   ]
-)
-test $ba_cv_header_utime_h = yes && AC_DEFINE(HAVE_UTIME_H, 1, [Set if utime.h exists])
+AC_CACHE_CHECK([for struct utimebuf], [ba_cv_header_utime_h], [
+  AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+      [[
+        #include <sys/types.h>
+        #include <utime.h>
+      ]],
+      [[
+        struct utimbuf foo
+      ]]
+    )],
+    [ba_cv_header_utime_h=yes],
+    [ba_cv_header_utime_h=no]
+  )
+])
+
+if test "$ba_cv_header_utime_h" = "yes"; then
+  AC_DEFINE([HAVE_UTIME_H], [1], [Set to 1 if we have struct utimebuf])
+fi
 
 dnl --------------------------------------------------------------------------
 dnl Check for typeof()
 dnl --------------------------------------------------------------------------
-AC_CACHE_CHECK(for typeof, ba_cv_have_typeof,
-   [
-       AC_TRY_RUN(
-	  [
-	      main(){char *a = 0; a = (typeof a)a;}
-	  ], [
-	      ba_cv_have_typeof=yes
-	  ], [
-	      ba_cv_have_typeof=no
-	  ], [
-	      ba_cv_have_typeof=no
-	  ]
-       )
-   ]
-)
-test $ba_cv_have_typeof = yes && AC_DEFINE([HAVE_TYPEOF], 1, [Defind to 1 if compiler has typeof])
+AC_CACHE_CHECK([for typeof], [ba_cv_have_typeof], [
+  AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+        [[char *a = 0]],
+        [[a = (typeof a)a;]]
+    )],
+    [ba_cv_have_typeof=yes],
+    [ba_cv_have_typeof=no],
+    [ba_cv_have_typeof=no]
+  )
+])
+
+if test "$ba_cv_have_typeof" = "yes"; then
+  AC_DEFINE([HAVE_TYPEOF], [1], [Define to 1 if compiler has typeof])
+fi
 
 dnl --------------------------------------------------------------------------
 dnl Check for required functions
@@ -125,37 +126,42 @@ dnl --------------------------------------------------------------------------
 dnl check for dependencies
 dnl --------------------------------------------------------------------------
 
-AC_ARG_ENABLE(ipv6, AS_HELP_STRING([--disable-ipv6],[disable IPv6 support]),[want_v6=$enableval],[want_v6=yes])
+AC_ARG_ENABLE([ipv6],
+  [AS_HELP_STRING([--disable-ipv6],
+    [disable IPv6 support])],
+  [want_v6=$enableval],
+  [want_v6=yes]
+)
 
-if test "x$want_v6" = "xno"; then
-        have_ipv6="no"
+if test "$want_v6" = "no"; then
+  have_ipv6="no"
 else
-    AC_MSG_CHECKING(for IPv6 support)
-    have_ipv6="no"
-    AC_RUN_IFELSE([
-        AC_LANG_PROGRAM(
-              [[
-                #include <sys/types.h>
-                #include <sys/socket.h>
-                #include <netinet/in.h>
-              ]],
-              [[
-                 int fd;
-                 struct sockaddr_in6 foo;
-                 fd = socket(AF_INET6, SOCK_STREAM, 0);
-                 return(fd >= 0 ? 0 : 1);
-             ]]
-          	)
-          ],
-          have_ipv6=yes,
-          have_ipv6=no,
-          have_ipv6=no)
+  AC_MSG_CHECKING([for IPv6 support])
+  have_ipv6="no"
+  AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM(
+      [[
+        #include <sys/types.h>
+        #include <sys/socket.h>
+        #include <netinet/in.h>
+      ]],
+      [[
+        int fd;
+        struct sockaddr_in6 foo;
+        fd = socket(AF_INET6, SOCK_STREAM, 0);
+        return(fd >= 0 ? 0 : 1);
+      ]]
+    )],
+    [have_ipv6=yes],
+    [have_ipv6=no],
+    [have_ipv6=no]
+  )
 
-    AC_MSG_RESULT($have_ipv6)
+  AC_MSG_RESULT([$have_ipv6])
 
-    if test $have_ipv6 = yes ; then
-        AC_DEFINE(HAVE_IPV6,,"check if system supports IPV6")
-    fi
+  if test "$have_ipv6" = "yes"; then
+    AC_DEFINE([HAVE_IPV6],[1],[Define to 1 if system supports IPV6])
+  fi
 fi
 
 
@@ -163,163 +169,156 @@ dnl -----------------------------------------------------------
 dnl Check whether OpenSSL is available
 dnl -----------------------------------------------------------
 AC_MSG_CHECKING([for OpenSSL])
-AC_ARG_WITH(openssl,
-    AS_HELP_STRING([--with-openssl@<:@=DIR@:>@],[Include OpenSSL support. DIR is the OpenSSL base]),
-    [
-	with_openssl_directory=${withval}
-    ]
+AC_ARG_WITH([openssl],
+  [AS_HELP_STRING([--with-openssl@<:@=DIR@:>@],
+    [Include OpenSSL support. DIR is the OpenSSL base])],
+  [with_openssl_directory=$withval]
 )
 AC_MSG_RESULT([$withval])
 
-if test "x$with_openssl_directory" != "xno"; then
-   OPENSSL_LIBS="-lssl -lcrypto"
-   OPENSSL_INC=""
+if test "$with_openssl_directory" != "no"; then
+  OPENSSL_LIBS="-lssl -lcrypto"
+  OPENSSL_INC=""
 
-   if test "x$with_openssl_directory" != "xyes" && test x"${with_openssl_directory}" != "x"; then
-      #
-      # Make sure the $with_openssl_directory also makes sense
-      #
-      if test -d "$with_openssl_directory/lib" -a -d "$with_openssl_directory/include"; then
-	 OPENSSL_LIBS="-L$with_openssl_directory/lib $OPENSSL_LIBS"
-	 OPENSSL_INC="-I$with_openssl_directory/include $OPENSSL_INC"
-      fi
-   fi
+  if test "$with_openssl_directory" != "yes" && test "$with_openssl_directory" != ""; then
+    # Make sure the $with_openssl_directory also makes sense
+    if test -d "$with_openssl_directory/lib" -a -d "$with_openssl_directory/include"; then
+      OPENSSL_LIBS="-L$with_openssl_directory/lib $OPENSSL_LIBS"
+      OPENSSL_INC="-I$with_openssl_directory/include $OPENSSL_INC"
+    fi
+  fi
 
-   saved_LIBS="${LIBS}"
-   saved_CPPFLAGS="${CPPFLAGS}"
-   LIBS="${saved_LIBS} ${OPENSSL_LIBS}"
-   CPPFLAGS="${saved_CPPFLAGS} ${OPENSSL_INC}"
+  saved_LIBS="$LIBS"
+  saved_CPPFLAGS="$CPPFLAGS"
+  LIBS="$saved_LIBS $OPENSSL_LIBS"
+  CPPFLAGS="$saved_CPPFLAGS $OPENSSL_INC"
 
-   AC_TRY_LINK(
-      [
-	  #include <openssl/ssl.h>
-      ], [
-	   CRYPTO_set_id_callback(NULL);
-      ], [
-	  support_tls="yes"
-	  support_crypto="yes"
-      ], [
-	  support_tls="no"
-	  support_crypto="no"
-      ]
-   )
+  AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM(
+      [[#include <openssl/ssl.h>]],
+      [[CRYPTO_set_id_callback(NULL);]]
+    )],
+    [support_tls="yes"; support_crypto="yes"],
+    [support_tls="no"; support_crypto="no"]
+  )
 
-   AC_TRY_LINK(
-      [
-	  #include <openssl/evp.h>
-      ], [
-	  EVP_sha512();
-      ], [
-	  ac_cv_openssl_sha2="yes"
-      ], [
-	  ac_cv_openssl_sha2="no"
-      ]
-   )
+  AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM(
+      [[#include <openssl/evp.h>]],
+      [[EVP_sha512();]]
+    )],
+    [ac_cv_openssl_sha2="yes"],
+    [ac_cv_openssl_sha2="no"]
+  )
 
-   dnl Solaris disables greater than 128+ bit encryption in their OpenSSL
-   dnl implementation, presumably for export reasons. If 192bit AES
-   dnl is available, we assume that we're running with a 'non-export'
-   dnl openssl library.
-   AC_TRY_LINK(
-      [
-	  #include <openssl/evp.h>
-      ], [
-	  EVP_aes_192_cbc();
-      ], [
-	  ac_cv_openssl_export="no"
-      ], [
-	  ac_cv_openssl_export="yes"
-      ]
-   )
+  dnl Solaris disables greater than 128+ bit encryption in their OpenSSL
+  dnl implementation, presumably for export reasons. If 192bit AES
+  dnl is available, we assume that we're running with a 'non-export'
+  dnl openssl library.
+  AC_LINK_IFELSE(
+    [AC_LANG_PROGRAM(
+      [[#include <openssl/evp.h>]],
+      [[EVP_aes_192_cbc();]]
+    )],
+    [ac_cv_openssl_export="no"],
+    [ac_cv_openssl_export="yes"]
+  )
 
-   if test "$support_tls" = "yes"; then
-      AC_DEFINE(HAVE_OPENSSL, 1, [Define if OpenSSL library is available])
-      AC_DEFINE(HAVE_TLS, 1, [Define if TLS support should be enabled])
-      AC_DEFINE(HAVE_CRYPTO, 1, [Define if encryption support should be enabled])
-   fi
+  if test "$support_tls" = "yes"; then
+    AC_DEFINE([HAVE_OPENSSL], [1], [Define to 1 if OpenSSL library is available])
+    AC_DEFINE([HAVE_TLS], [1], [Define to 1 if TLS support should be enabled])
+    AC_DEFINE([HAVE_CRYPTO], [1], [Define to 1 if encryption support should be enabled])
+  fi
 
-   if test "$ac_cv_openssl_sha2" = "yes"; then
-      AC_DEFINE(HAVE_SHA2, 1, [Define if the SHA-2 family of digest algorithms is available])
-   fi
+  if test "$ac_cv_openssl_sha2" = "yes"; then
+    AC_DEFINE([HAVE_SHA2], [1], [Define if the SHA-2 family of digest algorithms is available])
+  fi
 
-   if test "$ac_cv_openssl_export" = "yes"; then
-      AC_DEFINE(HAVE_OPENSSL_EXPORT_LIBRARY, 1, [Define if the OpenSSL library is export-contrained to 128bit ciphers])
-   fi
+  if test "$ac_cv_openssl_export" = "yes"; then
+    AC_DEFINE([HAVE_OPENSSL_EXPORT_LIBRARY], [1], [Define if the OpenSSL library is export-constrained to 128bit ciphers])
+  fi
 
-   if test "$support_crypto" = "yes"; then
-      AC_CHECK_LIB(ssl, EVP_PKEY_encrypt_old, AC_DEFINE(HAVE_OPENSSLv1, 1, [Set if have OpenSSL version 1.x]))
-   fi
+  if test "$support_crypto" = "yes"; then
+    AC_CHECK_LIB([ssl], [EVP_PKEY_encrypt_old],
+      [AC_DEFINE([HAVE_OPENSSLv1], [1], [Define to 1 if we have OpenSSL version 1.x])]
+    )
+  fi
 
-   LIBS="${saved_LIBS}"
-   CPPFLAGS="${saved_CPPFLAGS}"
+  LIBS="${saved_LIBS}"
+  CPPFLAGS="${saved_CPPFLAGS}"
 else
-   support_tls="no"
-   support_crypto="no"
-   OPENSSL_LIBS=""
-   OPENSSL_INC=""
+  support_tls="no"
+  support_crypto="no"
+  OPENSSL_LIBS=""
+  OPENSSL_INC=""
 fi
+
 if test "$support_tls" = "no"; then
-   OPENSSL_LIBS=""
-   OPENSSL_INC=""
-   AC_MSG_ERROR([Please install openssl])
+  OPENSSL_LIBS=""
+  OPENSSL_INC=""
+  AC_MSG_ERROR([Please install openssl])
 fi
+
 if test "$support_crypto" = "no"; then
-   OPENSSL_LIBS=""
-   OPENSSL_INC=""
-   AC_MSG_ERROR([Please install openssl])
+  OPENSSL_LIBS=""
+  OPENSSL_INC=""
+  AC_MSG_ERROR([Please install openssl])
 fi
 
-AC_SUBST(OPENSSL_LIBS)
-AC_SUBST(OPENSSL_INC)
+AC_SUBST([OPENSSL_LIBS])
+AC_SUBST([OPENSSL_INC])
 
-AC_CHECK_HEADERS(zlib.h)
+AC_CHECK_HEADERS([zlib.h])
 AC_CHECK_LIB([z], [deflate], [ZLIBS="-lz"])
 have_zlib=no
-if test x$ZLIBS = x-lz; then
-   AC_DEFINE(HAVE_LIBZ, 1, [Define if you have zlib])
-   have_zlib=yes
+if test "$ZLIBS" = "-lz"; then
+  AC_DEFINE([HAVE_LIBZ], [1], [Define to 1 if you have zlib])
+  have_zlib=yes
 fi
-AC_SUBST(ZLIBS)
+AC_SUBST([ZLIBS])
 
-if test $have_zlib = no  ; then
-	AC_MSG_ERROR([Please install zlib])
+if test "$have_zlib" = "no"; then
+  AC_MSG_ERROR([Please install zlib])
 fi
 
-AC_CHECK_HEADERS(crypt.h)
-AC_CHECK_LIB(crypt, crypt, [CRYPT_LIBS="-lcrypt"])
+AC_CHECK_HEADERS([crypt.h])
+AC_CHECK_LIB([crypt], [crypt], [CRYPT_LIBS="-lcrypt"])
 have_crypt=no
-if test x$CRYPT_LIBS = x-lcrypt; then
-   AC_DEFINE(HAVE_CRYPT, 1, [Defined to 1 if libcrypt was found])
-   have_crypt=yes
+if test "$CRYPT_LIBS" = "-lcrypt"; then
+  AC_DEFINE([HAVE_CRYPT], [1], [Define to 1 if you have libcrypt])
+  have_crypt=yes
 fi
-AC_SUBST(CRYPT_LIBS)
+AC_SUBST([CRYPT_LIBS])
 
-AC_CHECK_HEADERS(uthash.h, [have_uthash=yes], [have_uthash=no])
-if test $have_uthash = no  ; then
-        AC_MSG_ERROR([Please install uthash])
+AC_CHECK_HEADERS([uthash.h],
+  [have_uthash=yes],
+  [have_uthash=no]
+)
+if test "$have_uthash" = "no"; then
+  AC_MSG_ERROR([Please install uthash])
 fi
 
-AC_CHECK_HEADERS(librsync.h)
-AC_CHECK_LIB(rsync, rs_delta_begin, [RSYNC_LIBS="-lrsync"])
+AC_CHECK_HEADERS([librsync.h])
+AC_CHECK_LIB([rsync], [rs_delta_begin], [RSYNC_LIBS="-lrsync"])
 have_librsync=no
-if test x$RSYNC_LIBS = x-lrsync; then
-   AC_DEFINE(HAVE_LIBRSYNC, 1, [Defined to 1 if librsync was found])
-   have_librsync=yes
+if test "$RSYNC_LIBS" = "-lrsync"; then
+  AC_DEFINE([HAVE_LIBRSYNC], [1], [Define to 1 if you have librsync])
+  have_librsync=yes
 fi
-AC_SUBST(RSYNC_LIBS)
+AC_SUBST([RSYNC_LIBS])
 
-if test $have_librsync = no  ; then
-        AC_MSG_ERROR([Please install librsync])
+if test "$have_librsync" = "no"; then
+  AC_MSG_ERROR([Please install librsync])
 fi
 
-AC_CHECK_HEADERS(ncurses.h)
-AC_CHECK_LIB(ncurses, curs_set, [NCURSES_LIBS="-lncurses"])
+AC_CHECK_HEADERS([ncurses.h])
+AC_CHECK_LIB([ncurses], [curs_set], [NCURSES_LIBS="-lncurses"])
 have_ncurses=no
-if test x$NCURSES_LIBS = x-lncurses; then
-   AC_DEFINE(HAVE_NCURSES, 1, [Defined to 1 if libncurses was found])
-   have_ncurses=yes
+if test "$NCURSES_LIBS" = "-lncurses"; then
+  AC_DEFINE([HAVE_NCURSES], [1], [Define to 1 if you have libncurses])
+  have_ncurses=yes
 fi
-AC_SUBST(NCURSES_LIBS)
+AC_SUBST([NCURSES_LIBS])
 
 dnl check for 'Check', needed for the test suite
 m4_ifdef([PKG_CHECK_MODULES], [
@@ -332,193 +331,200 @@ dnl
 dnl Check for ACL support and libraries
 dnl
 support_acl=auto
-AC_ARG_ENABLE(acl,
-   AS_HELP_STRING([--disable-acl],[disable acl support @<:@default=auto@:>@]),
-   [
-       if test x$enableval = xyes; then
-	  support_acl=yes
-       elif test x$enableval = xno; then
-	  support_acl=no
-       fi
-   ]
+AC_ARG_ENABLE([acl],
+  [AS_HELP_STRING([--disable-acl],
+    [disable acl support @<:@default=auto@:>@]
+  )],
+  [
+    if test "$enableval" = "yes"; then
+      support_acl=yes
+    elif test "$enableval" = "no"; then
+      support_acl=no
+    fi
+  ]
 )
 
 have_acl=no
 have_extended_acl=no
-if test x$support_acl = xyes -o x$support_acl = xauto; then
-   AC_CHECK_HEADER(sys/acl.h, [ AC_DEFINE(HAVE_SYS_ACL_H,1,[Defines if your system have the sys/acl.h header file])] , )
-   AC_CHECK_FUNC(acl_get_file,
-      [
-	  have_acl=yes
-      ], [
-	  AC_CHECK_LIB(acl, acl_get_file,
-	     [
-		 have_acl=yes;
-		 if test -d /usr/lib64/; then
-		    FDLIBS="-L/usr/lib64 -lacl $FDLIBS"
-		 else
-		    FDLIBS="-L/usr/lib -lacl $FDLIBS"
-		 fi
-	     ], [
-		 AC_CHECK_LIB(pacl, acl_get_file,
-		    [
-			have_acl=yes;
-			FDLIBS="-lpacl $FDLIBS"
-		    ], [
-			AC_CHECK_LIB(sec, acltotext,
-			   [
-			       have_acl=yes;
-			       FDLIBS="-lsec $FDLIBS"
+if test "$support_acl" = "yes" -o "$support_acl" = "auto"; then
+  AC_CHECK_HEADER([sys/acl.h],
+    [AC_DEFINE([HAVE_SYS_ACL_H],[1],[Define to 1 if your system has the sys/acl.h header file])]
+  )
+  AC_CHECK_FUNC([acl_get_file],
+    [have_acl=yes],
+    [
+      AC_CHECK_LIB([acl], [acl_get_file],
+        [
+          have_acl=yes;
+          if test -d /usr/lib64/; then
+            FDLIBS="-L/usr/lib64 -lacl $FDLIBS"
+          else
+            FDLIBS="-L/usr/lib -lacl $FDLIBS"
+          fi
+        ],
+        [
+          AC_CHECK_LIB([pacl], [acl_get_file],
+            [have_acl=yes; FDLIBS="-lpacl $FDLIBS"],
+            [
+              AC_CHECK_LIB([sec], [acltotext],
+                [
+                  have_acl=yes
+                  FDLIBS="-lsec $FDLIBS"
+                  AC_CHECK_LIB([sec], [acl_totext],
+                    [have_extended_acl=yes]
+                  )
+                ]
+              )
+            ]
+          )
+        ]
+      )
+    ]
+  )
 
-			       AC_CHECK_LIB(sec, acl_totext,
-				  [
-				      have_extended_acl=yes
-				  ]
-			       )
-			   ]
-			)
-		    ]
-		 )
-	     ]
-	  )
-      ]
-   )
+  if test "$support_acl" = "yes" -a "$have_acl" != "yes"; then
+    AC_MSG_ERROR([acl support explicitly enabled but no supported acl implementation found, 
+      please either load the acl libraries or rerun configure without --enable-acl]
+    )
+  else
+    if test "$have_acl" = "yes"; then
+      AC_DEFINE([HAVE_ACL], [1],[Define to 1 if we have normal acl support])
+    fi
 
-   if test x$support_acl = xyes -a $have_acl != yes; then
-      AC_MSG_ERROR([acl support explicitly enabled but no supported acl implementation found, 
-  please either load the acl libraries or rerun configure without --enable-acl])
-   else
-      if test $have_acl = yes; then
-	 AC_DEFINE([HAVE_ACL],1,[Normal acl support])
-      fi
-
-      if test $have_extended_acl = yes; then
-	 AC_DEFINE([HAVE_EXTENDED_ACL],1,[Extended acl support])
-      fi
-   fi
+    if test "$have_extended_acl" = "yes"; then
+      AC_DEFINE([HAVE_EXTENDED_ACL], [1],[Define to 1 if we have extended acl support])
+    fi
+  fi
 fi
 
 dnl
 dnl Check for XATTR support
 dnl
 support_xattr=auto
-AC_ARG_ENABLE(xattr,
-   AS_HELP_STRING([--disable-xattr],[disable xattr support @<:@default=auto@:>@]),
-   [
-       if test x$enableval = xyes; then
-	  support_xattr=yes
-       elif test x$enableval = xno; then
-	  support_xattr=no
-       fi
-   ]
+AC_ARG_ENABLE([xattr],
+  [AS_HELP_STRING([--disable-xattr],
+    [disable xattr support @<:@default=auto@:>@])],
+  [
+    if test "$enableval" = "yes"; then
+      support_xattr=yes
+    elif test "$enableval" = "no"; then
+      support_xattr=no
+    fi
+  ]
 )
 
 have_xattr=no
-if test x$support_xattr = xyes -o x$support_xattr = xauto; then
-   dnl
-   dnl First check for *BSD support
-   dnl
-   AC_CHECK_HEADER(sys/extattr.h, [ AC_DEFINE(HAVE_SYS_EXTATTR_H,1,[Defines if your system have the sys/extattr.h header file])] , )
-   AC_CHECK_HEADER(libutil.h, [ AC_DEFINE(HAVE_LIBUTIL_H,1,[Defines if your system have the libutil.h header file])] , )
-   AC_CHECK_FUNCS(extattr_get_link extattr_set_link extattr_list_link,
+if test "$support_xattr" = "yes" -o "$support_xattr" = "auto"; then
+  dnl
+  dnl First check for *BSD support
+  dnl
+  AC_CHECK_HEADER([sys/extattr.h],
+    [AC_DEFINE([HAVE_SYS_EXTATTR_H], [1], [Define to 1 if your system has the sys/extattr.h header file])]
+  )
+  AC_CHECK_HEADER([libutil.h],
+    [AC_DEFINE([HAVE_LIBUTIL_H], [1], [Define to 1 if your system has the libutil.h header file])]
+  )
+  AC_CHECK_FUNCS([extattr_get_link extattr_set_link extattr_list_link],
+    [
+      have_xattr=yes
+      AC_DEFINE([HAVE_EXTATTR_GET_LINK], [1], [Define to 1 if you have the 'extattr_get_link' function.])
+      AC_DEFINE([HAVE_EXTATTR_SET_LINK], [1], [Define to 1 if you have the 'extattr_set_link' function.])
+      AC_DEFINE([HAVE_EXTATTR_LIST_LINK], [1], [Define to 1 if you have the 'extattr_list_link' function.])
+    ]
+  )
+
+  if test "$have_xattr" = "no"; then
+    AC_CHECK_FUNCS([extattr_get_file extattr_set_file extattr_list_file],
       [
-	  have_xattr=yes
-	  AC_DEFINE([HAVE_EXTATTR_GET_LINK],1,[Define to 1 if you have the 'extattr_get_link' function.])
-	  AC_DEFINE([HAVE_EXTATTR_SET_LINK],1,[Define to 1 if you have the 'extattr_set_link' function.])
-	  AC_DEFINE([HAVE_EXTATTR_LIST_LINK],1,[Define to 1 if you have the 'extattr_list_link' function.])
+        have_xattr=yes
+        AC_DEFINE([HAVE_EXTATTR_GET_FILE], [1], [Define to 1 if you have the 'extattr_get_file' function.])
+        AC_DEFINE([HAVE_EXTATTR_SET_FILE], [1], [Define to 1 if you have the 'extattr_set_file' function.])
+        AC_DEFINE([HAVE_EXTATTR_LIST_FILE], [1], [Define to 1 if you have the 'extattr_list_file' function.])
       ]
-   )
+    )
+  fi
 
-   if test $have_xattr = no; then
-      AC_CHECK_FUNCS(extattr_get_file extattr_set_file extattr_list_file,
-	 [
-	     have_xattr=yes
-	     AC_DEFINE([HAVE_EXTATTR_GET_FILE],1,[Define to 1 if you have the 'extattr_get_file' function.])
-	     AC_DEFINE([HAVE_EXTATTR_SET_FILE],1,[Define to 1 if you have the 'extattr_set_file' function.])
-	     AC_DEFINE([HAVE_EXTATTR_LIST_FILE],1,[Define to 1 if you have the 'extattr_list_file' function.])
-	 ]
+  if test "$have_xattr" = "yes"; then
+    have_extattr_string_in_libc=no
+    AC_CHECK_FUNCS([extattr_namespace_to_string extattr_string_to_namespacae],
+      [
+        have_extattr_string_in_libc=yes
+        AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING], [1], [Define to 1 if you have the 'extattr_namespace_to_string' function.])
+        AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE], [1], [Define to 1 if you have the 'extattr_string_to_namespace' function.])
+      ]
+    )
+
+    dnl
+    dnl If extattr_namespace_to_string and extattr_string_to_namespace are not in libc see if they are in libutil
+    dnl
+    if test "$have_extattr_string_in_libc" = "no"; then
+      AC_CHECK_LIB([util], [extattr_namespace_to_string extattr_string_to_namespace],
+        [
+          AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING], [1], [Define to 1 if you have the 'extattr_namespace_to_string' function.])
+          AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE], [1], [Define to 1 if you have the 'extattr_string_to_namespace' function.])
+          FDLIBS="-lutil $FDLIBS"
+        ]
       )
-   fi
+    fi
+  fi
 
-   if test $have_xattr = yes; then
-      have_extattr_string_in_libc=no
-      AC_CHECK_FUNCS(extattr_namespace_to_string extattr_string_to_namespace,
-	 [
-	     have_extattr_string_in_libc=yes
-	     AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING],1,[Define to 1 if you have the 'extattr_namespace_to_string' function.])
-	     AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE],1,[Define to 1 if you have the 'extattr_string_to_namespace' function.])
-	 ]
+  dnl
+  dnl If we failed to find *BSD support try the Linux or OSX implementation of xattr
+  dnl
+  if test "$have_xattr" = "no"; then
+    AC_CHECK_HEADER([sys/xattr.h],
+      [AC_DEFINE([HAVE_SYS_XATTR_H], [1], [Define to 1 if your system has the sys/xattr.h header file])]
+    )
+    AC_CHECK_FUNCS([llistxattr lgetxattr lsetxattar],
+      [
+        have_xattr=yes
+        AC_DEFINE([HAVE_LLISTXATTR], [1], [Define to 1 if you have the 'llistxattr' function.])
+        AC_DEFINE([HAVE_LGETXATTR], [1], [Define to 1 if you have the 'lgetxattr' function.])
+        AC_DEFINE([HAVE_LSETXATTR], [1], [Define to 1 if you have the 'lsetxattr' function.])
+      ]
+    )
+
+    if test "$have_xattr" = "no"; then
+      AC_CHECK_FUNCS([listxattr getxattr setxattr],
+        [
+          have_xattr=yes
+          AC_DEFINE([HAVE_LISTXATTR], [1], [Define to 1 if you have the 'listxattr' function.])
+          AC_DEFINE([HAVE_GETXATTR], [1], [Define to 1 if you have the 'getxattr' function.])
+          AC_DEFINE([HAVE_SETXATTR], [1], [Define to 1 if you have the 'setxattr' function.])
+        ]
       )
+    fi
+  fi
 
-      dnl
-      dnl If extattr_namespace_to_string and extattr_string_to_namespace are not in libc see if they are in libutil
-      dnl
-      if test $have_extattr_string_in_libc = no; then
-	 AC_CHECK_LIB(util, extattr_namespace_to_string extattr_string_to_namespace,
-	    [
-		AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING],1,[Define to 1 if you have the 'extattr_namespace_to_string' function.])
-		AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE],1,[Define to 1 if you have the 'extattr_string_to_namespace' function.])
-		FDLIBS="-lutil $FDLIBS"
-	    ]
-	 )
-      fi
-   fi
-
-   dnl
-   dnl If we failed to find *BSD support try the Linux or OSX implementation of xattr
-   dnl
-   if test $have_xattr = no; then
-      AC_CHECK_HEADER(sys/xattr.h, [ AC_DEFINE(HAVE_SYS_XATTR_H,1,[Defines if your system have the sys/xattr.h header file])] , )
-      AC_CHECK_FUNCS(llistxattr lgetxattr lsetxattr,
-	 [
-	     have_xattr=yes
-	     AC_DEFINE([HAVE_LLISTXATTR],1,[Define to 1 if you have the 'llistxattr' function.])
-	     AC_DEFINE([HAVE_LGETXATTR],1,[Define to 1 if you have the 'lgetxattr' function.])
-	     AC_DEFINE([HAVE_LSETXATTR],1,[Define to 1 if you have the 'lsetxattr' function.])
-	 ]
-      )
-
-      if test $have_xattr = no; then
-	 AC_CHECK_FUNCS(listxattr getxattr setxattr,
-	    [
-		have_xattr=yes
-		AC_DEFINE([HAVE_LISTXATTR],1,[Define to 1 if you have the 'listxattr' function.])
-		AC_DEFINE([HAVE_GETXATTR],1,[Define to 1 if you have the 'getxattr' function.])
-		AC_DEFINE([HAVE_SETXATTR],1,[Define to 1 if you have the 'setxattr' function.])
-	    ]
-	 )
-      fi
-   fi
-
-   if test x$support_xattr = xyes -a $have_xattr != yes; then
-      AC_MSG_ERROR([xattr support explicitly enabled but no supported xattr implementation found, 
-  please either load the xattr libraries or rerun configure without --enable-xattr])
-   else
-      if test $have_xattr = yes; then
-	 AC_DEFINE([HAVE_XATTR],1,[Extended Attributes support])
-      fi
-   fi
+  if test "$support_xattr" = "yes" -a "$have_xattr" != "yes"; then
+    AC_MSG_ERROR([xattr support explicitly enabled but no supported xattr implementation found, 
+      please either load the xattr libraries or rerun configure without --enable-xattr])
+  else
+    if test "$have_xattr" = "yes"; then
+      AC_DEFINE([HAVE_XATTR], [1], [Extended Attributes support])
+    fi
+  fi
 fi
 
-AC_SUBST(FDLIBS)
+AC_SUBST([FDLIBS])
 
 dnl
 dnl Check for headers, functions and libraries required to support
 dnl keeping readall capabilities
 dnl
-AC_CHECK_HEADERS(sys/prctl.h sys/capability.h)
-AC_CHECK_FUNCS(prctl setreuid)
-AC_CHECK_LIB([cap], [cap_set_proc], [CAP_LIBS="-lcap"], [CAP_LIBS=])
-if test x$CAP_LIBS = x-lcap; then
-   AC_DEFINE(HAVE_LIBCAP, 1, [Define if you have libcap])
+AC_CHECK_HEADERS([sys/prctl.h sys/capability.h])
+AC_CHECK_FUNCS([prctl setreuid])
+AC_CHECK_LIB([cap], [cap_set_proc], [CAP_LIBS="-lcap"])
+if test "$CAP_LIBS" = "-lcap"; then
+   AC_DEFINE([HAVE_LIBCAP], [1], [Define to 1 if you have libcap])
 fi
-AC_SUBST(CAP_LIBS)
+AC_SUBST([CAP_LIBS])
 
 
 CPPFLAGS="-fno-strict-aliasing -fno-exceptions -fno-rtti ${CPPFLAGS}"
 
 # we only build with a c++ compiler at the moment
-CC=${CXX}
+CC=$CXX
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

@@ -123,21 +123,20 @@ AC_SEARCH_LIBS([inet_ntop], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
 
 dnl --------------------------------------------------------------------------
-dnl check for dependencies
+dnl Check for IPv6
 dnl --------------------------------------------------------------------------
 
+AC_MSG_CHECKING([whether to enable IPv6 support])
 AC_ARG_ENABLE([ipv6],
-  [AS_HELP_STRING([--disable-ipv6],
-    [disable IPv6 support])],
-  [want_v6=$enableval],
-  [want_v6=yes]
+  [AS_HELP_STRING([--enable-ipv6],
+    [enable IPv6 support @<:@default=auto@:>@])],
+  [],
+  [enable_ipv6=auto]
 )
+AC_MSG_RESULT([$enable_ipv6])
 
-if test "$want_v6" = "no"; then
-  have_ipv6="no"
-else
+if test "$enable_ipv6" != "no"; then
   AC_MSG_CHECKING([for IPv6 support])
-  have_ipv6="no"
   AC_COMPILE_IFELSE(
     [AC_LANG_PROGRAM(
       [[
@@ -152,16 +151,19 @@ else
         return(fd >= 0 ? 0 : 1);
       ]]
     )],
-    [have_ipv6=yes],
-    [have_ipv6=no],
-    [have_ipv6=no]
+    [
+      enable_ipv6=yes
+      AC_DEFINE([HAVE_IPV6], [1], [Define to 1 if system supports IPV6])
+    ],
+    [
+      if test "$enable_ipv6" = "yes"; then
+	AC_MSG_RESULT([no])
+        AC_MSG_ERROR([Unable to detect IPv6 support])
+      fi
+    ]
   )
 
-  AC_MSG_RESULT([$have_ipv6])
-
-  if test "$have_ipv6" = "yes"; then
-    AC_DEFINE([HAVE_IPV6],[1],[Define to 1 if system supports IPV6])
-  fi
+  AC_MSG_RESULT([yes])
 fi
 
 

@@ -413,8 +413,6 @@ if test "$have_xattr" = "yes"; then
 fi
 
 
-CPPFLAGS="-fno-strict-aliasing -fno-exceptions -fno-rtti ${CPPFLAGS}"
-
 # we only build with a c++ compiler at the moment
 CC=$CXX
 

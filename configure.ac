@@ -288,14 +288,20 @@ AC_CHECK_HEADERS([librsync.h],
 AC_SUBST([RSYNC_LIBS])
 
 
-AC_CHECK_HEADERS([ncurses.h])
-AC_CHECK_LIB([ncurses], [curs_set], [NCURSES_LIBS="-lncurses"])
-have_ncurses=no
-if test "$NCURSES_LIBS" = "-lncurses"; then
-  AC_DEFINE([HAVE_NCURSES], [1], [Define to 1 if you have libncurses])
-  have_ncurses=yes
-fi
+dnl -----------------------------------------------------------
+dnl Check whether libncurses is available
+dnl -----------------------------------------------------------
+
+AC_CHECK_HEADERS([ncurses.h],
+  [
+    AC_CHECK_LIB([ncurses], [curs_set],
+      [NCURSES_LIBS="-lncurses"]
+    )
+  ]
+)
+
 AC_SUBST([NCURSES_LIBS])
+
 
 dnl check for 'Check', needed for the test suite
 m4_ifdef([PKG_CHECK_MODULES], [
@@ -525,7 +531,7 @@ Configuration on `date`:
    acl:				${have_acl}
    crypt:			${ac_cv_header_crypt_h}
    ipv6:			${enable_ipv6}
-   ncurses:			${have_ncurses}
+   ncurses:			${ac_cv_lib_ncurses_curs_set}
    openssl:			${have_ssl}
    xattr:			${have_xattr}
    zlib:			${ac_cv_header_zlib_h}

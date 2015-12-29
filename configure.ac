@@ -243,22 +243,32 @@ AC_CHECK_HEADERS([zlib.h],
 AC_SUBST([ZLIBS])
 
 
-AC_CHECK_HEADERS([crypt.h])
-AC_CHECK_LIB([crypt], [crypt], [CRYPT_LIBS="-lcrypt"])
+dnl -----------------------------------------------------------
+dnl Check whether libcrypt is available
+dnl -----------------------------------------------------------
+
 have_crypt=no
-if test "$CRYPT_LIBS" = "-lcrypt"; then
-  AC_DEFINE([HAVE_CRYPT], [1], [Define to 1 if you have libcrypt])
-  have_crypt=yes
-fi
+AC_CHECK_HEADERS([crypt.h],
+  [
+    AC_CHECK_LIB([crypt], [crypt],
+      [
+        CRYPT_LIBS="-lcrypt"
+        have_crypt=yes
+      ]
+    )
+  ]
+)
+
 AC_SUBST([CRYPT_LIBS])
 
+dnl -----------------------------------------------------------
+dnl Check whether uthash.h is available
+dnl -----------------------------------------------------------
+
 AC_CHECK_HEADERS([uthash.h],
-  [have_uthash=yes],
-  [have_uthash=no]
+  [],
+  [AC_MSG_ERROR([Cannot find uthash.h, please install uthash])]
 )
-if test "$have_uthash" = "no"; then
-  AC_MSG_ERROR([Please install uthash])
-fi
 
 AC_CHECK_HEADERS([librsync.h])
 AC_CHECK_LIB([rsync], [rs_delta_begin], [RSYNC_LIBS="-lrsync"])
@@ -507,12 +517,13 @@ Configuration on `date`:
    Libraries:			${LIBS}
    Static:			${support_static}
 
-   zlib:			${ac_cv_header_zlib_h}
-   openssl:			${have_ssl}
-   ipv6:			${enable_ipv6}
    acl:				${have_acl}
-   xattr:			${have_xattr}
+   crypt:			${ac_cv_header_crypt_h}
+   ipv6:			${enable_ipv6}
    ncurses:			${have_ncurses}
+   openssl:			${have_ssl}
+   xattr:			${have_xattr}
+   zlib:			${ac_cv_header_zlib_h}
 
   "
 

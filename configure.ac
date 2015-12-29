@@ -413,19 +413,6 @@ if test "$have_xattr" = "yes"; then
 fi
 
 
-dnl
-dnl Check for headers, functions and libraries required to support
-dnl keeping readall capabilities
-dnl
-AC_CHECK_HEADERS([sys/prctl.h sys/capability.h])
-AC_CHECK_FUNCS([prctl setreuid])
-AC_CHECK_LIB([cap], [cap_set_proc], [CAP_LIBS="-lcap"])
-if test "$CAP_LIBS" = "-lcap"; then
-   AC_DEFINE([HAVE_LIBCAP], [1], [Define to 1 if you have libcap])
-fi
-AC_SUBST([CAP_LIBS])
-
-
 CPPFLAGS="-fno-strict-aliasing -fno-exceptions -fno-rtti ${CPPFLAGS}"
 
 # we only build with a c++ compiler at the moment

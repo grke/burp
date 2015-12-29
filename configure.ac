@@ -424,16 +424,14 @@ Configuration on `date`:
 
    Host:			${host}
    Burp version:		${PACKAGE_NAME} ${PACKAGE_VERSION}
-   Source code location:	${srcdir}
    Install binaries:		${sbindir}
    Install config files:	${sysconfdir}
    C Compiler:			${CC}
    C++ Compiler:		${CXX}
    Preprocessor flags:		${CPPFLAGS}
-   Compiler flags:		${WCFLAGS} ${CFLAGS} ${CXXFLAGS}
-   Linker flags:		${WLDFLAGS} ${LDFLAGS}
+   Compiler flags:		${CXXFLAGS}
+   Linker flags:		${LDFLAGS}
    Libraries:			${LIBS}
-   Static:			${support_static}
 
    acl:				${have_acl}
    crypt:			${have_crypt}

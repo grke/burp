@@ -338,18 +338,24 @@ if test "$enable_acl" != "no"; then
       save_LIBS="$LIBS"
       AC_SEARCH_LIBS([acl_get_file], [acl],
         [
-	  have_acl=yes
-	  ACL_LIBS="$LIBS"
+          have_acl=yes
+          ACL_LIBS="$LIBS"
           AC_DEFINE([HAVE_ACL], [1],[Define to 1 if we have ACL support])
-	],
-	[
-	  AC_MSG_ERROR([function 'acl_get_file not found'. Perhaps you need to install libacl?])
-	]
+        ],
+        [
+          if test "$enable_acl" = "yes"; then
+            AC_MSG_ERROR([function 'acl_get_file not found'. Perhaps you need to install libacl?])
+          fi
+        ]
       )
       ACL_LIBS="$LIBS"
       LIBS="$save_LIBS"
     ],
-    [AC_MSG_ERROR([sys/acl.h not found])]
+    [
+      if test "$enable_acl" = "yes"; then
+        AC_MSG_ERROR([sys/acl.h not found])
+      fi
+    ]
   )
 fi
 

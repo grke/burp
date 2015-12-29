@@ -80,7 +80,7 @@ AC_CACHE_CHECK([for struct utimebuf], [ba_cv_header_utime_h], [
         #include <utime.h>
       ]],
       [[
-        struct utimbuf foo
+        struct utimbuf foo;
       ]]
     )],
     [ba_cv_header_utime_h=yes],
@@ -98,7 +98,7 @@ dnl --------------------------------------------------------------------------
 AC_CACHE_CHECK([for typeof], [ba_cv_have_typeof], [
   AC_COMPILE_IFELSE(
     [AC_LANG_PROGRAM(
-        [[char *a = 0]],
+        [[char *a = 0;]],
         [[a = (typeof a)a;]]
     )],
     [ba_cv_have_typeof=yes],

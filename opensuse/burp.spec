@@ -35,7 +35,6 @@ BuildRequires:  libcap-devel
 %else
 BuildRequires:  libcap
 %endif
-BuildRequires:  tcpd-devel
 BuildRequires:  librsync
 Provides:       libburp1 = %{version}
 Obsoletes:      libburp1 < %{version}

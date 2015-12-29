@@ -270,18 +270,23 @@ AC_CHECK_HEADERS([uthash.h],
   [AC_MSG_ERROR([Cannot find uthash.h, please install uthash])]
 )
 
-AC_CHECK_HEADERS([librsync.h])
-AC_CHECK_LIB([rsync], [rs_delta_begin], [RSYNC_LIBS="-lrsync"])
-have_librsync=no
-if test "$RSYNC_LIBS" = "-lrsync"; then
-  AC_DEFINE([HAVE_LIBRSYNC], [1], [Define to 1 if you have librsync])
-  have_librsync=yes
-fi
+
+dnl -----------------------------------------------------------
+dnl Check whether librsync is available
+dnl -----------------------------------------------------------
+
+AC_CHECK_HEADERS([librsync.h],
+  [
+    AC_CHECK_LIB([rsync], [rs_delta_begin],
+      [RSYNC_LIBS="-lrsync"],
+      [AC_MSG_ERROR([Unable to find librsync])]
+    )
+  ],
+  [AC_MSG_ERROR([Unable to find librsync.h, please install librsync])]
+)
+
 AC_SUBST([RSYNC_LIBS])
 
-if test "$have_librsync" = "no"; then
-  AC_MSG_ERROR([Please install librsync])
-fi
 
 AC_CHECK_HEADERS([ncurses.h])
 AC_CHECK_LIB([ncurses], [curs_set], [NCURSES_LIBS="-lncurses"])

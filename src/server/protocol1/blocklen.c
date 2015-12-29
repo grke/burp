@@ -14,7 +14,7 @@ size_t get_librsync_block_len(const char *endfile)
 	size_t ret=0;
 	uint64_t oldlen=0;
 	oldlen=strtoull(endfile, NULL, 10);
-	ret=(size_t)(ceil(sqrt(oldlen)/16)*16); // round to a multiple of 16.
+	ret=(size_t)(ceil(sqrt(double(oldlen)/16))*16); // round to a multiple of 16.
 	if(ret<64) return 64; // minimum of 64 bytes.
 	if(ret>MAX_BLOCK_SIZE) return MAX_BLOCK_SIZE;
 	return ret;

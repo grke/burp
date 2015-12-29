@@ -362,116 +362,56 @@ fi
 AC_SUBST([ACL_LIBS])
 
 
-dnl
-dnl Check for XATTR support
-dnl
-support_xattr=auto
+dnl -----------------------------------------------------------
+dnl Check for extended attribute support
+dnl -----------------------------------------------------------
+
+
+AC_MSG_CHECKING([whether to enable XATTR support])
 AC_ARG_ENABLE([xattr],
-  [AS_HELP_STRING([--disable-xattr],
-    [disable xattr support @<:@default=auto@:>@])],
-  [
-    if test "$enableval" = "yes"; then
-      support_xattr=yes
-    elif test "$enableval" = "no"; then
-      support_xattr=no
-    fi
-  ]
+  [AS_HELP_STRING([--enable-xattr],
+    [enable xattr support @<:@default=auto@:>@])],
+  [],
+  [enable_xattr=auto]
 )
+AC_MSG_RESULT([$enable_xattr])
 
 have_xattr=no
-if test "$support_xattr" = "yes" -o "$support_xattr" = "auto"; then
-  dnl
-  dnl First check for *BSD support
-  dnl
-  AC_CHECK_HEADER([sys/extattr.h],
-    [AC_DEFINE([HAVE_SYS_EXTATTR_H], [1], [Define to 1 if your system has the sys/extattr.h header file])]
-  )
-  AC_CHECK_HEADER([libutil.h],
-    [AC_DEFINE([HAVE_LIBUTIL_H], [1], [Define to 1 if your system has the libutil.h header file])]
-  )
-  AC_CHECK_FUNCS([extattr_get_link extattr_set_link extattr_list_link],
+
+dnl First check for the Linux or OSX implementation
+if test "$enable_xattr" != "no"; then
+  AC_CHECK_HEADER([sys/xattr.h],
     [
-      have_xattr=yes
-      AC_DEFINE([HAVE_EXTATTR_GET_LINK], [1], [Define to 1 if you have the 'extattr_get_link' function.])
-      AC_DEFINE([HAVE_EXTATTR_SET_LINK], [1], [Define to 1 if you have the 'extattr_set_link' function.])
-      AC_DEFINE([HAVE_EXTATTR_LIST_LINK], [1], [Define to 1 if you have the 'extattr_list_link' function.])
-    ]
+      AC_CHECK_FUNCS([llistxattr lgetxattr lsetxattr listxattr getxattr setxattr],
+        [have_xattr=yes],
+        [have_xattr=no]
+      )
+    ],
+    [have_xattr=no]
   )
-
-  if test "$have_xattr" = "no"; then
-    AC_CHECK_FUNCS([extattr_get_file extattr_set_file extattr_list_file],
-      [
-        have_xattr=yes
-        AC_DEFINE([HAVE_EXTATTR_GET_FILE], [1], [Define to 1 if you have the 'extattr_get_file' function.])
-        AC_DEFINE([HAVE_EXTATTR_SET_FILE], [1], [Define to 1 if you have the 'extattr_set_file' function.])
-        AC_DEFINE([HAVE_EXTATTR_LIST_FILE], [1], [Define to 1 if you have the 'extattr_list_file' function.])
-      ]
-    )
-  fi
-
-  if test "$have_xattr" = "yes"; then
-    have_extattr_string_in_libc=no
-    AC_CHECK_FUNCS([extattr_namespace_to_string extattr_string_to_namespacae],
-      [
-        have_extattr_string_in_libc=yes
-        AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING], [1], [Define to 1 if you have the 'extattr_namespace_to_string' function.])
-        AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE], [1], [Define to 1 if you have the 'extattr_string_to_namespace' function.])
-      ]
-    )
-
-    dnl
-    dnl If extattr_namespace_to_string and extattr_string_to_namespace are not in libc see if they are in libutil
-    dnl
-    if test "$have_extattr_string_in_libc" = "no"; then
-      AC_CHECK_LIB([util], [extattr_namespace_to_string extattr_string_to_namespace],
-        [
-          AC_DEFINE([HAVE_EXTATTR_NAMESPACE_TO_STRING], [1], [Define to 1 if you have the 'extattr_namespace_to_string' function.])
-          AC_DEFINE([HAVE_EXTATTR_STRING_TO_NAMESPACE], [1], [Define to 1 if you have the 'extattr_string_to_namespace' function.])
-          FDLIBS="-lutil $FDLIBS"
-        ]
-      )
-    fi
-  fi
-
-  dnl
-  dnl If we failed to find *BSD support try the Linux or OSX implementation of xattr
-  dnl
-  if test "$have_xattr" = "no"; then
-    AC_CHECK_HEADER([sys/xattr.h],
-      [AC_DEFINE([HAVE_SYS_XATTR_H], [1], [Define to 1 if your system has the sys/xattr.h header file])]
-    )
-    AC_CHECK_FUNCS([llistxattr lgetxattr lsetxattar],
-      [
-        have_xattr=yes
-        AC_DEFINE([HAVE_LLISTXATTR], [1], [Define to 1 if you have the 'llistxattr' function.])
-        AC_DEFINE([HAVE_LGETXATTR], [1], [Define to 1 if you have the 'lgetxattr' function.])
-        AC_DEFINE([HAVE_LSETXATTR], [1], [Define to 1 if you have the 'lsetxattr' function.])
-      ]
-    )
-
-    if test "$have_xattr" = "no"; then
-      AC_CHECK_FUNCS([listxattr getxattr setxattr],
-        [
-          have_xattr=yes
-          AC_DEFINE([HAVE_LISTXATTR], [1], [Define to 1 if you have the 'listxattr' function.])
-          AC_DEFINE([HAVE_GETXATTR], [1], [Define to 1 if you have the 'getxattr' function.])
-          AC_DEFINE([HAVE_SETXATTR], [1], [Define to 1 if you have the 'setxattr' function.])
-        ]
-      )
-    fi
-  fi
-
-  if test "$support_xattr" = "yes" -a "$have_xattr" != "yes"; then
-    AC_MSG_ERROR([xattr support explicitly enabled but no supported xattr implementation found, 
-      please either load the xattr libraries or rerun configure without --enable-xattr])
-  else
-    if test "$have_xattr" = "yes"; then
-      AC_DEFINE([HAVE_XATTR], [1], [Extended Attributes support])
-    fi
-  fi
 fi
 
-AC_SUBST([FDLIBS])
+dnl Then try the BSD implementation
+if test "$have_xattr" = "no"; then
+  AC_CHECK_HEADERS([sys/extattr.h],
+    [
+      AC_CHECK_FUNCS([extattr_get_link extattr_set_link extattr_list_link extattr_namespace_to_string extattr_string_to_namespace],
+        [have_xattr=yes],
+        [have_xattr=no]
+      )
+    ],
+    [have_xattr=no]
+  )
+fi
+
+if test "$enable_xattr" = "yes"; then
+  AC_MSG_ERROR([xattr support explicitly enabled but no supported xattr implementation found])
+fi
+
+if test "$have_xattr" = "yes"; then
+  AC_DEFINE([HAVE_XATTR], [1], [Extended Attributes support])
+fi
+
 
 dnl
 dnl Check for headers, functions and libraries required to support

@@ -2,6 +2,8 @@ TESTS = $(check_PROGRAMS)
 
 check_PROGRAMS = runner
 
+XFAIL_TESTS = $(TESTS)
+
 runner_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(CHECK_CFLAGS) \

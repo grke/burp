@@ -170,105 +170,61 @@ fi
 dnl -----------------------------------------------------------
 dnl Check whether OpenSSL is available
 dnl -----------------------------------------------------------
-AC_MSG_CHECKING([for OpenSSL])
+
+AC_MSG_CHECKING([For OpenSSL])
 AC_ARG_WITH([openssl],
   [AS_HELP_STRING([--with-openssl@<:@=DIR@:>@],
-    [Include OpenSSL support. DIR is the OpenSSL base])],
-  [with_openssl_directory=$withval]
+    [root of the OpenSSL directory])],
+  [
+    case "$withval" in
+     "" | yes | no)
+       AC_MSG_ERROR([Invalid --with-openssl value])
+       ;;
+     *)
+       openssl_dir=$withval
+       ;;
+    esac
+  ]
 )
-AC_MSG_RESULT([$withval])
 
-if test "$with_openssl_directory" != "no"; then
-  OPENSSL_LIBS="-lssl -lcrypto"
-  OPENSSL_INC=""
-
-  if test "$with_openssl_directory" != "yes" && test "$with_openssl_directory" != ""; then
-    # Make sure the $with_openssl_directory also makes sense
-    if test -d "$with_openssl_directory/lib" -a -d "$with_openssl_directory/include"; then
-      OPENSSL_LIBS="-L$with_openssl_directory/lib $OPENSSL_LIBS"
-      OPENSSL_INC="-I$with_openssl_directory/include $OPENSSL_INC"
-    fi
-  fi
-
-  saved_LIBS="$LIBS"
-  saved_CPPFLAGS="$CPPFLAGS"
-  LIBS="$saved_LIBS $OPENSSL_LIBS"
-  CPPFLAGS="$saved_CPPFLAGS $OPENSSL_INC"
-
-  AC_LINK_IFELSE(
-    [AC_LANG_PROGRAM(
-      [[#include <openssl/ssl.h>]],
-      [[CRYPTO_set_id_callback(NULL);]]
-    )],
-    [support_tls="yes"; support_crypto="yes"],
-    [support_tls="no"; support_crypto="no"]
-  )
-
-  AC_LINK_IFELSE(
-    [AC_LANG_PROGRAM(
-      [[#include <openssl/evp.h>]],
-      [[EVP_sha512();]]
-    )],
-    [ac_cv_openssl_sha2="yes"],
-    [ac_cv_openssl_sha2="no"]
-  )
-
-  dnl Solaris disables greater than 128+ bit encryption in their OpenSSL
-  dnl implementation, presumably for export reasons. If 192bit AES
-  dnl is available, we assume that we're running with a 'non-export'
-  dnl openssl library.
-  AC_LINK_IFELSE(
-    [AC_LANG_PROGRAM(
-      [[#include <openssl/evp.h>]],
-      [[EVP_aes_192_cbc();]]
-    )],
-    [ac_cv_openssl_export="no"],
-    [ac_cv_openssl_export="yes"]
-  )
-
-  if test "$support_tls" = "yes"; then
-    AC_DEFINE([HAVE_OPENSSL], [1], [Define to 1 if OpenSSL library is available])
-    AC_DEFINE([HAVE_TLS], [1], [Define to 1 if TLS support should be enabled])
-    AC_DEFINE([HAVE_CRYPTO], [1], [Define to 1 if encryption support should be enabled])
-  fi
-
-  if test "$ac_cv_openssl_sha2" = "yes"; then
-    AC_DEFINE([HAVE_SHA2], [1], [Define if the SHA-2 family of digest algorithms is available])
-  fi
-
-  if test "$ac_cv_openssl_export" = "yes"; then
-    AC_DEFINE([HAVE_OPENSSL_EXPORT_LIBRARY], [1], [Define if the OpenSSL library is export-constrained to 128bit ciphers])
-  fi
-
-  if test "$support_crypto" = "yes"; then
-    AC_CHECK_LIB([ssl], [EVP_PKEY_encrypt_old],
-      [AC_DEFINE([HAVE_OPENSSLv1], [1], [Define to 1 if we have OpenSSL version 1.x])]
-    )
-  fi
-
-  LIBS="${saved_LIBS}"
-  CPPFLAGS="${saved_CPPFLAGS}"
-else
-  support_tls="no"
-  support_crypto="no"
-  OPENSSL_LIBS=""
-  OPENSSL_INC=""
-fi
-
-if test "$support_tls" = "no"; then
-  OPENSSL_LIBS=""
-  OPENSSL_INC=""
-  AC_MSG_ERROR([Please install openssl])
-fi
-
-if test "$support_crypto" = "no"; then
-  OPENSSL_LIBS=""
-  OPENSSL_INC=""
-  AC_MSG_ERROR([Please install openssl])
-fi
-
-AC_SUBST([OPENSSL_LIBS])
+AC_SUBST([OPENSSL_LIBS], ["-lssl -lcrypto"])
+AC_SUBST([OPENSSL_LDFLAGS])
 AC_SUBST([OPENSSL_INC])
+
+if test "$openssl_dir" != ""; then
+  OPENSSL_LDFLAGS="-L${openssl_dir}/lib"
+  OPENSSL_INC="-I${openssl_dir}/include"
+fi
+
+save_LIBS="$LIBS"
+save_LDFLAGS="$LDFLAGS"
+save_CPPFLAGS="$CPPFLAGS"
+LDFLAGS="$LDFLAGS $OPENSSL_LDFLAGS"
+LIBS="$LIBS $OPENSSL_LIBS"
+CPPFLAGS="$OPENSSL_INC $CPPFLAGS"
+
+AC_LINK_IFELSE(
+  [AC_LANG_PROGRAM(
+    [[#include <openssl/ssl.h>]],
+    [[SSL_new(NULL)]]
+  )],
+  [
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([HAVE_OPENSSL], [1], [Define to 1 if OpenSSL library is available])
+  ],
+  [
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([Unable to find OpenSSL library])
+  ]
+)
+CPPFLAGS="$save_CPPFLAGS"
+LDFLAGS="$save_LDFLAGS"
+LIBS="$save_LIBS"
+
+
+dnl -----------------------------------------------------------
+dnl Check whether zlib is available
+dnl -----------------------------------------------------------
 
 AC_CHECK_HEADERS([zlib.h])
 AC_CHECK_LIB([z], [deflate], [ZLIBS="-lz"])

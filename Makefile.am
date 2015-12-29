@@ -43,6 +43,10 @@ burp_CPPFLAGS = \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(OPENSSL_INC)
 
+burp_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS)
+
 burp_SOURCES = \
 	src/action.h \
 	src/alloc.c src/alloc.h \
@@ -276,6 +280,10 @@ runner_CXXFLAGS = \
 	-fprofile-arcs \
 	-ftest-coverage \
 	-x c++
+
+runner_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS)
 
 runner_LDADD = \
 	$(CHECK_LIBS) \

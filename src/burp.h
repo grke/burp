@@ -64,16 +64,14 @@
 	#include <glob.h>
 #endif
 
-#ifdef HAVE_OPENSSL
-	// Fight OpenSSL namespace pollution.
-	#define STORE OSSL_STORE
-	#include <openssl/ssl.h>
-	#include <openssl/rand.h>
-	#include <openssl/err.h>
-	#include <openssl/asn1.h>
-	#include <openssl/asn1t.h>
-	#undef STORE
-#endif
+// Fight OpenSSL namespace pollution.
+#define STORE OSSL_STORE
+#include <openssl/ssl.h>
+#include <openssl/rand.h>
+#include <openssl/err.h>
+#include <openssl/asn1.h>
+#include <openssl/asn1t.h>
+#undef STORE
 
 // Local Burp includes. Be sure to put all the system includes before these.
 #ifdef HAVE_WIN32

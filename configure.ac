@@ -1202,12 +1202,7 @@ AC_SUBST_FILE(MCOMMON)
 MCOMMON2=./autoconf/Make.common2
 AC_SUBST_FILE(MCOMMON2)
 
-AC_CONFIG_FILES([
-  Makefile
-  manpages/Makefile
-  src/Makefile
-  utest/Makefile
-])
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
 echo "

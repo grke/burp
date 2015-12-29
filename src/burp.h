@@ -181,5 +181,13 @@
 	#define be64toh(x) betoh64(x)
 	#define le64toh(x) letoh64(x)
 #endif
+#ifdef HAVE_SUN_OS
+	#include <sys/isa_defs.h>
+	#include <sys/byteorder.h>
+	#define be64toh(x) BE_64(x)
+	#define htobe64(x) BE_64(x)
+	#define htole64(x) LE_64(x)
+	#define le64toh(x) LE_64(x)
+#endif
 
 #endif

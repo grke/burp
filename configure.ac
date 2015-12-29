@@ -247,17 +247,16 @@ dnl -----------------------------------------------------------
 dnl Check whether libcrypt is available
 dnl -----------------------------------------------------------
 
-have_crypt=no
-AC_CHECK_HEADERS([crypt.h],
+save_LIBS="$LIBS"
+AC_SEARCH_LIBS([crypt], [crypt],
   [
-    AC_CHECK_LIB([crypt], [crypt],
-      [
-        CRYPT_LIBS="-lcrypt"
-        have_crypt=yes
-      ]
-    )
-  ]
+	have_crypt=yes
+    CRYPT_LIBS="$LIBS"
+    AC_DEFINE([HAVE_CRYPT], [1], [Define to 1 if we have libcrypt])
+  ],
+  [have_crypt=no]
 )
+LIBS="$save_LIBS"
 
 AC_SUBST([CRYPT_LIBS])
 
@@ -506,7 +505,7 @@ Configuration on `date`:
    Static:			${support_static}
 
    acl:				${have_acl}
-   crypt:			${ac_cv_header_crypt_h}
+   crypt:			${have_crypt}
    ipv6:			${enable_ipv6}
    ncurses:			${ac_cv_lib_ncurses_curs_set}
    openssl:			${have_ssl}

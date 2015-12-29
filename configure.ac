@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl require a recent autoconf
 AC_PREREQ([2.61])
 
-AC_INIT([burp], [2.0.8], [https://github.com/grke/burp/issues], [], [http://burp.grke.org])
+AC_INIT([Burp], [2.0.8], [https://github.com/grke/burp/issues], [burp], [http://burp.grke.org])
 AC_CONFIG_AUX_DIR([autoconf])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -23,18 +23,6 @@ WIN32TOPDIR=${TOP_DIR}
 AC_SUBST(WIN32BUILDDIR)
 AC_SUBST(WIN32MAINDIR)
 AC_SUBST(WIN32TOPDIR)
-
-dnl burp version
-post_host=
-if test "x$BURP" != x; then
-   post_host=`echo -${BURP} | tr 'A-Z ' 'a-z-'`
-fi
-BURP=${BURP:-Burp}
-VERSION=`sed -n -e 's/^.*VERSION.*"\(.*\)"$/\1/p' ${srcdir}/src/version.h`
-AC_SUBST([VERSION])
-AC_SUBST([BURP])
-AC_SUBST([post_host])
-
 
 dnl -------------------------------------------------------
 dnl Check for compiler.
@@ -1225,8 +1213,8 @@ AC_OUTPUT
 echo "
 Configuration on `date`:
 
-   Host:			${host}${post_host}
-   Burp version:		${BURP} ${VERSION}
+   Host:			${host}
+   Burp version:		${PACKAGE_NAME} ${PACKAGE_VERSION}
    Source code location:	${srcdir}
    Install binaries:		${sbindir}
    Install config files:	${sysconfdir}

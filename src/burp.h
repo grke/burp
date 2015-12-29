@@ -111,7 +111,6 @@
 	#include "win32/compat/compat.h"
 #endif
 
-#include "version.h"
 #include "burpconfig.h"
 
 #ifdef HAVE_WIN32

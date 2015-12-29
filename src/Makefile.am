@@ -41,7 +41,6 @@ burp_SOURCES = \
 	slist.c slist.h \
 	ssl.c ssl.h \
 	strlist.c strlist.h \
-	version.h \
 	yajl_gen_w.c yajl_gen_w.h \
 	client/acl.c client/acl.h \
 	client/auth.c client/auth.h \

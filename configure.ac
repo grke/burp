@@ -14,7 +14,7 @@ AM_SILENT_RULES([yes])
 
 AC_LANG([C++])
 
-: ${CXXFLAGS="-Wall -g -O2"}
+: ${CPPFLAGS="-Wall -g -O2"}
 
 AC_CANONICAL_HOST
 AC_USE_SYSTEM_EXTENSIONS
@@ -515,7 +515,7 @@ fi
 AC_SUBST(CAP_LIBS)
 
 
-CXXFLAGS="-fno-strict-aliasing -fno-exceptions -fno-rtti ${CXXFLAGS}"
+CPPFLAGS="-fno-strict-aliasing -fno-exceptions -fno-rtti ${CPPFLAGS}"
 
 # we only build with a c++ compiler at the moment
 CC=${CXX}

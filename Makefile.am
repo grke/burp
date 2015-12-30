@@ -8,7 +8,9 @@ EXTRA_DIST = \
 	android/build-script-android \
 	android/burp_ca \
 	android/README \
-	configs \
+	configs/burp.conf.in \
+	configs/burp-server.conf.in \
+	configs/CA.cnf.in \
 	debian \
 	freebsd \
 	rhel \

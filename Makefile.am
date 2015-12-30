@@ -327,6 +327,7 @@ clean-local: clean-local-check
 .PHONY: clean-local-check
 clean-local-check:
 	-rm -rf utest_find
+	-rm -f  utest_lockfile
 	-rm -rf utest_restore
 	-rm -rf utest_xattr
 

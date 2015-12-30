@@ -16,7 +16,6 @@ EXTRA_DIST = \
 	rhel \
 	opensuse \
 	src/win32 \
-	test \
 	$(TESTS)
 
 dist_doc_DATA = \

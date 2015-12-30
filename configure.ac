@@ -419,27 +419,25 @@ CC=$CXX
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
-echo "
-Configuration on `date`:
-
-   Host:			${host}
-   Burp version:		${PACKAGE_NAME} ${PACKAGE_VERSION}
-   Install binaries:		${sbindir}
-   Install config files:	${sysconfdir}
-   C Compiler:			${CC}
-   C++ Compiler:		${CXX}
-   Preprocessor flags:		${CPPFLAGS}
-   Compiler flags:		${CXXFLAGS}
-   Linker flags:		${LDFLAGS}
-   Libraries:			${LIBS}
-
-   acl:				${have_acl}
-   crypt:			${have_crypt}
-   ipv6:			${enable_ipv6}
-   ncurses:			${ac_cv_lib_ncurses_curs_set}
-   openssl:			${have_ssl}
-   xattr:			${have_xattr}
-   zlib:			${ac_cv_header_zlib_h}
-
-  "
+AC_MSG_NOTICE([])
+AC_MSG_NOTICE([Configuration summary])
+AC_MSG_NOTICE([=====================])
+AC_MSG_NOTICE([])
+AC_MSG_NOTICE([                  Host: ${host}])
+AC_MSG_NOTICE([          Burp version: ${PACKAGE_VERSION}])
+AC_MSG_NOTICE([      Install binaries: ${sbindir}])
+AC_MSG_NOTICE([  Install config files: ${sysconfdir}])
+AC_MSG_NOTICE([          C++ Compiler: ${CXX}])
+AC_MSG_NOTICE([    Preprocessor flags: ${CPPFLAGS}])
+AC_MSG_NOTICE([        Compiler flags: ${CXXFLAGS}])
+AC_MSG_NOTICE([          Linker flags: ${LDFLAGS}])
+AC_MSG_NOTICE([])
+AC_MSG_NOTICE([                   acl: ${have_acl}])
+AC_MSG_NOTICE([                 crypt: ${have_crypt}])
+AC_MSG_NOTICE([                  ipv6: ${enable_ipv6}])
+AC_MSG_NOTICE([               ncurses: ${ac_cv_lib_ncurses_curs_set}])
+AC_MSG_NOTICE([               openssl: ${have_ssl}])
+AC_MSG_NOTICE([                 xattr: ${have_xattr}])
+AC_MSG_NOTICE([                  zlib: ${ac_cv_header_zlib_h}])
+AC_MSG_NOTICE([])
 

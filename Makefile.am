@@ -297,10 +297,9 @@ runner_LDADD = \
 	$(ZLIBS)
 
 
-CLEANFILES = \
-	utest_find/a \
-	utest_find/b \
-	utest_find/c \
-	utest_find/f \
-	utest_find/g \
-	utest_xattr/myfile
+clean-local: clean-local-check
+.PHONY: clean-local-check
+clean-local-check:
+	-rm -rf utest_find
+	-rm -rf utest_restore
+	-rm -rf utest_xattr

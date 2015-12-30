@@ -57,6 +57,7 @@ CLEANFILES+= $(configs)
 
 
 sbin_PROGRAMS = burp
+sbin_SCRIPTS = configs/certs/CA/burp_ca
 
 burp_LDADD = \
 	$(ACL_LIBS) \

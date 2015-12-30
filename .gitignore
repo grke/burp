@@ -18,8 +18,9 @@
 /autoconf/test-driver
 /autom4te.cache
 /burp
-/burp-client.conf
+/burp.conf
 /burp-server.conf
+/CA.cnf
 /configure
 /runner
 /runner.log

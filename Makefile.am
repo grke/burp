@@ -320,6 +320,8 @@ runner_LDADD = \
 	$(OPENSSL_LIBS) \
 	$(ZLIBS)
 
+install-data-local:
+	$(MKDIR_P) $(DESTDIR)$(runstatedir)
 
 clean-local: clean-local-check
 .PHONY: clean-local-check

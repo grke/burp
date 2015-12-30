@@ -200,8 +200,6 @@ TESTS = $(check_PROGRAMS)
 
 check_PROGRAMS = runner
 
-XFAIL_TESTS = $(TESTS)
-
 runner_SOURCES = \
 	utest/builders/build_attribs.c \
 	utest/builders/build_asfd_mock.c utest/builders/build_asfd_mock.h \

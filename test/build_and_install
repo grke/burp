@@ -48,7 +48,7 @@ build_and_install()
 	make || fail "make failed"
 	# For some reason, make is not returning an error code.
 	# Look for important binaries before carrying on.
-	[ -f src/burp ] || fail "make failed"
+	[ -x burp ] || fail "make failed"
 	make install DESTDIR="$target" || fail "make install failed"
 	cdir -
 }

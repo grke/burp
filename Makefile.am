@@ -3,26 +3,43 @@ ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS = -fno-strict-aliasing -fno-exceptions -fno-rtti
 
 EXTRA_DIST = \
+	android/build-script-android \
+	android/burp_ca \
+	android/README \
+	configs \
+	debian \
+	freebsd \
+	rhel \
+	opensuse \
+	src/win32 \
+	test \
+	$(TESTS)
+
+dist_doc_DATA = \
 	CHANGELOG \
 	CONTRIBUTORS \
 	DONATIONS \
 	LICENSE \
 	README \
 	UPGRADING \
-	android/build-script-android \
-	android/burp_ca \
-	android/README \
-	configs \
-	debian \
-	docs \
-	freebsd \
-	rhel \
-	opensuse \
+	docs/add-remove.txt \
+	docs/autoupgrade.txt \
+	docs/baremetal-windows2008.txt \
+	docs/baremetal-windows7and8.txt \
+	docs/baremetal-windows7-hirens.txt \
+	docs/baremetal-windows7.txt \
+	docs/burp_ca.txt \
+	docs/debug.txt \
+	docs/retention.txt \
+	docs/security-models.txt \
+	docs/server-basics.txt \
+	docs/shuffling.txt \
+	docs/status-monitor.txt \
+	docs/tests.txt \
+	docs/timer_script.txt \
+	docs/working_dir.txt \
 	src/protocol1/backup_phases.txt \
 	src/protocol1/readwrite.txt
-	src/win32 \
-	test \
-	$(TESTS)
 
 dist_man8_MANS = \
 	manpages/bedup.8 \

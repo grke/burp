@@ -2,4 +2,4 @@ password = abcdefgh
 
 # More configuration files can be read, using syntax like the following
 # (without the leading '# ').
-. incexc/*
+#. incexc/*

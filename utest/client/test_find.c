@@ -1,7 +1,7 @@
 #include "../test.h"
 #include "../builders/build_file.h"
 #include "../../src/alloc.h"
-#include "../../src/config.h"
+#include "config.h"
 #include "../../src/client/find.h"
 #include "../../src/conffile.h"
 #include "../../src/fsops.h"

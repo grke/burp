@@ -51,7 +51,7 @@ dist_man8_MANS = \
 
 sysconf_DATA = $(configs)
 
-configs = burp-client.conf burp-server.conf
+configs = burp-client.conf burp-server.conf CA.cnf
 
 CLEANFILES+= $(configs)
 

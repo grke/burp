@@ -14,7 +14,7 @@
 
 #define BASE		"utest_server_monitor_json_output"
 #define SDIRS		BASE "_sdirs"
-#define EXPECTED	"json_output"
+#define EXPECTED	"utest/json_output"
 
 static struct fzp *output=NULL;
 

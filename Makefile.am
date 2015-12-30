@@ -57,7 +57,13 @@ CLEANFILES+= $(configs)
 
 
 sbin_PROGRAMS = burp
-sbin_SCRIPTS = configs/certs/CA/burp_ca
+
+dist_sbin_SCRIPTS = configs/certs/CA/burp_ca
+
+clientconfdir = $(sysconfdir)/clientconfdir
+dist_clientconf_DATA = \
+	configs/server/clientconfdir/incexc \
+	configs/server/clientconfdir/testclient
 
 burp_LDADD = \
 	$(ACL_LIBS) \

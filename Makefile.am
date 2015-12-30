@@ -328,7 +328,8 @@ runner_LDADD = \
 	$(ZLIBS)
 
 install-data-local:
-	$(MKDIR_P) $(DESTDIR)$(runstatedir)
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(localstatedir)/spool/burp
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(runstatedir)
 
 clean-local: clean-local-check
 .PHONY: clean-local-check

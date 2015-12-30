@@ -2,6 +2,8 @@ ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = -fno-strict-aliasing -fno-exceptions -fno-rtti
 
+CLEANFILES=
+
 EXTRA_DIST = \
 	android/build-script-android \
 	android/burp_ca \
@@ -46,6 +48,13 @@ dist_man8_MANS = \
 	manpages/burp.8 \
 	manpages/burp_ca.8 \
 	manpages/vss_strip.8
+
+sysconf_DATA = $(configs)
+
+configs = burp-client.conf burp-server.conf
+
+CLEANFILES+= $(configs)
+
 
 sbin_PROGRAMS = burp
 
@@ -318,3 +327,16 @@ clean-local-check:
 	-rm -rf utest_find
 	-rm -rf utest_restore
 	-rm -rf utest_xattr
+
+$(configs): %: $(srcdir)/configs/%.in Makefile
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$< >$@
+
+do_subst = ( sed \
+  -e 's,[@]runstatedir[@],$(runstatedir),g' \
+  -e 's,[@]sbindir[@],$(sbindir),g' \
+  -e 's,[@]scriptdir[@],$(scriptdir),g' \
+  -e 's,[@]server_address[@],::1,g' \
+  -e 's,[@]sysconfdir[@],$(sysconfdir),g' \
+  | $(SHELL) ./config.status --file=- \
+  )

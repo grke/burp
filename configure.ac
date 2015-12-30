@@ -412,6 +412,14 @@ if test "$have_xattr" = "yes"; then
   AC_DEFINE([HAVE_XATTR], [1], [Extended Attributes support])
 fi
 
+dnl set sysconfdir to /etc/burp unless specified otherwise
+if test "$prefix" = "NONE" && test "$sysconfdir" = '${prefix}/etc'; then
+  sysconfdir='/etc/burp'
+fi
+
+if test "x$runstatedir" = x; then
+  AC_SUBST([runstatedir], ['${localstatedir}/run'])
+fi
 
 # we only build with a c++ compiler at the moment
 CC=$CXX

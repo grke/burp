@@ -333,6 +333,7 @@ runner_LDADD = \
 install-data-local:
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(localstatedir)/spool/burp
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(runstatedir)
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/CA-client
 
 clean-local: clean-local-check
 .PHONY: clean-local-check

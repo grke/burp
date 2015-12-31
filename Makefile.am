@@ -62,6 +62,12 @@ sbin_PROGRAMS = burp
 
 dist_sbin_SCRIPTS = configs/certs/CA/burp_ca
 
+dist_script_SCRIPTS = \
+	configs/server/timer_script \
+	configs/server/notify_script \
+	configs/server/ssl_extra_checks_script \
+	configs/server/summary_script
+
 clientconfdir = $(sysconfdir)/clientconfdir
 dist_clientconf_DATA = \
 	configs/server/clientconfdir/incexc \

@@ -422,6 +422,10 @@ if test "x$runstatedir" = x; then
   AC_SUBST([runstatedir], ['${localstatedir}/run'])
 fi
 
+if test "x$scriptdir" = x; then
+  AC_SUBST([scriptdir], ['${pkgdatadir}/scripts'])
+fi
+
 # we only build with a c++ compiler at the moment
 CC=$CXX
 

@@ -331,7 +331,11 @@ runner_LDADD = \
 	$(OPENSSL_LIBS) \
 	$(ZLIBS)
 
-MOSTLYCLEANFILES = $(runner_OBJECTS:.o=.gcno) $(runner_OBJECTS:.o=.gcda)
+coverage: check
+	$(AM_V_GEN)$(LCOV) -q --capture --no-external -d . -b . --output-file burp-coverage.info
+	$(AM_V_GEN)$(GENHTML) -q burp-coverage.info --output-directory burp-coverage
+
+.PHONY: coverage
 
 install-data-local:
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(localstatedir)/spool/burp
@@ -341,12 +345,19 @@ install-data-local:
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION)
 
 clean-local: clean-local-check
+
+mostlyclean-local:
+	$(AM_V_at)-rm -f burp-coverage.info
+	$(AM_V_at)rm -f $(runner_OBJECTS:.o=.gcno)
+	$(AM_V_at)-rm -f $(runner_OBJECTS:.o=.gcda)
+	$(AM_V_at)-rm -rf burp-coverage
+
 .PHONY: clean-local-check
 clean-local-check:
-	-rm -rf utest_find
-	-rm -f  utest_lockfile
-	-rm -rf utest_restore
-	-rm -rf utest_xattr
+	$(AM_V_at)-rm -rf utest_find
+	$(AM_V_at)-rm -f  utest_lockfile
+	$(AM_V_at)-rm -rf utest_restore
+	$(AM_V_at)-rm -rf utest_xattr
 
 $(configs): %: $(srcdir)/configs/%.in Makefile
 	$(AM_V_at)rm -f $@

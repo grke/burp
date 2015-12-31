@@ -31,6 +31,9 @@ dnl ------------------------------------------------------
 AC_PROG_INSTALL
 AC_PROG_MKDIR_P
 
+AC_PATH_PROG([GENHTML], [genhtml])
+AC_PATH_PROG([LCOV], [lcov])
+
 dnl --------------------------------------------------
 dnl Libtool config
 dnl --------------------------------------------------

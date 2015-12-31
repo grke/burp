@@ -22,6 +22,8 @@
 /burp
 /burp.conf
 /burp-server.conf
+/burp-coverage/
+/burp-coverage.info
 /CA.cnf
 /configure
 /runner

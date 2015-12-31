@@ -2,7 +2,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 AM_CPPFLAGS = -fno-strict-aliasing -fno-exceptions -fno-rtti
 
-CLEANFILES=
+CLEANFILES =
 
 EXTRA_DIST = \
 	android/build-script-android \
@@ -309,22 +309,17 @@ runner_SOURCES+= $(burp_SOURCES)
 
 runner_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
+	--coverage \
 	$(CHECK_CFLAGS) \
 	-DUTEST \
 	-DTOP_SRCDIR=\"$(top_srcdir)\" \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(OPENSSL_INC)
 
-runner_CXXFLAGS = \
-	$(AM_CXXFLAGS) \
-	-Wall \
-	-g \
-	-fprofile-arcs \
-	-ftest-coverage \
-	-x c++
 
 runner_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	--coverage \
 	$(OPENSSL_LDFLAGS)
 
 runner_LDADD = \
@@ -335,6 +330,8 @@ runner_LDADD = \
 	$(RSYNC_LIBS) \
 	$(OPENSSL_LIBS) \
 	$(ZLIBS)
+
+MOSTLYCLEANFILES = $(runner_OBJECTS:.o=.gcno) $(runner_OBJECTS:.o=.gcda)
 
 install-data-local:
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(localstatedir)/spool/burp

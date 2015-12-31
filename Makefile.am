@@ -16,6 +16,7 @@ EXTRA_DIST = \
 	rhel \
 	opensuse \
 	src/win32 \
+	utest/json_output \
 	$(TESTS)
 
 dist_doc_DATA = \

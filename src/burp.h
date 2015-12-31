@@ -13,20 +13,22 @@
 
 // System includes.
 #include <ctype.h>
-#include <dirent.h>
 #include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
+
+#include <dirent.h>
 #include <fcntl.h>
 #include <grp.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <signal.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <strings.h>
-#include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -36,8 +38,6 @@
 #include <sys/wait.h>
 #include <limits.h>
 #include <sys/socket.h>
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #if HAVE_ALLOCA_H
 	#include <alloca.h>

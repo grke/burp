@@ -340,6 +340,8 @@ install-data-local:
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(localstatedir)/spool/burp
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(runstatedir)
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/CA-client
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION)
 
 clean-local: clean-local-check
 .PHONY: clean-local-check

@@ -11,7 +11,7 @@
 #include "../../../src/client/monitor/status_client_ncurses.h"
 #include "../../builders/build_asfd_mock.h"
 
-#define SRC_DIR	"utest/json_output"
+#define SRC_DIR	TOP_SRCDIR "/utest/json_output"
 
 START_TEST(test_json_error)
 {

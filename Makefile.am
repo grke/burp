@@ -305,6 +305,7 @@ runner_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(CHECK_CFLAGS) \
 	-DUTEST \
+	-DTOP_SRCDIR=\"$(top_srcdir)\" \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(OPENSSL_INC)
 

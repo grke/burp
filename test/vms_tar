@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-v=$(grep define src/version.h | cut -f 2 -d "\"")
+v=$(awk '/AC_INIT/{print ;exit}' configure.ac | cut -d ',' -f 2 | sed -e 's/\[//' -e 's/\]//')
 [ -n $v ] || exit 1
 dir=burp-$v
 ext=tar.bz2

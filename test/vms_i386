@@ -33,7 +33,10 @@ scp $ssh_opts "$tarfile" "$host:" \
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \
-	"cd $directory && ./configure && make test" \
+	"cd $directory && autoreconf -vif && ./configure --prefix=/usr --sysconfdir=/etc/burp && make check" \
+		|| fail "make check"
+ssh $ssh_opts "$host" \
+	"cd $directory && cd test && make test" \
 		|| fail "make test"
 
 echo "Everything succeeded."

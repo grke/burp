@@ -45,6 +45,8 @@ OBJCPY := $(MINGW_BIN)/$(MINGW_PREFIX)objcopy
 NSIS_DIR := $(DEPKGS)/nsis
 STAB2CV := $(DEPKGS)/tools/bin/stab2cv
 
+VERSION := $(shell awk '/AC_INIT/{print ;exit}' ../../../configure.ac | cut -d ',' -f 2 | sed -e 's/\[//' -e 's/\]//')
+
 WIN64=@WIN64@
 
 ifeq ($(WIN64),yes)
@@ -102,3 +104,4 @@ HAVES := \
 	-DHAVE_LIBZ \
 	-DHAVE_OPENSSL \
 	-DHAVE_PCREPOSIX \
+	-DVERSION="\"$(VERSION)\""

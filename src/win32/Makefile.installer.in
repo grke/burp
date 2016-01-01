@@ -8,7 +8,7 @@
 
 include ../Makefile.inc
 
-VERSION := $(shell sed -ne 's/.*[ \t]VERSION[ \t][ \t]*"\(.*\)"/\1/p' < ../../version.h)
+VERSION := $(shell awk '/AC_INIT/{print ;exit}' ../../../configure.ac | cut -d ',' -f 2 | sed -e 's/\[//' -e 's/\]//')
 
 DEFINES := \
 	-DVERSION=$(VERSION) \

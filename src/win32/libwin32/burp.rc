@@ -7,7 +7,6 @@
 #include <winuser.h>
 #include <winver.h>
 #include "res.h"
-#include "../../version.h"
 
 /********************************************************************
  *
@@ -115,7 +114,7 @@ BEGIN
     LTEXT           "Licensed under GNU GPL 2.0.",-1,7,130,175,10
     RTEXT           "Build Date:",-1,108,24,42,8
     RTEXT           "Burp Version:",-1,100,9,50,8
-    LTEXT           VERSION,-1,159,10,65,8
+    LTEXT           "VERSION",-1,159,10,65,8
 END
 
 /************************************************************************

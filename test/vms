@@ -46,16 +46,20 @@ scp $ssh_opts "$tarfile" "$host:" \
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \
-	"cd $directory && ./configure && make test" \
+	"cd $directory && autoreconf -vif && ./configure --prefix=/usr --sysconfdir=/etc/burp && make coverage" \
+		|| fail "make coverage"
+scp -r $ssh_opts "$host:$directory/burp-coverage" . \
+	|| fail "copying code coverage"
+ssh $ssh_opts "$host" \
+	"cd $directory && make clean && cd test && make test" \
 		|| fail "make test"
 ssh $ssh_opts "$host" \
-	"cd $directory/src/win32 && make && make WIN64=yes" \
+	"cd $directory && autoreconf -vif && ./configure --prefix=/usr --sysconfdir=/etc/burp && cd src/win32 && make && make WIN64=yes" \
 		|| fail "building windows installers"
 ssh $ssh_opts "$host" \
 	"cd $directory/test && ./test_windows64 $ubuntu $windows Administrator" \
 		|| fail "running windows tests"
 scp -r $ssh_opts "$host:$directory/src/win*/release*/burp-win*installer*.exe" . || fail "copying windows installers"
-scp -r $ssh_opts "$host:/tmp/burp-coverage" . || fail "copying code coverage"
 ssh $ssh_opts "$host" "rm -rf $tarfile $directory" \
 	|| fail "cleaning ubuntu machine"
 

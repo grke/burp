@@ -1,5 +1,11 @@
 Things to watch out for when upgrading.
 
+2.0.30
+------
+The configure system has been rewritten and vastly improved. One difference
+to watch out for is that 'make install' will now overwrite any existing burp
+config files and scripts without any warning.
+
 2.0.26
 ------
 The dhfile generation command in burp_ca has changed from 'openssl dhparam -out

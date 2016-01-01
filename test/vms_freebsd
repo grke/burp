@@ -46,7 +46,7 @@ ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 #	"cd $directory && ./configure --prefix=/usr/local --sbindir=/usr/local/sbin LDFLAGS=\"-L/usr/local/lib\" && make test" \
 #		|| fail "make test"
 ssh $ssh_opts "$host" \
-	"cd $directory && ./configure CPPFLAGS=\"-I/usr/local/include\" LDFLAGS=\"-L/usr/local/lib\" && gmake" \
+	"cd $directory && autoreconf -vif && ./configure CPPFLAGS=\"-I/usr/local/include\" LDFLAGS=\"-L/usr/local/lib\" && gmake" \
 		|| fail "gmake"
 
 stop_instanceids "$instanceids"

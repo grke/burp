@@ -282,7 +282,6 @@ runner_SOURCES = \
 	utest/client/test_auth.c \
 	utest/client/test_find.c \
 	utest/client/test_restore.c \
-	utest/client/test_xattr.c \
 	utest/server/monitor/test_browse.c \
 	utest/server/monitor/test_cstat.c \
 	utest/server/monitor/test_json_output.c \
@@ -307,6 +306,10 @@ runner_SOURCES = \
 	utest/server/test_resume.c \
 	utest/server/test_restore.c \
 	utest/server/test_sdirs.c
+
+if WITH_XATTR
+runner_SOURCES+= utest/client/test_xattr.c
+endif
 
 runner_SOURCES+= $(burp_SOURCES)
 

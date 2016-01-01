@@ -19,7 +19,6 @@ int main(void)
 	srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
 	srunner_add_suite(sr, suite_client_protocol2_backup_phase2());
 	srunner_add_suite(sr, suite_client_restore());
-	srunner_add_suite(sr, suite_client_xattr());
 	srunner_add_suite(sr, suite_cmd());
 	srunner_add_suite(sr, suite_conf());
 	srunner_add_suite(sr, suite_conffile());
@@ -59,7 +58,9 @@ int main(void)
 	srunner_add_suite(sr, suite_server_resume());
 	srunner_add_suite(sr, suite_server_sdirs());
 	srunner_add_suite(sr, suite_slist());
-
+#ifdef HAVE_XATTR
+	srunner_add_suite(sr, suite_client_xattr());
+#endif
 	srunner_run_all(sr, CK_NORMAL);
 	number_failed = srunner_ntests_failed(sr);
 	srunner_free(sr);

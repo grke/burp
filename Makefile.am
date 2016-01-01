@@ -312,7 +312,7 @@ runner_SOURCES+= $(burp_SOURCES)
 
 runner_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
-	--coverage \
+	$(COVERAGE_CFLAGS) \
 	$(CHECK_CFLAGS) \
 	-DUTEST \
 	-DTOP_SRCDIR=\"$(top_srcdir)\" \
@@ -322,7 +322,7 @@ runner_CPPFLAGS = \
 
 runner_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	--coverage \
+	$(COVERAGE_LDFLAGS) \
 	$(OPENSSL_LDFLAGS)
 
 runner_LDADD = \
@@ -335,8 +335,13 @@ runner_LDADD = \
 	$(ZLIBS)
 
 coverage: check
+if WITH_COVERAGE
 	$(AM_V_GEN)$(LCOV) -q --capture --no-external -d . -b . --output-file burp-coverage.info
 	$(AM_V_GEN)$(GENHTML) -q burp-coverage.info --output-directory burp-coverage
+else
+	@echo Coverage support is not enabled
+	@echo run ./configure --with-coverage
+endif
 
 .PHONY: coverage
 

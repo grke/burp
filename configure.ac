@@ -31,9 +31,6 @@ dnl ------------------------------------------------------
 AC_PROG_INSTALL
 AC_PROG_MKDIR_P
 
-AC_PATH_PROG([GENHTML], [genhtml])
-AC_PATH_PROG([LCOV], [lcov])
-
 dnl --------------------------------------------------
 dnl Libtool config
 dnl --------------------------------------------------
@@ -415,6 +412,45 @@ fi
 if test "$have_xattr" = "yes"; then
   AC_DEFINE([HAVE_XATTR], [1], [Extended Attributes support])
 fi
+
+dnl -----------------------------------------------------------
+dnl Check if we want the tests to have code coverage support
+dnl -----------------------------------------------------------
+
+AC_SUBST([COVERAGE_CFLAGS])
+AC_SUBST([COVERAGE_LDFLAGS])
+AC_MSG_CHECKING([whether to build the test suite with code coverage support])
+AC_ARG_WITH([coverage],
+  [AS_HELP_STRING([--with-coverage],
+    [build test suite with code coverage support])],
+  [
+    AC_SUBST([COVERAGE_CFLAGS], [--coverage])
+    AC_SUBST([COVERAGE_LDFLAGS], [--coverage])
+  ],
+  [with_coverage=no]
+)
+AC_MSG_RESULT([$with_coverage])
+AM_CONDITIONAL([WITH_COVERAGE], [test "$with_coverage" = "yes"])
+if test "$with_coverage" = "yes"; then
+  AC_PATH_PROG([LCOV], [lcov], [no])
+fi
+
+if test "$with_coverage" = "yes" && test "$LCOV" = "no"; then
+  AC_MSG_ERROR([Unable to find lcov])
+fi
+
+if test "$with_coverage" = "yes"; then
+  AC_PATH_PROG([GENHTML], [genhtml], [no])
+fi
+
+if test "$with_coverage" = "yes" && test "$GENHTML" = "no"; then
+  AC_MSG_ERROR([Unable to find genhtml])
+fi
+
+
+dnl -----------------------------------------------------------
+dnl Set some defaults
+dnl -----------------------------------------------------------
 
 dnl set sysconfdir to /etc/burp unless specified otherwise
 if test "$prefix" = "NONE" && test "$sysconfdir" = '${prefix}/etc'; then

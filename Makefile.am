@@ -367,9 +367,19 @@ clean-local-check:
 	$(AM_V_at)-rm -rf utest_restore
 	$(AM_V_at)-rm -rf utest_xattr
 
-$(configs): %: $(srcdir)/configs/%.in Makefile
+$(configs): Makefile
+
+burp.conf: $(srcdir)/configs/client/burp.conf.in
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)$(do_subst) <$< >$@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/client/burp.conf.in >$@
+
+burp-server.conf: $(srcdir)/configs/server/burp.conf.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/burp.conf.in >$@
+
+CA.cnf: $(srcdir)/configs/certs/CA/CA.cnf.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/CA.cnf.in >$@
 
 do_subst = ( sed \
   -e 's,[@]runstatedir[@],$(runstatedir),g' \

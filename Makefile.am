@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = -fno-strict-aliasing -fno-exceptions -fno-rtti
+AM_CPPFLAGS = -fno-strict-aliasing -fno-exceptions -fno-rtti -x c++
 
 CLEANFILES =
 

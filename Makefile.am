@@ -70,8 +70,11 @@ dist_script_SCRIPTS = \
 
 clientconfdir = $(sysconfdir)/clientconfdir
 dist_clientconf_DATA = \
-	configs/server/clientconfdir/incexc \
 	configs/server/clientconfdir/testclient
+
+incexcdir = $(clientconfdir)/incexc
+dist_incexc_DATA = \
+	configs/server/clientconfdir/incexc/example
 
 burp_LDADD = \
 	$(ACL_LIBS) \

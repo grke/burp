@@ -12,7 +12,7 @@ port = 4971
 # If you do not wish to run a status server at all, comment status_port out.
 status_port = 4972
 
-directory = /var/spool/burp
+directory = @localstatedir@/spool/burp
 dedup_group = global
 clientconfdir = @sysconfdir@/clientconfdir
 # Choose the protocol to use.

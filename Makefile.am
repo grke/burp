@@ -382,6 +382,7 @@ CA.cnf: $(srcdir)/configs/certs/CA/CA.cnf.in
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/CA.cnf.in >$@
 
 do_subst = ( sed \
+  -e 's,[@]localstatedir[@],$(localstatedir),g' \
   -e 's,[@]runstatedir[@],$(runstatedir),g' \
   -e 's,[@]sbindir[@],$(sbindir),g' \
   -e 's,[@]scriptdir[@],$(scriptdir),g' \

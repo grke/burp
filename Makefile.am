@@ -336,7 +336,15 @@ runner_LDADD = \
 
 coverage: check
 	$(AM_V_GEN)$(LCOV) -q --capture --no-external -d . -b . --output-file burp-coverage.info
-	$(AM_V_GEN)$(GENHTML) -q burp-coverage.info --output-directory burp-coverage
+	$(AM_V_GEN)$(LCOV) -r burp-coverage.info \
+		src/yajl/* \
+		utest/* \
+		utest/*/* \
+		utest/*/*/* \
+		utest/*/*/*/* \
+		utest/*/*/*/*/* \
+			--output-file burp-coverage-clean.info
+	$(AM_V_GEN)$(GENHTML) -q burp-coverage-clean.info --output-directory burp-coverage
 
 .PHONY: coverage
 
@@ -351,7 +359,8 @@ clean-local: clean-local-check
 
 mostlyclean-local:
 	$(AM_V_at)-rm -f burp-coverage.info
-	$(AM_V_at)rm -f $(runner_OBJECTS:.o=.gcno)
+	$(AM_V_at)-rm -f burp-coverage-clean.info
+	$(AM_V_at)-rm -f $(runner_OBJECTS:.o=.gcno)
 	$(AM_V_at)-rm -f $(runner_OBJECTS:.o=.gcda)
 	$(AM_V_at)-rm -rf burp-coverage
 

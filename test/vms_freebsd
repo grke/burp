@@ -42,12 +42,12 @@ scp $ssh_opts "$tarfile" "$host:" \
 	|| fail "scp $tarfile to ubuntu machine"
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
-#ssh $ssh_opts "$host" \
-#	"cd $directory && ./configure --prefix=/usr/local --sbindir=/usr/local/sbin LDFLAGS=\"-L/usr/local/lib\" && make test" \
-#		|| fail "make test"
 ssh $ssh_opts "$host" \
-	"cd $directory && autoreconf -vif && ./configure CPPFLAGS=\"-I/usr/local/include\" LDFLAGS=\"-L/usr/local/lib\" && gmake" \
+	"cd $directory && autoreconf -vif && ./configure --prefix=/usr --sysconfdir=/etc/burp CPPFLAGS=\"-I/usr/local/include\" LDFLAGS=\"-L/usr/local/lib\" && gmake" \
 		|| fail "gmake"
+#ssh $ssh_opts "$host" \
+#	"cd $directory && cd test && gmake test" \
+#		|| fail "gmake test"
 
 stop_instanceids "$instanceids"
 

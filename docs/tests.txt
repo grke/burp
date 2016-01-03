@@ -13,13 +13,16 @@ These tests do not show up in the code coverage report.
 If you wish to run them yourself, change to the top level of the burp source
 directory and do this:
 make clean
+autoreconf --vif
 ./configure
-cd utest
-make
-If the tests pass, and you have lcov installed, a code coverage report will
-be generated in /tmp/burp-coverage.
-If you want to build burp proper after running the unit tests, you will first
-need to run 'make clean' in the top level of the source code.
+make check
+
+If you have lcov installed and you wish to generate a code coverage report when
+the tests pass, you can do so like this:
+make clean
+autoreconf --vif
+./configure --with-coverage
+make coverage
 
 At first glance, the code coverage report will look like not much is getting
 tested, but that is not true, because you will not see (1) showing up in it.

@@ -58,7 +58,7 @@ build_and_install()
 	cdir "$build"
 	make clean
 	autoreconf -vif || fail "autoreconf failed"
-	./configure --prefix=/usr --sysconfdir=/etc/burp || fail "configure failed"
+	./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var || fail "configure failed"
 	make || fail "make failed"
 	# For some reason, make is not returning an error code.
 	# Look for important binaries before carrying on.

@@ -450,7 +450,6 @@ if test "$with_coverage" = "yes" && test "$GENHTML" = "no"; then
   AC_MSG_ERROR([Unable to find genhtml])
 fi
 
-
 dnl -----------------------------------------------------------
 dnl Set some defaults
 dnl -----------------------------------------------------------

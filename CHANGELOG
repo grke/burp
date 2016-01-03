@@ -1,3 +1,16 @@
+2016-01-03 Changes in burp-2.0.30:
+  * Ruben Kerkhof has rewritten the automake/configure system.
+  * Make CMD_INTERRUPT work in protocol 2.
+  * Tests for restore.
+  * Tests for backup phase2.
+  * Tests for champ_server.
+  * Tests for slist.
+  * Fix minor memory leaks.
+  * Bug fix for deleting the current backup.
+  * Correct documentation about ca_crl_check.
+  * Fix listing all backups and using '-d'.
+  * Fix status monitor segfault on exit.
+
 2015-11-30 Changes in burp-2.0.28:
   * Use the same maximum blocksize as rsync ((int32_t)1<<17).
   * Clean up client side librsync load_signature code.

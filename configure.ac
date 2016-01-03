@@ -293,10 +293,14 @@ dnl -----------------------------------------------------------
 dnl Check whether libncurses is available
 dnl -----------------------------------------------------------
 
+have_ncurses=no
 AC_CHECK_HEADERS([ncurses.h],
   [
     AC_CHECK_LIB([ncurses], [curs_set],
-      [NCURSES_LIBS="-lncurses"]
+      [
+        NCURSES_LIBS="-lncurses"
+        have_ncurses=yes
+      ]
     )
   ]
 )
@@ -489,7 +493,7 @@ AC_MSG_NOTICE([])
 AC_MSG_NOTICE([                   acl: ${have_acl}])
 AC_MSG_NOTICE([                 crypt: ${have_crypt}])
 AC_MSG_NOTICE([                  ipv6: ${enable_ipv6}])
-AC_MSG_NOTICE([               ncurses: ${ac_cv_lib_ncurses_curs_set}])
+AC_MSG_NOTICE([               ncurses: ${have_ncurses}])
 AC_MSG_NOTICE([               openssl: ${have_ssl}])
 AC_MSG_NOTICE([                 xattr: ${have_xattr}])
 AC_MSG_NOTICE([                  zlib: ${ac_cv_header_zlib_h}])

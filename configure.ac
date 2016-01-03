@@ -417,6 +417,8 @@ if test "$have_xattr" = "yes"; then
   AC_DEFINE([HAVE_XATTR], [1], [Extended Attributes support])
 fi
 
+AM_CONDITIONAL([WITH_XATTR], [test "$have_xattr" = "yes"])
+
 dnl set sysconfdir to /etc/burp unless specified otherwise
 if test "$prefix" = "NONE" && test "$sysconfdir" = '${prefix}/etc'; then
   sysconfdir='/etc/burp'

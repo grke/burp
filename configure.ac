@@ -294,7 +294,7 @@ dnl Check whether libncurses is available
 dnl -----------------------------------------------------------
 
 have_ncurses=no
-AC_CHECK_HEADERS([ncurses.h],
+AC_CHECK_HEADERS([ncurses.h ncurses/ncurses.h],
   [
     AC_CHECK_LIB([ncurses], [curs_set],
       [

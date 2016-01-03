@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = -fno-strict-aliasing -fno-exceptions -fno-rtti
+AM_CPPFLAGS = -fno-strict-aliasing -fno-exceptions -fno-rtti -x c++
 
 CLEANFILES =
 
@@ -315,7 +315,7 @@ runner_SOURCES+= $(burp_SOURCES)
 
 runner_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
-	--coverage \
+	$(COVERAGE_CFLAGS) \
 	$(CHECK_CFLAGS) \
 	-DUTEST \
 	-DTOP_SRCDIR=\"$(top_srcdir)\" \
@@ -325,7 +325,7 @@ runner_CPPFLAGS = \
 
 runner_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	--coverage \
+	$(COVERAGE_LDFLAGS) \
 	$(OPENSSL_LDFLAGS)
 
 runner_LDADD = \
@@ -338,6 +338,7 @@ runner_LDADD = \
 	$(ZLIBS)
 
 coverage: check
+if WITH_COVERAGE
 	$(AM_V_GEN)$(LCOV) -q --capture --no-external -d . -b . --output-file burp-coverage.info
 	$(AM_V_GEN)$(LCOV) -r burp-coverage.info \
 		src/yajl/* \
@@ -348,6 +349,10 @@ coverage: check
 		utest/*/*/*/*/* \
 			--output-file burp-coverage-clean.info
 	$(AM_V_GEN)$(GENHTML) -q burp-coverage-clean.info --output-directory burp-coverage
+else
+	@echo Coverage support is not enabled
+	@echo run ./configure --with-coverage
+endif
 
 .PHONY: coverage
 
@@ -374,11 +379,22 @@ clean-local-check:
 	$(AM_V_at)-rm -rf utest_restore
 	$(AM_V_at)-rm -rf utest_xattr
 
-$(configs): %: $(srcdir)/configs/%.in Makefile
+$(configs): Makefile
+
+burp.conf: $(srcdir)/configs/client/burp.conf.in
 	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)$(do_subst) <$< >$@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/client/burp.conf.in >$@
+
+burp-server.conf: $(srcdir)/configs/server/burp.conf.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/burp.conf.in >$@
+
+CA.cnf: $(srcdir)/configs/certs/CA/CA.cnf.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/CA.cnf.in >$@
 
 do_subst = ( sed \
+  -e 's,[@]localstatedir[@],$(localstatedir),g' \
   -e 's,[@]runstatedir[@],$(runstatedir),g' \
   -e 's,[@]sbindir[@],$(sbindir),g' \
   -e 's,[@]scriptdir[@],$(scriptdir),g' \

@@ -491,6 +491,7 @@ pre_tweaks_server()
 	sed_rep_server 's#^CA_DIR.*#CA_DIR = '"$target"'/etc/burp/CA#g' "$target/etc/burp/CA.cnf"
 	sed_rep_server 's/^stdout = .*/stdout = 1/g'
 	sed_rep_server 's/^syslog = .*/syslog = 0/g'
+	sed_rep_server 's/^#address = .*/address = '"$serveraddress"'/g'
 }
 
 pre_tweaks_client()

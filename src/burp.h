@@ -141,8 +141,6 @@
 #endif
 #ifdef HAVE_NETBSD_OS
 	#include <sys/endian.h>
-	#define be64toh(x) betoh64(x)
-	#define le64toh(x) letoh64(x)
 #endif
 #ifdef HAVE_SUN_OS
 	#include <sys/isa_defs.h>

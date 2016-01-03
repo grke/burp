@@ -120,10 +120,28 @@ sed -i -e "$1" "$conf" || fail "sed $1 failed $2"
 EOF
 }
 
+append_server()
+{
+	conf="$serverconf"
+	[ -n "$2" ] && conf="$2"
+	cat >> "$serverscript" << EOF
+echo "$1" >> "$conf" || fail "echo $1 failed"
+EOF
+
+}
 sed_rep_client()
 {
 	cat >> "$clientscript" << EOF
 sed -i -e "$1" "$clientconf" || fail "sed $1 failed $2"
+EOF
+}
+
+append_client()
+{
+	conf="$clientconf"
+	[ -n "$2" ] && conf="$2"
+	cat >> "$clientscript" << EOF
+echo "$1" >> "$conf" || fail "echo $1 failed"
 EOF
 }
 
@@ -335,13 +353,13 @@ EOF
 add_compression_off()
 {
 	sed_rep_server 's/^compression = .*//g'
-	sed_rep_server '$ acompression = 0'
+	append_server 'compression = 0'
 }
 
 add_compression_on()
 {
 	sed_rep_server 's/^compression = .*//g'
-	sed_rep_server '$ acompression = 9'
+	append_server 'compression = 9'
 }
 
 add_encryption_off()
@@ -352,7 +370,7 @@ add_encryption_off()
 add_encryption_on()
 {
 	add_encryption_off
-	sed_rep_client '$ aencryption_password = 7djh34nmmsd'
+	append_client 'encryption_password = 7djh34nmmsd'
 }
 
 add_include_off()
@@ -363,7 +381,7 @@ add_include_off()
 add_include_on()
 {
 	add_include_off
-	sed_rep_client '$ ainclude = '"$includedir"
+	append_client "include = $includedir"
 }
 
 add_split_vss_off()
@@ -374,7 +392,7 @@ add_split_vss_off()
 add_split_vss_on()
 {
 	add_split_vss_off
-	sed_rep_client '$ asplit_vss = 1' "$clientconf"
+	append_client "split_vss = 1"
 }
 
 add_strip_vss_off()
@@ -385,7 +403,7 @@ add_strip_vss_off()
 add_strip_vss_on()
 {
 	add_strip_vss_off
-	sed_rep_client '$ astrip_vss = 1' "$clientconf"
+	append_client "strip_vss = 1"
 }
 
 add_protocol1_off()
@@ -397,7 +415,7 @@ add_protocol1_on()
 {
 	add_protocol1_off
 	[ "$protocol" = 1 ] && \
-		sed_rep_client '$ aprotocol = 1' "$clientconf"
+		append_client 'protocol = 1'
 }
 
 add_server_breakpoint_off()
@@ -408,7 +426,7 @@ add_server_breakpoint_off()
 add_server_breakpoint_on()
 {
 	add_server_breakpoint_off
-	sed_rep_server "\$ abreakpoint = $1" "$serverconf"
+	append_server "breakpoint = $1"
 }
 
 add_client_breakpoint_off()
@@ -419,7 +437,7 @@ add_client_breakpoint_off()
 add_client_breakpoint_on()
 {
 	add_client_breakpoint_off
-	sed_rep_client "\$ abreakpoint = $1" "$clientconf"
+	append_client "breakpoint = $1"
 }
 
 add_recovery_method_delete()

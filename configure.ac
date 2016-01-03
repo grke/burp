@@ -397,6 +397,7 @@ dnl Then try the BSD implementation
 if test "$have_xattr" = "no"; then
   AC_CHECK_HEADERS([sys/extattr.h],
     [
+      AC_CHECK_HEADERS_ONCE([libutil.h])
       AC_CHECK_FUNCS([extattr_get_link extattr_set_link extattr_list_link extattr_namespace_to_string extattr_string_to_namespace],
         [have_xattr=yes],
         [have_xattr=no]

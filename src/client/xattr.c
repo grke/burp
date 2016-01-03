@@ -299,15 +299,17 @@ int set_xattr(struct asfd *asfd, const char *path,
 
 #if defined(HAVE_FREEBSD_OS) \
  || defined(HAVE_NETBSD_OS)
-
-
 #include <sys/extattr.h>
+#ifdef HAVE_LIBUTIL_H
 #include <libutil.h>
+#endif
 
 static int namespaces[2] = { EXTATTR_NAMESPACE_USER, EXTATTR_NAMESPACE_SYSTEM };
 
 #if defined(HAVE_FREEBSD_OS)
 static const char *acl_skiplist[2] = { "system.posix1e.acl_access", NULL };
+#elif defined(HAVE_NETBSD_OS)
+static const char *acl_skiplist[1] = { NULL };
 #endif
 
 int has_xattr(const char *path)

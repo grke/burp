@@ -352,19 +352,19 @@ EOF
 
 add_compression_off()
 {
-	sed_rep_server 's/^compression = .*//g'
+	sed_rep_server '/^compression = .*/d'
 	append_server 'compression = 0'
 }
 
 add_compression_on()
 {
-	sed_rep_server 's/^compression = .*//g'
+	sed_rep_server '/^compression = .*/d'
 	append_server 'compression = 9'
 }
 
 add_encryption_off()
 {
-	sed_rep_client 's/^encryption_password = .*//g'
+	sed_rep_client '/^encryption_password = .*/d'
 }
 
 add_encryption_on()
@@ -375,7 +375,7 @@ add_encryption_on()
 
 add_include_off()
 {
-	sed_rep_client 's/^include = .*//g'
+	sed_rep_client '/^include = .*/d'
 }
 
 add_include_on()
@@ -386,7 +386,7 @@ add_include_on()
 
 add_split_vss_off()
 {
-	sed_rep_client 's/^split_vss = .*//g' "$clientconf"
+	sed_rep_client '/^split_vss = .*/d' "$clientconf"
 }
 
 add_split_vss_on()
@@ -397,7 +397,7 @@ add_split_vss_on()
 
 add_strip_vss_off()
 {
-	sed_rep_client 's/^strip_vss = .*//g' "$clientconf"
+	sed_rep_client '/^strip_vss = .*/d' "$clientconf"
 }
 
 add_strip_vss_on()
@@ -408,7 +408,7 @@ add_strip_vss_on()
 
 add_protocol1_off()
 {
-	sed_rep_client 's/^protocol = .*//g' "$clientconf"
+	sed_rep_client '/^protocol = .*/d' "$clientconf"
 }
 
 add_protocol1_on()
@@ -420,7 +420,7 @@ add_protocol1_on()
 
 add_server_breakpoint_off()
 {
-	sed_rep_server 's/^breakpoint = .*//g' "$serverconf"
+	sed_rep_server '/^breakpoint = .*/d' "$serverconf"
 }
 
 add_server_breakpoint_on()
@@ -431,7 +431,7 @@ add_server_breakpoint_on()
 
 add_client_breakpoint_off()
 {
-	sed_rep_client 's/^breakpoint = .*//g' "$clientconf"
+	sed_rep_client '/^breakpoint = .*/d' "$clientconf"
 }
 
 add_client_breakpoint_on()

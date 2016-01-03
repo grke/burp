@@ -17,7 +17,9 @@
 #endif
 
 #ifdef HAVE_NCURSES_H
-#include "ncurses.h"
+#include <ncurses.h>
+#elif HAVE_NCURSES_NCURSES_H
+#include <ncurses/ncurses.h>
 #endif
 
 #include "protocol2/blist.h"
@@ -59,7 +61,7 @@ static int extract_buf(struct asfd *asfd,
 	return 0;
 }
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 static int parse_readbuf_ncurses(struct asfd *asfd)
 {
 	if(!asfd->readbuflen) return 0;
@@ -131,7 +133,7 @@ static int asfd_parse_readbuf(struct asfd *asfd)
 	return 0;
 }
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 static int asfd_do_read_ncurses(struct asfd *asfd)
 {
 	static int i;
@@ -526,7 +528,7 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 	{
 		asfd->do_read=asfd_do_read;
 		asfd->do_write=asfd_do_write;
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
 		{
 			asfd->do_read=asfd_do_read_ncurses;
@@ -547,7 +549,7 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 		case ASFD_STREAM_LINEBUF:
 			asfd->parse_readbuf_specific=parse_readbuf_line_buf;
 			break;
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		case ASFD_STREAM_NCURSES_STDIN:
 			asfd->parse_readbuf_specific=parse_readbuf_ncurses;
 			break;

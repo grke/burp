@@ -300,6 +300,7 @@ AC_CHECK_HEADERS([ncurses.h ncurses/ncurses.h],
       [
         NCURSES_LIBS="-lncurses"
         have_ncurses=yes
+        AC_DEFINE([HAVE_NCURSES], [1], [Set to 1 if we have ncurses])
       ]
     )
   ]

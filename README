@@ -12,8 +12,9 @@ for you:
 apt-get install librsync-dev libz-dev libssl-dev uthash-dev libyajl-dev
 
 Change to the burp source directory and run "autoreconf -vif", "./configure
---prefix=/usr --sysconfdir=/etc/burp" then "make". All being well, burp will
-compile successfully. Then run "make install" as root to install.
+--prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var" then "make". All
+being well, burp will compile successfully. Then run "make install" as root to
+install.
 
 Start the burp server with this command: burp -c /etc/burp/burp-server.conf
 

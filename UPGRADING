@@ -1,5 +1,12 @@
 Things to watch out for when upgrading.
 
+2.0.32
+------
+'make install' will now install everything except configuration files.
+'make install-config' will install configuration files, and will overwrite
+without warning.
+'make install-all' will install everything.
+
 2.0.30
 ------
 The configure system has been rewritten and vastly improved. One difference

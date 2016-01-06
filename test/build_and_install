@@ -50,7 +50,7 @@ build_and_install()
 	# For some reason, make is not returning an error code.
 	# Look for important binaries before carrying on.
 	[ -x burp ] || fail "make failed to build binaries"
-	make install DESTDIR="$target" || fail "make install failed"
+	make install-all DESTDIR="$target" || fail "make install failed"
 	cdir -
 }
 

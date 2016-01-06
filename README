@@ -14,8 +14,10 @@ apt-get install autconf automake libtool make pkg-config check g++ \
 
 Change to the burp source directory and run "autoreconf -vif", "./configure
 --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var" then "make". All
-being well, burp will compile successfully. Then run "make install" as root to
-install.
+being well, burp will compile successfully. Then run "make install" and then
+"make install-configs" as root to install. The "make install-configs" command
+will overwrite configuration files in /etc/burp, so you will probably not
+want to do that if you have an existing burp installation.
 
 Start the burp server with this command: burp -c /etc/burp/burp-server.conf
 

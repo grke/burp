@@ -51,11 +51,28 @@ dist_man8_MANS = \
 	manpages/burp_ca.8 \
 	manpages/vss_strip.8
 
-sysconf_DATA = $(configs)
-
 configs = burp.conf burp-server.conf CA.cnf
 
 CLEANFILES+= $(configs)
+
+install-all: install install-configs
+
+install-configs: $(configs) install-clientconfdir
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/CA-client
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION)
+	echo $(configs) | while read files ; do \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(sysconfdir)" || exit $$?; \
+	done
+
+clientconfdir = $(sysconfdir)/clientconfdir
+incexcdir = $(clientconfdir)/incexc
+
+install-clientconfdir:
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(clientconfdir)
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(incexcdir)
+	$(INSTALL_DATA) configs/server/clientconfdir/testclient "$(DESTDIR)$(clientconfdir)"
+	$(INSTALL_DATA) configs/server/clientconfdir/incexc/example "$(DESTDIR)$(incexcdir)"
 
 
 sbin_PROGRAMS = burp
@@ -67,14 +84,6 @@ dist_script_SCRIPTS = \
 	configs/server/notify_script \
 	configs/server/ssl_extra_checks_script \
 	configs/server/summary_script
-
-clientconfdir = $(sysconfdir)/clientconfdir
-dist_clientconf_DATA = \
-	configs/server/clientconfdir/testclient
-
-incexcdir = $(clientconfdir)/incexc
-dist_incexc_DATA = \
-	configs/server/clientconfdir/incexc/example
 
 burp_LDADD = \
 	$(ACL_LIBS) \
@@ -359,9 +368,6 @@ endif
 install-data-local:
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(localstatedir)/spool/burp
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(runstatedir)
-	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/CA-client
-	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32
-	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win64/$(VERSION)
 
 clean-local: clean-local-check
 

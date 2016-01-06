@@ -9,7 +9,8 @@ you have openssl, zlib, librsync, uthash and yajl libraries and development
 libraries installed. With debian or ubuntu, this command should install them
 for you:
 
-apt-get install librsync-dev libz-dev libssl-dev uthash-dev libyajl-dev
+apt-get install autconf automake libtool make pkg-config check g++ \
+	librsync-dev libz-dev libssl-dev uthash-dev libyajl-dev
 
 Change to the burp source directory and run "autoreconf -vif", "./configure
 --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var" then "make". All

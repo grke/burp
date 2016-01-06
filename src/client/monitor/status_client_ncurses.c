@@ -18,10 +18,16 @@
 #include "status_client_ncurses.h"
 
 #ifdef HAVE_NCURSES_H
-#include "ncurses.h"
+#include <ncurses.h>
+#elif HAVE_NCURSES_NCURSES_H
+#include <ncurses/ncurses.h>
+#endif
+
+#ifdef HAVE_NCURSES
 // So that the sighandler can call endwin():
 static enum action actg=ACTION_STATUS;
 #endif
+
 
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
@@ -36,7 +42,7 @@ static void print_line(const char *string, int row, int col)
 {
 	int k=0;
 	const char *cp=NULL;
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
 		while(k<LEFT_SPACE) mvprintw(row+TOP_SPACE, k++, " ");
@@ -51,7 +57,7 @@ static void print_line(const char *string, int row, int col)
 	{
 		printf("%c", *cp);
 		k++;
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS && k<col) break;
 #endif
 	}
@@ -354,7 +360,7 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 	}
 	if(path && *path)
 	{
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS)
 		{
 			printw("\n%s\n", path);
@@ -375,7 +381,7 @@ static void screen_header(int row, int col)
 	time_t t=time(NULL);
 	date=getdatestr(t);
 	l=strlen(date);
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
 		char v[32]="";
@@ -438,7 +444,7 @@ static void print_logs_list_line(struct sel *sel,
 	print_line(msg, (*x)++, col);
 
 	if(!sel->logop) sel->logop=bit;
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(sel->logop==bit) mvprintw(*x+TOP_SPACE-1, 1, "*");
 #endif
 }
@@ -472,7 +478,7 @@ static void client_and_status_and_backup_and_log(struct sel *sel,
 	print_line(msg, (*x)++, col);
 }
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 static int selindex_from_cstat(struct sel *sel)
 {
 	int selindex=0;
@@ -524,13 +530,13 @@ static void print_logs_list(struct sel *sel, int *x, int col)
 static void update_screen_clients(struct sel *sel, int *x, int col,
 	int winmin, int winmax, struct conf **confs)
 {
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	int s=0;
 #endif
 	struct cstat *c;
 	int star_printed=0;
 	int max_cname=28*((float)col/100);
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS_SNAPSHOT)
 #endif
 	{
@@ -541,7 +547,7 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 	}
 	for(c=sel->clist; c; c=c->next)
 	{
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS)
 		{
 			s++;
@@ -552,7 +558,7 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 
 		client_summary(c, (*x)++, col, max_cname, confs);
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS && sel->client==c)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
@@ -566,7 +572,7 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 static void update_screen_backups(struct sel *sel, int *x, int col,
 	int winmin, int winmax)
 {
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	int s=0;
 #endif
 	struct bu *b;
@@ -575,7 +581,7 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 	const char *extradesc=NULL;
 	for(b=sel->client->bu; b; b=b->next)
 	{
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS)
 		{
 			s++;
@@ -598,7 +604,7 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 				get_bu_str(b),
 				extradesc);
 		print_line(msg, (*x)++, col);
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS && sel->backup==b)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
@@ -679,7 +685,7 @@ static void update_screen_live_counters(struct cstat *client, int *x, int col)
 static void update_screen_view_log(struct sel *sel, int *x, int col,
 	int winmin, int winmax)
 {
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	int s=0;
 #endif
 	int o=0;
@@ -695,7 +701,7 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 
 	for(l=sel->llines; l; l=l->next)
 	{
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS)
 		{
 			s++;
@@ -708,7 +714,7 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 		for(cp=l->line, o=0; *cp && o<sel->offset; cp++, o++) { }
 		print_line(cp, (*x)++, col);
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS && sel->lline==l)
 		{
 			mvprintw((*x)+TOP_SPACE-1, 1, "*");
@@ -724,7 +730,7 @@ static int update_screen(struct sel *sel, struct conf **confs)
 	int x=0;
 	int row=24;
 	int col=80;
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	int selindex=0;
 	static int selindex_last=0;
 #endif
@@ -733,7 +739,7 @@ static int update_screen(struct sel *sel, struct conf **confs)
 
 	screen_header(row, col);
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
 		getmaxyx(stdscr, row, col);
@@ -769,7 +775,7 @@ static int update_screen(struct sel *sel, struct conf **confs)
 			break;
 	}
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
 		// Adjust sliding window appropriately.
@@ -833,7 +839,7 @@ static int update_screen(struct sel *sel, struct conf **confs)
 			break;
 	}
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
 		// Blank any remainder of the screen.
@@ -924,7 +930,7 @@ static int request_status(struct asfd *asfd,
 
 static void sighandler(int sig)
 {
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS) endwin();
 #endif
         logp("got signal: %d\n", sig);
@@ -941,7 +947,7 @@ static void setup_signals(void)
 	signal(SIGPIPE, &sighandler);
 }
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 static void left(struct sel *sel)
 {
 	switch(sel->page)
@@ -1233,7 +1239,7 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 
 static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 {
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
 		return parse_stdin_data(asfd, sel, count);
 #endif
@@ -1317,7 +1323,7 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 		if(!sel->client) sel->client=sel->clist;
 		if(!sel->backup && sel->client) sel->backup=sel->client->bu;
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 		if(act==ACTION_STATUS
 		  && update_screen(sel, confs))
 			goto error;
@@ -1343,7 +1349,7 @@ error:
 	return ret;
 }
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 static void ncurses_init(void)
 {
 	initscr();
@@ -1383,7 +1389,7 @@ int status_client_ncurses(enum action act, struct conf **confs)
 	struct async *as=NULL;
 	const char *monitor_logfile=get_string(confs[OPT_MONITOR_LOGFILE]);
 
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	actg=act; // So that the sighandler can call endwin().
 #else
 	if(act==ACTION_STATUS)
@@ -1411,7 +1417,7 @@ int status_client_ncurses(enum action act, struct conf **confs)
 		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_READ, -1, confs))
 			goto end;
 //printf("ml: %s\n", monitor_logfile);
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
 		int stdinfd=fileno(stdin);
@@ -1431,7 +1437,7 @@ int status_client_ncurses(enum action act, struct conf **confs)
 
 	ret=main_loop(as, act, confs);
 end:
-#ifdef HAVE_NCURSES_H
+#ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS) endwin();
 #endif
 	if(ret) logp("%s exiting with error: %d\n", __func__, ret);

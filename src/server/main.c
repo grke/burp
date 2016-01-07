@@ -218,11 +218,8 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	SSL_set_verify(ssl, SSL_VERIFY_PEER
 		/* | SSL_VERIFY_FAIL_IF_NO_PEER_CERT */, 0);
 
-	if(SSL_accept(ssl)<=0)
-	{
-		logp_ssl_err("SSL_accept\n");
+	if(ssl_do_accept(ssl))
 		goto end;
-	}
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
 	  || !setup_asfd(as, "main socket",

@@ -6,6 +6,34 @@
 
 static const char *pass=NULL;
 
+int ssl_do_accept(SSL *ssl)
+{
+	while(1)
+	{
+		int r;
+		ERR_clear_error();
+		switch((r=SSL_accept(ssl)))
+		{
+			case 1:
+				return 0;
+			case 0:
+				switch(SSL_get_error(ssl, r))
+				{
+					case SSL_ERROR_WANT_READ:
+						continue;
+					default:
+						goto error;
+				}
+				break;
+			default:
+				goto error;
+		}
+	}
+error:
+	logp_ssl_err("SSL_accept\n");
+	return -1;
+}
+
 int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 {
 	DH *ret=0;

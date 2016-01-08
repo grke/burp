@@ -13,14 +13,12 @@ These tests do not show up in the code coverage report.
 If you wish to run them yourself, change to the top level of the burp source
 directory and do this:
 make clean
-autoreconf --vif
 ./configure
 make check
 
 If you have lcov installed and you wish to generate a code coverage report when
 the tests pass, you can do so like this:
 make clean
-autoreconf --vif
 ./configure --with-coverage
 make coverage
 

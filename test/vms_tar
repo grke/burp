@@ -2,13 +2,17 @@
 
 v=$(awk '/AC_INIT/{print ;exit}' configure.ac | cut -d ',' -f 2 | sed -e 's/\[//' -e 's/\]//')
 [ -n $v ] || exit 1
-dir=burp-$v
+dir=burp-"$v"
 ext=tar.bz2
-tarfile=$dir.$ext
+tarfile="$dir.$ext"
 
 files=$(ls)
-mkdir $dir || exit 1
-mv $files $dir || exit 1
-tar -cjvf $tarfile $dir || exit 1
+mkdir "$dir" || exit 1
+mv $files "$dir" || exit 1
+cd "$dir" || exit 1
+autoreconf -vif || exit 1
+rm -rf autom4te.cache || exit 1
+cd - || exit 1
+tar -cjvf "$tarfile" "$dir" || exit 1
 
 exit 0

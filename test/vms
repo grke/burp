@@ -46,7 +46,7 @@ scp $ssh_opts "$tarfile" "$host:" \
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \
-	"cd $directory && autoreconf -vif && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var --with-coverage && make coverage" \
+	"cd $directory && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var --with-coverage && make coverage" \
 		|| fail "make coverage"
 scp -r $ssh_opts "$host:$directory/burp-coverage" . \
 	|| fail "copying code coverage"
@@ -54,7 +54,7 @@ ssh $ssh_opts "$host" \
 	"cd $directory && make clean && cd test && make test" \
 		|| fail "make test"
 ssh $ssh_opts "$host" \
-	"cd $directory && autoreconf -vif && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var && cd src/win32 && make && make WIN64=yes" \
+	"cd $directory && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var && cd src/win32 && make && make WIN64=yes" \
 		|| fail "building windows installers"
 ssh $ssh_opts "$host" \
 	"cd $directory/test && ./test_windows64 $ubuntu $windows Administrator" \

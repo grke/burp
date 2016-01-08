@@ -12,10 +12,10 @@ for you:
 apt-get install autconf automake libtool make pkg-config check g++ \
 	librsync-dev libz-dev libssl-dev uthash-dev libyajl-dev
 
-Change to the burp source directory and run "autoreconf -vif", "./configure
---prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var" then "make". All
-being well, burp will compile successfully. Then run "make install" and then
-"make install-configs" as root to install. The "make install-configs" command
+Change to the burp source directory and run "./configure --prefix=/usr
+--sysconfdir=/etc/burp --localstatedir=/var" then "make". All being well, burp
+will compile successfully. Then run "make install" and then "make
+install-configs" as root to install. The "make install-configs" command
 will overwrite configuration files in /etc/burp, so you will probably not
 want to do that if you have an existing burp installation.
 

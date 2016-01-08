@@ -17,6 +17,8 @@ int ssl_do_accept(SSL *ssl)
 			case 1:
 				return 0;
 			case 0:
+				goto error;
+			default:
 				switch(SSL_get_error(ssl, r))
 				{
 					case SSL_ERROR_WANT_READ:
@@ -25,8 +27,6 @@ int ssl_do_accept(SSL *ssl)
 						goto error;
 				}
 				break;
-			default:
-				goto error;
 		}
 	}
 error:

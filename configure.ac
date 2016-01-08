@@ -74,25 +74,12 @@ AC_SYS_LARGEFILE
 dnl --------------------------------------------------------------------------
 dnl Check for utimebuf structure
 dnl --------------------------------------------------------------------------
-AC_CACHE_CHECK([for struct utimebuf], [ba_cv_header_utime_h], [
-  AC_COMPILE_IFELSE(
-    [AC_LANG_PROGRAM(
-      [[
-        #include <sys/types.h>
-        #include <utime.h>
-      ]],
-      [[
-        struct utimbuf foo;
-      ]]
-    )],
-    [ba_cv_header_utime_h=yes],
-    [ba_cv_header_utime_h=no]
-  )
-])
-
-if test "$ba_cv_header_utime_h" = "yes"; then
-  AC_DEFINE([HAVE_UTIME_H], [1], [Set to 1 if we have struct utimebuf])
-fi
+AC_CHECK_TYPES([struct utimbuf], [], [],
+  [[
+    #include <sys/types.h>
+    #include <utime.h>
+  ]]
+)
 
 dnl --------------------------------------------------------------------------
 dnl Check for typeof()

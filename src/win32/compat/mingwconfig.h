@@ -23,8 +23,8 @@
 /* Define if you have GCC */
 #define HAVE_GCC 1
 
-/* Define to 1 if utime.h exists and declares struct utimbuf.  */
-#define HAVE_UTIME_H 1
+/* Define to 1 if struct utimbuf exists.  */
+#define HAVE_STRUCT_UTIMBUF 1
 
 /* Data types */
 #define HAVE_U_INT 1

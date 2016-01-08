@@ -86,7 +86,7 @@
 	#include "winhost.h"
 #endif
 
-#if HAVE_UTIME_H
+#if HAVE_STRUCT_UTIMBUF
 	#include <utime.h>
 #else
 	struct utimbuf {

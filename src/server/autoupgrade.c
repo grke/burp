@@ -101,7 +101,6 @@ int autoupgrade_server(struct async *as,
 	}
 	if(asfd_flush_asio(asfd))
 		goto end;
-	ret=0;
 	/* Clients currently exit after forking, so exit ourselves. */
 	logp("Expecting client to upgrade - now exiting\n");
 	asfd_free(&as->asfd);

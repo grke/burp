@@ -127,7 +127,6 @@ int get_xattr(struct asfd *asfd, const char *path,
 		have_acl++;
 	}
 
-	z=xattrlist;
 	for(z=xattrlist; z-xattrlist <= len; z=strchr(z, '\0')+1)
 	{
 		char tmp1[9];

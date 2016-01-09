@@ -110,7 +110,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 			path, len, strerror(errno));
 		return 0; // carry on
 	}
-	if(!(xattrlist=(char *)calloc_w(1, len+1, __func__)))
+	if(!(xattrlist=(char *)calloc_w(1, len, __func__)))
 		return -1;
 	if((len=llistxattr(path, xattrlist, len))<0)
 	{
@@ -119,7 +119,6 @@ int get_xattr(struct asfd *asfd, const char *path,
 		free_w(&xattrlist);
 		return 0; // carry on
 	}
-	xattrlist[len]='\0';
 
 	if(xattrtext && *xattrtext)
 	{

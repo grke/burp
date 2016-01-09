@@ -582,17 +582,16 @@ void asfd_close(struct asfd *asfd)
 	if(!asfd) return;
 	if(asfd->ssl && asfd->fd>=0)
 	{
-		int r;
 		set_blocking(asfd->fd);
 		// I do not think this SSL_shutdown stuff works right.
 		// Ignore it for now.
 #ifndef HAVE_WIN32
 		signal(SIGPIPE, SIG_IGN);
 #endif
-		if(!(r=SSL_shutdown(asfd->ssl)))
+		if(!SSL_shutdown(asfd->ssl))
 		{
 			shutdown(asfd->fd, 1);
-			r=SSL_shutdown(asfd->ssl);
+			SSL_shutdown(asfd->ssl);
 		}
 	}
 	if(asfd->ssl)

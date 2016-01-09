@@ -131,8 +131,7 @@ int from_base64(int64_t *value, const char *where)
 uint64_t base64_to_uint64(const char *buf)
 {
 	int64_t val;
-	const char *p=buf;
-	p+=from_base64(&val, p);
+	from_base64(&val, buf);
 	return (uint64_t)val;
 }
 

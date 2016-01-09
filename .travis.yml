@@ -1,0 +1,40 @@
+sudo: required
+dist: trusty
+language: cpp
+git:
+  depth: 3
+compiler:
+  - gcc
+  - clang
+os:
+  - linux
+  - osx
+osx_image: xcode7.2
+
+deploy:
+  skip_cleanup: true
+
+before_script:
+  - git describe --always --dirty=+
+
+before_install:
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get -qq update || true
+  - test "$TRAVIS_OS_NAME" = "osx" && sudo wget -q https://raw.githubusercontent.com/troydhanson/uthash/master/src/uthash.h -O /usr/local/include/uthash.h || true
+  - test "$TRAVIS_OS_NAME" = "osx" && brew update || true
+install:
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get -qq install check || true
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get -qq install libacl1-dev || true
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get -qq install libncurses5-dev || true
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get -qq install librsync-dev || true
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get -qq install uthash-dev || true
+  - test "$TRAVIS_OS_NAME" = "osx" && brew install check || true
+  - test "$TRAVIS_OS_NAME" = "osx" && brew install librsync || true
+  - test "$TRAVIS_OS_NAME" = "osx" && brew install openssl || true
+
+script:
+  - autoreconf -vif
+  - test "$TRAVIS_OS_NAME" = "linux" && ./configure || ./configure --with-openssl=/usr/local/opt/openssl
+  - test "$TRAVIS_OS_NAME" = "linux" && make -j3 distcheck  || make -j3 distcheck DISTCHECK_CONFIGURE_FLAGS="--with-openssl=/usr/local/opt/openssl"
+
+after_failure:
+  - cat burp-*/_build/test-suite.log

@@ -43,7 +43,7 @@ scp $ssh_opts "$tarfile" "$host:" \
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \
-	"cd $directory && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var CPPFLAGS=\"-I/usr/local/include\" LDFLAGS=\"-L/usr/local/lib\" && make" \
+	"cd $directory && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var && make" \
 		|| fail "make"
 #ssh $ssh_opts "$host" \
 #	"cd $directory && cd test && make test" \

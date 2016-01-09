@@ -97,7 +97,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 	char **xattrtext, size_t *xlen, struct cntr *cntr)
 {
 	char *z=NULL;
-	size_t len=0;
+	ssize_t len;
 	int have_acl=0;
 	char *toappend=NULL;
 	char *xattrlist=NULL;
@@ -129,12 +129,12 @@ int get_xattr(struct asfd *asfd, const char *path,
 	}
 
 	z=xattrlist;
-	for(z=xattrlist; len > (size_t)(z-xattrlist)+1; z=strchr(z, '\0')+1)
+	for(z=xattrlist; len > z-xattrlist+1; z=strchr(z, '\0')+1)
 	{
 		char tmp1[9];
 		char tmp2[9];
 		char *val=NULL;
-		size_t vlen=0;
+		ssize_t vlen;
 		size_t zlen=0;
 		size_t newlen=0;
 

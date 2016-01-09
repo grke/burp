@@ -24,10 +24,7 @@ static int rs_loadsig_network_run(struct asfd *asfd,
 
 	if(!(in_fb=rs_filebuf_new(NULL,
 		NULL, asfd, ASYNC_BUF_LEN, -1)))
-	{
-		result=RS_MEM_ERROR;
 		goto end;
-	}
 
 	while(1)
 	{

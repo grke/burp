@@ -6,9 +6,31 @@
 # Date:      29.12.2012
 
 # Locking code to try to make sure that two instances do not run together and
-# corrupt the ca files.
-[ "${FLOCKER}" != "$0" ] \
-  && exec env FLOCKER="$0" flock -e -w 60 /tmp/burp_ca.lock "$0" "$@" || :
+# corrupt the CA files.
+LOCKFILE="/tmp/burp_ca.lock"
+
+lock()
+{
+    if (set -o noclobber; : > "$LOCKFILE") 2>/dev/null; then
+        trap 'rm -f "$LOCKFILE"; exit $?' INT TERM EXIT
+        return 0
+    fi
+    return 1
+}
+
+maxwait=60
+sleeptime=1
+sleptfor=0
+
+while ! lock; do
+    sleep $sleeptime
+    let sleptfor+=$sleeptime
+    let sleeptime*=2
+    if [ $sleptfor -ge $maxwait ]; then
+        echo "Failed to acquire lock $lockfile in $sleptfor seconds" >&2
+        exit 1
+    fi
+done
 
 set -e
 

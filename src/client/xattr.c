@@ -101,8 +101,8 @@ int get_xattr(struct asfd *asfd, const char *path,
 	int have_acl=0;
 	char *toappend=NULL;
 	char *xattrlist=NULL;
-	size_t totallen=0;
-	size_t maxlen=0xFFFFFFFF/2;
+	ssize_t totallen=0;
+	ssize_t maxlen=0xFFFFFFFF/2;
 
 	if((len=llistxattr(path, NULL, 0))<0)
 	{
@@ -133,8 +133,8 @@ int get_xattr(struct asfd *asfd, const char *path,
 		char tmp2[9];
 		char *val=NULL;
 		ssize_t vlen;
-		size_t zlen=0;
-		size_t newlen=0;
+		ssize_t zlen=0;
+		ssize_t newlen=0;
 
 		if((zlen=strlen(z))>maxlen)
 		{

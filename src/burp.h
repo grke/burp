@@ -142,6 +142,9 @@
 #ifdef HAVE_NETBSD_OS
 	#include <sys/endian.h>
 #endif
+#ifdef HAVE_DRAGONFLY_OS
+	#include <sys/endian.h>
+#endif
 #ifdef HAVE_SUN_OS
 	#include <sys/isa_defs.h>
 	#include <sys/byteorder.h>

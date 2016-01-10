@@ -48,6 +48,11 @@ case $host in
   *-*-darwin*)
     AC_DEFINE([HAVE_DARWIN_OS], [1], [Set to 1 if the OS is Darwin])
     ;;
+  *-*-dragonfly*)
+    AC_DEFINE([HAVE_DRAGONFLY_OS], [1], [Set to 1 if the OS is DragonFlyBSD])
+    CPPFLAGS="-I/usr/local/include $CPPFLAGS"
+    LDFLAGS="-L/usr/local/lib $LDFLAGS"
+    ;;
   *-*-freebsd*)
     AC_DEFINE([HAVE_FREEBSD_OS], [1], [Set to 1 if the OS is FreeBSD])
     CPPFLAGS="-I/usr/local/include $CPPFLAGS"
@@ -330,7 +335,7 @@ if test "$enable_acl" != "no"; then
   AC_CHECK_HEADERS([sys/acl.h],
     [
       save_LIBS="$LIBS"
-      AC_SEARCH_LIBS([acl_get_file], [acl],
+      AC_SEARCH_LIBS([acl_get_file], [acl posix1e],
         [
           have_acl=yes
           ACL_LIBS="$LIBS"

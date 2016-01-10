@@ -37,8 +37,12 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs)
 			log_fzp_set(NULL, confs);
 			switch(champ_chooser_server(sdirs, confs))
 			{
-				case 0: cret=0;
-				default: cret=1;
+				case 0:
+					cret=0;
+					break;
+				default:
+					cret=1;
+					break;
 			}
 			exit(cret);
 		default:

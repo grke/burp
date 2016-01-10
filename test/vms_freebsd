@@ -43,11 +43,11 @@ scp $ssh_opts "$tarfile" "$host:" \
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \
-	"cd $directory && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var CPPFLAGS=\"-I/usr/local/include\" LDFLAGS=\"-L/usr/local/lib\" && gmake" \
-		|| fail "gmake"
+	"cd $directory && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var && make" \
+		|| fail "make"
 #ssh $ssh_opts "$host" \
-#	"cd $directory && cd test && gmake test" \
-#		|| fail "gmake test"
+#	"cd $directory && cd test && make test" \
+#		|| fail "make test"
 
 stop_instanceids "$instanceids"
 

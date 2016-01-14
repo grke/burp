@@ -385,7 +385,7 @@ have_xattr=no
 
 dnl First check for the Linux or OSX implementation
 if test "$enable_xattr" != "no"; then
-  AC_CHECK_HEADER([sys/xattr.h],
+  AC_CHECK_HEADERS([sys/xattr.h],
     [
       AC_CHECK_FUNCS([llistxattr lgetxattr lsetxattr listxattr getxattr setxattr],
         [have_xattr=yes],
@@ -400,10 +400,20 @@ dnl Then try the BSD implementation
 if test "$have_xattr" = "no"; then
   AC_CHECK_HEADERS([sys/extattr.h],
     [
-      AC_CHECK_HEADERS_ONCE([libutil.h])
-      AC_CHECK_FUNCS([extattr_get_link extattr_set_link extattr_list_link extattr_namespace_to_string extattr_string_to_namespace],
+      AC_CHECK_HEADERS([libutil.h])
+      AC_CHECK_DECLS([extattr_get_link, extattr_set_link, extattr_list_link, extattr_namespace_to_string, extattr_string_to_namespace],
         [have_xattr=yes],
-        [have_xattr=no]
+        [have_xattr=no],
+        [AC_INCLUDES_DEFAULT
+          [
+            #ifdef HAVE_SYS_EXTATTR_H
+            #include <sys/extattr.h>
+            #endif
+            #ifdef HAVE_LIBUTIL_H
+            #include <libutil.h>
+            #endif
+          ]
+        ]
       )
     ],
     [have_xattr=no]

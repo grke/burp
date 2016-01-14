@@ -8,11 +8,59 @@
 #include "extrameta.h"
 #include "xattr.h"
 
+#ifdef HAVE_SYS_XATTR_H
+#include <sys/xattr.h>
+#endif
+
+#ifdef HAVE_SYS_EXTATTR_H
+#include <sys/extattr.h>
+#endif
+#ifdef HAVE_LIBUTIL_H
+#include <libutil.h>
+#endif
+
 #ifdef HAVE_XATTR
-#if defined(HAVE_LINUX_OS) \
- || defined(HAVE_FREEBSD_OS) \
- || defined(HAVE_NETBSD_OS) \
- || defined(HAVE_DARWIN_OS)
+
+#if defined(HAVE_DARWIN_OS)
+
+/*
+ * OSX doesn't have llistxattr, lgetxattr and lsetxattr but has
+ * listxattr, getxattr and setxattr with an extra options argument
+ * which mimics the l variants of the functions when we specify
+ * XATTR_NOFOLLOW as the options value.
+ */
+#define llistxattr(path, list, size) \
+listxattr((path), (list), (size), XATTR_NOFOLLOW)
+#define lgetxattr(path, name, value, size) \
+getxattr((path), (name), (value), (size), 0, XATTR_NOFOLLOW)
+#define lsetxattr(path, name, value, size, flags) \
+setxattr((path), (name), (value), (size), (flags), XATTR_NOFOLLOW)
+
+
+static const char *xattr_acl_skiplist[2] = {
+    "com.apple.system.Security",
+    NULL
+};
+#endif // HAVE_DARWIN_OS
+
+#if defined(HAVE_LINUX_OS)
+static const char *xattr_acl_skiplist[3] = {
+    "system.posix_acl_access",
+    "system.posix_acl_default",
+    NULL
+};
+#endif // HAVE_LINUX_OS
+
+#if defined(HAVE_FREEBSD_OS)
+static const char *acl_skiplist[2] = {
+    "system.posix1e.acl_access", NULL
+};
+#endif // HAVE_FREEBSD_OS
+
+#if defined(HAVE_NETBSD_OS)
+static const char *acl_skiplist[1] = { NULL };
+#endif // HAVE_NETBSD_OS
+
 
 static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
 	struct cntr *cntr, ssize_t *s, const char *path)
@@ -37,46 +85,8 @@ static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
 
 	return ret;
 }
-#endif
-#endif
 
-#ifdef HAVE_XATTR
-#if defined(HAVE_LINUX_OS) \
- || defined(HAVE_DARWIN_OS)
-#include <sys/xattr.h>
-
-
-#if defined(HAVE_DARWIN_OS)
-
-static const char *xattr_acl_skiplist[2] = {
-    "com.apple.system.Security",
-    NULL
-};
-
-#else
-
-static const char *xattr_acl_skiplist[3] = { "system.posix_acl_access", "system.posix_acl_default", NULL };
-//static const char *xattr_skiplist[1] = { NULL };
-#endif
-
-
-/*
- * OSX doesn't have llistxattr, lgetxattr and lsetxattr but has
- * listxattr, getxattr and setxattr with an extra options argument
- * which mimics the l variants of the functions when we specify
- * XATTR_NOFOLLOW as the options value.
- */
-#if defined(HAVE_DARWIN_OS)
-#define llistxattr(path, list, size) \
-listxattr((path), (list), (size), XATTR_NOFOLLOW)
-#define lgetxattr(path, name, value, size) \
-getxattr((path), (name), (value), (size), 0, XATTR_NOFOLLOW)
-#define lsetxattr(path, name, value, size, flags) \
-setxattr((path), (name), (value), (size), (flags), XATTR_NOFOLLOW)
-
-#endif
-
-
+#ifdef HAVE_SYS_XATTR_H
 int has_xattr(const char *path)
 {
 	if(llistxattr(path, NULL, 0)>0) return 1;
@@ -87,12 +97,12 @@ int get_xattr(struct asfd *asfd, const char *path,
 	char **xattrtext, size_t *xlen, struct cntr *cntr)
 {
 	char *z=NULL;
-	size_t len=0;
+	ssize_t len;
 	int have_acl=0;
 	char *toappend=NULL;
 	char *xattrlist=NULL;
-	size_t totallen=0;
-	size_t maxlen=0xFFFFFFFF/2;
+	ssize_t totallen=0;
+	ssize_t maxlen=0xFFFFFFFF/2;
 
 	if((len=llistxattr(path, NULL, 0))<0)
 	{
@@ -100,7 +110,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 			path, len, strerror(errno));
 		return 0; // carry on
 	}
-	if(!(xattrlist=(char *)calloc_w(1, len+1, __func__)))
+	if(!(xattrlist=(char *)calloc_w(1, len, __func__)))
 		return -1;
 	if((len=llistxattr(path, xattrlist, len))<0)
 	{
@@ -109,7 +119,6 @@ int get_xattr(struct asfd *asfd, const char *path,
 		free_w(&xattrlist);
 		return 0; // carry on
 	}
-	xattrlist[len]='\0';
 
 	if(xattrtext && *xattrtext)
 	{
@@ -118,15 +127,14 @@ int get_xattr(struct asfd *asfd, const char *path,
 		have_acl++;
 	}
 
-	z=xattrlist;
-	for(z=xattrlist; len > (size_t)(z-xattrlist)+1; z=strchr(z, '\0')+1)
+	for(z=xattrlist; z-xattrlist <= len; z=strchr(z, '\0')+1)
 	{
 		char tmp1[9];
 		char tmp2[9];
 		char *val=NULL;
-		size_t vlen=0;
-		size_t zlen=0;
-		size_t newlen=0;
+		ssize_t vlen;
+		ssize_t zlen=0;
+		ssize_t newlen=0;
 
 		if((zlen=strlen(z))>maxlen)
 		{
@@ -294,23 +302,14 @@ int set_xattr(struct asfd *asfd, const char *path,
 	}
 	return -1;
 }
+#endif // HAVE_SYS_XATTR_H
 
-#endif // HAVE_LINUX_OS
 
-#if defined(HAVE_FREEBSD_OS) \
- || defined(HAVE_NETBSD_OS)
-#include <sys/extattr.h>
-#ifdef HAVE_LIBUTIL_H
-#include <libutil.h>
-#endif
-
-static int namespaces[2] = { EXTATTR_NAMESPACE_USER, EXTATTR_NAMESPACE_SYSTEM };
-
-#if defined(HAVE_FREEBSD_OS)
-static const char *acl_skiplist[2] = { "system.posix1e.acl_access", NULL };
-#elif defined(HAVE_NETBSD_OS)
-static const char *acl_skiplist[1] = { NULL };
-#endif
+#ifdef HAVE_SYS_EXTATTR_H
+static int namespaces[2] = {
+	EXTATTR_NAMESPACE_USER,
+	EXTATTR_NAMESPACE_SYSTEM
+};
 
 int has_xattr(const char *path)
 {
@@ -582,7 +581,6 @@ int set_xattr(struct asfd *asfd, const char *path,
 	}
 	return -1;
 }
-
-#endif // HAVE_FREE/NETBSD_OS
+#endif // HAVE_SYS_EXTATTR_H
 
 #endif // HAVE_XATTR

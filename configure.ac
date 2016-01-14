@@ -87,6 +87,12 @@ AC_CHECK_TYPES([struct utimbuf], [], [],
 )
 
 dnl --------------------------------------------------------------------------
+dnl Check for endian headers
+dnl --------------------------------------------------------------------------
+AC_CHECK_HEADERS([endian.h sys/endian.h sys/byteorder.h libkern/OSByteOrder.h],
+  [break]
+)
+dnl --------------------------------------------------------------------------
 dnl Check for typeof()
 dnl --------------------------------------------------------------------------
 AC_CACHE_CHECK([for typeof], [ba_cv_have_typeof], [

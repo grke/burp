@@ -98,10 +98,27 @@
 #ifdef HAVE_DIRENT_H
 #endif
 
-#ifdef HAVE_LINUX_OS
+#ifdef HAVE_ENDIAN_H
 	#include <endian.h>
-#endif
-#ifdef HAVE_WIN32
+#elif HAVE_SYS_ENDIAN_H
+	#include <sys/endian.h>
+#elif HAVE_LIBKERN_OSBYTEORDER_H
+	#include <libkern/OSByteOrder.h>
+	#define htobe64(x) OSSwapHostToBigInt64(x)
+	#define htole64(x) OSSwapHostToLittleInt64(x)
+	#define be64toh(x) OSSwapBigToHostInt64(x)
+	#define le64toh(x) OSSwapLittleToHostInt64(x)
+	#define __BYTE_ORDER    BYTE_ORDER
+	#define __BIG_ENDIAN    BIG_ENDIAN
+	#define __LITTLE_ENDIAN LITTLE_ENDIAN
+	#define __PDP_ENDIAN    PDP_ENDIAN
+#elif HAVE_SYS_BYTEORDER_H
+	#include <sys/byteorder.h>
+	#define be64toh(x) BE_64(x)
+	#define htobe64(x) BE_64(x)
+	#define htole64(x) LE_64(x)
+	#define le64toh(x) LE_64(x)
+#elif HAVE_WIN32
 	#include <winsock2.h>
 	#include <sys/param.h>
 	#if BYTE_ORDER == LITTLE_ENDIAN
@@ -121,37 +138,6 @@
 	#define __BIG_ENDIAN    BIG_ENDIAN
 	#define __LITTLE_ENDIAN	LITTLE_ENDIAN
 	#define __PDP_ENDIAN	PDP_ENDIAN
-#endif
-#ifdef HAVE_DARWIN_OS
-	#include <libkern/OSByteOrder.h>
-	#define htobe64(x) OSSwapHostToBigInt64(x)
-	#define htole64(x) OSSwapHostToLittleInt64(x)
-	#define be64toh(x) OSSwapBigToHostInt64(x)
-	#define le64toh(x) OSSwapLittleToHostInt64(x)
-	#define __BYTE_ORDER    BYTE_ORDER
-	#define __BIG_ENDIAN    BIG_ENDIAN
-	#define __LITTLE_ENDIAN LITTLE_ENDIAN
-	#define __PDP_ENDIAN    PDP_ENDIAN
-#endif
-#ifdef HAVE_OPENBSD_OS
-	#include <sys/endian.h>
-#endif
-#ifdef HAVE_FREEBSD_OS
-	#include <sys/endian.h>
-#endif
-#ifdef HAVE_NETBSD_OS
-	#include <sys/endian.h>
-#endif
-#ifdef HAVE_DRAGONFLY_OS
-	#include <sys/endian.h>
-#endif
-#ifdef HAVE_SUN_OS
-	#include <sys/isa_defs.h>
-	#include <sys/byteorder.h>
-	#define be64toh(x) BE_64(x)
-	#define htobe64(x) BE_64(x)
-	#define htole64(x) LE_64(x)
-	#define le64toh(x) LE_64(x)
 #endif
 
 #endif

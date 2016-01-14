@@ -39,7 +39,7 @@ while true ; do
 		fail "Could not make initial ssh connection after $attempts"
 done
 
-ssh $ssh_opts "$host" "rm -rf $tarfile $directory" \
+ssh $ssh_opts "$host" "rm -rf $tarfile $directory /tmp/burp_ca.lock" \
 	|| fail "cleaning ubuntu machine"
 scp $ssh_opts "$tarfile" "$host:" \
 	|| fail "scp $tarfile to ubuntu machine"

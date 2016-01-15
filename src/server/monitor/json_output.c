@@ -200,7 +200,7 @@ static int do_counters(struct cntr *cntr)
 	struct cntr_ent *e;
 
 #ifndef UTEST
-	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)time(NULL);
+	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=((uint64_t)time(NULL) - timezone);
 #endif
 	if(yajl_gen_str_w("counters")
 	  || yajl_array_open_w()) return -1;

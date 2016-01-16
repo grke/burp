@@ -57,6 +57,12 @@ CLEANFILES+= $(configs)
 
 install-all: install install-configs
 
+LN_S = ln -s -f
+
+install-exec-hook:
+	$(AM_V_at)$(LN_S) burp $(DESTDIR)$(sbindir)/bedup
+	$(AM_V_at)$(LN_S) burp $(DESTDIR)$(sbindir)/bsigs
+
 install-configs: $(configs) install-clientconfdir
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/CA-client
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/autoupgrade/server/win32
@@ -74,6 +80,7 @@ install-clientconfdir:
 	$(INSTALL_DATA) configs/server/clientconfdir/testclient "$(DESTDIR)$(clientconfdir)"
 	$(INSTALL_DATA) configs/server/clientconfdir/incexc/example "$(DESTDIR)$(incexcdir)"
 
+bin_PROGRAMS = vss_strip
 
 sbin_PROGRAMS = burp
 
@@ -84,6 +91,8 @@ dist_script_SCRIPTS = \
 	configs/server/notify_script \
 	configs/server/ssl_extra_checks_script \
 	configs/server/summary_script
+
+vss_strip_SOURCES = src/server/protocol1/vss_strip.c
 
 burp_LDADD = \
 	$(ACL_LIBS) \

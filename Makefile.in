@@ -40,7 +40,7 @@ all: Makefile
 	@for I in ${all_subdirs}; \
 	  do (cd $$I; echo "==>Entering directory `pwd`"; \
 	      $(MAKE) $@ || (echo ""; echo ""; echo "  ====== Error in `pwd` ======"; \
-			    echo ""; echo "";)); \
+			    echo ""; echo ""; exit 1;)) || exit 1; \
 	done
 
 depend:

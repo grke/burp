@@ -161,22 +161,28 @@ static void add_node(int find, const char *path, mode_t mode, long ftype)
 
 static void add_sock(int find, const char *path)
 {
-	return add_node(find, path, S_IFSOCK, (long)FT_SPEC);
+	char *tmp;
+	long ftype=(long)FT_SPEC;
+	fail_unless((tmp=prepend_s(fullpath, path))!=NULL);
+	fail_unless(!mksock(tmp));
+	if(find==FOUND)
+		fail_unless(!strlist_add(&expected, tmp, ftype));
+	free_w(&tmp);
 }
 
 static void do_add_fifo(int find, const char *path, long ftype)
 {
-	return add_node(find, path, S_IFIFO, ftype);
+	add_node(find, path, S_IFIFO, ftype);
 }
 
 static void add_fifo(int find, const char *path)
 {
-	return do_add_fifo(find, path, (long)FT_FIFO);
+	do_add_fifo(find, path, (long)FT_FIFO);
 }
 
 static void add_fifo_special(int find, const char *path)
 {
-	return do_add_fifo(find, path, (long)FT_SPEC);
+	do_add_fifo(find, path, (long)FT_SPEC);
 }
 
 static void run_find(const char *buf, FF_PKT *ff, struct conf **confs)

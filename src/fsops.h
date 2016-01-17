@@ -31,4 +31,8 @@ extern int entries_in_directory_alphasort_rev(const char *path,
 extern int entries_in_directory_no_sort(const char *path,
 	struct dirent ***nl, int *count, int atime);
 
+#ifndef HAVE_WIN32
+extern int mksock(const char *path);
+#endif
+
 #endif

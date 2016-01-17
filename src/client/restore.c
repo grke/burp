@@ -245,9 +245,17 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 			cntr_add(cntr, CMD_SPECIAL, 1);
 		}
 	}
-//	else if(S_ISSOCK(statp.st_mode))
-//		do_logw(asfd, cntr, "Skipping restore of socket: %s\n", fname);
-//
+	else if(S_ISSOCK(statp.st_mode))
+	{
+		if(mksock(rpath))
+			do_logw(asfd, cntr,
+				"Cannot make socket: %s\n", strerror(errno));
+		else
+		{
+			attribs_set(asfd, rpath, &statp, sb->winattr, cntr);
+			cntr_add(cntr, CMD_SPECIAL, 1);
+		}
+	}
 #ifdef S_IFDOOR     // Solaris high speed RPC mechanism
 	else if (S_ISDOOR(statp.st_mode))
 		do_logw(asfd, cntr,

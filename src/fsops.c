@@ -5,6 +5,10 @@
 #include "pathcmp.h"
 #include "prepend.h"
 
+#ifndef HAVE_WIN32
+#include <sys/un.h>
+#endif
+
 uint32_t fs_name_max=0;
 uint32_t fs_full_path_max=0;
 static uint32_t fs_path_max=0;
@@ -461,3 +465,22 @@ int entries_in_directory_no_sort(const char *path, struct dirent ***nl,
 {
 	return entries_in_directory(path, nl, count, atime, NULL);
 }
+
+#ifndef HAVE_WIN32
+int mksock(const char *path)
+{
+	int fd=-1;
+	int ret=-1;
+	struct sockaddr_un addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family=AF_UNIX;
+	strncpy(addr.sun_path, path, sizeof(addr.sun_path)-1);
+	if((fd=socket(addr.sun_family, SOCK_STREAM, 0))<0
+	  || (bind(fd, (struct sockaddr *)&addr, sizeof(addr)))<0)
+		goto end;
+	ret=0;
+end:
+	if(fd>=0) close(fd);
+	return ret;
+}
+#endif

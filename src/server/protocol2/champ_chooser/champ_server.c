@@ -231,7 +231,6 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 			goto end;
 	}
 
-	unlink(local.sun_path);
 	if((s=socket(AF_UNIX, SOCK_STREAM, 0))<0)
 	{
 		logp("socket error in %s: %s\n", __func__, strerror(errno));
@@ -240,8 +239,9 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 
 	memset(&local, 0, sizeof(struct sockaddr_un));
 	local.sun_family=AF_UNIX;
-	strcpy(local.sun_path, sdirs->champsock);
-	len=strlen(local.sun_path)+sizeof(local.sun_family);
+	snprintf(local.sun_path, sizeof(local.sun_path),
+		"%s", sdirs->champsock);
+	len=strlen(local.sun_path)+sizeof(local.sun_family)+1;
 	unlink(sdirs->champsock);
 	if(bind(s, (struct sockaddr *)&local, len)<0)
 	{

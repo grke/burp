@@ -78,8 +78,9 @@ static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf **confs)
 
 	memset(&remote, 0, sizeof(struct sockaddr_un));
 	remote.sun_family=AF_UNIX;
-	strcpy(remote.sun_path, sdirs->champsock);
-	len=strlen(remote.sun_path)+sizeof(remote.sun_family);
+	snprintf(remote.sun_path, sizeof(remote.sun_path),
+		"%s", sdirs->champsock);
+	len=strlen(remote.sun_path)+sizeof(remote.sun_family)+1;
 
 	while(tries++<tries_max)
 	{

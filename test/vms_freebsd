@@ -45,9 +45,9 @@ ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 ssh $ssh_opts "$host" \
 	"cd $directory && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var && make" \
 		|| fail "make"
-#ssh $ssh_opts "$host" \
-#	"cd $directory && cd test && make test" \
-#		|| fail "make test"
+ssh $ssh_opts "$host" \
+	"cd $directory && cd test && make test" \
+		|| fail "make test"
 
 stop_instanceids "$instanceids"
 

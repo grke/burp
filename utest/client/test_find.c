@@ -149,16 +149,6 @@ static void add_nostat(int find, const char *path)
 	free_w(&tmp);
 }
 
-static void add_node(int find, const char *path, mode_t mode, long ftype)
-{
-	char *tmp;
-	fail_unless((tmp=prepend_s(fullpath, path))!=NULL);
-	fail_unless(!mknod(tmp, mode, 100));
-	if(find==FOUND)
-		fail_unless(!strlist_add(&expected, tmp, ftype));
-	free_w(&tmp);
-}
-
 static void add_sock(int find, const char *path)
 {
 	char *tmp;
@@ -170,19 +160,24 @@ static void add_sock(int find, const char *path)
 	free_w(&tmp);
 }
 
-static void do_add_fifo(int find, const char *path, long ftype)
+static void do_add_fifo(int find, const char *path, mode_t mode, long ftype)
 {
-	add_node(find, path, S_IFIFO, ftype);
+	char *tmp;
+	fail_unless((tmp=prepend_s(fullpath, path))!=NULL);
+	fail_unless(!mkfifo(tmp, mode));
+	if(find==FOUND)
+		fail_unless(!strlist_add(&expected, tmp, ftype));
+	free_w(&tmp);
 }
 
 static void add_fifo(int find, const char *path)
 {
-	do_add_fifo(find, path, (long)FT_FIFO);
+	do_add_fifo(find, path, S_IFIFO, (long)FT_FIFO);
 }
 
 static void add_fifo_special(int find, const char *path)
 {
-	do_add_fifo(find, path, (long)FT_SPEC);
+	do_add_fifo(find, path, S_IFIFO, (long)FT_SPEC);
 }
 
 static void run_find(const char *buf, FF_PKT *ff, struct conf **confs)

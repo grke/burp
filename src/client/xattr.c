@@ -86,226 +86,7 @@ static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
 	return ret;
 }
 
-#ifdef HAVE_SYS_XATTR_H
-int has_xattr(const char *path)
-{
-	if(llistxattr(path, NULL, 0)>0) return 1;
-	return 0;
-}
-
-int get_xattr(struct asfd *asfd, const char *path,
-	char **xattrtext, size_t *xlen, struct cntr *cntr)
-{
-	char *z=NULL;
-	ssize_t len;
-	int have_acl=0;
-	char *toappend=NULL;
-	char *xattrlist=NULL;
-	ssize_t totallen=0;
-	ssize_t maxlen=0xFFFFFFFF/2;
-
-	if((len=llistxattr(path, NULL, 0))<0)
-	{
-		logw(asfd, cntr, "could not llistxattr '%s': %d %s\n",
-			path, len, strerror(errno));
-		return 0; // carry on
-	}
-	if(!(xattrlist=(char *)calloc_w(1, len, __func__)))
-		return -1;
-	if((len=llistxattr(path, xattrlist, len))<0)
-	{
-		logw(asfd, cntr, "could not llistxattr '%s': %d %s\n",
-			path, len, strerror(errno));
-		free_w(&xattrlist);
-		return 0; // carry on
-	}
-
-	if(xattrtext && *xattrtext)
-	{
-		// Already have some meta text, which means that some
-		// ACLs were set.
-		have_acl++;
-	}
-
-	for(z=xattrlist; z-xattrlist <= len; z=strchr(z, '\0')+1)
-	{
-		char tmp1[9];
-		char tmp2[9];
-		char *val=NULL;
-		ssize_t vlen;
-		ssize_t zlen=0;
-		ssize_t newlen=0;
-
-		if((zlen=strlen(z))>maxlen)
-		{
-                	logw(asfd, cntr, "xattr element of '%s' too long: %d\n",
-				path, zlen);
-			free_w(&toappend);
-			break;
-		}
-
-		if(have_acl)
-		{
-			int c=0;
-			int skip=0;
-			// skip xattr entries that were already saved as ACLs.
-			for(c=0; xattr_acl_skiplist[c]; c++)
-			{
-				if(!strcmp(z, xattr_acl_skiplist[c]))
-				{
-					skip++;
-					break;
-				}
-			}
-			if(skip) continue;
-		}
-
-		if((vlen=lgetxattr(path, z, NULL, 0))<0)
-		{
-			logw(asfd, cntr,
-				"could not lgetxattr on %s for %s: %d %s\n",
-				path, z, vlen, strerror(errno));
-			continue;
-		}
-		if(vlen)
-		{
-			if(!(val=(char *)malloc_w(vlen+1, __func__)))
-			{
-				free_w(&xattrlist);
-				free_w(&toappend);
-				return -1;
-			}
-			if((vlen=lgetxattr(path, z, val, vlen))<0)
-			{
-				logw(asfd, cntr,
-				  "could not lgetxattr %s for %s: %d %s\n",
-					path, z, vlen, strerror(errno));
-				free_w(&val);
-				continue;
-			}
-			val[vlen]='\0';
-
-			if(vlen>maxlen)
-			{
-				logw(asfd, cntr,
-					"xattr value of '%s' too long: %d\n",
-					path, vlen);
-				free_w(&toappend);
-				free_w(&val);
-				break;
-			}
-		}
-
-		snprintf(tmp1, sizeof(tmp1), "%08X", (unsigned int)zlen);
-		snprintf(tmp2, sizeof(tmp2), "%08X", (unsigned int)vlen);
-		newlen=totallen+8+zlen+8+vlen;
-		if(!(toappend=(char *)realloc_w(toappend, newlen, __func__)))
-		{
-			free_w(&val);
-			free_w(&xattrlist);
-			return -1;
-		}
-		memcpy(toappend+totallen, tmp1, 8);
-		totallen+=8;
-		memcpy(toappend+totallen, z, zlen);
-		totallen+=zlen;
-		memcpy(toappend+totallen, tmp2, 8);
-		totallen+=8;
-		memcpy(toappend+totallen, val, vlen);
-		totallen+=vlen;
-		free_w(&val);
-
-		if(totallen>maxlen)
-		{
-                	logw(asfd, cntr,
-				"xattr length of '%s' grew too long: %d\n",
-				path, totallen);
-			free_w(&val);
-			free_w(&toappend);
-			free_w(&xattrlist);
-			return 0; // carry on
-		}
-	}
-
-	if(toappend)
-	{
-		char tmp3[10];
-		size_t newlen=0;
-		snprintf(tmp3, sizeof(tmp3), "%c%08X",
-			META_XATTR, (unsigned int)totallen);
-		newlen=(*xlen)+9+totallen;
-		if(!(*xattrtext=(char *)
-			realloc_w(*xattrtext, newlen, __func__)))
-		{
-			free_w(&toappend);
-			free_w(&xattrlist);
-			return -1;
-		}
-		memcpy(*xattrtext, tmp3, 9);
-		(*xlen)+=9;
-		memcpy((*xattrtext)+(*xlen), toappend, totallen);
-		(*xlen)+=totallen;
-		free_w(&toappend);
-	}
-	free_w(&xattrlist);
-	return 0;
-}
-
-static int do_set_xattr(struct asfd *asfd,
-	const char *path,
-	const char *xattrtext, size_t xlen, struct cntr *cntr)
-{
-	size_t l=0;
-	int ret=-1;
-	char *data=NULL;
-	char *name=NULL;
-	char *value=NULL;
-
-	data=(char *)xattrtext;
-	l=xlen;
-	while(l>0)
-	{
-		ssize_t s=0;
-		free_w(&name);
-		free_w(&value);
-
-		if(!(name=get_next_str(asfd, &data, &l, cntr, &s, path))
-		  || !(value=get_next_str(asfd, &data, &l, cntr, &s, path)))
-			goto end;
-		if(lsetxattr(path, name, value, s, 0))
-		{
-			logw(asfd, cntr, "lsetxattr error on %s: %s\n",
-				path, strerror(errno));
-			goto end;
-		}
-	}
-
-	ret=0;
-end:
-	free_w(&name);
-	free_w(&value);
-	return ret;
-}
-
-int set_xattr(struct asfd *asfd, const char *path,
-	const char *xattrtext, size_t xlen, char metacmd, struct cntr *cntr)
-{
-	switch(metacmd)
-	{
-		case META_XATTR:
-			return do_set_xattr(asfd,
-				path, xattrtext, xlen, cntr);
-		default:
-			logp("unknown xattr type: %c\n", metacmd);
-			logw(asfd, cntr, "unknown xattr type: %c\n", metacmd);
-			break;
-	}
-	return -1;
-}
-#endif // HAVE_SYS_XATTR_H
-
-
-#ifdef HAVE_SYS_EXTATTR_H
+#if defined(HAVE_SYS_EXTATTR_H)
 static int namespaces[2] = {
 	EXTATTR_NAMESPACE_USER,
 	EXTATTR_NAMESPACE_SYSTEM
@@ -581,6 +362,222 @@ int set_xattr(struct asfd *asfd, const char *path,
 	}
 	return -1;
 }
-#endif // HAVE_SYS_EXTATTR_H
+#elif defined(HAVE_SYS_XATTR_H)
+int has_xattr(const char *path)
+{
+	if(llistxattr(path, NULL, 0)>0) return 1;
+	return 0;
+}
+
+int get_xattr(struct asfd *asfd, const char *path,
+	char **xattrtext, size_t *xlen, struct cntr *cntr)
+{
+	char *z=NULL;
+	ssize_t len;
+	int have_acl=0;
+	char *toappend=NULL;
+	char *xattrlist=NULL;
+	ssize_t totallen=0;
+	ssize_t maxlen=0xFFFFFFFF/2;
+
+	if((len=llistxattr(path, NULL, 0))<0)
+	{
+		logw(asfd, cntr, "could not llistxattr '%s': %d %s\n",
+			path, len, strerror(errno));
+		return 0; // carry on
+	}
+	if(!(xattrlist=(char *)calloc_w(1, len, __func__)))
+		return -1;
+	if((len=llistxattr(path, xattrlist, len))<0)
+	{
+		logw(asfd, cntr, "could not llistxattr '%s': %d %s\n",
+			path, len, strerror(errno));
+		free_w(&xattrlist);
+		return 0; // carry on
+	}
+
+	if(xattrtext && *xattrtext)
+	{
+		// Already have some meta text, which means that some
+		// ACLs were set.
+		have_acl++;
+	}
+
+	for(z=xattrlist; z-xattrlist <= len; z=strchr(z, '\0')+1)
+	{
+		char tmp1[9];
+		char tmp2[9];
+		char *val=NULL;
+		ssize_t vlen;
+		ssize_t zlen=0;
+		ssize_t newlen=0;
+
+		if((zlen=strlen(z))>maxlen)
+		{
+			logw(asfd, cntr, "xattr element of '%s' too long: %d\n",
+				path, zlen);
+			free_w(&toappend);
+			break;
+		}
+
+		if(have_acl)
+		{
+			int c=0;
+			int skip=0;
+			// skip xattr entries that were already saved as ACLs.
+			for(c=0; xattr_acl_skiplist[c]; c++)
+			{
+				if(!strcmp(z, xattr_acl_skiplist[c]))
+				{
+					skip++;
+					break;
+				}
+			}
+			if(skip) continue;
+		}
+
+		if((vlen=lgetxattr(path, z, NULL, 0))<0)
+		{
+			logw(asfd, cntr,
+				"could not lgetxattr on %s for %s: %d %s\n",
+				path, z, vlen, strerror(errno));
+			continue;
+		}
+		if(vlen)
+		{
+			if(!(val=(char *)malloc_w(vlen+1, __func__)))
+			{
+				free_w(&xattrlist);
+				free_w(&toappend);
+				return -1;
+			}
+			if((vlen=lgetxattr(path, z, val, vlen))<0)
+			{
+				logw(asfd, cntr,
+				  "could not lgetxattr %s for %s: %d %s\n",
+					path, z, vlen, strerror(errno));
+				free_w(&val);
+				continue;
+			}
+			val[vlen]='\0';
+
+			if(vlen>maxlen)
+			{
+				logw(asfd, cntr,
+					"xattr value of '%s' too long: %d\n",
+					path, vlen);
+				free_w(&toappend);
+				free_w(&val);
+				break;
+			}
+		}
+
+		snprintf(tmp1, sizeof(tmp1), "%08X", (unsigned int)zlen);
+		snprintf(tmp2, sizeof(tmp2), "%08X", (unsigned int)vlen);
+		newlen=totallen+8+zlen+8+vlen;
+		if(!(toappend=(char *)realloc_w(toappend, newlen, __func__)))
+		{
+			free_w(&val);
+			free_w(&xattrlist);
+			return -1;
+		}
+		memcpy(toappend+totallen, tmp1, 8);
+		totallen+=8;
+		memcpy(toappend+totallen, z, zlen);
+		totallen+=zlen;
+		memcpy(toappend+totallen, tmp2, 8);
+		totallen+=8;
+		memcpy(toappend+totallen, val, vlen);
+		totallen+=vlen;
+		free_w(&val);
+
+		if(totallen>maxlen)
+		{
+			logw(asfd, cntr,
+				"xattr length of '%s' grew too long: %d\n",
+				path, totallen);
+			free_w(&val);
+			free_w(&toappend);
+			free_w(&xattrlist);
+			return 0; // carry on
+		}
+	}
+
+	if(toappend)
+	{
+		char tmp3[10];
+		size_t newlen=0;
+		snprintf(tmp3, sizeof(tmp3), "%c%08X",
+			META_XATTR, (unsigned int)totallen);
+		newlen=(*xlen)+9+totallen;
+		if(!(*xattrtext=(char *)
+			realloc_w(*xattrtext, newlen, __func__)))
+		{
+			free_w(&toappend);
+			free_w(&xattrlist);
+			return -1;
+		}
+		memcpy(*xattrtext, tmp3, 9);
+		(*xlen)+=9;
+		memcpy((*xattrtext)+(*xlen), toappend, totallen);
+		(*xlen)+=totallen;
+		free_w(&toappend);
+	}
+	free_w(&xattrlist);
+	return 0;
+}
+
+static int do_set_xattr(struct asfd *asfd,
+	const char *path,
+	const char *xattrtext, size_t xlen, struct cntr *cntr)
+{
+	size_t l=0;
+	int ret=-1;
+	char *data=NULL;
+	char *name=NULL;
+	char *value=NULL;
+
+	data=(char *)xattrtext;
+	l=xlen;
+	while(l>0)
+	{
+		ssize_t s=0;
+		free_w(&name);
+		free_w(&value);
+
+		if(!(name=get_next_str(asfd, &data, &l, cntr, &s, path))
+		  || !(value=get_next_str(asfd, &data, &l, cntr, &s, path)))
+			goto end;
+		if(lsetxattr(path, name, value, s, 0))
+		{
+			logw(asfd, cntr, "lsetxattr error on %s: %s\n",
+				path, strerror(errno));
+			goto end;
+		}
+	}
+
+	ret=0;
+end:
+	free_w(&name);
+	free_w(&value);
+	return ret;
+}
+
+int set_xattr(struct asfd *asfd, const char *path,
+	const char *xattrtext, size_t xlen, char metacmd, struct cntr *cntr)
+{
+	switch(metacmd)
+	{
+		case META_XATTR:
+			return do_set_xattr(asfd,
+				path, xattrtext, xlen, cntr);
+		default:
+			logp("unknown xattr type: %c\n", metacmd);
+			logw(asfd, cntr, "unknown xattr type: %c\n", metacmd);
+			break;
+	}
+	return -1;
+}
+#endif // HAVE_SYS_XATTR_H
 
 #endif // HAVE_XATTR

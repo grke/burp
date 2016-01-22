@@ -145,8 +145,6 @@ int get_xattr(struct asfd *asfd, const char *path,
 		}
 		xattrlist[len]='\0';
 
-		// Convert namespace number to string. It has to be freed
-		// later on.
 		if(extattr_namespace_to_string(namespaces[i], &cnamespace))
 		{
 			logp("Failed to convert %d into namespace on '%s'\n",
@@ -255,8 +253,6 @@ int get_xattr(struct asfd *asfd, const char *path,
 				return 0; // carry on
 			}
 		}
-
-		free_w(&cnamespace);
 
 		if(toappend)
 		{

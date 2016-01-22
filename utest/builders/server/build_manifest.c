@@ -64,7 +64,8 @@ struct slist *build_slist_phase1(const char *prefix,
 				sb->path.cmd=CMD_DIRECTORY;
 				break;
 			case 4:
-				sb->path.cmd=CMD_ENC_FILE;
+				if(protocol==PROTO_1)
+					sb->path.cmd=CMD_ENC_FILE;
 				break;
 			case 5:
 				sb->path.cmd=CMD_SPECIAL;

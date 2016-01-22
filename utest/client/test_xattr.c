@@ -67,9 +67,11 @@ static struct xattrdata x[] = {
 static void test_xattr(struct xattrdata x)
 {
 	size_t rlen=0;
+	char metasymbol=META_XATTR;
 	char *retrieved=NULL;
 	const char *path=NULL;
 	const char *myfile=BASE "/myfile";
+	char expected[256];
 
 	fail_unless(recursive_delete(BASE)==0);
 	build_file(myfile, NULL);
@@ -77,13 +79,25 @@ static void test_xattr(struct xattrdata x)
 	if(x.do_dir) path=BASE;
 	else path=myfile;
 
+#if defined(HAVE_FREEBSD_OS) || defined(HAVE_NETBSD_OS)
+	metasymbol=META_XATTR_BSD;
+#endif
+#if defined(HAVE_DARWIN_OS)
+	metasymbol=META_XATTR_OSX;
+#endif
+#if defined(HAVE_LINUX_OS)
+	metasymbol=META_XATTR;
+#endif
+	snprintf(expected, sizeof(expected), "%s", x.expected_read);
+	expected[0]=metasymbol;
+
 	fail_unless(has_xattr(path)==0);
 	fail_unless(!set_xattr(
 		NULL, // asfd
 		path,
 		x.write,
 		strlen(x.write),
-		META_XATTR,
+		metasymbol,
 		NULL // cntr
 	));
 	fail_unless(!get_xattr(
@@ -93,8 +107,8 @@ static void test_xattr(struct xattrdata x)
 		&rlen,
 		NULL // cntr
 	));
-	fail_unless(rlen==strlen(x.expected_read));
-	fail_unless(!memcmp(x.expected_read, retrieved, rlen));
+	fail_unless(rlen==strlen(expected));
+	fail_unless(!memcmp(expected, retrieved, rlen));
 	free_w(&retrieved);
 	tear_down();
 }

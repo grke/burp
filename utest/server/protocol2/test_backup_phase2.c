@@ -587,14 +587,14 @@ static void setup_asfds_happy_path_one_blk_per_file_no_dedup_big(
 
 	setup_writes_from_slist_blk_requests(asfd, &aw, slist, 1, 0);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
-	asfd_mock_read_no_op(asfd, &ar, 25600);
+	asfd_mock_read_no_op(asfd, &ar, 35600);
 	setup_reads_from_slist_blks(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
 
 	setup_chfd_writes_from_slist(chfd, &cw, slist, 1, 0);
-	asfd_mock_read_no_op(chfd, &cr, 25600);
+	asfd_mock_read_no_op(chfd, &cr, 35600);
 	setup_chfd_reads_from_slist_blks_not_got(chfd, &cr, slist, 1, 0);
-	asfd_mock_read_no_op(chfd, &cr, 25600);
+	asfd_mock_read_no_op(chfd, &cr, 35600);
 	asfd_assert_write(chfd, &cw, 0, CMD_GEN, "sigs_end");
 	asfd_assert_write(chfd, &cw, 0, CMD_MANIFEST, "utest_server_protocol2_backup_phase2/a_group/clients/utestclient/working/changed/00000000");
 }

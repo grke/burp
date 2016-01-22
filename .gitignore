@@ -37,6 +37,7 @@
 /utest_lockfile
 /utest_restore/
 /utest_xattr/
+/vss_strip
 Makefile
 Makefile.in
 config.h.in

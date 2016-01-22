@@ -383,21 +383,8 @@ AC_MSG_RESULT([$enable_xattr])
 
 have_xattr=no
 
-dnl First check for the Linux or OSX implementation
+dnl First try the BSD implementation
 if test "$enable_xattr" != "no"; then
-  AC_CHECK_HEADERS([sys/xattr.h],
-    [
-      AC_CHECK_FUNCS([llistxattr lgetxattr lsetxattr listxattr getxattr setxattr],
-        [have_xattr=yes],
-        [have_xattr=no]
-      )
-    ],
-    [have_xattr=no]
-  )
-fi
-
-dnl Then try the BSD implementation
-if test "$have_xattr" = "no"; then
   AC_CHECK_HEADERS([sys/extattr.h],
     [
       AC_CHECK_HEADERS([libutil.h])
@@ -414,6 +401,19 @@ if test "$have_xattr" = "no"; then
             #endif
           ]
         ]
+      )
+    ],
+    [have_xattr=no]
+  )
+fi
+
+dnl Then check for the Linux or OSX implementation
+if test "$have_xattr" = "no"; then
+  AC_CHECK_HEADERS([sys/xattr.h],
+    [
+      AC_CHECK_FUNCS([llistxattr lgetxattr lsetxattr listxattr getxattr setxattr],
+        [have_xattr=yes],
+        [have_xattr=no]
       )
     ],
     [have_xattr=no]

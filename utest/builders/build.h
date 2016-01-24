@@ -2,6 +2,7 @@
 #define _BUILDERS_H
 
 #include "../../src/conf.h"
+#include "../../src/cmd.h"
 #include "server/build_storage_dirs.h"
 #include "server/protocol2/champ_chooser/build_dindex.h"
 
@@ -11,6 +12,10 @@
 extern char **build_paths(const char *prefix, int wanted);
 extern struct sbuf *build_attribs(enum protocol protocol);
 extern struct sbuf *build_attribs_reduce(enum protocol protocol);
+
+#define SIZEOF_MANIFEST_CMDS	6
+extern enum cmd manifest_cmds[SIZEOF_MANIFEST_CMDS];
+
 extern struct slist *build_manifest(const char *path,
         enum protocol protocol, int entries, int phase);
 extern struct slist *build_manifest_with_data_files(const char *path,

@@ -35,6 +35,15 @@ static void link_data(struct sbuf *sb, enum cmd cmd)
 	sb->link.len=strlen(sb->link.buf);
 }
 
+enum cmd manifest_cmds[SIZEOF_MANIFEST_CMDS]={
+	CMD_FILE,
+	CMD_SOFT_LINK,
+	CMD_HARD_LINK,
+	CMD_DIRECTORY,
+	CMD_ENC_FILE,
+	CMD_SPECIAL
+};
+
 struct slist *build_slist_phase1(const char *prefix,
 	enum protocol protocol, int entries)
 {
@@ -49,26 +58,26 @@ struct slist *build_slist_phase1(const char *prefix,
 	{
 		sb=build_attribs_reduce(protocol);
 		attribs_encode(sb);
-		iobuf_from_str(&sb->path, CMD_FILE, paths[i]);
+		iobuf_from_str(&sb->path, manifest_cmds[0], paths[i]);
 		slist_add_sbuf(slist, sb);
 		switch(prng_next()%10)
 		{
 			case 0:
-				link_data(sb, CMD_SOFT_LINK);
+				link_data(sb, manifest_cmds[1]);
 				break;
 			case 1:
-				link_data(sb, CMD_HARD_LINK);
+				link_data(sb, manifest_cmds[2]);
 				break;
 			case 2:
 			case 3:
-				sb->path.cmd=CMD_DIRECTORY;
+				sb->path.cmd=manifest_cmds[3];
 				break;
 			case 4:
 				if(protocol==PROTO_1)
-					sb->path.cmd=CMD_ENC_FILE;
+					sb->path.cmd=manifest_cmds[4];
 				break;
 			case 5:
-				sb->path.cmd=CMD_SPECIAL;
+				sb->path.cmd=manifest_cmds[5];
 				break;
 			default:
 				break;

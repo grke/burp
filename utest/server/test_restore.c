@@ -305,19 +305,21 @@ static void setup_asfds_proto2_interrupt(struct asfd *asfd, struct slist *slist)
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->link);
+			asfd_mock_read_no_op(asfd, &r, 1);
 		}
 		else if(sbuf_is_filedata(s))
 		{
 			struct blk *b;
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+			asfd_mock_read_no_op(asfd, &r, 1);
 			if(count++==1)
 			{
 				asfd_assert_write(asfd,
 					&w, 0, CMD_DATA, "data");
 				asfd_assert_write(asfd,
 					&w, 0, CMD_DATA, "data");
-				asfd_mock_read_no_op(asfd, &r, 6);
+				asfd_mock_read_no_op(asfd, &r, 2);
 				asfd_mock_read(asfd, &r, 0, CMD_INTERRUPT,
 					s->path.buf);
 				asfd_assert_write(asfd, &w, 0,
@@ -325,15 +327,20 @@ static void setup_asfds_proto2_interrupt(struct asfd *asfd, struct slist *slist)
 				continue;
 			}
 			for(b=s->protocol2->bstart;
-			  b && b!=s->protocol2->bend; b=b->next)
+				b && b!=s->protocol2->bend; b=b->next)
+			{
 				asfd_assert_write(asfd,
 					&w, 0, CMD_DATA, "data");
+				asfd_mock_read_no_op(asfd, &r, 1);
+			}
 			asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
+			asfd_mock_read_no_op(asfd, &r, 1);
 		}
 		else
 		{
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
+			asfd_mock_read_no_op(asfd, &r, 1);
 		}
 	}
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
@@ -421,6 +428,10 @@ END_TEST
 
 START_TEST(test_proto2_interrupt_on_non_filedata)
 {
+	size_t s;
+	for(s=0; s<SIZEOF_MANIFEST_CMDS; s++)
+		manifest_cmds[s]=CMD_DIRECTORY;
+
 	run_test(0, PROTO_2,
 		2, 1, setup_asfds_proto2_interrupt_on_non_filedata);
 }

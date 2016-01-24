@@ -69,7 +69,15 @@ pre=0 # Previous backup number.
 res=0 # Restore number. Incremented for each restore.
 test_includes_backup=0
 test_includes_restore=0
-protocol=2 
+protocol=2
+
+if stat --version 2>/dev/null | grep GNU &>/dev/null ; then
+	# GNU style
+	stat_args="-c '%g:%u %A %N'"
+else
+	# FreeBSD style
+	stat_args="-f '%g:%u %p %N %Y'"
+fi
 
 kill_server()
 {
@@ -286,8 +294,8 @@ EOF
 	# wrong on restore on Windows, so do not do this check in that case.
 [ -z "$STRIP_VSS" -o "$protocol" = 2 ] && cat >> "$clientscript" << EOF
 diff -u \
-  <( cd "$rpath1" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort $exclude_dir) \
-  <( cd "$rpath2" ; find . $extra_find_arg -printf "chown %U:%G %p; chmod %m %p \n" | sort $exclude_dir) \
+  <( cd "$rpath1" ; find . $extra_find_arg -print0 | xargs -0 stat $stat_args | sort $exclude_dir) \
+  <( cd "$rpath2" ; find . $extra_find_arg -print0 | xargs -0 stat $stat_args | sort $exclude_dir) \
 	|| fail "$3 (permissions)"
 EOF
 }

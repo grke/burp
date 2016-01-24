@@ -94,6 +94,10 @@ dist_script_SCRIPTS = \
 
 vss_strip_SOURCES = src/server/protocol1/vss_strip.c
 
+vss_strip_CPPFLAGS = \
+	$(AM_CPPFLAGS) \
+	$(OPENSSL_INC)
+
 burp_LDADD = \
 	$(ACL_LIBS) \
 	$(CRYPT_LIBS) \

@@ -12,6 +12,8 @@ elif [ "$1" = "burp-i386" ] ; then
 	$dir/test/vms_i386 $tarfile $dir || exit 1
 elif [ "$1" = "burp-freebsd" ] ; then
 	$dir/test/vms_freebsd $tarfile $dir || exit 1
+elif [ "$1" = "burp-netbsd" ] ; then
+	$dir/test/vms_netbsd $tarfile $dir || exit 1
 else
 	echo "Do not know what sort of build to do"
 	exit 1

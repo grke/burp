@@ -11,9 +11,10 @@ usage()
 {
 	echo "usage: $prog [stop|start|restart|status] [instanceid ...]" 1>&2
 	echo "No instanceids restarts all AWS machines" 1>&2
+	echo "'freebsd' maps to instanceid $freebsdid" 1>&2
+	echo "'netbsd' maps to instanceid $netbsdid" 1>&2
 	echo "'ubuntu' maps to instanceid $ubuntuid" 1>&2
-	echo "'freebsd' maps to instanceid $windowsid" 1>&2
-	echo "'windows' maps to instanceid $freebsdid" 1>&2
+	echo "'windows' maps to instanceid $windowsid" 1>&2
 	exit 1
 }
 
@@ -26,6 +27,7 @@ if [ -n "$instanceids" ] ; then
 	[ "$instanceids" = "ubuntu" ] && instanceids=$ubuntuid
 	[ "$instanceids" = "windows" ] && instanceids=$windowsid
 	[ "$instanceids" = "freebsd" ] && instanceids=$freebsdid
+	[ "$instanceids" = "netbsd" ] && instanceids=$netbsdid
 else
 	instanceids=$(get_all_instanceids)
 fi

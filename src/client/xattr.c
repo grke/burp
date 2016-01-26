@@ -61,8 +61,10 @@ static const char *acl_skiplist[2] = {
 static const char *acl_skiplist[1] = { NULL };
 #endif // HAVE_NETBSD_OS
 
-
-static char *get_next_str(struct asfd *asfd, char **data, size_t *l,
+#ifndef UTEST
+static
+#endif
+char *get_next_xattr_str(struct asfd *asfd, char **data, size_t *l,
 	struct cntr *cntr, ssize_t *s, const char *path)
 {
 	char *ret=NULL;
@@ -299,9 +301,11 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 		int cnspace=0;
 		char *name=NULL;
 
-		if(!(nspace=get_next_str(asfd, &data, &l, cntr, &vlen, path))
-		  || !(value=get_next_str(asfd, &data, &l, cntr, &vlen, path)))
-			goto end;
+		if(!(nspace=get_next_xattr_str(asfd, &data, &l,
+			cntr, &vlen, path))
+		  || !(value=get_next_xattr_str(asfd, &data, &l,
+			cntr, &vlen, path)))
+				goto end;
 
 		// Need to split the name into two parts.
 		if(!(name=strchr(nspace, '.')))
@@ -541,9 +545,11 @@ static int do_set_xattr(struct asfd *asfd,
 		free_w(&name);
 		free_w(&value);
 
-		if(!(name=get_next_str(asfd, &data, &l, cntr, &s, path))
-		  || !(value=get_next_str(asfd, &data, &l, cntr, &s, path)))
-			goto end;
+		if(!(name=get_next_xattr_str(asfd, &data, &l,
+			cntr, &s, path))
+		  || !(value=get_next_xattr_str(asfd, &data, &l,
+			cntr, &s, path)))
+				goto end;
 		if(lsetxattr(path, name, value, s, 0))
 		{
 			logw(asfd, cntr, "lsetxattr error on %s: %s\n",

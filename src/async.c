@@ -151,6 +151,7 @@ static int async_io(struct async *as, int doread)
 			if((as->setsec || as->setusec)
 			  && asfd->fdtype!=ASFD_FD_SERVER_LISTEN_MAIN
 			  && asfd->fdtype!=ASFD_FD_SERVER_LISTEN_STATUS
+			  && asfd->fdtype!=ASFD_FD_CHILD_PIPE_WRITE
 			  && as->now-as->last_time>0
 			  && as->now-as->last_time>0
 			  && asfd->max_network_timeout>0

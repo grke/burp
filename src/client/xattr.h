@@ -12,6 +12,12 @@ extern int get_xattr(struct asfd *asfd, const char *path,
 extern int set_xattr(struct asfd *asfd, const char *path,
 	const char *xattrtext, size_t xlen, char metacmd, struct cntr *cntr);
 #endif
+
+#ifdef UTEST
+extern char *get_next_xattr_str(struct asfd *asfd, char **data, size_t *l,
+	struct cntr *cntr, ssize_t *s, const char *path);
+#endif
+
 #endif
 
 #endif

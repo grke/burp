@@ -62,7 +62,61 @@ static struct xattrdata x[] = {
 		1,
 		"0000000Cuser.comment000000000000000Cuser.abcdefg00000002xy",
 		"X0000003A0000000Cuser.comment000000000000000Cuser.abcdefg00000002xy" },
+	{
+		// Directory - Multiple xattrs, different ordering.
+		// This is to test this test.
+		1,
+		"0000000Cuser.abcdefg00000002xy0000000Cuser.comment00000002cd",
+		"X0000003C0000000Cuser.comment00000002cd0000000Cuser.abcdefg00000002xy" },
 };
+
+// Some operating systems return the xattrs in a different order, so we need
+// to do some extra fiddling to check that each piece was included in the
+// returned string.
+static void check_match(const char *expected,
+	const char *retrieved, size_t rlen)
+{
+	size_t r;
+	char *retr=NULL;
+
+	// First 9 bytes represent the length of the whole string.
+	fail_unless(!memcmp(expected, retrieved, 9));
+
+	retr=(char *)retrieved+9;
+	r=rlen-9;
+	while(r>0)
+	{
+		size_t e;
+		ssize_t rlen=0;
+		char *rval=NULL;
+		char *expe=NULL;
+		int found=0;
+
+		fail_unless((rval=get_next_xattr_str(NULL,
+			&retr, &r, NULL, &rlen, NULL))!=NULL);
+		printf("%s\n", rval);
+
+		expe=(char *)expected+9;
+		e=rlen-9;
+		while(e>0)
+		{
+			char *eval=NULL;
+			ssize_t elen=0;
+			fail_unless((eval=get_next_xattr_str(NULL,
+				&expe, &e, NULL, &elen, NULL))!=NULL);
+			if(rlen==elen
+			  && !memcmp(rval, eval, rlen))
+			{
+				found++;
+				free_w(&eval);
+				break;
+			}
+			free_w(&eval);
+		}
+		free_w(&rval);
+		fail_unless(found==1);
+	}
+}
 
 static void test_xattr(struct xattrdata x)
 {
@@ -108,7 +162,9 @@ static void test_xattr(struct xattrdata x)
 		NULL // cntr
 	));
 	fail_unless(rlen==strlen(expected));
-	fail_unless(!memcmp(expected, retrieved, rlen));
+
+	check_match(expected, retrieved, rlen);
+
 	free_w(&retrieved);
 	tear_down();
 }

@@ -181,7 +181,7 @@ static int add_data_to_store(struct cntr *cntr,
 		if(!slist->blist->head)
 			logp("and slist->blist->head is null\n");
 		else
-			logp("head index: %d\n", slist->blist->head->index);
+			logp("head index: %" PRIu64 "\n", slist->blist->head->index);
 		return -1;
 	}
 
@@ -211,7 +211,7 @@ static int set_up_for_sig_info(struct slist *slist, struct iobuf *attr,
 	}
 	if(!sb)
 	{
-		logp("Could not find %lu in request list\n", index);
+		logp("Could not find %" PRIu64 " in request list\n", index);
 		return -1;
 	}
 	// Replace the attribs with the more recent values.
@@ -685,7 +685,7 @@ static int mark_up_to_index(struct blist *blist,
 			return -1;
 	if(!blk)
 	{
-		logp("Could not find index from champ chooser: %lu\n", index);
+		logp("Could not find index from champ chooser: %" PRIu64 "\n", index);
 		return -1;
 	}
 //logp("Found index from champ chooser: %lu\n", index);
@@ -766,7 +766,7 @@ static int check_for_missing_work_in_slist(struct slist *slist)
 
 	if(slist->blist->head)
 	{
-		logp("ERROR: finishing but still want block: %lu\n",
+		logp("ERROR: finishing but still want block: %" PRIu64 "\n",
 			slist->blist->head->index);
 		return -1;
 	}

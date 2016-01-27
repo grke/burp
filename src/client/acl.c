@@ -98,7 +98,7 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 
 	if(tlen>maxlen)
 	{
-		logw(asfd, cntr, "ACL of '%s' too long: %d\n", path, tlen);
+		logw(asfd, cntr, "ACL of '%s' too long: %zd\n", path, tlen);
 		goto end; // carry on
 	}
 

@@ -136,7 +136,7 @@ static int init_listen_socket(const char *address, const char *port, int *fds)
 		if(listen(fds[i], 5)<0)
 		{
 			close_fd(&(fds[i]));
-			logp("could not listen on main socket %d\n", port);
+			logp("could not listen on main socket %s\n", port);
 			return -1;
 		}
 

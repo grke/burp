@@ -82,8 +82,8 @@ enum cand_ret candidate_load(struct candidate *candidate, const char *path,
 		{
 			case 1: goto end;
 			case -1:
-				logp("Error reading %s in %s, pos %d\n",
-					path, __func__, fzp_tell(fzp));
+				logp("Error reading %s in %s, pos %lld\n",
+					path, __func__, (long long)fzp_tell(fzp));
 				ret=CAND_RET_TEMP;
 				goto error;
 		}

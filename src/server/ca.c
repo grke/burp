@@ -528,7 +528,7 @@ int ca_x509_verify_crl(struct conf **confs,
 	if(X509_NAME_cmp(X509_CRL_get_issuer(crl),
 		X509_get_issuer_name(peer_cert)))
 	{
-		logp_ssl_err("CRL: CRL %s is from a different issuer than the issuer of certificate %\ns", crl_path, ssl_peer_cn);
+		logp_ssl_err("CRL: CRL %s is from a different issuer than the issuer of certificate %s\n", crl_path, ssl_peer_cn);
 		goto end;
 	}
 

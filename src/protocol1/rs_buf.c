@@ -107,7 +107,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 		//	buf->avail_in, fb->buf_len);
 		if(buf->avail_in > fb->buf_len)
 		{
-			logp("buf->avail_in > fb->buf_len (%d > %d) in %s\n",
+			logp("buf->avail_in > fb->buf_len (%zu > %zu) in %s\n",
 				buf->avail_in, fb->buf_len, __func__);
 			return RS_IO_ERROR;
 		}
@@ -127,7 +127,7 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	{
 		if(buf->avail_in)
 		{
-			logp("buf->avail_in is %d in %s\n",
+			logp("buf->avail_in is %zu in %s\n",
 				buf->avail_in, __func__);
 			return RS_IO_ERROR;
 		}
@@ -248,7 +248,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 	{
 		if(buf->avail_out)
 		{
-			logp("buf->avail_out is %d in %s\n",
+			logp("buf->avail_out is %zu in %s\n",
 				buf->avail_out, __func__);
 			return RS_IO_ERROR;
 		}
@@ -259,7 +259,7 @@ rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
 
 	if(buf->avail_out > fb->buf_len)
 	{
-		logp("buf->avail_out > fb->buf_len (%d > %d) in %s\n",
+		logp("buf->avail_out > fb->buf_len (%zu > %zu) in %s\n",
 			buf->avail_out, fb->buf_len, __func__);
 		return RS_IO_ERROR;
 	}

@@ -181,7 +181,7 @@ static int do_bu_get_list(struct sdirs *sdirs,
 
 	if(!sdirs)
 	{
-		logp("%s() called with NULL sdirs\n");
+		logp("%s() called with NULL sdirs\n", __func__);
 		goto end;
 	}
 

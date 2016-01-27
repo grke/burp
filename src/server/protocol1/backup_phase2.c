@@ -511,7 +511,7 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(fzp_close(&(rb->protocol1->fzp)))
 	{
-		logp("error closing delta for %s in receive\n", rb->path);
+		logp("error closing delta for %s in receive\n", rb->path.buf);
 		goto end;
 	}
 	iobuf_move(&rb->endfile, rbuf);

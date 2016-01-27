@@ -134,7 +134,7 @@ static struct manio *do_manio_open(const char *manifest, const char *mode,
 		if(manio->phase!=2)
 		{
 			logp("manio append mode only works for phase 2.\n");
-			logp("%s has phase: %s\n",
+			logp("%s has phase: %d\n",
 				manio->manifest, manio->phase);
 			goto error;
 		}
@@ -283,7 +283,7 @@ int manio_read_fcount(struct manio *manio)
 	s=strlen(buf);
 	if(s!=9)
 	{
-		logp("data in %s is not the right length (%s!=9)\n", s);
+		logp("data in %s is not the right length (%zu!=9)\n", path, s);
 		goto end;
 	}
 	manio->offset->fcount=strtoul(buf, NULL, 16);

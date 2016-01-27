@@ -39,9 +39,7 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 					break; // All OK.
 				case 0:
 				{
-					char msg[256];
-					snprintf(msg, sizeof(msg), "Checksum mismatch in block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, uint64_to_savepathstr_with_sig(blk->savepath));
-					logw(asfd, cntr, msg);
+					logw(asfd, cntr, "Checksum mismatch in block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, uint64_to_savepathstr_with_sig(blk->savepath));
 					break;
 		
 				}
@@ -127,13 +125,11 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 	}
 	else
 	{
-		char msg[256]="";
-		snprintf(msg, sizeof(msg),
+		logw(asfd, cntr,
 			"Unexpected signature in manifest: %016"PRIX64 "%s%s\n",
 			blk->fingerprint,
 			bytes_to_md5str(blk->md5sum),
 			uint64_to_savepathstr_with_sig(blk->savepath));
-		logw(asfd, cntr, msg);
 	}
 	blk->data=NULL;
 	return 0;

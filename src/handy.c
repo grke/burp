@@ -270,6 +270,7 @@ int init_client_socket(const char *host, const char *port)
 {
 	int rfd=-1;
 	int gai_ret;
+	int keepalive = 1;
 	struct addrinfo hints;
 	struct addrinfo *result;
 	struct addrinfo *rp;
@@ -290,6 +291,7 @@ int init_client_socket(const char *host, const char *port)
 	{
 		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 		if(rfd<0) continue;
+		setsockopt(rfd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
 		if(connect(rfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
 		close_fd(&rfd);
 	}

@@ -156,7 +156,14 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 
 		iobuf_free_content(rbuf);
 		if(asfd->read(asfd)) break;
-		if(rbuf->cmd==CMD_TIMESTAMP)
+		if(rbuf->cmd==CMD_MESSAGE)
+		{
+			printf("%s\n", rbuf->buf);
+			if(!strcmp(rbuf->buf, "no backups"))
+				ret=0;
+			goto end;
+		}
+		else if(rbuf->cmd==CMD_TIMESTAMP)
 		{
 			// A backup timestamp, just print it.
 			printf("Backup: %s\n", rbuf->buf);

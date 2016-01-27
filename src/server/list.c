@@ -317,8 +317,18 @@ int do_list_server_work(
 
 	if(!found)
 	{
-		asfd_write_wrapper_str(asfd, CMD_ERROR, "backup not found");
-		goto end;
+		if(list_mode==LIST_MODE_BACKUPS)
+		{
+			asfd_write_wrapper_str(asfd,
+				CMD_MESSAGE, "no backups");
+			// Success.
+		}
+		else
+		{
+			asfd_write_wrapper_str(asfd,
+				CMD_MESSAGE, "backup not found");
+			goto end;
+		}
 	}
 
 	ret=0;

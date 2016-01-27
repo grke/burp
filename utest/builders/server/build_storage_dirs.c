@@ -24,14 +24,15 @@ static void do_build_storage_dirs(struct sdirs *sdirs, struct sd *s, int len,
 	time_t t=0;
 	char backup[128]="";
 	char timestamp_path[128]="";
+	fail_unless(!build_path_w(sdirs->client));
+	fail_unless(!mkdir(sdirs->client, 0777));
 	for(i=0; i<len; i++)
 	{
 		snprintf(backup, sizeof(backup),
 			"%s/%s", sdirs->client, s[i].timestamp);
 		snprintf(timestamp_path, sizeof(timestamp_path),
 			"%s/timestamp", backup);
-                fail_unless(!build_path_w(backup));
-                fail_unless(!mkdir(backup, 0777));
+		fail_unless(!mkdir(backup, 0777));
 		fail_unless(!timestamp_write(timestamp_path, s[i].timestamp));
 		if(s[i].flags & BU_CURRENT)
 			fail_unless(!symlink(s[i].timestamp, sdirs->current));

@@ -94,7 +94,6 @@ static void check_match(const char *expected,
 
 		fail_unless((rval=get_next_xattr_str(NULL,
 			&retr, &r, NULL, &rlen, NULL))!=NULL);
-		printf("%s\n", rval);
 
 		expe=(char *)expected+9;
 		e=rlen-9;

@@ -80,7 +80,6 @@ static void chld_check_for_exiting(struct async *mainas)
 static int init_listen_socket(const char *address, const char *port, int *fds)
 {
 	int i;
-	int keepalive=1;
 	int gai_ret;
 	struct addrinfo hints;
 	struct addrinfo *rp=NULL;
@@ -112,7 +111,7 @@ static int init_listen_socket(const char *address, const char *port, int *fds)
 				port, strerror(errno));
 			continue;
 		}
-		setsockopt(fds[i], SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+		set_keepalive(fds[i], 1);
 #ifdef HAVE_IPV6
 		if(rp->ai_family==AF_INET6)
 		{

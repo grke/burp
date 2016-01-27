@@ -266,11 +266,23 @@ int set_peer_env_vars(struct sockaddr_storage *addr)
 	return 0;
 }
 
+int set_keepalive(int fd, int value)
+{
+	int keepalive=value;
+	if(setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE,
+		(char *)&keepalive, sizeof(keepalive)))
+	{
+		logp("setsockopt keepalive=%d failed: %s\n",
+			value, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int init_client_socket(const char *host, const char *port)
 {
 	int rfd=-1;
 	int gai_ret;
-	int keepalive = 1;
 	struct addrinfo hints;
 	struct addrinfo *result;
 	struct addrinfo *rp;
@@ -291,7 +303,7 @@ int init_client_socket(const char *host, const char *port)
 	{
 		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 		if(rfd<0) continue;
-		setsockopt(rfd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
+		set_keepalive(rfd, 1);
 		if(connect(rfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
 		close_fd(&rfd);
 	}

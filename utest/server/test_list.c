@@ -69,8 +69,10 @@ static struct sd fp123[] = {
 	{ "0000003 1970-01-03 00:00:00", 0, 0, 0 }
 };
 
-static void setup_asfd_none(struct asfd *asfd)
+static void setup_asfd_no_backups(struct asfd *asfd)
 {
+	int w=0;
+	asfd_assert_write(asfd, &w, 0, CMD_MESSAGE, "no backups");
 }
 
 static void setup_asfd_bad_regex(struct asfd *asfd)
@@ -133,7 +135,7 @@ static void setup_asfd_1_2_3(struct asfd *asfd)
 static void setup_asfd_not_found(struct asfd *asfd)
 {
 	int w=0;
-	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "backup not found");
+	asfd_assert_write(asfd, &w, 0, CMD_MESSAGE, "backup not found");
 }
 
 static void setup_asfd_1del_write_failure(struct asfd *asfd)
@@ -179,7 +181,7 @@ static void run_test(int expected_init_ret,
 {
 	struct asfd *asfd;
 	struct sdirs *sdirs=NULL;
-	if(slen) sdirs=setup_sdirs(s, slen, protocol);
+	sdirs=setup_sdirs(s, slen, protocol);
 
 	asfd=asfd_mock_setup(&reads, &writes);
 
@@ -208,12 +210,12 @@ START_TEST(test_do_server_list)
 	list_server_callback_ret=0;
 
 	// No backups.
-	run_test(-1, 0, 0, PROTO_1, NULL, NULL, NULL,
+	run_test(0,  0, 0, PROTO_1, NULL, NULL, NULL,
 		NULL, 0, NULL,
-		setup_asfd_none);
-	run_test(-1, 0, 0, PROTO_2, NULL, NULL, NULL,
+		setup_asfd_no_backups);
+	run_test(0,  0, 0, PROTO_2, NULL, NULL, NULL,
 		NULL, 0, NULL,
-		setup_asfd_none);
+		setup_asfd_no_backups);
 
 	// Backup not specified. burp -a l
 	run_test(0, 0, 0, PROTO_1, NULL, NULL, NULL,
@@ -656,6 +658,7 @@ Suite *suite_server_list(void)
 	tcase_add_test(tc_core, test_check_browsedir_windows);
 	tcase_add_test(tc_core, test_check_browsedir_windows_blank);
 	tcase_add_test(tc_core, test_check_browsedir_alloc_error);
+
 	suite_add_tcase(s, tc_core);
 
 	return s;

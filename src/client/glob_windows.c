@@ -145,7 +145,7 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 			(LPTSTR)&lpMsgBuf,
 			0, NULL );
-		logp("Error: %s\n", lpMsgBuf);
+		logp("Error: %s\n", (char *)lpMsgBuf);
 		LocalFree(lpMsgBuf);
 		goto end;
 	}

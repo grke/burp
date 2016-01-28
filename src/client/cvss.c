@@ -152,7 +152,8 @@ static int enable_priv(HANDLE hToken, const char *name)
 	// Get the LUID for the security privilege.
 	if(!p_LookupPrivilegeValue(NULL, name, &tkp.Privileges[0].Luid))
 	{
-		logp("LookupPrivilegeValue: %s\n", GetLastError());
+		logp("LookupPrivilegeValue: %lu\n",
+			(unsigned long)GetLastError());
 		return 0;
 	}
 
@@ -236,8 +237,9 @@ static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 	if(offset!=s)
 	{
 		if(print_err)
-			logp("Error in read - got %d, wanted %d\n",
-				offset, s);
+			logp("Error in read - got %lu, wanted %lu\n",
+				(unsigned long)offset,
+				(unsigned long)s);
 		return -1;
 	}
 	return 0;

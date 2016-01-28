@@ -25,8 +25,8 @@ static int do_write(struct asfd *asfd, BFILE *bfd,
 	int ret=0;
 	if((ret=bfd->write(bfd, out, outlen))<=0)
 	{
-		logp("%s: error when appending %zu: %d\n",
-			__func__, outlen, ret);
+		logp("%s: error when appending %lu: %d\n",
+			__func__, (unsigned long)outlen, ret);
 		asfd->write_str(asfd, CMD_ERROR, "write failed");
 		return -1;
 	}

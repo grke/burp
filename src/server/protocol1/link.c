@@ -108,7 +108,8 @@ static int duplicate_file(const char *oldpath, const char *newpath)
 		t=fzp_write(np, buf, s);
 		if(t!=s)
 		{
-			logp("could not write all bytes: %zu!=%zu\n", s, t);
+			logp("could not write all bytes: %lu!=%lu\n",
+				(unsigned long)s, (unsigned long)t);
 			goto end;
 		}
 	}

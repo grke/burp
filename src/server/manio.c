@@ -283,7 +283,8 @@ int manio_read_fcount(struct manio *manio)
 	s=strlen(buf);
 	if(s!=9)
 	{
-		logp("data in %s is not the right length (%zu!=9)\n", path, s);
+		logp("data in %s is not the right length (%lu!=9)\n", path,
+			(unsigned long)s);
 		goto end;
 	}
 	manio->offset->fcount=strtoul(buf, NULL, 16);

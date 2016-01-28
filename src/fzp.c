@@ -441,8 +441,8 @@ error:
 
 static void pass_msg(size_t nmemb, size_t got, int pass)
 {
-	logp("Tried to read %zu bytes, got %zu by pass %d\n",
-		nmemb, got, pass);
+	logp("Tried to read %lu bytes, got %lu by pass %d\n",
+		(unsigned long)nmemb, (unsigned long)got, pass);
 }
 
 int fzp_read_ensure(struct fzp *fzp, void *ptr, size_t nmemb, const char *func)
@@ -473,8 +473,8 @@ int fzp_read_ensure(struct fzp *fzp, void *ptr, size_t nmemb, const char *func)
 			// End of file.
 			if(!got) return 1;
 			pass_msg(nmemb, got, pass);
-			logp("Error in %s, called from %s: %zu bytes, eof\n",
-				__func__, func, got);
+			logp("Error in %s, called from %s: %lu bytes, eof\n",
+				__func__, func, (unsigned long)got);
 			return -1;
 		}
 		else

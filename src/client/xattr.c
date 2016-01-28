@@ -247,8 +247,8 @@ int get_xattr(struct asfd *asfd, const char *path,
 			if(totallen>maxlen)
 			{
 				logw(asfd, cntr,
-					"xattr length of '%s' grew too long: %zu\n",
-					path, totallen);
+				  "xattr length of '%s' grew too long: %lu\n",
+				  path, (unsigned long)totallen);
 				free_w(&val);
 				free_w(&toappend);
 				free_w(&xattrlist);

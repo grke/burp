@@ -1184,7 +1184,7 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 	static int ch;
 	if(asfd->rbuf->len!=sizeof(ch))
 	{
-		logp("Unexpected input length in %s: %d\n",
+		logp("Unexpected input length in %s: %zu\n",
 			__func__, asfd->rbuf->len);
 		return -1;
 	}

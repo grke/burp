@@ -221,12 +221,12 @@ static void table_border(enum action act)
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
-	  logc("% 18s ------------------------------------------------------------\n", "");
+	  logc("%18s ------------------------------------------------------------\n", "");
 	}
 	if(act==ACTION_RESTORE
 	  || act==ACTION_VERIFY)
 	{
-	  logc("% 18s ------------------------------\n", "");
+	  logc("%18s ------------------------------\n", "");
 	}
 }
 
@@ -405,33 +405,33 @@ static void quint_print(struct cntr_ent *ent, enum action act)
 	if(!(ent->flags & CNTR_TABULATE)) return;
 
 	if(!e && !a && !b && !c) return;
-	logc("% 18s:", ent->label);
+	logc("%18s:", ent->label);
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
-		logc("% 9llu ", a);
-		logc("% 9llu ", b);
-		logc("% 9llu ", c);
-		logc("% 9llu ", d);
+		logc("%9" PRIu64 " ", a);
+		logc("%9" PRIu64 " ", b);
+		logc("%9" PRIu64 " ", c);
+		logc("%9" PRIu64 " ", d);
 	}
 	if(act==ACTION_RESTORE
 	  || act==ACTION_VERIFY)
 	{
-		logc("% 9s ", "");
-		//logc("% 9s ", "");
-		//logc("% 9s ", "");
-		//logc("% 9s ", "");
+		logc("%9s ", "");
+		//logc("%9s ", "");
+		//logc("%9s ", "");
+		//logc("%9s ", "");
 	}
 	if(act==ACTION_ESTIMATE)
 	{
-		logc("% 9s ", "");
-		logc("% 9s ", "");
-		logc("% 9llu\n", e);
+		logc("%9s ", "");
+		logc("%9s ", "");
+		logc("%9" PRIu64 "\n", e);
 	}
 	else
 	{
-		logc("% 9llu |", a+b+c);
-		logc("% 9llu\n", e);
+		logc("%9" PRIu64 " |", a+b+c);
+		logc("%9" PRIu64 "\n", e);
 	}
 }
 
@@ -446,10 +446,10 @@ static void bottom_part(struct cntr *c, enum action act)
 	uint64_t l;
 	struct cntr_ent **e=c->ent;
 	logc("\n");
-	logc("             Messages:   % 11llu\n", get_count(e, CMD_MESSAGE));
-	logc("             Warnings:   % 11llu\n", get_count(e, CMD_WARNING));
+	logc("             Messages:   %11" PRIu64 "\n", get_count(e, CMD_MESSAGE));
+	logc("             Warnings:   %11" PRIu64 "\n", get_count(e, CMD_WARNING));
 	logc("\n");
-	logc("      Bytes estimated:   % 11llu", get_count(e, CMD_BYTES_ESTIMATED));
+	logc("      Bytes estimated:   %11" PRIu64, get_count(e, CMD_BYTES_ESTIMATED));
 	logc("%s\n", bytes_to_human(get_count(e, CMD_BYTES_ESTIMATED)));
 
 	if(act==ACTION_ESTIMATE) return;
@@ -458,19 +458,19 @@ static void bottom_part(struct cntr *c, enum action act)
 	  || act==ACTION_BACKUP_TIMED)
 	{
 		l=get_count(e, CMD_BYTES);
-		logc("      Bytes in backup:   % 11llu", l);
+		logc("      Bytes in backup:   %11" PRIu64, l);
 		logc("%s\n", bytes_to_human(l));
 	}
 	if(act==ACTION_RESTORE)
 	{
 		l=get_count(e, CMD_BYTES);
-		logc("      Bytes attempted:   % 11llu", l);
+		logc("      Bytes attempted:   %11" PRIu64, l);
 		logc("%s\n", bytes_to_human(l));
 	}
 	if(act==ACTION_VERIFY)
 	{
 		l=get_count(e, CMD_BYTES);
-		logc("        Bytes checked:   % 11llu", l);
+		logc("        Bytes checked:   %11" PRIu64, l);
 		logc("%s\n", bytes_to_human(l));
 	}
 
@@ -478,7 +478,7 @@ static void bottom_part(struct cntr *c, enum action act)
 	  || act==ACTION_BACKUP_TIMED)
 	{
 		l=get_count(e, CMD_BYTES_RECV);
-		logc("       Bytes received:   % 11llu", l);
+		logc("       Bytes received:   %11" PRIu64, l);
 		logc("%s\n", bytes_to_human(l));
 	}
 	if(act==ACTION_BACKUP 
@@ -486,7 +486,7 @@ static void bottom_part(struct cntr *c, enum action act)
 	  || act==ACTION_RESTORE)
 	{
 		l=get_count(e, CMD_BYTES_SENT);
-		logc("           Bytes sent:   % 11llu", l);
+		logc("           Bytes sent:   %11" PRIu64, l);
 		logc("%s\n", bytes_to_human(l));
 	}
 }
@@ -508,18 +508,18 @@ void cntr_print(struct cntr *cntr, enum action act)
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)
 	{
-	  logc("% 18s % 9s % 9s % 9s % 9s % 9s |% 9s\n",
+	  logc("%18s %9s %9s %9s %9s %9s |%9s\n",
 	    " ", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
 	}
 	if(act==ACTION_RESTORE
 	  || act==ACTION_VERIFY)
 	{
-	  logc("% 18s % 9s % 9s |% 9s\n",
+	  logc("%18s %9s %9s |%9s\n",
 	    " ", "", "Attempted", "Expected");
 	}
 	if(act==ACTION_ESTIMATE)
 	{
-	  logc("% 18s % 9s % 9s %9s\n",
+	  logc("%18s %9s %9s %9s\n",
 	    " ", "", "", "Scanned");
 	}
 	table_border(act);

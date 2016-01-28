@@ -989,9 +989,9 @@ int run_bedup(int argc, char *argv[])
 	{
 		logp("%d client storages scanned\n", ccount);
 	}
-	logp("%llu duplicate %s found\n",
+	logp("%" PRIu64 " duplicate %s found\n",
 		count, count==1?"file":"files");
-	logp("%llu bytes %s%s\n",
+	logp("%" PRIu64 " bytes %s%s\n",
 		savedbytes, (makelinks || deletedups)?"saved":"saveable",
 			bytes_to_human(savedbytes));
 	mystruct_delete_all();

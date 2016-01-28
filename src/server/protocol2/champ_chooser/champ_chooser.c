@@ -193,7 +193,7 @@ int deduplicate(struct asfd *asfd, const char *directory, struct scores *scores)
 //printf("after agb: %lu %d\n", blk->index, blk->got);
 	}
 
-	logp("%s: %04d/%04d - %04d/%04d\n",
+	logp("%s: %04d/%04zu - %04d/%04d\n",
 		asfd->desc, count, candidates_len, in->got, blk_count);
 
 	// Start the incoming array again.

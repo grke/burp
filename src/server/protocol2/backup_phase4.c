@@ -212,7 +212,7 @@ int merge_sparse_indexes(const char *dst, const char *srca, const char *srcb)
 
 	if(fzp_close(&dzp))
 	{
-		logp("Error closing %s in %s\n", tmpfile, __func__);
+		logp("Error closing %s in %s\n", dst, __func__);
 		goto end;
 	}
 
@@ -355,7 +355,7 @@ int merge_dindexes(const char *dst, const char *srca, const char *srcb)
 
 	if(fzp_close(&dzp))
 	{
-		logp("Error closing %s in %s\n", tmpfile, __func__);
+		logp("Error closing %s in %s\n", dst, __func__);
 		goto end;
 	}
 

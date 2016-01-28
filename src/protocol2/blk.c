@@ -112,7 +112,7 @@ int blk_set_from_iobuf_sig(struct blk *blk, struct iobuf *iobuf)
 {
 	if(iobuf->len!=24)
 	{
-		logp("Signature wrong length: %u!=24\n", iobuf->len);
+		logp("Signature wrong length: %zu!=24\n", iobuf->len);
 		return -1;
 	}
 	set_sig(blk, iobuf);
@@ -123,7 +123,7 @@ int blk_set_from_iobuf_sig_and_savepath(struct blk *blk, struct iobuf *iobuf)
 {
 	if(iobuf->len!=32)
 	{
-		logp("Signature with save_path wrong length: %u!=32\n",
+		logp("Signature with save_path wrong length: %zu!=32\n",
 			iobuf->len);
 		return -1;
 	}
@@ -136,7 +136,7 @@ int blk_set_from_iobuf_fingerprint(struct blk *blk, struct iobuf *iobuf)
 {
 	if(iobuf->len!=sizeof(blk->fingerprint))
 	{
-		logp("Fingerprint wrong length: %u!=%u\n",
+		logp("Fingerprint wrong length: %zu!=%zu\n",
 			iobuf->len, sizeof(blk->fingerprint));
 		return -1;
 	}
@@ -148,7 +148,7 @@ int blk_set_from_iobuf_savepath(struct blk *blk, struct iobuf *iobuf)
 {
 	if(iobuf->len!=sizeof(blk->savepath))
 	{
-		logp("Save path wrong length: %u!=%u\n",
+		logp("Save path wrong length: %zu!=%zu\n",
 			iobuf->len, sizeof(blk->savepath));
 		return -1;
 	}
@@ -160,8 +160,8 @@ int blk_set_from_iobuf_index_and_savepath(struct blk *blk, struct iobuf *iobuf)
 {
 	if(iobuf->len!=16)
 	{
-		logp("File number and savepath with wrong length: %u!=%u\n",
-			iobuf->len, 16);
+		logp("File number and savepath with wrong length: %zu!=16\n",
+			iobuf->len);
 		return -1;
 	}
 	blk->index=ETOH(*(uint64_t *)iobuf->buf);
@@ -173,7 +173,7 @@ int blk_set_from_iobuf_wrap_up(struct blk *blk, struct iobuf *iobuf)
 {
 	if(iobuf->len!=sizeof(blk->index))
 	{
-		logp("Wrap up with wrong length: %u!=%u\n",
+		logp("Wrap up with wrong length: %zu!=%zu\n",
 			iobuf->len, sizeof(blk->index));
 		return -1;
 	}

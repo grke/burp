@@ -71,7 +71,7 @@ char *get_next_xattr_str(struct asfd *asfd, char **data, size_t *l,
 
 	if((sscanf(*data, "%08X", (unsigned int *)s))!=1)
 	{
-		logw(asfd, cntr, "sscanf of xattr '%s' %d failed for %s\n",
+		logw(asfd, cntr, "sscanf of xattr '%s' %zd failed for %s\n",
 			*data, *l, path);
 		return NULL;
 	}
@@ -110,7 +110,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 	char **xattrtext, size_t *xlen, struct cntr *cntr)
 {
 	int i=0;
-	size_t maxlen=0xFFFFFFFF/2;
+	ssize_t maxlen=0xFFFFFFFF/2;
 
 	for(i=0; i<(int)(sizeof(namespaces)/sizeof(int)); i++)
 	{
@@ -119,13 +119,13 @@ int get_xattr(struct asfd *asfd, const char *path,
 		int have_acl=0;
 		char *xattrlist=NULL;
 		char *cnamespace=NULL;
-		size_t totallen=0;
+		ssize_t totallen=0;
 		char *toappend=NULL;
 		char z[BSD_BUF_SIZE]="";
 		char cattrname[BSD_BUF_SIZE]="";
 		if((len=extattr_list_link(path, namespaces[i], NULL, 0))<0)
 		{
-			logw(asfd, cntr, "could not extattr_list_link of '%s': %d\n",
+			logw(asfd, cntr, "could not extattr_list_link of '%s': %zd\n",
 				path, len);
 			return 0; // carry on
 		}
@@ -140,7 +140,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 			return -1;
 		if((len=extattr_list_link(path, namespaces[i], xattrlist, len))<=0)
 		{
-			logw(asfd, cntr, "could not extattr_list_link '%s': %d\n",
+			logw(asfd, cntr, "could not extattr_list_link '%s': %zd\n",
 				path, len);
 			free_w(&xattrlist);
 			return 0; // carry on
@@ -195,7 +195,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 			if((vlen=extattr_list_link(path, namespaces[i],
 				xattrlist, len))<0)
 			{
-				logw(asfd, cntr, "could not extattr_list_link on %s for %s: %d\n", path, namespaces[i], vlen);
+				logw(asfd, cntr, "could not extattr_list_link on %s for %s: %zd\n", path, cnamespace, vlen);
 				continue;
 			}
 			if(vlen)
@@ -209,7 +209,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 				if((vlen=extattr_get_link(path, namespaces[i],
 					cattrname, val, vlen))<0)
 				{
-					logw(asfd, cntr, "could not extattr_list_link %s for %s: %d\n", path, namespaces[i], vlen);
+					logw(asfd, cntr, "could not extattr_list_link %s for %s: %zd\n", path, cnamespace, vlen);
 					free_w(&val);
 					continue;
 				}
@@ -217,7 +217,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 
 				if(vlen>maxlen)
 				{
-					logw(asfd, cntr, "xattr value of '%s' too long: %d\n",
+					logw(asfd, cntr, "xattr value of '%s' too long: %zd\n",
 						path, vlen);
 					free_w(&toappend);
 					free_w(&val);
@@ -247,7 +247,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 			if(totallen>maxlen)
 			{
 				logw(asfd, cntr,
-					"xattr length of '%s' grew too long: %d\n",
+					"xattr length of '%s' grew too long: %zu\n",
 					path, totallen);
 				free_w(&val);
 				free_w(&toappend);
@@ -296,7 +296,7 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 	l=xlen;
 	while(l>0)
 	{
-		int cnt;
+		ssize_t cnt;
 		ssize_t vlen=0;
 		int cnspace=0;
 		char *name=NULL;
@@ -331,8 +331,8 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 			cnspace, name, value, vlen))!=vlen)
 		{
 			logw(asfd, cntr,
-				"extattr_set_link error on %s %d!=vlen: %s\n",
-				path, strerror(errno));
+				"extattr_set_link error on %s %zd!=%zd: %s\n",
+				path, cnt, vlen, strerror(errno));
 			goto end;
 		}
 
@@ -382,7 +382,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 
 	if((len=llistxattr(path, NULL, 0))<0)
 	{
-		logw(asfd, cntr, "could not llistxattr '%s': %d %s\n",
+		logw(asfd, cntr, "could not llistxattr '%s': %zd %s\n",
 			path, len, strerror(errno));
 		return 0; // carry on
 	}
@@ -390,7 +390,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 		return -1;
 	if((len=llistxattr(path, xattrlist, len))<0)
 	{
-		logw(asfd, cntr, "could not llistxattr '%s': %d %s\n",
+		logw(asfd, cntr, "could not llistxattr '%s': %zd %s\n",
 			path, len, strerror(errno));
 		free_w(&xattrlist);
 		return 0; // carry on
@@ -414,7 +414,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 
 		if((zlen=strlen(z))>maxlen)
 		{
-			logw(asfd, cntr, "xattr element of '%s' too long: %d\n",
+			logw(asfd, cntr, "xattr element of '%s' too long: %zd\n",
 				path, zlen);
 			free_w(&toappend);
 			break;
@@ -439,7 +439,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 		if((vlen=lgetxattr(path, z, NULL, 0))<0)
 		{
 			logw(asfd, cntr,
-				"could not lgetxattr on %s for %s: %d %s\n",
+				"could not lgetxattr on %s for %s: %zd %s\n",
 				path, z, vlen, strerror(errno));
 			continue;
 		}
@@ -454,7 +454,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 			if((vlen=lgetxattr(path, z, val, vlen))<0)
 			{
 				logw(asfd, cntr,
-				  "could not lgetxattr %s for %s: %d %s\n",
+				  "could not lgetxattr %s for %s: %zd %s\n",
 					path, z, vlen, strerror(errno));
 				free_w(&val);
 				continue;
@@ -464,7 +464,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 			if(vlen>maxlen)
 			{
 				logw(asfd, cntr,
-					"xattr value of '%s' too long: %d\n",
+					"xattr value of '%s' too long: %zd\n",
 					path, vlen);
 				free_w(&toappend);
 				free_w(&val);
@@ -494,7 +494,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 		if(totallen>maxlen)
 		{
 			logw(asfd, cntr,
-				"xattr length of '%s' grew too long: %d\n",
+				"xattr length of '%s' grew too long: %zd\n",
 				path, totallen);
 			free_w(&val);
 			free_w(&toappend);

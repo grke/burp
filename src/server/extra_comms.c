@@ -419,7 +419,7 @@ int extra_comms(struct async *as,
 			if(vers.cli>=vers.burp2) break;
 			logp("protocol=%d is set server side, "
 			  "but client is burp version %s\n",
-			  peer_version);
+			  PROTO_2, peer_version);
 			goto error;
 	}
 

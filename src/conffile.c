@@ -113,7 +113,7 @@ static int path_checks(const char *path, const char *err_msg)
 		if(*p!='.' || *(p+1)!='.') continue;
 		if((p==path || *(p-1)=='/') && (*(p+2)=='/' || !*(p+2)))
 		{
-			logp(err_msg);
+			logp("%s", err_msg);
 			return -1;
 		}
 	}
@@ -126,7 +126,7 @@ static int path_checks(const char *path, const char *err_msg)
 #endif
 	)
 	{
-		logp(err_msg);
+		logp("%s", err_msg);
 		return -1;
 	}
 	return 0;
@@ -884,7 +884,7 @@ static int finalise_fstypes(struct conf **c)
 		if(!strncasecmp(l->path, "0x", 2))
 		{
 			l->flag=strtol((l->path)+2, NULL, 16);
-			logp("Excluding file system type 0x%08X\n", l->flag);
+			logp("Excluding file system type 0x%08lX\n", l->flag);
 		}
 		else
 		{

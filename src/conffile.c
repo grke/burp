@@ -605,7 +605,7 @@ static int get_fqdn(struct conf **c)
 	hints.ai_socktype=SOCK_STREAM;
 	hints.ai_flags=AI_CANONNAME;
 
-	if((gai_result=getaddrinfo(hostname, "http", &hints, &info)))
+	if((gai_result=getaddrinfo(hostname, NULL, &hints, &info)))
 	{
 		logp("getaddrinfo in %s: %s\n", __func__,
 			gai_strerror(gai_result));

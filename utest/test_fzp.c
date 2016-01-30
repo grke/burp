@@ -1,6 +1,7 @@
 #include "test.h"
 #include "../src/alloc.h"
 #include "../src/fzp.h"
+#include "../src/handy.h"
 
 static const char *file="utest_fzp";
 static const char *content="0123456789abcdefg";
@@ -79,14 +80,19 @@ static struct sdata sd[] = {
 	{ 20 } // It is OK to seek beyond the end of a file.
 };
 
+static int fzp_gzopen_old_zlib_seek_hack=0;
+
 static void seek_checks(
 	struct fzp *(*open_func)(const char *, const char *),
 	struct sdata *d)
 {
 	struct fzp *fzp;
+	int expected=0;
 
 	fail_unless((fzp=open_func(file, "rb"))!=NULL);
-	fail_unless(!fzp_seek(fzp, d->pos, SEEK_SET));
+	if(fzp_gzopen_old_zlib_seek_hack && d->pos > (off_t)strlen(content))
+		expected=-1;
+	fail_unless(fzp_seek(fzp, d->pos, SEEK_SET)==expected);
 	fail_unless(fzp_tell(fzp)==d->pos);
 	fail_unless(!fzp_eof(fzp));
 	fail_unless(!fzp_close(&fzp));
@@ -164,6 +170,8 @@ END_TEST
 
 START_TEST(test_fzp_gzseek)
 {
+	if(version_to_long(ZLIB_VERSION) <= version_to_long("1.2.3"))
+		fzp_gzopen_old_zlib_seek_hack=1;
 	do_seek_tests(fzp_gzopen);
 }
 END_TEST

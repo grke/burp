@@ -97,7 +97,7 @@ static time_t my_timegm(struct tm *tm)
 		if(!(tz=strdup_w(tz, __func__)))
 			return -1;
 	}
-	setenv("TZ", "", 1);
+	setenv("TZ", "UTC0", 1);
 	tzset();
 	ret=mktime(tm);
 	if(tz)

@@ -132,13 +132,12 @@ static void test_xattr(struct xattrdata x)
 	if(x.do_dir) path=BASE;
 	else path=myfile;
 
-#if defined(HAVE_FREEBSD_OS) || defined(HAVE_NETBSD_OS)
+#if defined(HAVE_FREEBSD_OS) || \
+    defined(HAVE_NETBSD_OS)
 	metasymbol=META_XATTR_BSD;
 #endif
-#if defined(HAVE_DARWIN_OS)
-	metasymbol=META_XATTR_OSX;
-#endif
-#if defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_DARWIN_OS)
 	metasymbol=META_XATTR;
 #endif
 	snprintf(expected, sizeof(expected), "%s", x.expected_read);

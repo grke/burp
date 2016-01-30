@@ -9,7 +9,6 @@
 
 #define META_XATTR		'X'
 #define META_XATTR_BSD		'B'
-#define META_XATTR_OSX		'M'
 
 #define META_VSS		'V'
 

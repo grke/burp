@@ -123,7 +123,8 @@ int set_extrameta(struct asfd *asfd,
 				break;
 #endif
 #endif
-#if defined(HAVE_LINUX_OS)
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR:
 				if(set_xattr(asfd,
@@ -136,15 +137,6 @@ int set_extrameta(struct asfd *asfd,
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_XATTR
 			case META_XATTR_BSD:
-				if(set_xattr(asfd,
-					path, m, s, cmdtmp, cntr))
-						errors++;
-				break;
-#endif
-#endif
-#if defined(HAVE_DARWIN_OS)
-#ifdef HAVE_XATTR
-			case META_XATTR_OSX:
 				if(set_xattr(asfd,
 					path, m, s, cmdtmp, cntr))
 						errors++;

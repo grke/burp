@@ -24,6 +24,7 @@ dnl Check for compiler.
 dnl ------------------------------------------------------
 
 AC_PROG_CXX
+AM_PROG_CC_C_O
 
 dnl -------------------------------------------------------
 dnl Check for programs.

@@ -48,7 +48,10 @@ static void read_checks(
 
 	fail_unless((fzp=open_func(file, "rb"))!=NULL);
 	fail_unless(fzp_read(fzp, buf, d->want)==(int)d->got);
-	fail_unless((d->want>d->got) == fzp_eof(fzp));
+	if(d->want > d->got)
+		fail_unless(fzp_eof(fzp));
+	else
+		fail_unless(!fzp_eof(fzp));
 	fail_unless(!fzp_close(&fzp));
 	fail_unless(fzp==NULL);
 

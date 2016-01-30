@@ -118,7 +118,7 @@ int from_base64(int64_t *value, const char *where)
 	/* Construct value */
 	for(char c=where[i]; c && c!=' '; c=where[++i])
 	{
-		if(!isalnum(c) && c!='+' && c!='/')
+		if(!isalnum((unsigned char)c) && c!='+' && c!='/')
 			continue;
 		val<<=6;
 		val+=base64_map[(uint8_t)c];

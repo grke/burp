@@ -425,39 +425,13 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 	return 0;
 }
 
-// Using putenv() because Windows has no setenv().
-static const struct tm *my_localtime(time_t t)
-{
-	static const struct tm *ctm=NULL;
-	char *tz;
-
-	if((tz=getenv("TZ")))
-	{
-		if(!(tz=strdup_w(tz, __func__)))
-			return NULL;
-	}
-	putenv((char *)"TZ=");
-	tzset();
-	ctm=localtime(&t);
-
-	if(tz)
-	{
-		static char buf[32];
-		snprintf(buf, sizeof(buf), "TZ=%s", tz);
-		putenv(buf);
-		tzset();
-	}
-	free_w(&tz);
-	return ctm;
-}
-
-const char *getdatestr(time_t t)
+const char *getdatestr(const time_t t)
 {
 	static char buf[32]="";
 	const struct tm *ctm=NULL;
 
 	if(!t
-	  || !(ctm=my_localtime(t)))
+	  || !(ctm=gmtime(&t)))
 		return "never";
 
 	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ctm);

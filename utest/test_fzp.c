@@ -87,14 +87,18 @@ static void seek_checks(
 	struct sdata *d)
 {
 	struct fzp *fzp;
-	int expected=0;
 
 	fail_unless((fzp=open_func(file, "rb"))!=NULL);
 	if(fzp_gzopen_old_zlib_seek_hack && d->pos > (off_t)strlen(content))
-		expected=-1;
-	fail_unless(fzp_seek(fzp, d->pos, SEEK_SET)==expected);
-	fail_unless(fzp_tell(fzp)==d->pos);
-	fail_unless(!fzp_eof(fzp));
+	{
+		fail_unless(fzp_seek(fzp, d->pos, SEEK_SET)==-1);
+	}
+	else
+	{
+		fail_unless(!fzp_seek(fzp, d->pos, SEEK_SET));
+		fail_unless(fzp_tell(fzp)==d->pos);
+		fail_unless(!fzp_eof(fzp));
+	}
 	fail_unless(!fzp_close(&fzp));
 	fail_unless(fzp==NULL);
 }

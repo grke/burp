@@ -1,3 +1,40 @@
+2016-01-31 Changes in burp-2.0.32:
+  * Tweak README install instructions.
+  * Fix ncurses output option.
+  * Fixes for ncurses support on OpenIndiana.
+  * Header inclusion order fixes.
+  * NetBSD be64toh and le64toh cleanup.
+  * Make xattr code compile on NetBSD.
+  * Attempt SSL_accept again on SSL_ERROR_WANT_READ.
+  * Fix 'make distcheck'.
+  * Add 'make install-config' and 'make install-all' commands.
+  * Use AC_CHECK_TYPES to check for struct utimbuf.
+  * Replace flock locking with bash file creation locking.
+  * Portability fixes in test_main.
+  * Make xattr.c depend more on detected functionality, less on OS.
+  * Compiler warning fixes on various platforms.
+  * Fixes to so that burp runs on DragonFlyBSD.
+  * Fix a protocol2 champsock problem for FreeBSD.
+  * Use the BSD-style xattr functions on NetBSD.
+  * FreeBSD now fully added to automatic test system.
+  * Simplify checks for endian conversion functions.
+  * Install bedup, bsigs, and vss_strip.
+  * Don't try to create sockets with mknod.
+  * Fix xattr test so that ordering doesn't matter.
+  * Add keepalive flag to sockets.
+  * Remove child status pipe from the connections that timeout.
+  * Mark log functions as printf-like, clean up format warnings.
+  * Allow for setting test verbosity from environment.
+  * NetBSD fix - getaddrinfo: don't lookup http service.
+  * Set timezone to UTC before calling mktime, otherwise Solaris uses the
+    system timezone.
+  * Use gmtime instead of localtime, to fix test failures on OpenIndiana and
+    OmniOS.
+  * Fix AM_PROC_CC_C_O warning with older automake versions.
+  * Fix base64 decoding test on NetBSD.
+  * Fix test_fzp for older zlib versions.
+  * Updated yajl in burp-depgs in order to fix a Windows XP linking bug.
+
 2016-01-03 Changes in burp-2.0.30:
   * Ruben Kerkhof has rewritten the automake/configure system.
   * Make CMD_INTERRUPT work in protocol 2.
@@ -206,7 +243,7 @@
   * Fix bug where 'burp -a S' was limited to 24 lines.
   * Make 'burp -a S' not truncate client names.
   * Implement glob '. /some/dir/*' conf syntax on non-Windows machines.
-  * Changes to support librsync-1.0.0.  
+  * Changes to support librsync-1.0.0.
   * When listing a directory, include a '.' entry to indicate the directory
     itself.
   * When listing a directory, send an error if the directory was not found.
@@ -762,7 +799,7 @@
   * Add Bas van den Dikkenberg's tweaks for getting burp into official Debian
     and Ubuntu repositories. Burp is now in debian sid and ubuntu precise.
   * Make the server tell the client what extra_comms features it supports, so
-    that, in future, old servers are more likely to work with new clients. 
+    that, in future, old servers are more likely to work with new clients.
   * Improve 'make clean'.
   * Add option to strip off leading path components on restore.
   * Fix segfault that was happening on the server when SSL_accept() failed.
@@ -943,7 +980,7 @@
 2011-03-18 Changes in burp-1.1.22:
   * Added scheduling.
   * Added email notifications.
-  * Fixed autoconf. Programs like ccache should now work. 
+  * Fixed autoconf. Programs like ccache should now work.
   * Strip whitespace from end of conf lines, ignore quotes around conf lines.
   * Updated the Windows build tools.
 

@@ -12,6 +12,11 @@ for you:
 apt-get install make pkg-config check g++ \
 	librsync-dev libz-dev libssl-dev uthash-dev libyajl-dev
 
+(If you are checking out directly from git, you will also need to get some
+extra packages in order to generate the configure file:
+apt-get install autoconf automake libtool
+autoreconf -vif)
+
 Change to the burp source directory and run "./configure --prefix=/usr
 --sysconfdir=/etc/burp --localstatedir=/var" then "make". All being well, burp
 will compile successfully. Then run "make install" and then "make
@@ -27,7 +32,7 @@ runs, its startup will be a slower than usual because it needs to generate its
 SSL certificates. However, this will probably only be noticeable on old
 machines.
 
-The server is now ready for clients to connect to it. 
+The server is now ready for clients to connect to it.
 
 
 Unix client

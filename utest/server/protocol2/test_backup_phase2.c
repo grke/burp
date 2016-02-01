@@ -276,7 +276,7 @@ static void setup_asfds_no_sigs_from_client(struct asfd *asfd,
 
 	setup_writes_from_slist(asfd, &aw, slist);
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "requests_end");
-	asfd_mock_read_no_op(asfd, &ar, 30);
+	asfd_mock_read_no_op(asfd, &ar, 60);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");

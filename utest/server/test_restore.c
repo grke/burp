@@ -287,7 +287,7 @@ static void setup_asfds_proto2_stuff(struct asfd *asfd, struct slist *slist)
 		}
 	}
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
-	asfd_mock_read_no_op(asfd, &r, 200);
+	asfd_mock_read_no_op(asfd, &r, 300);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
 }
 

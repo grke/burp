@@ -437,6 +437,7 @@ Suite *suite_server_bu_get(void)
 	s=suite_create("server_bu_get");
 
 	tc_core=tcase_create("Core");
+	tcase_set_timeout(tc_core, 60);
 
 	tcase_add_test(tc_core, test_bu_get_proto_1);
 	tcase_add_test(tc_core, test_bu_get_proto_2);

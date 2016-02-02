@@ -554,7 +554,7 @@ int regenerate_client_dindex(struct sdirs *sdirs)
 
 	for(bu=bu_list; bu; bu=bu->next)
 	{
-		snprintf(tmp, sizeof(tmp), "%08lu", bu->index-1);
+		snprintf(tmp, sizeof(tmp), "%08"PRIX64, bu->index-1);
 		if(!(newpath=prepend_s(sdirs->dindex, tmp))
 		  || !(oldpath=prepend_s(bu->path, "manifest/dfiles")))
 			goto end;

@@ -297,6 +297,8 @@ diff -u \
   <( cd "$rpath1" ; find . $extra_find_arg -print0 | xargs -0 stat $stat_args | sort $exclude_dir) \
   <( cd "$rpath2" ; find . $extra_find_arg -print0 | xargs -0 stat $stat_args | sort $exclude_dir) \
 	|| fail "$3 (permissions)"
+
+	rm -rf "$rpath2"
 EOF
 }
 
@@ -350,8 +352,10 @@ fi
 # Scramble a whole bunch of files
 # On Windows, need to specify the whole path to find and sort, or the Windows
 # versions are picked up instead.
+sortprog="sort --random-sort"
+which shuffle >/dev/null 2>&1 && sortprog=shuffle
 /usr/bin/find "$includedir/autoconf" -type f | while read f ; do
-	LC_ALL='C' sort --random-sort "\$f" > tmpfile
+	LC_ALL='C' \$sortprog "\$f" > tmpfile
 	[ "$?" != "0" ] && exit 1
 	mv tmpfile "\$f" || exit 1
 done || fail "randomise files failed"

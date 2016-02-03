@@ -27,18 +27,24 @@ while ! lock; do
     let sleptfor+=$sleeptime
     let sleeptime*=2
     if [ $sleptfor -ge $maxwait ]; then
-        echo "Failed to acquire lock $lockfile in $sleptfor seconds" >&2
+        echo "Failed to acquire lock $lockfile in $sleptfor seconds" 1>&2
         exit 1
     fi
 done
+
+name=$(hostname -f 2>/dev/null)
+# Try NetBSD style.
+[ -n "$name" ] || name=$(hostname 2>/dev/null)
+if [ -z "$name" ] ; then
+	echo "Could not determine hostname" 1>&2
+	exit 1
+fi
 
 set -e
 
 etc=/etc/burp
 dir=${etc}/CA
 conf=${etc}/CA.cnf
-
-name=$(hostname -f)
 ca_days=7300
 size=2048
 

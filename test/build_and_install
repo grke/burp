@@ -37,7 +37,11 @@ build_and_install()
 	ln "$tolink" "$build/utest/testhardlink4" || fail
 
 	# Create a .bz2 file, to exercise exclude_comp.
-	tar -cjf "$build/autoconf/autoconf.tar.bz2" ../autoconf || fail
+	# Some tars (like on NetBSd) do not like having '..' in the arguments.
+	# So cd up and back again.
+	cdir ..
+	tar -cjf "$build/autoconf/autoconf.tar.bz2" autoconf || fail
+	cdir -
 
 	# Create a target directory, compile burp and install it into the
 	# target.

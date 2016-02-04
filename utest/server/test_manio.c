@@ -109,12 +109,17 @@ static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 			blk_expected=(*sb_expected)->protocol2->bstart;
 			blk_expected_end=(*sb_expected)->protocol2->bend;
 		}
-		*sb_expected=(*sb_expected)->next;
 		i++;
 		if(i==finish)
 		{
-			if(protocol==PROTO_1 || phase==1) break;
+			if(protocol==PROTO_1 || phase==1
+			  || !sbuf_is_filedata(*sb_expected))
+			{
+				*sb_expected=(*sb_expected)->next;
+				break;
+			}
 		}
+		*sb_expected=(*sb_expected)->next;
 	}
 end:
 	sbuf_free(&rb);

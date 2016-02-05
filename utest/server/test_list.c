@@ -650,6 +650,7 @@ Suite *suite_server_list(void)
 	s=suite_create("server_list");
 
 	tc_core=tcase_create("Core");
+	tcase_set_timeout(tc_core, 60);
 
 	tcase_add_test(tc_core, test_do_server_list);
 	tcase_add_test(tc_core, test_check_browsedir);

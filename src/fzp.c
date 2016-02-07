@@ -56,7 +56,10 @@ static int close_zp(gzFile *zp)
 	int e;
 	int ret=0;
 	if(!*zp) return ret;
-	if((e=gzclose(*zp)))
+	if((e=gzclose(*zp))
+	// Can return Z_BUF_ERROR if the last read ended in the middle
+	// of a gzip stream. I saw this happening in utests on OpenBSD.
+	  && e!=Z_BUF_ERROR)
 	{
 		const char *str=NULL;
 		if(e==Z_ERRNO) str=strerror(errno);

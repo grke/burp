@@ -7,29 +7,42 @@
 
 # Locking code to try to make sure that two instances do not run together and
 # corrupt the CA files.
-LOCKFILE="/tmp/burp_ca.lock"
+LOCKDIR="/tmp/burp_ca.lockdir"
+PIDFILE="$LOCKDIR/pid"
 
 lock()
 {
-    if (set -o noclobber; : > "$LOCKFILE") 2>/dev/null; then
-        trap 'rm -f "$LOCKFILE"; exit $?' INT TERM EXIT
-        return 0
-    fi
-    return 1
+	# Originally from http://wiki.bash-hackers.org/howto/mutex, and
+	# adjusted somewhat.
+	if mkdir "$LOCKDIR" 2>/dev/null ; then
+		trap 'rm -rf "$LOCKDIR"; exit $?' INT TERM EXIT
+		echo $$ > "$PIDFILE" || return 1
+		return 0
+	else
+		oldpid="$(cat "$PIDFILE")" || return 1
+
+		if ! ps -p "$oldpid" &>/dev/null; then
+			echo "Removing stale lock with pid $oldpid" 1>&2
+			rm -rf "$LOCKDIR" || return 1
+			echo "Restarting myself" 1>&2
+			exec "$0" "$@"
+		fi
+		return 1
+	fi
 }
 
 maxwait=60
 sleeptime=1
-sleptfor=0
+slept=0
 
 while ! lock; do
-    sleep $sleeptime
-    let sleptfor+=$sleeptime
-    let sleeptime*=2
-    if [ $sleptfor -ge $maxwait ]; then
-        echo "Failed to acquire lock $lockfile in $sleptfor seconds" 1>&2
-        exit 1
-    fi
+	sleep $sleeptime
+	let slept+=$sleeptime
+	let sleeptime*=2
+	if [ $slept -ge $maxwait ]; then
+		echo "Failed to acquire lock $LOCKDIR in $slept seconds" 1>&2
+		exit 1
+	fi
 done
 
 name=$(hostname -f 2>/dev/null)
@@ -86,31 +99,31 @@ check_second_arg()
 
 while [ $# -gt 0 ]
 do
-    case $1 in
-    -h|--help) help; exit 0 ;;
-    -i|--init) init=yes ;;
-    -k|--key) key=yes ;;
-    -K|--keypath) check_second_arg $#; keypath=$2; shift ;;
-    -r|--request) request=yes ;;
-    -R|--requestpath) check_second_arg $#; requestpath=$2; shift ;;
-    -s|--sign) sign=yes ;;
-       --batch) batch="-batch" ;;
-       --revoke) check_second_arg $#; revoke=$2; shift ;;
-       --crl) crl=yes ;;
-    -d|--dir) check_second_arg $#; dir=$2; shift ;;
-    -c|--config) check_second_arg $#; conf=$2; shift ;;
-    -n|--name) check_second_arg $#; name=$2; shift ;;
-    -D|--days) check_second_arg $#; days="-days $2"; shift ;;
-       --ca_days) check_second_arg $#; ca_days=$2; shift ;;
-    -S|--size) check_second_arg $#; size=$2; shift ;;
-    -a|--ca) check_second_arg $#; ca=$2; shift ;;
-    -f|--dhfile) check_second_arg $#; dhfile=$2; shift ;;
-    -A|--altname) check_second_arg $#; altname=$2; shift ;;
-    --) shift; break;;
-    -*) echo "$0: error - unrecognized option $1" 1>&2; exit 1;;
-    *) break;;
-    esac
-    shift
+	case $1 in
+		-h|--help) help; exit 0 ;;
+		-i|--init) init=yes ;;
+		-k|--key) key=yes ;;
+		-K|--keypath) check_second_arg $#; keypath=$2; shift ;;
+		-r|--request) request=yes ;;
+		-R|--requestpath) check_second_arg $#; requestpath=$2; shift ;;
+		-s|--sign) sign=yes ;;
+		   --batch) batch="-batch" ;;
+		   --revoke) check_second_arg $#; revoke=$2; shift ;;
+		   --crl) crl=yes ;;
+		-d|--dir) check_second_arg $#; dir=$2; shift ;;
+		-c|--config) check_second_arg $#; conf=$2; shift ;;
+		-n|--name) check_second_arg $#; name=$2; shift ;;
+		-D|--days) check_second_arg $#; days="-days $2"; shift ;;
+		   --ca_days) check_second_arg $#; ca_days=$2; shift ;;
+		-S|--size) check_second_arg $#; size=$2; shift ;;
+		-a|--ca) check_second_arg $#; ca=$2; shift ;;
+		-f|--dhfile) check_second_arg $#; dhfile=$2; shift ;;
+		-A|--altname) check_second_arg $#; altname=$2; shift ;;
+		--) shift; break;;
+		-*) echo "$0: error - unrecognized option $1" 1>&2; exit 1;;
+		*) break;;
+	esac
+	shift
 done
 
 if [ -n "$dhfile" ] ; then
@@ -121,32 +134,34 @@ if [ -n "$dhfile" ] ; then
 fi
 
 if [ -z "$ca" ]; then
-  ca=${name}
+	ca=${name}
 fi
 
 if [ -n "$altname" ]; then
-  altname="subjectAltName=$altname"
+	altname="subjectAltName=$altname"
 fi
 
 # init CA
 if [ "$init" = "yes" ]; then
-  echo "Init... ${ca}"
-  if [ ! -f ${conf} ]; then
-     echo "$0: error - config ${conf} missing" 1>&2; exit 1
-  fi
-  if [ -d ${dir} ]; then
-     echo "$0: error - ${dir} exists, ca initialized" 1>&2; exit 1
-  fi
+	echo "Init... ${ca}"
+	if [ ! -f ${conf} ]; then
+		echo "$0: error - config ${conf} missing" 1>&2
+		exit 1
+	fi
+	if [ -d ${dir} ]; then
+		echo "$0: error - ${dir} exists, ca initialized" 1>&2
+		exit 1
+	fi
   
-  mkdir ${dir}
-  mkdir ${dir}/certs
-  mkdir ${dir}/newcerts
+	mkdir ${dir}
+	mkdir ${dir}/certs
+	mkdir ${dir}/newcerts
 
-  umask ${sec_umask}
-  openssl genrsa -out ${dir}/CA_${ca}.key ${size}
-  umask ${def_umask}
-  TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
-  cat <<-EOF > ${TEMP}
+	umask ${sec_umask}
+	openssl genrsa -out ${dir}/CA_${ca}.key ${size}
+	umask ${def_umask}
+	TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
+	cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
 
 	[ req ]
@@ -161,32 +176,32 @@ if [ "$init" = "yes" ]; then
 	[ req_distinguished_name ]
 	commonName                      = ${ca}
 EOF
-  CA_DIR=${dir} openssl req -config ${TEMP} -new -x509 -days $ca_days \
-    -key ${dir}/CA_${ca}.key -out ${dir}/CA_${ca}.crt -extensions v3_ca
-  rm -f $TEMP
+	CA_DIR=${dir} openssl req -config ${TEMP} -new -x509 -days $ca_days \
+		-key ${dir}/CA_${ca}.key -out ${dir}/CA_${ca}.crt \
+		-extensions v3_ca
+	rm -f $TEMP
 
-  : > ${dir}/index.txt
-  echo "00" > ${dir}/serial.txt
-  echo "00" > ${dir}/crlnumber.txt
-
+	: > ${dir}/index.txt
+	echo "00" > ${dir}/serial.txt
+	echo "00" > ${dir}/crlnumber.txt
 fi
 
 [ -z "$keypath" ] && keypath=${dir}/${name}.key
 
 # generate key
 if [ "$key" = "yes" ]; then
-  echo "generating key ${name}: ${keypath}"
-  umask ${sec_umask}
-  openssl genrsa -out "${keypath}" ${size}
-  umask ${def_umask}
+	echo "generating key ${name}: ${keypath}"
+	umask ${sec_umask}
+	openssl genrsa -out "${keypath}" ${size}
+	umask ${def_umask}
 fi
 
 # generate signing request 
 [ -z "$requestpath" ] && requestpath=${dir}/${name}.csr
 if [ "$request" = "yes" ]; then
-  echo "generating request ${name}"
-  TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
-  cat <<-EOF > ${TEMP}
+	echo "generating request ${name}"
+	TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
+	cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
         req_extensions          = v3_req
 
@@ -202,40 +217,39 @@ if [ "$request" = "yes" ]; then
 	commonName                      = ${name}
 
 EOF
-  openssl req -config ${TEMP} -new -key "${keypath}" \
-    -out "${requestpath}" -extensions v3_req
-  rm -f $TEMP
+	openssl req -config ${TEMP} -new -key "${keypath}" \
+		-out "${requestpath}" -extensions v3_req
+	rm -f "$TEMP"
 fi
 
 
 # sign 
 if [ "$sign" = "yes" ]; then
-  serial=$(cat ${dir}/serial.txt)
-  CA_DIR=${dir} openssl ca -config ${conf} -name ca \
-    -in ${dir}/${name}.csr -out $dir/${name}.crt ${days} \
-    -keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
-    ${batch}
-  if [ ! -f ${dir}/newcerts/${serial}.pem ]; then
-    exit 0
-  fi
-  mv ${dir}/newcerts/${serial}.pem ${dir}/certs/${serial}.pem
-  #rehash the certificates
-  for file in ${dir}/certs/*.pem; do ln -s -f $file ${dir}/certs/`openssl x509 -hash -noout -in $file`.0; done
+	serial=$(cat ${dir}/serial.txt)
+	CA_DIR=${dir} openssl ca -config ${conf} -name ca \
+		-in ${dir}/${name}.csr -out $dir/${name}.crt ${days} \
+		-keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
+		${batch}
+	[ -f ${dir}/newcerts/${serial}.pem ] || exit 0
+	mv ${dir}/newcerts/${serial}.pem ${dir}/certs/${serial}.pem
+	# rehash the certificates
+	for file in ${dir}/certs/*.pem; do
+		ln -s -f $file \
+			${dir}/certs/`openssl x509 -hash -noout -in $file`.0
+	done
 fi
 
-#revoke
-if [ -n "$revoke" ]; then
-  CA_DIR=${dir} openssl ca -config ${conf} -name ca \
-    -revoke ${dir}/certs/${revoke}.pem \
-    -keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
-    ${batch}
-fi
+# revoke
+[ -n "$revoke" ] && \
+	CA_DIR=${dir} openssl ca -config ${conf} -name ca \
+		-revoke ${dir}/certs/${revoke}.pem \
+		-keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
+		${batch}
 
-#crl
-if [ -n "$crl" ]; then
-  CA_DIR=${dir} openssl ca -config ${conf} -name ca \
-   -gencrl -out ${dir}/CA_${ca}.crl \
-   -keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt 
-fi
+# crl
+[ -n "$crl" ] && \
+	CA_DIR=${dir} openssl ca -config ${conf} -name ca \
+		-gencrl -out ${dir}/CA_${ca}.crl \
+		-keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt
 
 exit 0

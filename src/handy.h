@@ -67,4 +67,6 @@ extern int breakpoint(int breaking, const char *func);
 extern void convert_backslashes(char **path);
 #endif
 
+extern char *encode_time(time_t utime, char *buf);
+
 #endif

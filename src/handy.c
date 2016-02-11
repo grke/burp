@@ -601,3 +601,27 @@ void convert_backslashes(char **path)
 	for(p=*path; *p; p++) if(*p=='\\') *p='/';
 }
 #endif
+
+char *encode_time(time_t utime, char *buf)
+{
+	const struct tm *tm;
+	int n=0;
+	time_t time=utime;
+
+#ifdef HAVE_WIN32
+	/* Avoid a seg fault in Microsoft's CRT localtime_r(),
+	 *  which incorrectly references a NULL returned from gmtime() if
+	 *  time is negative before or after the timezone adjustment. */
+	struct tm *gtm;
+
+	if(!(gtm=gmtime(&time))) return buf;
+
+	if(gtm->tm_year==1970 && gtm->tm_mon==1 && gtm->tm_mday<3) return buf;
+#endif
+
+	if((tm=localtime(&time)))
+		n=sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
+			tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday,
+			tm->tm_hour, tm->tm_min, tm->tm_sec);
+	return buf+n;
+}

@@ -4,6 +4,7 @@
 #include "../async.h"
 #include "../attribs.h"
 #include "../cmd.h"
+#include "../handy.h"
 #include "../log.h"
 
 /* Note: The chars in this function are not the same as in the CMD_ set.
@@ -24,30 +25,6 @@ static char *encode_mode(mode_t mode, char *buf)
 	*cp++=(mode&S_ISVTX?(mode&S_IXOTH?'t':'T'):(mode&S_IXOTH?'x':'-'));
 	*cp='\0';
 	return cp;
-}
-
-static char *encode_time(uint64_t utime, char *buf)
-{
-	const struct tm *tm;
-	int n=0;
-	time_t time=utime;
-
-#ifdef HAVE_WIN32
-	/* Avoid a seg fault in Microsoft's CRT localtime_r(),
-	 *  which incorrectly references a NULL returned from gmtime() if
-	 *  time is negative before or after the timezone adjustment. */
-	struct tm *gtm;
-
-	if(!(gtm=gmtime(&time))) return buf;
-
-	if(gtm->tm_year==1970 && gtm->tm_mon==1 && gtm->tm_mday<3) return buf;
-#endif
-
-	if((tm=localtime(&time)))
-		n=sprintf(buf, "%04d-%02d-%02d %02d:%02d:%02d",
-			tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday,
-			tm->tm_hour, tm->tm_min, tm->tm_sec);
-	return buf+n;
 }
 
 void ls_to_buf(char *lsbuf, struct sbuf *sb)

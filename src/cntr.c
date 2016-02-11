@@ -496,14 +496,18 @@ void cntr_print(struct cntr *cntr, enum action act)
 	struct cntr_ent *e;
 	time_t now;
 	time_t start;
+	char time_start_str[32];
+	char time_end_str[32];
 	if(!cntr) return;
 	now=time(NULL);
 	start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)now;
 
 	border();
-	logc("Start time: %s\n", getdatestr(start));
-	logc("  End time: %s\n", getdatestr(now));
+	encode_time(start, time_start_str);
+	encode_time(now, time_end_str);
+	logc("Start time: %s\n", time_start_str);
+	logc("  End time: %s\n", time_end_str);
 	logc("Time taken: %s\n", time_taken(now-start));
 	if(act==ACTION_BACKUP
 	  || act==ACTION_BACKUP_TIMED)

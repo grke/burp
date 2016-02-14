@@ -432,6 +432,9 @@ Whether to check for revoked certificates in the certificate revocation list.
 .TP
 \fBmonitor_browse_cache=[0|1]\fR
 Whether or not the server should cache the directory tree when a monitor client is browsing. Advantage: browsing is faster. Disadvantage: more memory is used.
+.TP
+\fBlabel=[string]\fR
+You can have multiple labels, and they can be overridden in the client configuration files in clientconfdir on the server. They will appear as an array of strings in the server status monitor JSON output. The idea is to provide a mechanism for arbirtrary values to be passed to clients of the server status monitor.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -684,6 +687,7 @@ Additionally, the following options can be overridden here for each client:
 \fBcompression\fR
 \fBhard_quota\fR
 \fBsoft_quota\fR
+\fBlabel\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR
 \fBnotify_success_script\fR

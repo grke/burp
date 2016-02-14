@@ -23,6 +23,7 @@ struct cstat
 {
 	char *name;
 	char *conffile;
+	struct strlist *labels;
 	time_t conf_mtime;
 	struct cntr *cntr; // Set from the parent process.
 	enum run_status run_status;

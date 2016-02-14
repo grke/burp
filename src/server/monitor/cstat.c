@@ -41,6 +41,7 @@ int cstat_permitted(struct cstat *cstat,
 static int set_cstat_from_conf(struct cstat *cstat,
 	struct conf **parentconfs, struct conf **cconfs)
 {
+	struct strlist *s=NULL;
 	// Make sure the permitted flag is set appropriately.
 	cstat->permitted=cstat_permitted(cstat, parentconfs, cconfs);
 
@@ -49,6 +50,10 @@ static int set_cstat_from_conf(struct cstat *cstat,
 	if(!(cstat->sdirs=sdirs_alloc())
 	  || sdirs_init_from_confs((struct sdirs *)cstat->sdirs, cconfs))
 		return -1;
+	strlists_free(&cstat->labels);
+	for(s=get_strlist(cconfs[OPT_LABEL]); s; s=s->next)
+		if(strlist_add_sorted(&cstat->labels, s->path, s->flag))
+			return -1;
 	return 0;
 }
 

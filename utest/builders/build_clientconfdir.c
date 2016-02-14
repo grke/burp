@@ -25,11 +25,11 @@ void delete_clientconfdir_file(const char *file)
 	fail_unless(!unlink(path));
 }
 
-void build_clientconfdir_files(const char *cnames[])
+void build_clientconfdir_files(const char *cnames[], const char *content)
 {
 	int i=0;
 	for(i=0; cnames[i]; i++)
-		build_clientconfdir_file(cnames[i], NULL);
+		build_clientconfdir_file(cnames[i], content);
 }
 
 void assert_cstat_list(struct cstat *clist, const char *cnames[])

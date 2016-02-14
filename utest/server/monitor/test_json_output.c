@@ -1,8 +1,11 @@
 #include "../../test.h"
 #include "../../builders/build.h"
+#include "../../builders/build_file.h"
 #include "../../../src/alloc.h"
 #include "../../../src/asfd.h"
 #include "../../../src/bu.h"
+#include "../../../src/conf.h"
+#include "../../../src/conffile.h"
 #include "../../../src/cstat.h"
 #include "../../../src/fsops.h"
 #include "../../../src/fzp.h"
@@ -15,6 +18,8 @@
 #define BASE		"utest_server_monitor_json_output"
 #define SDIRS		BASE "_sdirs"
 #define EXPECTED	TOP_SRCDIR "/utest/json_output"
+#define CONF_BASE	"utest_server_monitor_json_output_conf"
+#define CONFFILE	CONF_BASE "/burp.conf"
 
 static struct fzp *output=NULL;
 
@@ -62,20 +67,41 @@ START_TEST(test_json_send_empty)
 }
 END_TEST
 
+static struct conf **setup_conf(void)
+{
+	struct conf **confs=NULL;
+	fail_unless((confs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(confs));
+	return confs;
+}
+
 START_TEST(test_json_send_clients)
 {
 	struct asfd *asfd;
 	struct cstat *c=NULL;
 	struct cstat *clist=NULL;
+	struct conf **globalcs=NULL;
+	struct conf **cconfs=NULL;
 	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
+
+	globalcs=setup_conf();
+	cconfs=setup_conf();
+
+	build_file(CONFFILE, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(CONFFILE, globalcs));
+
 	fail_unless(recursive_delete(CLIENTCONFDIR)==0);
-	build_clientconfdir_files(cnames);
-	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
+	build_clientconfdir_files(cnames, "label=abc\nlabel=xyz\n");
+	fail_unless(!cstat_load_data_from_disk(&clist, globalcs, cconfs));
 	assert_cstat_list(clist, cnames);
 	for(c=clist; c; c=c->next) c->permitted=1;
 	asfd=asfd_setup(BASE "/clients");
 	fail_unless(!json_send(asfd, clist, NULL, NULL, NULL, NULL, 0/*cache*/));
+	for(c=clist; c; c=c->next)
+		sdirs_free((struct sdirs **)&c->sdirs);
 	cstat_list_free(&clist);
+	confs_free(&globalcs);
+	confs_free(&cconfs);
 	tear_down(&asfd);
 }
 END_TEST
@@ -113,7 +139,7 @@ static void do_test_json_send_clients_with_backup(const char *path,
 	struct cstat *clist=NULL;
 	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
 	fail_unless(recursive_delete(CLIENTCONFDIR)==0);
-	build_clientconfdir_files(cnames);
+	build_clientconfdir_files(cnames, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames);
 	for(c=clist; c; c=c->next)
@@ -278,6 +304,7 @@ START_TEST(cleanup)
 	// Not a test. Just wanted to cleanup before and after this suite.
 	fail_unless(!recursive_delete(BASE));
 	fail_unless(!recursive_delete(SDIRS));
+	fail_unless(!recursive_delete(CONF_BASE));
 }
 END_TEST
 

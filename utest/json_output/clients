@@ -2,6 +2,10 @@
     "clients": [
         {
             "name": "cli1",
+            "labels": [
+                "abc",
+                "xyz"
+            ],
             "run_status": "unknown",
             "backups": [
 
@@ -9,6 +13,10 @@
         },
         {
             "name": "cli2",
+            "labels": [
+                "abc",
+                "xyz"
+            ],
             "run_status": "unknown",
             "backups": [
 
@@ -16,6 +24,10 @@
         },
         {
             "name": "cli3",
+            "labels": [
+                "abc",
+                "xyz"
+            ],
             "run_status": "unknown",
             "backups": [
 

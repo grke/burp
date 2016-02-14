@@ -8,6 +8,7 @@
 #include "../../fzp.h"
 #include "../../iobuf.h"
 #include "../../prepend.h"
+#include "../../strlist.h"
 #include "../../yajl_gen_w.h"
 #include "browse.h"
 #include "json_output.h"
@@ -326,13 +327,31 @@ static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 	return 0;
 }
 
+static int str_array(const char *field, struct cstat *cstat)
+{
+	struct strlist *s=NULL;
+	if(!cstat->labels) return 0;
+	if(yajl_gen_str_w(field)
+	  || yajl_array_open_w())
+		return -1;
+	for(s=cstat->labels; s; s=s->next)
+		if(yajl_gen_str_w(s->path))
+			return -1;
+	if(yajl_array_close_w())
+		return -1;
+	return 0;
+}
+
 static int json_send_client_start(struct asfd *asfd, struct cstat *cstat)
 {
 	const char *run_status=run_status_to_str(cstat);
 
 	if(yajl_map_open_w()
-	  || yajl_gen_str_pair_w("name", cstat->name)
-	  || yajl_gen_str_pair_w("run_status", run_status))
+	  || yajl_gen_str_pair_w("name", cstat->name))
+		return -1;
+	if(str_array("labels", cstat))
+		return -1;
+	if(yajl_gen_str_pair_w("run_status", run_status))
 		return -1;
 	if(cstat->run_status==RUN_STATUS_RUNNING)
 	{

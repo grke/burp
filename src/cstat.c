@@ -4,6 +4,7 @@
 #include "cstat.h"
 #include "log.h"
 #include "prepend.h"
+#include "strlist.h"
 
 struct cstat *cstat_alloc(void)
 {
@@ -35,6 +36,7 @@ static void cstat_free_content(struct cstat *c)
 	bu_list_free(&c->bu);
 	free_w(&c->name);
 	free_w(&c->conffile);
+	strlists_free(&c->labels);
 	cntr_free(&c->cntr);
 	if(c->sdirs) logp("%s() called without freeing sdirs\n", __func__);
 	c->clientdir_mtime=0;

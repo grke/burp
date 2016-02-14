@@ -231,6 +231,8 @@ enum conf_opt
 	OPT_TIMER_SCRIPT,
 	OPT_TIMER_ARG,
 
+	OPT_LABEL,
+
 	// Notify scripts
 	OPT_N_SUCCESS_SCRIPT,
 	OPT_N_SUCCESS_ARG,

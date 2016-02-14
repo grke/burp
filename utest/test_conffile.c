@@ -455,6 +455,7 @@ START_TEST(test_clientconfdir_conf)
 		"timer_script=/timer/script\n"
 		"timer_arg=/timer/arg1\n"
 		"timer_arg=/timer/arg2\n"
+		"label=qwe\n"
 		NOTIFY_CONF
 	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
@@ -478,6 +479,8 @@ START_TEST(test_clientconfdir_conf)
 		"restore_client=123\n"
 		"restore_client=456\n"
 		"dedup_group=dd_group\n"
+		"label=rty\n"
+		"label=xyz\n"
 	;
 
 	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
@@ -514,6 +517,9 @@ START_TEST(test_clientconfdir_conf)
 	assert_strlist(&s, "/timer/arg2", 0);
 	assert_include(&s, NULL);
 	ck_assert_str_eq(get_string(cconfs[OPT_DEDUP_GROUP]), "dd_group");
+	s=get_strlist(cconfs[OPT_LABEL]);
+	assert_strlist(&s, "rty", 0);
+	assert_strlist(&s, "xyz", 0);
 	notify_assertions(cconfs);
 	tear_down(&globalcs, &cconfs);
 }

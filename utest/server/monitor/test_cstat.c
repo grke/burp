@@ -141,32 +141,32 @@ START_TEST(test_cstat_get_client_names)
 		{".abc", "xyz~", NULL };
 
 	clean();
-	build_clientconfdir_files(cnames);
+	build_clientconfdir_files(cnames, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames);
 
 	// Call again with the same clientconfdir files.
 	clean();
-	build_clientconfdir_files(cnames);
+	build_clientconfdir_files(cnames, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames);
 
 	// Call again with extra clientconfdir files.
 	clean();
-	build_clientconfdir_files(cnames_add);
+	build_clientconfdir_files(cnames_add, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames_add);
 
 	// Call again with fewer clientconfdir files.
 	// The list will not be shorter.
 	clean();
-	build_clientconfdir_files(cnames_rm);
+	build_clientconfdir_files(cnames_rm, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames_add);
 
 	// Temporary files should be missed.
 	clean();
-	build_clientconfdir_files(tmp_files);
+	build_clientconfdir_files(tmp_files, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames_add);
 
@@ -223,7 +223,7 @@ START_TEST(test_cstat_reload_from_client_confs)
 	fail_unless(!confs_init(globalcs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
-	build_clientconfdir_files(cnames123);
+	build_clientconfdir_files(cnames123, NULL);
 
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	fail_unless(cstat_reload_from_client_confs(&clist,
@@ -301,7 +301,7 @@ static struct cstat *test_cstat_remove_setup(struct conf ***globalcs,
 	fail_unless(!confs_init(*globalcs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, *globalcs));
-	build_clientconfdir_files(cnames);
+	build_clientconfdir_files(cnames, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames);
 	return clist;
@@ -403,7 +403,7 @@ START_TEST(test_cstat_add_out_of_order)
 	fail_unless(!confs_init(globalcs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
-	build_clientconfdir_files(cnames31204);
+	build_clientconfdir_files(cnames31204, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames01234);
 	test_cstat_remove_teardown(&globalcs, &clist);

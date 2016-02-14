@@ -175,6 +175,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_INCGLOB:
         	case OPT_FIFOS:
         	case OPT_BLOCKDEVS:
+		case OPT_LABEL:
 			fail_unless(get_strlist(c[o])==NULL);
 			break;
 		case OPT_PROTOCOL:

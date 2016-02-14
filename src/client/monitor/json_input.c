@@ -140,6 +140,11 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 		}
 		goto end;
 	}
+	else if(!strcmp(lastkey, "labels"))
+	{
+		if(!current) goto error;
+		goto end;
+	}
 	else if(!strcmp(lastkey, "run_status"))
 	{
 		if(!current) goto error;

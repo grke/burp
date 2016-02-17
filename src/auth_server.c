@@ -16,15 +16,12 @@
 static int check_passwd(const char *passwd, const char *plain_text)
 {
 #ifdef HAVE_CRYPT
-	char salt[3];
-
-	if(!plain_text || !passwd || strlen(passwd)!=13)
+	if(!plain_text || !passwd || strlen(passwd) < 13)
 		return 0;
 
-	salt[0]=passwd[0];
-	salt[1]=passwd[1];
-	salt[2]=0;
-	return !strcmp(crypt(plain_text, salt), passwd);
+	const char *encrypted = crypt(plain_text, passwd);
+
+	return encrypted && !strcmp(encrypted, passwd);
 #endif // HAVE_CRYPT
 	logp("Server compiled without crypt support - cannot use passwd option\n");
 	return -1;

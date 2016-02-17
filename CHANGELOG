@@ -1,3 +1,6 @@
+  * Add support for glibc's additional algorithms in crypt(3)-style passwords
+    ("passwd" configuration option)
+
 2015-07-01 Changes in burp-1.4.40:
   * Fix '-a l' regex so that it isn't split in two at the right-most
     colon.

@@ -129,49 +129,6 @@ int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)
 	return iobuf_pathcmp(&a->path, &b->path);
 }
 
-// Return -1 for error, 0 for could not open file, 1 for success.
-int sbuf_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
-	struct conf **confs)
-{
-	BFILE *bfd=&sb->protocol2->bfd;
-#ifdef HAVE_WIN32
-	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
-#else
-	if(lstat(sb->path.buf, &sb->statp))
-#endif
-	{
-		// This file is no longer available.
-		logw(asfd, cntr, "%s has vanished\n", sb->path.buf);
-		return 0;
-	}
-	sb->compression=get_int(confs[OPT_COMPRESSION]);
-	// Encryption not yet implemented in protocol2.
-	//sb->protocol2->encryption=conf->protocol2->encryption_password?1:0;
-	if(attribs_encode(sb)) return -1;
-
-	if(bfd->open_for_send(bfd, asfd,
-		sb->path.buf, sb->winattr,
-		get_int(confs[OPT_ATIME]), cntr, PROTO_2))
-	{
-		logw(asfd, get_cntr(confs),
-			"Could not open %s\n", sb->path.buf);
-		return 0;
-	}
-	return 1;
-}
-
-void sbuf_close_file(struct sbuf *sb, struct asfd *asfd)
-{
-	BFILE *bfd=&sb->protocol2->bfd;
-	bfd->close(bfd, asfd);
-}
-
-ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize)
-{
-	BFILE *bfd=&sb->protocol2->bfd;
-	return (ssize_t)bfd->read(bfd, buf, bufsize);
-}
-
 enum parse_ret
 {
 	PARSE_RET_ERROR=-1,

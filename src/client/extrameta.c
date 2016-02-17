@@ -15,8 +15,7 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
 #if defined(WIN32_VSS)
 	return 1;
 #endif
-	// FIX THIS: extra meta not supported in protocol2.
-	if(protocol==PROTO_2) return 0;
+
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_NETBSD_OS)

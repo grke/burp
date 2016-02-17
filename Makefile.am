@@ -180,6 +180,7 @@ burp_SOURCES = \
 	src/client/protocol1/backup_phase2.c src/client/protocol1/backup_phase2.h \
 	src/client/protocol1/restore.c src/client/protocol1/restore.h \
 	src/client/protocol2/backup_phase2.c src/client/protocol2/backup_phase2.h \
+	src/client/protocol2/rabin_read.c src/client/protocol2/rabin_read.h \
 	src/client/protocol2/restore.c src/client/protocol2/restore.h \
 	src/protocol1/handy.c src/protocol1/handy.h \
 	src/protocol1/msg.c src/protocol1/msg.h \

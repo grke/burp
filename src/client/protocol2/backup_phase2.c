@@ -11,6 +11,7 @@
 #include "../../protocol2/blist.h"
 #include "../../protocol2/rabin/rabin.h"
 #include "../../slist.h"
+#include "rabin_read.h"
 
 #define END_SIGS                0x01
 #define END_BACKUP              0x02
@@ -140,7 +141,7 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 	{
 		struct cntr *cntr=NULL;
 		if(confs) cntr=get_cntr(confs);
-		switch(sbuf_open_file(sb, asfd, cntr, confs))
+		switch(rabin_open_file(sb, asfd, cntr, confs))
 		{
 			case 1: // All OK.
 				break;
@@ -164,7 +165,7 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 		case 0: // All OK.
 			break;
 		case 1: // File ended.
-			sbuf_close_file(sb, asfd);
+			rabin_close_file(sb, asfd);
 			slist->last_requested=sb->next;
 			break;
 		default:

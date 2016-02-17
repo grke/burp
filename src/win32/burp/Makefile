@@ -54,6 +54,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/protocol1/backup_phase2.o \
 	$(OBJDIR)/client/protocol1/restore.o \
 	$(OBJDIR)/client/protocol2/backup_phase2.o \
+	$(OBJDIR)/client/protocol2/rabin_read.o \
 	$(OBJDIR)/client/protocol2/restore.o \
 	$(OBJDIR)/client/ca.o \
 	$(OBJDIR)/client/cvss.o \

@@ -57,11 +57,6 @@ extern struct sbuf *sbuf_alloc(enum protocol protocol);
 extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf **sb);
 
-extern int sbuf_open_file(struct sbuf *sb,
-	struct asfd *asfd, struct cntr *cntr, struct conf **confs);
-extern void sbuf_close_file(struct sbuf *sb, struct asfd *asfd);
-extern ssize_t sbuf_read(struct sbuf *sb, char *buf, size_t bufsize);
-
 extern int sbuf_is_filedata(struct sbuf *sb);
 extern int sbuf_is_vssdata(struct sbuf *sb);
 extern int sbuf_is_link(struct sbuf *sb);

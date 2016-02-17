@@ -6,6 +6,7 @@
 #include "../blk.h"
 #include "../blist.h"
 #include "../../sbuf.h"
+#include "../../client/protocol2/rabin_read.h"
 
 static struct blk *blk=NULL;
 static char *gcp=NULL;
@@ -102,7 +103,7 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 			return 0; // Got a block.
 		// Did not get a block. Carry on and read more.
 	}
-	while((bytes=sbuf_read(sb, gbuf, rconf.blk_max)))
+	while((bytes=rabin_read(sb, gbuf, rconf.blk_max)))
 	{
 		gcp=gbuf;
 		gbuf_end=gbuf+bytes;

@@ -246,7 +246,7 @@ static void setup_asfds_proto1_stuff(struct asfd *asfd, struct slist *slist)
 	}
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
 	asfd_mock_read_no_op(asfd, &r, 100);
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend ok");
 }
 
 START_TEST(test_proto1_stuff)
@@ -288,7 +288,7 @@ static void setup_asfds_proto2_stuff(struct asfd *asfd, struct slist *slist)
 	}
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
 	asfd_mock_read_no_op(asfd, &r, 300);
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend ok");
 }
 
 static void setup_asfds_proto2_interrupt(struct asfd *asfd, struct slist *slist)
@@ -345,7 +345,7 @@ static void setup_asfds_proto2_interrupt(struct asfd *asfd, struct slist *slist)
 	}
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
 	asfd_mock_read_no_op(asfd, &r, 200);
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend ok");
 }
 
 static void setup_asfds_proto2_interrupt_no_match(struct asfd *asfd,
@@ -386,7 +386,7 @@ static void setup_asfds_proto2_interrupt_no_match(struct asfd *asfd,
 	}
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
 	asfd_mock_read_no_op(asfd, &r, 200);
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend ok");
 }
 
 static void setup_asfds_proto2_interrupt_on_non_filedata(struct asfd *asfd,
@@ -405,7 +405,7 @@ static void setup_asfds_proto2_interrupt_on_non_filedata(struct asfd *asfd,
 	asfd_mock_read(asfd, &r, 0, CMD_INTERRUPT, "00000");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
 	asfd_mock_read_no_op(asfd, &r, 200);
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend_ok");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend ok");
 }
 
 START_TEST(test_proto2_stuff)

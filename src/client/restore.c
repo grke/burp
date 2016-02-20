@@ -600,8 +600,8 @@ int do_restore_client(struct asfd *asfd,
 
 	logf("\n");
 
-//	if(get_int(confs[OPT_SEND_CLIENT_CNTR]) && cntr_recv(confs))
-//		goto error;
+	if(get_int(confs[OPT_SEND_CLIENT_CNTR]) && cntr_recv(asfd, confs))
+		goto error;
 
 	if(!(sb=sbuf_alloc(protocol))
 	  || (protocol==PROTO_2 && !(blk=blk_alloc())))
@@ -620,7 +620,7 @@ int do_restore_client(struct asfd *asfd,
 		{
 			case 0: break;
 			case 1: if(asfd->write_str(asfd, CMD_GEN,
-				"restoreend_ok")) goto error;
+				"restoreend ok")) goto error;
 				goto end; // It was OK.
 			default:
 			case -1: goto error;

@@ -45,7 +45,7 @@ static void setup_proto1_no_files(struct asfd *asfd, struct slist *slist)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend_ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend ok");
 }
 
 static void setup_proto1_no_datapth(struct asfd *asfd, struct slist *slist)
@@ -135,7 +135,7 @@ static void setup_proto1_some_things(struct asfd *asfd, struct slist *slist)
 		}
 	}
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend_ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend ok");
 }
 
 static struct conf **setup_conf(void)
@@ -270,7 +270,7 @@ static void setup_proto2_some_things(struct asfd *asfd, struct slist *slist)
 		}
 	}
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend_ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend ok");
 }
 
 static void setup_proto2_interrupt(struct asfd *asfd, struct slist *slist)
@@ -339,7 +339,7 @@ static void setup_proto2_interrupt(struct asfd *asfd, struct slist *slist)
 		}
 	}
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend_ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend ok");
 }
 
 START_TEST(test_restore_proto2_bad_read)

@@ -28,7 +28,7 @@
 static enum asl_ret restore_end_func(struct asfd *asfd,
 	struct conf **confs, void *param)
 {
-	if(!strcmp(asfd->rbuf->buf, "restoreend_ok"))
+	if(!strcmp(asfd->rbuf->buf, "restoreend ok"))
 		return ASL_END_OK;
 	iobuf_log_unexpected(asfd->rbuf, __func__);
 	return ASL_END_ERROR;

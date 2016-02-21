@@ -9,14 +9,17 @@
 #include "../iobuf.h"
 #include "../log.h"
 
-static int check_passwd(const char *passwd, const char *plain_text)
+#ifndef UTEST
+static
+#endif
+int check_passwd(const char *passwd, const char *plain_text)
 {
 #ifdef HAVE_CRYPT
-	if(!plain_text || !passwd || strlen(passwd) < 13)
+	const char *encrypted=NULL;
+	if(!plain_text || !passwd || strlen(passwd)<13)
 		return 0;
 
-	const char *encrypted = crypt(plain_text, passwd);
-
+	encrypted=crypt(plain_text, passwd);
 	return encrypted && !strcmp(encrypted, passwd);
 #endif // HAVE_CRYPT
 	logp("Server compiled without crypt support - cannot use passwd option\n");

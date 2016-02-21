@@ -6,4 +6,8 @@ extern void version_warn(struct asfd *asfd,
 extern int authorise_server(struct asfd *asfd,
 	struct conf **globalcs, struct conf **cconfs);
 
+#ifdef UTEST
+extern int check_passwd(const char *passwd, const char *plain_text);
+#endif
+
 #endif

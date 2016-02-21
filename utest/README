@@ -1,5 +1,0 @@
-Let's start trying to do unit tests.
-These use 'check'.
-On Debian:
-apt-get install check
-make

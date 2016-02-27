@@ -62,6 +62,10 @@ touched in the backup set, testing backshift was abandoned.
 test   time   client   server  network (b)   disk space (kb)   nodes
 a1 43:37:50   125132        -   6709214436      6314132      1290187
 
+<p>
+<a href="backshift-update.html">Note from the author of Backshift</a>
+</p>
+
 <br>
 
 backuppc-3.2.1

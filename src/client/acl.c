@@ -108,7 +108,7 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 		*alen, ourtext, tlen+9, "", 0, alen)))
 			ret=-1;
 end:
-	free_w(&tmp);
+	if(tmp) acl_free(tmp);
 	free_w(&ourtext);
 	return ret;
 }

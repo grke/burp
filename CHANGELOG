@@ -1,5 +1,18 @@
+2016-02-28 Changes in burp-2.0.34:
   * Add support for glibc's additional algorithms in crypt(3)-style passwords
-    ("passwd" configuration option)
+    ("passwd" configuration option).
+  * Unit tests for check_passwd.
+  * Bug fix for acls - use acl_free() instead of free_w().
+  * Make server accept 'restoreend_ok' and 'restoreend ok'.
+  * Make client send 'restoreend ok', the same as burp 1.4.40.
+  * Work on protocol2 xattr support.
+  * Implement labels being passed via status monitor.
+  * Use localtime() instead of gmtime() in cntr_print().
+  * Better locking for burp_ca.
+  * Make close_zp() not crash on OpenBSD on Z_RET_ERROR.
+  * Add Travis file.
+  * Turn on all tests for NetBSD.
+  * Fix dindex filename in protocol 2 phase 4 regenerate client index.
 
 2016-01-31 Changes in burp-2.0.32:
   * Tweak README install instructions.
@@ -16,7 +29,7 @@
   * Portability fixes in test_main.
   * Make xattr.c depend more on detected functionality, less on OS.
   * Compiler warning fixes on various platforms.
-  * Fixes to so that burp runs on DragonFlyBSD.
+  * Fixes so that burp runs on DragonFlyBSD.
   * Fix a protocol2 champsock problem for FreeBSD.
   * Use the BSD-style xattr functions on NetBSD.
   * FreeBSD now fully added to automatic test system.

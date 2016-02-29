@@ -28,7 +28,7 @@ it was doing file system look ups for each incoming checksum over the network.
 This must badly exacerbate the disk bottleneck problem.
 </p>
 <p>
-<a href="backshift-update.html">Note from the author of Backshift</a>
+<a href="backshift-update.html">Note from the author of Backshift, August 2015</a>
 </p>
 
 <p>

@@ -308,7 +308,9 @@ int restore_ent(struct asfd *asfd,
 	/* FIX THIS: for Windows, need to read and remember the blocks that
 	   go with the directories. Probably have to do the same for metadata
 	   that goes with directories. */
-	if(S_ISDIR((*sb)->statp.st_mode))
+	if(S_ISDIR((*sb)->statp.st_mode)
+	  // Hack for metadata for now - just do it straight away.
+	  && !sbuf_is_metadata(*sb))
 	{
 		// Add to the head of the list instead of the tail.
 		(*sb)->next=slist->head;

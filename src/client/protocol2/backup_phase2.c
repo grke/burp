@@ -63,6 +63,7 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 	{
 		/* Incoming file request. */
 		case CMD_FILE:
+		case CMD_METADATA:
 			if(add_to_file_requests(slist, rbuf)) goto error;
 			return 0;
 

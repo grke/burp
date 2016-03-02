@@ -43,7 +43,7 @@ static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
 	int r;
 	int ret=-1;
 	int done=0;
-	struct fzp *fzp;
+	struct fzp *fzp=NULL;
 	struct iobuf rbuf;
 
 	iobuf_init(&rbuf);

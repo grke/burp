@@ -42,6 +42,8 @@ extern void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol);
 extern struct manio *do_manio_open(const char *path, const char *mode,
 	enum protocol protocol, int phase);
 extern void assert_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len);
+extern void assert_files_equal(const char *opath, const char *npath);
+extern void assert_files_compressed_equal(const char *opath, const char *npath);
 
 Suite *suite_alloc(void);
 Suite *suite_attribs(void);
@@ -68,6 +70,7 @@ Suite *suite_protocol2_rabin_rconf(void);
 Suite *suite_protocol2_rabin_win(void);
 Suite *suite_protocol2_sbuf_protocol2(void);
 Suite *suite_server_auth(void);
+Suite *suite_server_backup_phase3(void);
 Suite *suite_server_bu_get(void);
 Suite *suite_server_delete(void);
 Suite *suite_server_list(void);

@@ -28,7 +28,10 @@ static int breakcount=0;
 
 static int data_needed(struct sbuf *sb)
 {
-	if(sb->path.cmd==CMD_FILE) return 1;
+	if(sb->path.cmd==CMD_FILE)
+		return 1;
+	if(sb->path.cmd==CMD_METADATA)
+		return 1;
 	return 0;
 }
 

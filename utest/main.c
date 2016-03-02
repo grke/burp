@@ -36,6 +36,7 @@ int main(void)
 	srunner_add_suite(sr, suite_protocol2_rabin_win());
 	srunner_add_suite(sr, suite_protocol2_sbuf_protocol2());
 	srunner_add_suite(sr, suite_server_auth());
+	srunner_add_suite(sr, suite_server_backup_phase3());
 	srunner_add_suite(sr, suite_server_bu_get());
 	srunner_add_suite(sr, suite_server_delete());
 	srunner_add_suite(sr, suite_server_list());

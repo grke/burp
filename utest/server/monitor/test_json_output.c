@@ -229,7 +229,8 @@ END_TEST
 
 #define FULL_CHUNK	4096
 
-static void full_match(const char *opath, const char *npath)
+static void do_assert_files_equal(const char *opath, const char *npath,
+	int compressed)
 {
 	size_t ogot;
 	size_t ngot;
@@ -239,8 +240,16 @@ static void full_match(const char *opath, const char *npath)
 	static char obuf[FULL_CHUNK];
 	static char nbuf[FULL_CHUNK];
 
-	fail_unless((ofp=fzp_open(opath, "rb"))!=NULL);
-	fail_unless((nfp=fzp_open(npath, "rb"))!=NULL);
+	if(compressed)
+	{
+		fail_unless((ofp=fzp_gzopen(opath, "rb"))!=NULL);
+		fail_unless((nfp=fzp_gzopen(npath, "rb"))!=NULL);
+	}
+	else
+	{
+		fail_unless((ofp=fzp_open(opath, "rb"))!=NULL);
+		fail_unless((nfp=fzp_open(npath, "rb"))!=NULL);
+	}
 
 	while(1)
 	{
@@ -253,6 +262,16 @@ static void full_match(const char *opath, const char *npath)
 	}
 	fzp_close(&ofp);
 	fzp_close(&nfp);
+}
+
+void assert_files_equal(const char *opath, const char *npath)
+{
+	return do_assert_files_equal(opath, npath, 0/*compressed*/);
+}
+
+void assert_files_compressed_equal(const char *opath, const char *npath)
+{
+	return do_assert_files_equal(opath, npath, 1/*compressed*/);
 }
 
 START_TEST(test_json_matching_output)
@@ -271,7 +290,7 @@ START_TEST(test_json_matching_output)
 		fail_unless(
 			(epath=prepend_s(EXPECTED, dir[i]->d_name))!=NULL);
 
-		full_match(bpath, epath);
+		assert_files_equal(bpath, epath);
 
 		free_w(&bpath);
 		free_w(&epath);

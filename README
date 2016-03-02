@@ -17,12 +17,15 @@ extra packages in order to generate the configure file:
 apt-get install autoconf automake libtool
 autoreconf -vif)
 
-Change to the burp source directory and run "./configure --prefix=/usr
---sysconfdir=/etc/burp --localstatedir=/var" then "make". All being well, burp
-will compile successfully. Then run "make install" and then "make
-install-configs" as root to install. The "make install-configs" command
-will overwrite configuration files in /etc/burp, so you will probably not
-want to do that if you have an existing burp installation.
+Change to the burp source directory and run:
+
+./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var
+
+Then run "make". All being well, burp will compile successfully. Run "make
+install" and then "make install-configs" as root to install.
+The "make install-configs" command will overwrite configuration files in
+/etc/burp, so you will probably not want to do that if you have an existing
+burp installation.
 
 Start the burp server with this command: burp -c /etc/burp/burp-server.conf
 

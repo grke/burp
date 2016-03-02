@@ -99,9 +99,10 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 	struct slist *slist, enum action act,
 	struct sbuf *need_data, int last_ent_was_dir, struct cntr *cntr)
 {
+	int ret=-1;
 	if(need_data->path.buf)
 	{
-		if(send_data(asfd, blk, act, need_data, cntr)) return -1;
+		ret=send_data(asfd, blk, act, need_data, cntr);
 	}
 	else if(last_ent_was_dir)
 	{
@@ -111,7 +112,7 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 		struct blk *nblk;
 		struct sbuf *xb;
 		if(!(nblk=blk_alloc_with_data(blk->length)))
-			return -1;
+			goto end;
 		nblk->length=blk->length;
 		memcpy(nblk->data, blk->data, blk->length);
 		xb=slist->head;
@@ -122,6 +123,7 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 			xb->protocol2->bend->next=nblk;
 			xb->protocol2->bend=nblk;
 		}
+		ret=0;
 	}
 	else
 	{
@@ -131,6 +133,7 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 			bytes_to_md5str(blk->md5sum),
 			uint64_to_savepathstr_with_sig(blk->savepath));
 	}
+end:
 	blk->data=NULL;
-	return 0;
+	return ret;
 }

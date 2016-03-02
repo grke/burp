@@ -23,8 +23,6 @@ roughly in order of most important to least.
 
 * Add data encryption.
 
-* Make acl/xattrs work as far as protocol1 does.
-
 * Make Windows EFS work.
 
 * Make Windows 'image' backups work.

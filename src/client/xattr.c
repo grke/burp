@@ -403,7 +403,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 		have_acl++;
 	}
 
-	for(z=xattrlist; z-xattrlist <= len; z=strchr(z, '\0')+1)
+	for(z=xattrlist; z-xattrlist < len; z=strchr(z, '\0')+1)
 	{
 		char tmp1[9];
 		char tmp2[9];

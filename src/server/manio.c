@@ -559,8 +559,8 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 	struct blk **blk, struct manio *srcmanio,
 	struct manio *dstmanio)
 {
-	static int ars;
-	static char *copy=NULL;
+	int ars;
+	struct iobuf copy;
 
 	// Use the most recent stat for the new manifest.
 	if(dstmanio)
@@ -573,7 +573,9 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 		}
 	}
 
-	if(!(copy=strdup_w(csb->path.buf, __func__)))
+	copy.len=csb->path.len;
+	copy.cmd=csb->path.cmd;
+	if(!(copy.buf=strdup_w(csb->path.buf, __func__)))
 		goto error;
 	while(1)
 	{
@@ -584,15 +586,15 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 			// Finished.
 			sbuf_free_content(csb);
 			blk_free(blk);
-			free_w(&copy);
+			iobuf_free_content(&copy);
 			return 1;
 		}
 
 		// Got something.
-		if(strcmp(csb->path.buf, copy))
+		if(iobuf_pathcmp(&csb->path, &copy))
 		{
 			// Found the next entry.
-			free_w(&copy);
+			iobuf_free_content(&copy);
 			return 0;
 		}
 		if(dstmanio)
@@ -615,7 +617,7 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 	}
 
 error:
-	free_w(&copy);
+	iobuf_free_content(&copy);
 	return -1;
 }
 

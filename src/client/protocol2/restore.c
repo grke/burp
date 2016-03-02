@@ -2,12 +2,14 @@
 #include "../../alloc.h"
 #include "../../asfd.h"
 #include "../../async.h"
+#include "../../attribs.h"
 #include "../../bfile.h"
 #include "../../cmd.h"
 #include "../../cntr.h"
 #include "../../fsops.h"
 #include "../../log.h"
 #include "../../sbuf.h"
+#include "../extrameta.h"
 #include "../restore.h"
 
 static int start_restore_file(struct asfd *asfd,
@@ -57,17 +59,58 @@ error:
 	return ret;
 }
 
-/*
+static int get_meta(
+	struct asfd *asfd,
+	struct cntr *cntr,
+	char **metadata,
+	size_t *metalen)
+{
+	int ret=-1;
+	struct iobuf *rbuf=asfd->rbuf;
+
+	while(1)
+	{
+		iobuf_free_content(rbuf);
+		if(asfd->read(asfd))
+			goto end;
+printf("%c\n", rbuf->cmd);
+
+		switch(rbuf->cmd)
+		{
+			case CMD_DATA:
+				if(!(*metadata=(char *)realloc_w(*metadata,
+					(*metalen)+rbuf->len, __func__)))
+						goto end;
+				memcpy((*metadata)+(*metalen),
+					rbuf->buf, rbuf->len);
+				*metalen+=rbuf->len;
+				break;
+			case CMD_END_FILE:
+				ret=0;
+				goto end;
+			case CMD_MESSAGE:
+			case CMD_WARNING:
+				log_recvd(rbuf, cntr, 0);
+				break;
+			default:
+				iobuf_log_unexpected(rbuf, __func__);
+				goto end;
+		}
+	}
+
+end:
+	iobuf_free_content(rbuf);
+	return ret;
+}
+
 static int restore_metadata(
-#ifdef HAVE_WIN32
-	BFILE *bfd,
-#endif
+	struct asfd *asfd,
 	struct sbuf *sb,
 	const char *fname,
 	enum action act,
 	const char *encpassword,
 	int vss_restore,
-	struct conf **confs)
+	struct cntr *cntr)
 {
 	// If it is directory metadata, try to make sure the directory
 	// exists. Pass in NULL as the cntr, so no counting is done.
@@ -80,17 +123,16 @@ static int restore_metadata(
 		size_t metalen=0;
 		char *metadata=NULL;
 		if(S_ISDIR(sb->statp.st_mode)
-		  && restore_dir(asfd, sb, fname, act, confs))
+		  && restore_dir(asfd, sb, fname, act, cntr, PROTO_2))
 			return -1;
 
 		// Read in the metadata...
-		if(restore_file_or_get_meta(bfd, sb, fname, act, encpassword,
-			&metadata, &metalen, vss_restore, confs))
-				return -1;
+		if(get_meta(asfd, cntr, &metadata, &metalen))
+			return -1;
 		if(metadata)
 		{
-			if(set_extrameta(bfd, fname, sb->path.cmd,
-				&(sb->statp), metadata, metalen, confs))
+			if(set_extrameta(asfd, NULL, fname, sb,
+				metadata, metalen, cntr))
 			{
 				free_w(&metadata);
 				// carry on if we could not do it
@@ -100,15 +142,16 @@ static int restore_metadata(
 #ifndef HAVE_WIN32
 			// set attributes again, since we just diddled with
 			// the file
-			attribs_set(fname, &(sb->statp), sb->winattr, confs);
+			attribs_set(asfd, fname, &(sb->statp),
+				sb->winattr, cntr);
 #endif
-			cntr_add(get_cntr(confs), sb->path.cmd, 1);
+			cntr_add(cntr, sb->path.cmd, 1);
 		}
 	}
-	else cntr_add(get_cntr(confs), sb->cmd, 1);
+	else
+		cntr_add(cntr, sb->path.cmd, 1);
 	return 0;
 }
-*/
 
 int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
@@ -142,13 +185,13 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 			}
 			break;
 */
-/* FIX THIS: Metadata and EFS not supported yet.
 		case CMD_METADATA:
-			if(restore_metadata(
-				bfd, sb, fullpath, act,
-				NULL, vss_restore, confs))
+			if(restore_metadata(asfd,
+				sb, fullpath, act,
+				NULL, vss_restore, cntr))
 					goto error;
 			break;
+/* FIX THIS: Encryption and EFS not supported yet.
 		case CMD_ENC_METADATA:
 			if(restore_metadata(
 				bfd, sb, fullpath, act,

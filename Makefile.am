@@ -302,6 +302,7 @@ runner_SOURCES = \
 	utest/client/monitor/test_lline.c \
 	utest/client/protocol1/test_backup_phase2.c \
 	utest/client/protocol2/test_backup_phase2.c \
+	utest/client/protocol2/test_rabin_read.c \
 	utest/client/test_auth.c \
 	utest/client/test_find.c \
 	utest/client/test_restore.c \

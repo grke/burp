@@ -73,7 +73,6 @@ static int get_meta(
 		iobuf_free_content(rbuf);
 		if(asfd->read(asfd))
 			goto end;
-printf("%c\n", rbuf->cmd);
 
 		switch(rbuf->cmd)
 		{

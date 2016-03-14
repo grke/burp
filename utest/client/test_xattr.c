@@ -6,6 +6,8 @@
 #include "../../src/client/extrameta.h"
 #include "../../src/client/xattr.h"
 
+#ifdef HAVE_XATTR
+
 #define BASE		"utest_xattr"
 
 static void tear_down(void)
@@ -73,7 +75,7 @@ static struct xattrdata x[] = {
 // Some operating systems return the xattrs in a different order, so we need
 // to do some extra fiddling to check that each piece was included in the
 // returned string.
-static void check_match(const char *expected,
+void assert_xattr(const char *expected,
 	const char *retrieved, size_t rlen)
 {
 	size_t r;
@@ -161,7 +163,7 @@ static void test_xattr(struct xattrdata x)
 	));
 	fail_unless(rlen==strlen(expected));
 
-	check_match(expected, retrieved, rlen);
+	assert_xattr(expected, retrieved, rlen);
 
 	free_w(&retrieved);
 	tear_down();
@@ -195,3 +197,5 @@ Suite *suite_client_xattr(void)
 
 	return s;
 }
+
+#endif

@@ -44,6 +44,9 @@ extern struct manio *do_manio_open(const char *path, const char *mode,
 extern void assert_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len);
 extern void assert_files_equal(const char *opath, const char *npath);
 extern void assert_files_compressed_equal(const char *opath, const char *npath);
+extern void assert_xattr(const char *expected,
+	const char *retrieved, size_t rlen);
+
 
 Suite *suite_alloc(void);
 Suite *suite_attribs(void);
@@ -54,6 +57,7 @@ Suite *suite_client_monitor_json_input(void);
 Suite *suite_client_monitor_lline(void);
 Suite *suite_client_protocol1_backup_phase2(void);
 Suite *suite_client_protocol2_backup_phase2(void);
+Suite *suite_client_protocol2_rabin_read(void);
 Suite *suite_client_restore(void);
 Suite *suite_client_xattr(void);
 Suite *suite_cmd(void);

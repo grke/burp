@@ -18,6 +18,7 @@ int main(void)
 	srunner_add_suite(sr, suite_client_monitor_lline());
 	srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
 	srunner_add_suite(sr, suite_client_protocol2_backup_phase2());
+	srunner_add_suite(sr, suite_client_protocol2_rabin_read());
 	srunner_add_suite(sr, suite_client_restore());
 #ifdef HAVE_XATTR
 	srunner_add_suite(sr, suite_client_xattr());

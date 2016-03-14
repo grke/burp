@@ -11,12 +11,13 @@ static char *meta_buffer=NULL;
 static size_t meta_buffer_len=0;
 static char *mp=NULL;
 
-static void rabin_close_file_extrameta(struct sbuf *sb)
+static int rabin_close_file_extrameta(struct sbuf *sb)
 {
 	free_w(&meta_buffer);
 	meta_buffer_len=0;
 	mp=NULL;
 	sb->protocol2->bfd.mode=BF_CLOSED;
+	return 0;
 }
 
 // Return -1 for error, 0 for could not get data, 1 for success.
@@ -35,7 +36,7 @@ static int rabin_open_file_extrameta(struct sbuf *sb, struct asfd *asfd,
 	return 1;
 }
 
-ssize_t rabin_read_extrameta(struct sbuf *sb, char *buf, size_t bufsize)
+static ssize_t rabin_read_extrameta(struct sbuf *sb, char *buf, size_t bufsize)
 {
 	// Place bufsize of the meta buffer contents into buf.
 	size_t to_read=meta_buffer_len;
@@ -43,8 +44,9 @@ ssize_t rabin_read_extrameta(struct sbuf *sb, char *buf, size_t bufsize)
 		return 0;
 	if(bufsize<meta_buffer_len)
 		to_read=bufsize;
-	memcpy(buf, meta_buffer, to_read);
+	memcpy(buf, mp, to_read);
 	meta_buffer_len-=to_read;
+	mp+=to_read;
 	return (ssize_t)to_read;
 }
 
@@ -81,16 +83,13 @@ int rabin_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
 	return 1;
 }
 
-void rabin_close_file(struct sbuf *sb, struct asfd *asfd)
+int rabin_close_file(struct sbuf *sb, struct asfd *asfd)
 {
 	BFILE *bfd;
 	if(sbuf_is_metadata(sb))
-	{
-		rabin_close_file_extrameta(sb);
-		return;
-	}
+		return rabin_close_file_extrameta(sb);
 	bfd=&sb->protocol2->bfd;
-	bfd->close(bfd, asfd);
+	return bfd->close(bfd, asfd);
 }
 
 ssize_t rabin_read(struct sbuf *sb, char *buf, size_t bufsize)

@@ -47,6 +47,7 @@ dist_doc_DATA = \
 
 dist_man8_MANS = \
 	manpages/bedup.8 \
+	manpages/bsigs.8 \
 	manpages/burp.8 \
 	manpages/burp_ca.8 \
 	manpages/vss_strip.8

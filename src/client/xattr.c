@@ -8,10 +8,11 @@
 #include "extrameta.h"
 #include "xattr.h"
 
+#ifdef HAVE_XATTR
+
 #ifdef HAVE_SYS_XATTR_H
 #include <sys/xattr.h>
 #endif
-
 #ifdef HAVE_SYS_EXTATTR_H
 #include <sys/extattr.h>
 #endif
@@ -19,10 +20,7 @@
 #include <libutil.h>
 #endif
 
-#ifdef HAVE_XATTR
-
-#if defined(HAVE_DARWIN_OS)
-
+#ifdef HAVE_DARWIN_OS
 /*
  * OSX doesn't have llistxattr, lgetxattr and lsetxattr but has
  * listxattr, getxattr and setxattr with an extra options argument
@@ -35,31 +33,34 @@ listxattr((path), (list), (size), XATTR_NOFOLLOW)
 getxattr((path), (name), (value), (size), 0, XATTR_NOFOLLOW)
 #define lsetxattr(path, name, value, size, flags) \
 setxattr((path), (name), (value), (size), (flags), XATTR_NOFOLLOW)
-
-
-static const char *xattr_acl_skiplist[2] = {
+static const char *acl_skiplist[2] = {
     "com.apple.system.Security",
     NULL
 };
-#endif // HAVE_DARWIN_OS
-
-#if defined(HAVE_LINUX_OS)
-static const char *xattr_acl_skiplist[3] = {
+#elif HAVE_LINUX_OS
+static const char *acl_skiplist[3] = {
     "system.posix_acl_access",
     "system.posix_acl_default",
     NULL
 };
-#endif // HAVE_LINUX_OS
-
-#if defined(HAVE_FREEBSD_OS)
+#elif HAVE_FREEBSD_OS
 static const char *acl_skiplist[2] = {
     "system.posix1e.acl_access", NULL
 };
-#endif // HAVE_FREEBSD_OS
+#else
+static const char *acl_skiplist[1] = {
+	NULL
+};
+#endif
 
-#if defined(HAVE_NETBSD_OS)
-static const char *acl_skiplist[1] = { NULL };
-#endif // HAVE_NETBSD_OS
+// Skip xattr entries that were already saved as ACLs.
+static int in_skiplist(const char *xattr)
+{
+	for(int c=0; acl_skiplist[c]; c++)
+		if(!strcmp(xattr, acl_skiplist[c]))
+			return 1;
+	return 0;
+}
 
 #ifndef UTEST
 static
@@ -88,7 +89,7 @@ char *get_next_xattr_str(struct asfd *asfd, char **data, size_t *l,
 	return ret;
 }
 
-#if defined(HAVE_SYS_EXTATTR_H)
+#ifdef HAVE_SYS_EXTATTR_H
 static int namespaces[2] = {
 	EXTATTR_NAMESPACE_USER,
 	EXTATTR_NAMESPACE_SYSTEM
@@ -173,22 +174,8 @@ int get_xattr(struct asfd *asfd, const char *path,
 			snprintf(z, sizeof(z), "%s.%s",
 				cnamespace, cattrname);
 
-			if(have_acl)
-			{
-				int c=0;
-				int skip=0;
-				// skip xattr entries that were already saved
-				// as ACLs.
-				for(c=0; acl_skiplist[c]; c++)
-				{
-					if(!strcmp(z, acl_skiplist[c]))
-					{
-						skip++;
-						break;
-					}
-				}
-				if(skip) continue;
-			}
+			if(have_acl && in_skiplist(z))
+				continue;
 			zlen=strlen(z);
 			//printf("\ngot: %s (%s)\n", z, path);
 
@@ -362,79 +349,44 @@ int set_xattr(struct asfd *asfd, const char *path,
 	}
 	return -1;
 }
-#elif defined(HAVE_SYS_XATTR_H)
+
+#elif HAVE_SYS_XATTR_H
+
 int has_xattr(const char *path)
 {
 	if(llistxattr(path, NULL, 0)>0) return 1;
 	return 0;
 }
 
-int get_xattr(struct asfd *asfd, const char *path,
-	char **xattrtext, size_t *xlen, struct cntr *cntr)
+static int get_toappend(struct asfd *asfd, const char *path,
+	char **toappend, const char *xattrlist, ssize_t len, ssize_t *totallen,
+	int have_acl,
+	struct cntr *cntr)
 {
-	char *z=NULL;
-	ssize_t len;
-	int have_acl=0;
-	char *toappend=NULL;
-	char *xattrlist=NULL;
-	ssize_t totallen=0;
+	char *val=NULL;
+	const char *z=NULL;
 	ssize_t maxlen=0xFFFFFFFF/2;
-
-	if((len=llistxattr(path, NULL, 0))<0)
-	{
-		logw(asfd, cntr, "could not llistxattr '%s': %zd %s\n",
-			path, len, strerror(errno));
-		return 0; // carry on
-	}
-	if(!(xattrlist=(char *)calloc_w(1, len, __func__)))
-		return -1;
-	if((len=llistxattr(path, xattrlist, len))<0)
-	{
-		logw(asfd, cntr, "could not llistxattr '%s': %zd %s\n",
-			path, len, strerror(errno));
-		free_w(&xattrlist);
-		return 0; // carry on
-	}
-
-	if(xattrtext && *xattrtext)
-	{
-		// Already have some meta text, which means that some
-		// ACLs were set.
-		have_acl++;
-	}
 
 	for(z=xattrlist; z-xattrlist < len; z=strchr(z, '\0')+1)
 	{
 		char tmp1[9];
 		char tmp2[9];
-		char *val=NULL;
 		ssize_t vlen;
 		ssize_t zlen=0;
 		ssize_t newlen=0;
 
+		free_w(&val);
+
 		if((zlen=strlen(z))>maxlen)
 		{
-			logw(asfd, cntr, "xattr element of '%s' too long: %zd\n",
+			logw(asfd, cntr,
+				"xattr element of '%s' too long: %zd\n",
 				path, zlen);
-			free_w(&toappend);
-			break;
+			goto carryon;
 		}
 
-		if(have_acl)
-		{
-			int c=0;
-			int skip=0;
-			// skip xattr entries that were already saved as ACLs.
-			for(c=0; xattr_acl_skiplist[c]; c++)
-			{
-				if(!strcmp(z, xattr_acl_skiplist[c]))
-				{
-					skip++;
-					break;
-				}
-			}
-			if(skip) continue;
-		}
+		if(have_acl && in_skiplist(z))
+			continue;
 
 		if((vlen=lgetxattr(path, z, NULL, 0))<0)
 		{
@@ -446,17 +398,12 @@ int get_xattr(struct asfd *asfd, const char *path,
 		if(vlen)
 		{
 			if(!(val=(char *)malloc_w(vlen+1, __func__)))
-			{
-				free_w(&xattrlist);
-				free_w(&toappend);
-				return -1;
-			}
+				goto error;
 			if((vlen=lgetxattr(path, z, val, vlen))<0)
 			{
 				logw(asfd, cntr,
 				  "could not lgetxattr %s for %s: %zd %s\n",
 					path, z, vlen, strerror(errno));
-				free_w(&val);
 				continue;
 			}
 			val[vlen]='\0';
@@ -466,41 +413,85 @@ int get_xattr(struct asfd *asfd, const char *path,
 				logw(asfd, cntr,
 					"xattr value of '%s' too long: %zd\n",
 					path, vlen);
-				free_w(&toappend);
-				free_w(&val);
-				break;
+				goto carryon;
 			}
 		}
 
 		snprintf(tmp1, sizeof(tmp1), "%08X", (unsigned int)zlen);
 		snprintf(tmp2, sizeof(tmp2), "%08X", (unsigned int)vlen);
-		newlen=totallen+8+zlen+8+vlen;
-		if(!(toappend=(char *)realloc_w(toappend, newlen, __func__)))
-		{
-			free_w(&val);
-			free_w(&xattrlist);
-			return -1;
-		}
-		memcpy(toappend+totallen, tmp1, 8);
-		totallen+=8;
-		memcpy(toappend+totallen, z, zlen);
-		totallen+=zlen;
-		memcpy(toappend+totallen, tmp2, 8);
-		totallen+=8;
-		memcpy(toappend+totallen, val, vlen);
-		totallen+=vlen;
-		free_w(&val);
+		newlen=(*totallen)+8+zlen+8+vlen;
+		if(!(*toappend=(char *)realloc_w(*toappend, newlen, __func__)))
+			goto error;
+		memcpy((*toappend)+(*totallen), tmp1, 8);
+		*totallen+=8;
+		memcpy((*toappend)+(*totallen), z, zlen);
+		*totallen+=zlen;
+		memcpy((*toappend)+(*totallen), tmp2, 8);
+		*totallen+=8;
+		memcpy((*toappend)+(*totallen), val, vlen);
+		*totallen+=vlen;
 
-		if(totallen>maxlen)
+		if(*totallen>maxlen)
 		{
 			logw(asfd, cntr,
 				"xattr length of '%s' grew too long: %zd\n",
-				path, totallen);
-			free_w(&val);
-			free_w(&toappend);
-			free_w(&xattrlist);
-			return 0; // carry on
+				path, *totallen);
+			goto carryon;
 		}
+	}
+
+	free_w(&val);
+	return 0;
+error:
+	free_w(&val);
+	free_w(toappend);
+	return -1;
+carryon:
+	free_w(&val);
+	free_w(toappend);
+	return 0;
+}
+
+int get_xattr(struct asfd *asfd, const char *path,
+	char **xattrtext, size_t *xlen, struct cntr *cntr)
+{
+	int ret=0;
+	ssize_t len;
+	int have_acl=0;
+	char *toappend=NULL;
+	char *xattrlist=NULL;
+	ssize_t totallen=0;
+
+	if((len=llistxattr(path, NULL, 0))<0)
+	{
+		logw(asfd, cntr, "could not llistxattr '%s': %zd %s\n",
+			path, len, strerror(errno));
+		goto end; // Carry on.
+	}
+	if(!(xattrlist=(char *)calloc_w(1, len, __func__)))
+	{
+		ret=-1;
+		goto end;
+	}
+	if((len=llistxattr(path, xattrlist, len))<0)
+	{
+		logw(asfd, cntr, "could not llistxattr '%s': %zd %s\n",
+			path, len, strerror(errno));
+		goto end; // Carry on.
+	}
+
+	if(xattrtext && *xattrtext)
+	{
+		// Already have some meta text, which means that some
+		// ACLs were set.
+		have_acl++;
+	}
+
+	if(get_toappend(asfd, path, &toappend, xattrlist, len, &totallen,
+		have_acl, cntr))
+	{
+		ret=-1;
+		goto end;
 	}
 
 	if(toappend)
@@ -513,18 +504,18 @@ int get_xattr(struct asfd *asfd, const char *path,
 		if(!(*xattrtext=(char *)
 			realloc_w(*xattrtext, newlen, __func__)))
 		{
-			free_w(&toappend);
-			free_w(&xattrlist);
-			return -1;
+			ret=-1;
+			goto end;
 		}
 		memcpy(*xattrtext, tmp3, 9);
 		(*xlen)+=9;
 		memcpy((*xattrtext)+(*xlen), toappend, totallen);
 		(*xlen)+=totallen;
-		free_w(&toappend);
 	}
+end:
+	free_w(&toappend);
 	free_w(&xattrlist);
-	return 0;
+	return ret;
 }
 
 static int do_set_xattr(struct asfd *asfd,
@@ -580,6 +571,6 @@ int set_xattr(struct asfd *asfd, const char *path,
 	}
 	return -1;
 }
-#endif // HAVE_SYS_XATTR_H
+#endif
 
-#endif // HAVE_XATTR
+#endif

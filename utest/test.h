@@ -55,6 +55,7 @@ Suite *suite_client_auth(void);
 Suite *suite_client_find(void);
 Suite *suite_client_monitor_json_input(void);
 Suite *suite_client_monitor_lline(void);
+Suite *suite_client_monitor_status_client_ncurses(void);
 Suite *suite_client_protocol1_backup_phase2(void);
 Suite *suite_client_protocol2_backup_phase2(void);
 Suite *suite_client_protocol2_rabin_read(void);

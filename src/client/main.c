@@ -376,7 +376,8 @@ static enum cliret do_client(struct conf **confs,
 		logp("Status mode not implemented on Windows.\n");
 		goto error;
 #endif
-		if(status_client_ncurses(act, confs)) ret=CLIENT_ERROR;
+		if(status_client_ncurses_init(act)
+		  || status_client_ncurses(confs)) ret=CLIENT_ERROR;
 		goto end;
 	}
 

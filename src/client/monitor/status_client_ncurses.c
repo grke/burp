@@ -74,7 +74,7 @@ static char *get_bu_str(struct bu *bu)
 }
 
 static void client_summary(struct cstat *cstat,
-	int row, int col, int clientwidth, struct conf **confs)
+	int row, int col, int clientwidth)
 {
 	char msg[1024]="";
 	char fmt[64]="";
@@ -528,7 +528,7 @@ static void print_logs_list(struct sel *sel, int *x, int col)
 }
 
 static void update_screen_clients(struct sel *sel, int *x, int col,
-	int winmin, int winmax, struct conf **confs)
+	int winmin, int winmax)
 {
 #ifdef HAVE_NCURSES
 	int s=0;
@@ -556,7 +556,7 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 		}
 #endif
 
-		client_summary(c, (*x)++, col, max_cname, confs);
+		client_summary(c, (*x)++, col, max_cname);
 
 #ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS && sel->client==c)
@@ -725,7 +725,7 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 	if(!star_printed) sel->lline=sel->llines;
 }
 
-static int update_screen(struct sel *sel, struct conf **confs)
+static int update_screen(struct sel *sel)
 {
 	int x=0;
 	int row=24;
@@ -823,19 +823,16 @@ static int update_screen(struct sel *sel, struct conf **confs)
 	switch(sel->page)
 	{
 		case PAGE_CLIENT_LIST:
-			update_screen_clients(sel, &x, col,
-				winmin, winmax, confs);
+			update_screen_clients(sel, &x, col, winmin, winmax);
 			break;
 		case PAGE_BACKUP_LIST:
-			update_screen_backups(sel, &x, col,
-				winmin, winmax);
+			update_screen_backups(sel, &x, col, winmin, winmax);
 			break;
 		case PAGE_BACKUP_LOGS:
 			print_logs_list(sel, &x, col);
 			break;
 		case PAGE_VIEW_LOG:
-			update_screen_view_log(sel, &x, col,
-				winmin, winmax);
+			update_screen_view_log(sel, &x, col, winmin, winmax);
 			break;
 	}
 
@@ -852,7 +849,7 @@ static int update_screen(struct sel *sel, struct conf **confs)
 }
 
 static int request_status(struct asfd *asfd,
-	const char *client, struct sel *sel, struct conf **confs)
+	const char *client, struct sel *sel)
 {
 	char buf[256]="";
 	switch(sel->page)
@@ -928,10 +925,16 @@ static int request_status(struct asfd *asfd,
 	return 0;
 }
 
+static void ncurses_free()
+{
+	endwin();
+}
+
 static void sighandler(int sig)
 {
 #ifdef HAVE_NCURSES
-	if(actg==ACTION_STATUS) endwin();
+	if(actg==ACTION_STATUS)
+		ncurses_free();
 #endif
         logp("got signal: %d\n", sig);
 	if(sig==SIGPIPE) logp("Server may have too many active status clients.\n");
@@ -1254,26 +1257,37 @@ static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 	}
 }
 
-static int main_loop(struct async *as, enum action act, struct conf **confs)
+#ifndef UTEST
+static
+#endif
+int status_client_ncurses_main_loop(struct async *as, const char *orig_client)
 {
 	int ret=-1;
 	char *client=NULL;
 	int count=0;
 	struct asfd *asfd=NULL;
-	struct asfd *sfd=as->asfd; // Server asfd.
+	struct asfd *sfd=NULL; // Server asfd.
 	int reqdone=0;
 	struct sel *sel=NULL;
-	const char *orig_client=get_string(confs[OPT_ORIG_CLIENT]);
+
+	if(!as
+	  || !(sfd=as->asfd))
+	{
+		logp("async not set up correctly in %s\n", __func__);
+		goto error;
+	}
 
 	if(!(sel=sel_alloc()))
 		goto error;
 	sel->page=PAGE_CLIENT_LIST;
 
-	if(orig_client && !client)
+	if(orig_client)
 	{
 		client=strdup_w(orig_client, __func__);
 		sel->page=PAGE_BACKUP_LIST;
 	}
+
+	if(json_input_init()) goto end;
 
 	while(1)
 	{
@@ -1282,12 +1296,14 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 			char *req=NULL;
 			if(sel->page>PAGE_CLIENT_LIST)
 			{
-				if(client) req=client;
-				else if(sel->client) req=sel->client->name;
+				if(client)
+					req=client;
+				else if(sel->client)
+					req=sel->client->name;
 			}
-			if(request_status(sfd,
-				req, sel, confs)) goto error;
-			if(act==ACTION_STATUS_SNAPSHOT)
+			if(request_status(sfd, req, sel))
+				goto error;
+			if(actg==ACTION_STATUS_SNAPSHOT)
 				reqdone=1;
 		}
 
@@ -1324,16 +1340,16 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 		if(!sel->backup && sel->client) sel->backup=sel->client->bu;
 
 #ifdef HAVE_NCURSES
-		if(act==ACTION_STATUS
-		  && update_screen(sel, confs))
+		if(actg==ACTION_STATUS
+		  && update_screen(sel))
 			goto error;
 		refresh();
 #endif
 
-		if(act==ACTION_STATUS_SNAPSHOT
+		if(actg==ACTION_STATUS_SNAPSHOT
 		  && sel->gotfirstresponse)
 		{
-			if(update_screen(sel, confs))
+			if(update_screen(sel))
 				goto error;
 			// FIX THIS - should probably set up stdout with an
 			// asfd.
@@ -1345,6 +1361,7 @@ static int main_loop(struct async *as, enum action act, struct conf **confs)
 end:
 	ret=0;
 error:
+	json_input_free();
 	sel_free(&sel);
 	return ret;
 }
@@ -1380,7 +1397,21 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 	return forkchild_fd(csin, csout, NULL, args[0], args);
 }
 
-int status_client_ncurses(enum action act, struct conf **confs)
+int status_client_ncurses_init(enum action act)
+{
+#ifdef HAVE_NCURSES
+	actg=act; // So that the sighandler can call endwin().
+#else
+	if(act==ACTION_STATUS)
+	{
+		printf("To use the live status monitor, you need to recompile with ncurses support.\n");
+		return -1;
+	}
+#endif
+	return 0;
+}
+
+int status_client_ncurses(struct conf **confs)
 {
 	int csin=-1;
 	int csout=-1;
@@ -1388,16 +1419,6 @@ int status_client_ncurses(enum action act, struct conf **confs)
 	pid_t childpid=-1;
 	struct async *as=NULL;
 	const char *monitor_logfile=get_string(confs[OPT_MONITOR_LOGFILE]);
-
-#ifdef HAVE_NCURSES
-	actg=act; // So that the sighandler can call endwin().
-#else
-	if(act==ACTION_STATUS)
-	{
-		printf("To use the live status monitor, you need to recompile with ncurses support.\n");
-		goto end;
-	}
-#endif
 
 	setup_signals();
 
@@ -1433,15 +1454,14 @@ int status_client_ncurses(enum action act, struct conf **confs)
 		goto end;
 	log_fzp_set_direct(lfzp);
 
-	if(json_input_init()) goto end;
-
-	ret=main_loop(as, act, confs);
+	ret=status_client_ncurses_main_loop(as,
+		get_string(confs[OPT_ORIG_CLIENT]));
 end:
 #ifdef HAVE_NCURSES
-	if(actg==ACTION_STATUS) endwin();
+	if(actg==ACTION_STATUS)
+		ncurses_free();
 #endif
 	if(ret) logp("%s exiting with error: %d\n", __func__, ret);
-	json_input_free();
 	fzp_close(&lfzp);
 	async_asfd_free_all(&as);
 	close_fd(&csin);

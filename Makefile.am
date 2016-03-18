@@ -301,6 +301,7 @@ runner_SOURCES = \
 	utest/protocol2/rabin/test_win.c \
 	utest/client/monitor/test_json_input.c \
 	utest/client/monitor/test_lline.c \
+	utest/client/monitor/test_status_client_ncurses.c \
 	utest/client/protocol1/test_backup_phase2.c \
 	utest/client/protocol2/test_backup_phase2.c \
 	utest/client/protocol2/test_rabin_read.c \

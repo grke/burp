@@ -12,7 +12,15 @@ int main(void)
 	srunner_add_suite(sr, suite_alloc());
 	srunner_add_suite(sr, suite_attribs());
 	srunner_add_suite(sr, suite_base64());
+#ifdef HAVE_ACL
+	srunner_add_suite(sr, suite_client_acl());
+#endif
 	srunner_add_suite(sr, suite_client_auth());
+#ifdef HAVE_ACL
+#ifdef HAVE_XATTR
+	srunner_add_suite(sr, suite_client_extrameta());
+#endif
+#endif
 	srunner_add_suite(sr, suite_client_find());
 	srunner_add_suite(sr, suite_client_monitor_json_input());
 	srunner_add_suite(sr, suite_client_monitor_lline());

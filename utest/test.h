@@ -51,7 +51,9 @@ extern void assert_xattr(const char *expected,
 Suite *suite_alloc(void);
 Suite *suite_attribs(void);
 Suite *suite_base64(void);
+Suite *suite_client_acl(void);
 Suite *suite_client_auth(void);
+Suite *suite_client_extrameta(void);
 Suite *suite_client_find(void);
 Suite *suite_client_monitor_json_input(void);
 Suite *suite_client_monitor_lline(void);

@@ -165,7 +165,7 @@ static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
 	{
 		
 		if(!set_extrameta(asfd, bfd, fname,
-			sb, metadata, metalen, cntr))
+			metadata, metalen, cntr))
 		{
 #ifndef HAVE_WIN32
 			// Set attributes again, since we just diddled with the

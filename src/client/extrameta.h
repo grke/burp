@@ -12,13 +12,13 @@
 
 #define META_VSS		'V'
 
-extern int has_extrameta(const char *path,
-	enum cmd cmd, enum protocol protocol,
+extern int has_extrameta(const char *path, enum cmd cmd,
 	int enable_acl, int enable_xattr);
 
 extern int get_extrameta(struct asfd *asfd,
 	BFILE *bfd,
-	struct sbuf *sb,
+	const char *path,
+	int isdir,
 	char **extrameta,
 	size_t *elen,
 	struct cntr *cntr);
@@ -26,7 +26,6 @@ extern int get_extrameta(struct asfd *asfd,
 extern int set_extrameta(struct asfd *asfd,
 	BFILE *bfd,
 	const char *path,
-	struct sbuf *sb,
 	const char *extrameta,
 	size_t metalen,
 	struct cntr *cntr);

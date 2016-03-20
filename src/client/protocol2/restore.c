@@ -130,7 +130,7 @@ static int restore_metadata(
 			return -1;
 		if(metadata)
 		{
-			if(set_extrameta(asfd, NULL, fname, sb,
+			if(set_extrameta(asfd, NULL, fname,
 				metadata, metalen, cntr))
 			{
 				free_w(&metadata);

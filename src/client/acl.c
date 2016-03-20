@@ -43,7 +43,7 @@ static int acl_is_trivial(acl_t acl)
 		 * If we fail to get the tagtype we call the acl non-trivial.
 		 */
 		if (acl_get_tag_type(ace, &tag) < 0)
-			return true;
+			return 0;
 		/*
 		 * Anything other the ACL_USER_OBJ, ACL_GROUP_OBJ
 		 * or ACL_OTHER breaks the spell.
@@ -58,11 +58,30 @@ static int acl_is_trivial(acl_t acl)
 	return 1;
 }
 
+static int default_acl_contains_something(acl_t acl)
+{
+	acl_entry_t ace;
+	return acl_get_entry(acl, ACL_FIRST_ENTRY, &ace)==1;
+}
+
 static acl_t acl_contains_something(const char *path, int acl_type)
 {
 	acl_t acl=NULL;
-	if(!(acl=acl_get_file(path, acl_type))) return NULL;
-	if(!acl_is_trivial(acl)) return acl;
+	if(!(acl=acl_get_file(path, acl_type)))
+		return NULL;
+	switch(acl_type)
+	{
+		case ACL_TYPE_ACCESS:
+			if(acl_is_trivial(acl))
+				goto nothing;
+			break;
+		case ACL_TYPE_DEFAULT:
+			if(!default_acl_contains_something(acl))
+				goto nothing;
+			break;
+	}
+	return acl;
+nothing:
 	acl_free(acl);
 	return NULL;
 }
@@ -70,12 +89,18 @@ static acl_t acl_contains_something(const char *path, int acl_type)
 int has_acl(const char *path, enum cmd cmd)
 {
 	acl_t acl=NULL;
-	if(!(acl=acl_contains_something(path, ACL_TYPE_ACCESS))
-	  || (cmd==CMD_DIRECTORY
-	    && !(acl=acl_contains_something(path, ACL_TYPE_DEFAULT))))
-		return 0;
-	acl_free(acl);
-	return 1;
+	if((acl=acl_contains_something(path, ACL_TYPE_ACCESS)))
+	{
+		acl_free(acl);
+		return 1;
+	}
+	if(cmd==CMD_DIRECTORY
+	    && (acl=acl_contains_something(path, ACL_TYPE_DEFAULT)))
+	{
+		acl_free(acl);
+		return 1;
+	}
+	return 0;
 }
 
 static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
@@ -86,6 +111,7 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 	char *tmp=NULL;
 	ssize_t tlen=0;
 	char *ourtext=NULL;
+	char *oldtext=*acltext;
 	ssize_t maxlen=0xFFFFFFFF/2;
 
 	if(!(tmp=acl_to_text(acl, NULL)))
@@ -104,46 +130,43 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 
 	snprintf(pre, sizeof(pre), "%c%08X", type, (unsigned int)tlen);
 	if(!(ourtext=prepend(pre, tmp))
-	  || !(*acltext=prepend_len(*acltext,
+	  || !(*acltext=prepend_len(oldtext,
 		*alen, ourtext, tlen+9, "", 0, alen)))
 			ret=-1;
+	free_w(&oldtext);
 end:
 	if(tmp) acl_free(tmp);
 	free_w(&ourtext);
 	return ret;
 }
 
-int get_acl(struct asfd *asfd, struct sbuf *sb,
+int get_acl(struct asfd *asfd, const char *path, int isdir,
 	char **acltext, size_t *alen, struct cntr *cntr)
 {
+	int ret=-1;
 	acl_t acl=NULL;
-	const char *path=sb->path.buf;
 
 	if((acl=acl_contains_something(path, ACL_TYPE_ACCESS)))
 	{
 		if(get_acl_string(asfd, acl,
 			acltext, alen, path, META_ACCESS_ACL, cntr))
-		{
-			acl_free(acl);
-			return -1;
-		}
-		acl_free(acl);
+				goto end;
 	}
 
-	if(S_ISDIR(sb->statp.st_mode))
+	if(isdir)
 	{
+		if(acl) acl_free(acl);
 		if((acl=acl_contains_something(path, ACL_TYPE_DEFAULT)))
 		{
 			if(get_acl_string(asfd, acl,
 				acltext, alen, path, META_DEFAULT_ACL, cntr))
-			{
-				acl_free(acl);
-				return -1;
-			}
-			acl_free(acl);
+					goto end;
 		}
 	}
-	return 0;
+	ret=0;
+end:
+	if(acl) acl_free(acl);
+	return ret;
 }
 
 static int do_set_acl(struct asfd *asfd, const char *path,
@@ -160,8 +183,6 @@ static int do_set_acl(struct asfd *asfd, const char *path,
 			path, acltext, strerror(errno));
 		goto end;
 	}
-//#ifndef HAVE_FREEBSD_OS // Bacula says that acl_valid fails on valid input
-			// on freebsd. It works OK for me on FreeBSD 8.2.
 	if(acl_valid(acl))
 	{
 		logp("acl_valid error on %s: %s", path, strerror(errno));
@@ -169,7 +190,6 @@ static int do_set_acl(struct asfd *asfd, const char *path,
 			path, strerror(errno));
 		goto end;
 	}
-//#endif
 	if(acl_set_file(path, acltype, acl))
 	{
 		logp("acl set error on %s: %s", path, strerror(errno));
@@ -180,10 +200,10 @@ static int do_set_acl(struct asfd *asfd, const char *path,
 	ret=0;
 end:
 	if(acl) acl_free(acl);
-	return ret; 
+	return ret;
 }
 
-int set_acl(struct asfd *asfd, const char *path, struct sbuf *sb,
+int set_acl(struct asfd *asfd, const char *path,
 	const char *acltext, size_t alen, char metacmd, struct cntr *cntr)
 {
 	switch(metacmd)
@@ -197,10 +217,9 @@ int set_acl(struct asfd *asfd, const char *path, struct sbuf *sb,
 		default:
 			logp("unknown acl type: %c\n", metacmd);
 			logw(asfd, cntr, "unknown acl type: %c\n", metacmd);
-			break;
+			return -1;
 	}
-	return -1;
 }
 
-#endif // LINUX | BSD
-#endif // HAVE_ACL
+#endif
+#endif

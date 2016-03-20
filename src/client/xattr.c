@@ -62,6 +62,24 @@ static int in_skiplist(const char *xattr)
 	return 0;
 }
 
+static int append_to_extrameta(const char *toappend, char metasymbol,
+	char **xattrtext, size_t *xlen, ssize_t totallen)
+{
+	char tmp3[10];
+	size_t newlen=0;
+	snprintf(tmp3, sizeof(tmp3), "%c%08X",
+		metasymbol, (unsigned int)totallen);
+	newlen=(*xlen)+9+totallen;
+	if(!(*xattrtext=(char *)
+		realloc_w(*xattrtext, newlen, __func__)))
+			return -1;
+	memcpy((*xattrtext)+(*xlen), tmp3, 9);
+	(*xlen)+=9;
+	memcpy((*xattrtext)+(*xlen), toappend, totallen);
+	(*xlen)+=totallen;
+	return 0;
+}
+
 #ifndef UTEST
 static
 #endif
@@ -245,24 +263,15 @@ int get_xattr(struct asfd *asfd, const char *path,
 
 		if(toappend)
 		{
-			char tmp3[10];
-			size_t newlen=0;
-			snprintf(tmp3, sizeof(tmp3), "%c%08X",
-				META_XATTR_BSD, (unsigned int)totallen);
-			newlen=(*xlen)+9+totallen;
-			if(!(*xattrtext=(char *)
-				realloc_w(*xattrtext, newlen, __func__)))
+			if(append_to_extrameta(toappend, META_XATTR_BSD,
+				xattrtext, xlen, totallen))
 			{
 				free_w(&toappend);
 				free_w(&xattrlist);
 				return -1;
 			}
-			memcpy(*xattrtext, tmp3, 9);
-			(*xlen)+=9;
-			memcpy((*xattrtext)+(*xlen), toappend, totallen);
-			(*xlen)+=totallen;
-			free_w(&toappend);
 		}
+		free_w(&toappend);
 		free_w(&xattrlist);
 	}
 
@@ -495,23 +504,8 @@ int get_xattr(struct asfd *asfd, const char *path,
 	}
 
 	if(toappend)
-	{
-		char tmp3[10];
-		size_t newlen=0;
-		snprintf(tmp3, sizeof(tmp3), "%c%08X",
-			META_XATTR, (unsigned int)totallen);
-		newlen=(*xlen)+9+totallen;
-		if(!(*xattrtext=(char *)
-			realloc_w(*xattrtext, newlen, __func__)))
-		{
-			ret=-1;
-			goto end;
-		}
-		memcpy(*xattrtext, tmp3, 9);
-		(*xlen)+=9;
-		memcpy((*xattrtext)+(*xlen), toappend, totallen);
-		(*xlen)+=totallen;
-	}
+		ret=append_to_extrameta(toappend, META_XATTR,
+			xattrtext, xlen, totallen);
 end:
 	free_w(&toappend);
 	free_w(&xattrlist);

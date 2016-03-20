@@ -305,9 +305,12 @@ runner_SOURCES = \
 	utest/client/protocol1/test_backup_phase2.c \
 	utest/client/protocol2/test_backup_phase2.c \
 	utest/client/protocol2/test_rabin_read.c \
+	utest/client/test_acl.c \
 	utest/client/test_auth.c \
+	utest/client/test_extrameta.c \
 	utest/client/test_find.c \
 	utest/client/test_restore.c \
+	utest/client/test_xattr.c \
 	utest/server/monitor/test_browse.c \
 	utest/server/monitor/test_cstat.c \
 	utest/server/monitor/test_json_output.c \
@@ -334,10 +337,6 @@ runner_SOURCES = \
 	utest/server/test_resume.c \
 	utest/server/test_restore.c \
 	utest/server/test_sdirs.c
-
-if WITH_XATTR
-runner_SOURCES+= utest/client/test_xattr.c
-endif
 
 runner_SOURCES+= $(burp_SOURCES)
 
@@ -399,6 +398,7 @@ mostlyclean-local:
 
 .PHONY: clean-local-check
 clean-local-check:
+	$(AM_V_at)-rm -rf utest_acl
 	$(AM_V_at)-rm -rf utest_find
 	$(AM_V_at)-rm -f  utest_lockfile
 	$(AM_V_at)-rm -rf utest_restore

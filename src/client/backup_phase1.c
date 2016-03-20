@@ -72,13 +72,13 @@ static int usual_stuff(struct asfd *asfd,
 
 static int maybe_send_extrameta(struct asfd *asfd,
 	const char *path, enum cmd cmd,
-	struct sbuf *sb, enum protocol protocol,
+	struct sbuf *sb,
 	struct cntr *cntr, enum cmd symbol)
 {
 	// FIX THIS: should probably initialise extrameta with the desired
 	// conf parameters so that they do not need to be passed in all the
 	// time.
-	if(!has_extrameta(path, cmd, protocol, enable_acl, enable_xattr))
+	if(!has_extrameta(path, cmd, enable_acl, enable_xattr))
 		return 0;
 	return usual_stuff(asfd, cntr, path, NULL, sb, symbol);
 }
@@ -110,7 +110,6 @@ static int do_to_server(struct asfd *asfd,
 	}
 #endif
 	struct cntr *cntr=get_cntr(confs);
-	enum protocol protocol=get_protocol(confs);
 	sb->compression=compression;
 	sb->statp=ff->statp;
 	attribs_encode(sb);
@@ -120,7 +119,7 @@ static int do_to_server(struct asfd *asfd,
 	  && !strip_vss
 	  && cmd!=CMD_EFS_FILE
 	  && maybe_send_extrameta(asfd, ff->fname,
-		cmd, sb, protocol, cntr, metasymbol))
+		cmd, sb, cntr, metasymbol))
 			return -1;
 #endif
 
@@ -136,12 +135,12 @@ static int do_to_server(struct asfd *asfd,
 	// FIX THIS: May have to check that it is not a directory here.
 	  && !S_ISDIR(sb->statp.st_mode) // does this work?
 	  && maybe_send_extrameta(asfd,
-		ff->fname, cmd, sb, protocol, cntr, vss_trail_symbol))
+		ff->fname, cmd, sb, cntr, vss_trail_symbol))
 			return -1;
 	return 0;
 #else
 	return maybe_send_extrameta(asfd, ff->fname, cmd, sb,
-		protocol, cntr, metasymbol);
+		cntr, metasymbol);
 #endif
 }
 

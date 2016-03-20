@@ -9,7 +9,7 @@
 #include "extrameta.h"
 #include "xattr.h"
 
-int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
+int has_extrameta(const char *path, enum cmd cmd,
 	int enable_acl, int enable_xattr)
 {
 #if defined(WIN32_VSS)
@@ -20,7 +20,8 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
     defined(HAVE_NETBSD_OS)
 
 #ifdef HAVE_ACL
-	if(enable_acl && has_acl(path, cmd)) return 1;
+	if(enable_acl && has_acl(path, cmd))
+		return 1;
 #endif
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -28,7 +29,8 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
     defined(HAVE_NETBSD_OS) || \
     defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
-	if(enable_xattr && has_xattr(path)) return 1;
+	if(enable_xattr && has_xattr(path))
+		return 1;
 #endif
 #endif
         return 0;
@@ -36,13 +38,15 @@ int has_extrameta(const char *path, enum cmd cmd, enum protocol protocol,
 
 int get_extrameta(struct asfd *asfd,
 	BFILE *bfd,
-	struct sbuf *sb,
+	const char *path,
+	int isdir,
 	char **extrameta,
 	size_t *elen,
 	struct cntr *cntr)
 {
 #if defined (WIN32_VSS)
-	if(get_vss(bfd, sb, extrameta, elen)) return -1;
+	if(get_vss(bfd, extrameta, elen))
+		return -1;
 #endif
 	// Important to do xattr directly after acl, because xattr is excluding
 	// some entries if acls were set.
@@ -50,7 +54,8 @@ int get_extrameta(struct asfd *asfd,
     defined(HAVE_FREEBSD_OS) || \
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
-	if(get_acl(asfd, sb, extrameta, elen, cntr)) return -1;
+	if(get_acl(asfd, path, isdir, extrameta, elen, cntr))
+		return -1;
 #endif
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -58,7 +63,8 @@ int get_extrameta(struct asfd *asfd,
     defined(HAVE_NETBSD_OS) || \
     defined(HAVE_DARWIN_OS)
 #ifdef HAVE_XATTR
-	if(get_xattr(asfd, sb->path.buf, extrameta, elen, cntr)) return -1;
+	if(get_xattr(asfd, path, extrameta, elen, cntr))
+		return -1;
 #endif
 #endif
         return 0;
@@ -67,7 +73,6 @@ int get_extrameta(struct asfd *asfd,
 int set_extrameta(struct asfd *asfd,
 	BFILE *bfd,
 	const char *path,
-	struct sbuf *sb,
 	const char *extrameta,
 	size_t metalen,
 	struct cntr *cntr)
@@ -104,7 +109,8 @@ int set_extrameta(struct asfd *asfd,
 		{
 #if defined(HAVE_WIN32)
 			case META_VSS:
-				if(set_vss(bfd, m, s)) errors++;
+				if(set_vss(bfd, m, s))
+					errors++;
 				break;
 #endif
 #if defined(HAVE_LINUX_OS) || \
@@ -112,11 +118,11 @@ int set_extrameta(struct asfd *asfd,
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
 			case META_ACCESS_ACL:
-				if(set_acl(asfd, path, sb, m, s, cmdtmp, cntr))
+				if(set_acl(asfd, path, m, s, cmdtmp, cntr))
 					errors++;
 				break;
 			case META_DEFAULT_ACL:
-				if(set_acl(asfd, path, sb, m, s, cmdtmp, cntr))
+				if(set_acl(asfd, path, m, s, cmdtmp, cntr))
 					errors++;
 				break;
 #endif

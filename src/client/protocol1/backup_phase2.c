@@ -257,8 +257,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 #endif
 	  )
 	{
-		if(get_extrameta(asfd, bfd,
-			sb, &extrameta, &elen, cntr))
+		if(get_extrameta(asfd, bfd, sb->path.buf,
+			S_ISDIR(sb->statp.st_mode),
+			&extrameta, &elen, cntr))
 		{
 			logw(asfd, cntr,
 				"Meta data error for %s\n", sb->path.buf);

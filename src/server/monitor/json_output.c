@@ -353,6 +353,8 @@ static int json_send_client_start(struct asfd *asfd, struct cstat *cstat)
 		return -1;
 	if(yajl_gen_str_pair_w("run_status", run_status))
 		return -1;
+	if(yajl_gen_int_pair_w("protocol", cstat->protocol))
+		return -1;
 	if(cstat->run_status==RUN_STATUS_RUNNING)
 	{
 		if(yajl_gen_str_pair_w("phase",

@@ -32,6 +32,10 @@ progress_counter = 1
 # initiate a restore.
 server_can_restore = 0
 
+# Set server_can_override_includes to 0 if you do not want the server to be able
+# to override the local include/exclude list. Defaults is 1.
+# server_can_override_includes = 1
+
 # Set an encryption password if you do not trust the server with your data.
 # Note that this will mean that network deltas will not be possible. Each time
 # a file changes, the whole file will be transferred on the next backup.

@@ -137,6 +137,7 @@ enum conf_opt
 	OPT_AUTOUPGRADE_DIR, // also a server option
 	OPT_CA_CSR_DIR,
 	OPT_RANDOMISE,
+	OPT_SERVER_OVERRIDE_INCLUDES,
 
 	// This block of client stuff is all to do with what files to backup.
 	OPT_STARTDIR,

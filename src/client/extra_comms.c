@@ -125,10 +125,18 @@ int extra_comms(struct async *as, struct conf **confs,
 		if(!*incexc && server_supports(feat, ":sincexc:"))
 		{
 			logp("Server is setting includes/excludes.\n");
-			if(incexc_recv_client(asfd, incexc, confs))
-				goto end;
-			if(*incexc && conf_parse_incexcs_buf(confs,
-				*incexc)) goto end;
+			if(get_int(confs[OPT_SERVER_OVERRIDE_INCLUDES]))
+			{
+				logp("Client accepts.\n");
+				if(incexc_recv_client(asfd, incexc, confs))
+					goto end;
+				if(*incexc && conf_parse_incexcs_buf(confs,
+					*incexc)) goto end;
+			}
+			else
+			{
+				logp("Client configuration says no\n");
+			}
 		}
 	}
 

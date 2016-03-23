@@ -125,7 +125,7 @@ int extra_comms(struct async *as, struct conf **confs,
 		if(!*incexc && server_supports(feat, ":sincexc:"))
 		{
 			logp("Server is setting includes/excludes.\n");
-			if(get_int(confs[OPT_SERVER_OVERRIDE_INCLUDES]))
+			if(get_int(confs[OPT_SERVER_CAN_OVERRIDE_INCLUDES]))
 			{
 				logp("Client accepts.\n");
 				if(incexc_recv_client(asfd, incexc, confs))

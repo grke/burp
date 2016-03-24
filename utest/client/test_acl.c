@@ -7,6 +7,7 @@
 #include "../../src/client/acl.h"
 
 #ifdef HAVE_ACL
+#ifndef HAVE_DARWIN_OS
 
 #define BASE		"utest_acl"
 
@@ -226,4 +227,5 @@ Suite *suite_client_acl(void)
 	return s;
 }
 
+#endif
 #endif

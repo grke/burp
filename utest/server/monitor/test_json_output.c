@@ -145,7 +145,8 @@ static void do_test_json_send_clients_with_backup(const char *path,
 	for(c=clist; c; c=c->next)
 	{
 		c->permitted=1;
-		fail_unless((c->sdirs=setup_sdirs(PROTO_1, c->name))!=NULL);
+		c->protocol=PROTO_1;
+		fail_unless((c->sdirs=setup_sdirs(c->protocol, c->name))!=NULL);
 		build_storage_dirs((struct sdirs *)c->sdirs, sd, s);
 		fail_unless(!cstat_set_backup_list(c));
 		fail_unless(c->bu!=NULL);

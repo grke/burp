@@ -3,6 +3,7 @@
         {
             "name": "cli1",
             "run_status": "unknown",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 5,
@@ -17,6 +18,7 @@
         {
             "name": "cli2",
             "run_status": "unknown",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 5,
@@ -31,6 +33,7 @@
         {
             "name": "cli3",
             "run_status": "unknown",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 5,

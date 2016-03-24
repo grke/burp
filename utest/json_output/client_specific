@@ -3,6 +3,7 @@
         {
             "name": "cli2",
             "run_status": "unknown",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 5,

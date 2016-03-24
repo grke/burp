@@ -98,6 +98,13 @@ static int input_integer(void *ctx, long long val)
 			return 1;
 		}
 	}
+	else
+	{
+		if(!strcmp(lastkey, "protocol"))
+		{
+			return 1;
+		}
+	}
 error:
 	logp("Unexpected integer: %s %llu\n", lastkey, val);
         return 0;

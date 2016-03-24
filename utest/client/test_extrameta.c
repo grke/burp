@@ -66,7 +66,6 @@ static struct extrametadata x[] = {
 static void test_extrameta(struct extrametadata x)
 {
 	size_t rlen=0;
-	char metasymbol=META_XATTR;
 	char *retrieved=NULL;
 	const char *path=NULL;
 	const char *myfile=BASE "/myfile";
@@ -88,14 +87,6 @@ static void test_extrameta(struct extrametadata x)
 		path=myfile;
 	}
 
-#if defined(HAVE_FREEBSD_OS) || \
-    defined(HAVE_NETBSD_OS)
-	metasymbol=META_XATTR_BSD;
-#endif
-#if defined(HAVE_LINUX_OS) || \
-    defined(HAVE_DARWIN_OS)
-	metasymbol=META_XATTR;
-#endif
 	if(strstr(x.extrameta, "%s"))
 		fail_unless((passwd=getpwuid(1001))!=NULL);
 	snprintf(expected, sizeof(expected), x.extrameta,

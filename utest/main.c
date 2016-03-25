@@ -13,7 +13,9 @@ int main(void)
 	srunner_add_suite(sr, suite_attribs());
 	srunner_add_suite(sr, suite_base64());
 #ifdef HAVE_ACL
+#ifndef HAVE_DARWIN_OS
 	srunner_add_suite(sr, suite_client_acl());
+#endif
 #endif
 	srunner_add_suite(sr, suite_client_auth());
 #ifdef HAVE_ACL

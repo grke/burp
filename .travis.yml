@@ -39,5 +39,8 @@ script:
 after_failure:
   - cat burp-*/_build/sub/test-suite.log
 
-after_success:
-  - echo "success"
+deploy:
+  provider: script
+  script: test/travis-deploy.sh
+  on:
+    branch: master

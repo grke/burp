@@ -38,3 +38,6 @@ script:
 
 after_failure:
   - cat burp-*/_build/sub/test-suite.log
+
+after_success:
+  - echo "success"

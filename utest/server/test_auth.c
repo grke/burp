@@ -13,9 +13,11 @@ static struct pdata p[] = {
 	{ 1, "hiH9IOyyrrl4k", "ifpqgio" },
 	{ 0, "hiH9IOyyrrl4k", "ifpqgia" },
 #ifndef HAVE_NETBSD_OS
+#ifndef HAVE_DARWIN_OS
 	{ 1, "$6$dYCzeXf3$Vue9VQ49lBLtK7d273FxKYsWrF1WGwr3Th2GBCghj0WG61o/bXxEal/11pCdvWqN/Y1iSiOblqZhitBsqAOVe1", "testuser" },
 	{ 0, "x6$dYCzeXf3$Vue9VQ49lBLtK7d273FxKYsWrF1WGwr3Th2GBCghj0WG61o/bXxEal/11pCdvWqN/Y1iSiOblqZhitBsqAOVe1", "testuser" },
 	{ 0, "x6$dYCzeXf3$Vue9VQ49lBLtK7d273FxKYsWrF1WGwr3Th2GBCghj0WG61o/bXxEal/11pCdvWqN/Y1iSiOblqZhitBsqAOVe1", NULL },
+#endif
 #endif
 	{ 0, NULL, "testuser" },
 	{ 0, "123", "testuser" }

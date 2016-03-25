@@ -120,6 +120,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_CLIENT_CAN_RESTORE:
 		case OPT_CLIENT_CAN_VERIFY:
 		case OPT_SERVER_CAN_RESTORE:
+		case OPT_SERVER_CAN_OVERRIDE_INCLUDES:
 		case OPT_B_SCRIPT_RESERVED_ARGS:
 		case OPT_R_SCRIPT_RESERVED_ARGS:
 		case OPT_ACL:

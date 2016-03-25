@@ -23,6 +23,9 @@ You are a client, and you don't trust the server.
    * You must not set the autoupgrade options in the client burp.conf.
    * You must set 'server_can_restore=0' in the client burp.conf to prevent
      server initiated restores.
+   * You must set 'server_can_override_includes=0' in the client burp.conf to
+     prevent the server from being able to backup files you do not want it to
+     access.
 
 Untrustworthy users
 -------------------

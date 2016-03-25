@@ -32,6 +32,7 @@ static struct extrametadata x[] = {
 		"X0000001E0000000Cuser.comment00000002cd"
 #endif
 	},
+#ifndef HAVE_DARWIN_OS
 	{
 		// File - An access acl.
 		0,
@@ -60,7 +61,8 @@ static struct extrametadata x[] = {
 		"A00000026u::rwx,u:1001:rwx,g::rwx,m::rwx,o::r--"
 		"X0000001E0000000Cuser.comment00000002cd"
 #endif
-	}
+	},
+#endif
 };
 
 static void test_extrameta(struct extrametadata x)

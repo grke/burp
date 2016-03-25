@@ -37,4 +37,4 @@ script:
   - test "$TRAVIS_OS_NAME" = "linux" && make -j3 distcheck  || make -j3 distcheck DISTCHECK_CONFIGURE_FLAGS="--with-openssl=/usr/local/opt/openssl"
 
 after_failure:
-  - cat burp-*/_build/test-suite.log
+  - cat test-suite.log

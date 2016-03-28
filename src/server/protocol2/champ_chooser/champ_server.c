@@ -347,6 +347,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 
 end:
 	logp("champ chooser exiting: %d\n", ret);
+	champ_chooser_free(&scores);
 	log_fzp_set(NULL, confs);
 	async_free(&as);
 	asfd_free(&asfd); // This closes s for us.
@@ -355,7 +356,6 @@ end:
 // FIX THIS: free asfds.
 	lock_release(lock);
 	lock_free(&lock);
-	scores_free(&scores);
 	return ret;
 }
 

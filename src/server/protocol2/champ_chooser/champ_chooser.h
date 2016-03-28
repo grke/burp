@@ -2,6 +2,7 @@
 #define _CHAMP_CHOOSER_H
 
 extern struct scores *champ_chooser_init(const char *datadir);
+extern void champ_chooser_free(struct scores **scores);
 
 extern int deduplicate(struct asfd *asfd, const char *directory,
 	struct scores *scores);

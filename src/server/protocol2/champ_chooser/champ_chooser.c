@@ -11,6 +11,7 @@
 #include "hash.h"
 #include "incoming.h"
 #include "scores.h"
+#include "sparse.h"
 
 static void try_lock_msg(int seconds)
 {
@@ -107,6 +108,13 @@ struct scores *champ_chooser_init(const char *datadir)
 error:
 	scores_free(&scores);
 	return NULL;
+}
+
+void champ_chooser_free(struct scores **scores)
+{
+	candidates_free();
+	sparse_delete_all();
+	scores_free(scores);
 }
 
 static int already_got_block(struct asfd *asfd, struct blk *blk)

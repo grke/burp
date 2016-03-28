@@ -278,6 +278,8 @@ runner_SOURCES = \
 	utest/builders/protocol2/build_blist.c \
 	utest/builders/server/build_manifest.c \
 	utest/builders/server/build_storage_dirs.c utest/builders/server/build_storage_dirs.h \
+	utest/builders/server/protocol2/build_sparse_index.c \
+	utest/builders/server/protocol2/build_sparse_index.h \
 	utest/builders/server/protocol2/champ_chooser/build_dindex.c utest/builders/server/protocol2/champ_chooser/build_dindex.h \
 	utest/main.c \
 	utest/prng.c utest/prng.h \
@@ -319,7 +321,7 @@ runner_SOURCES = \
 	utest/server/protocol1/test_blocklen.c \
 	utest/server/protocol1/test_dpth.c \
 	utest/server/protocol1/test_fdirs.c \
-	utest/server/protocol2/champ_chooser/test_candidate.c \
+	utest/server/protocol2/champ_chooser/test_champ_chooser.c \
 	utest/server/protocol2/champ_chooser/test_champ_server.c \
 	utest/server/protocol2/champ_chooser/test_dindex.c \
 	utest/server/protocol2/champ_chooser/test_hash.c \

@@ -13,18 +13,24 @@
 struct candidate **candidates=NULL;
 size_t candidates_len=0;
 
+#ifndef UTEST
+static
+#endif
 struct candidate *candidate_alloc(void)
 {
 	return (struct candidate *)
 		calloc_w(1, sizeof(struct candidate), __func__);
 }
 
-void candidate_free_content(struct candidate *c)
+static void candidate_free_content(struct candidate *c)
 {
 	if(!c) return;
 	free_w(&c->path);
 }
 
+#ifndef UTEST
+static
+#endif
 void candidate_free(struct candidate **c)
 {
 	if(!c) return;
@@ -32,8 +38,15 @@ void candidate_free(struct candidate **c)
 	free_v((void **)c);
 }
 
-void candidates_set_score_pointers(struct candidate **candidates, size_t clen,
-	struct scores *scores)
+void candidates_free(void)
+{
+	for(size_t c=0; c<candidates_len; c++)
+		candidate_free(&(candidates[c]));
+	free_v((void **)&candidates);
+}
+
+static void candidates_set_score_pointers(struct candidate **candidates,
+	size_t clen, struct scores *scores)
 {
 	size_t a;
 	for(a=0; candidates && a<candidates_len; a++)

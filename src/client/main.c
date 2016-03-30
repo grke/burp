@@ -158,7 +158,7 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 
 		if(get_int(confs[OPT_GLOB_AFTER_SCRIPT_PRE]))
 		{
-			if(finalise_glob(confs))
+			if(reeval_glob(confs))
 				ret=CLIENT_ERROR;
 		}
 	}

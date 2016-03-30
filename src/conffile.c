@@ -831,7 +831,7 @@ static int finalise_start_dirs(struct conf **c)
 }
 
 // The glob stuff should only run on the client side.
-int finalise_glob(struct conf **c)
+static int finalise_glob(struct conf **c)
 {
 	int ret=-1;
 #ifdef HAVE_WIN32
@@ -857,6 +857,18 @@ int finalise_glob(struct conf **c)
 	ret=0;
 end:
 	return ret;
+}
+
+// Reeval the glob after script pre
+int reeval_glob(struct conf **c)
+{
+	if(finalise_glob(c))
+		return -1;
+
+	if(finalise_incexc_dirs(c)
+	  || finalise_start_dirs(c)) return -1;
+
+	return 0;
 }
 
 // Set the flag of the first item in a list that looks at extensions to the

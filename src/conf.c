@@ -499,6 +499,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "browsefile");
 	case OPT_BROWSEDIR:
 	  return sc_str(c[o], 0, 0, "browsedir");
+	case OPT_GLOB_AFTER_SCRIPT_PRE:
+	  return sc_int(c[o], 1, 0, "glob_after_script_pre");
 	case OPT_B_SCRIPT_PRE:
 	  return sc_str(c[o], 0, 0, "backup_script_pre");
 	case OPT_B_SCRIPT_PRE_ARG:

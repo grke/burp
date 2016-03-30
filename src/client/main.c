@@ -1,4 +1,5 @@
 #include "../burp.h"
+#include "../conffile.h"
 #include "../action.h"
 #include "../asfd.h"
 #include "../async.h"
@@ -154,6 +155,12 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 			args, get_strlist(confs[OPT_B_SCRIPT_PRE_ARG]),
 			confs, 1, 1, 1))
 				 ret=CLIENT_ERROR;
+
+		if(get_int(confs[OPT_GLOB_AFTER_SCRIPT_PRE]))
+		{
+			if(finalise_glob(confs))
+				ret=CLIENT_ERROR;
+		}
 	}
 
 	if(ret==CLIENT_OK && do_backup_client(asfd,

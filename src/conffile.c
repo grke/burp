@@ -831,7 +831,7 @@ static int finalise_start_dirs(struct conf **c)
 }
 
 // The glob stuff should only run on the client side.
-static int finalise_glob(struct conf **c)
+int finalise_glob(struct conf **c)
 {
 	int ret=-1;
 #ifdef HAVE_WIN32

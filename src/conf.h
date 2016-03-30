@@ -193,6 +193,9 @@ enum conf_opt
 	OPT_R_SCRIPT_POST_RUN_ON_FAIL,
 	OPT_R_SCRIPT_RESERVED_ARGS,
 
+	// eval glob after script pre.
+	OPT_GLOB_AFTER_SCRIPT_PRE,
+
 	// Server scripts.
 	OPT_S_SCRIPT_PRE,
 	OPT_S_SCRIPT_PRE_ARG,

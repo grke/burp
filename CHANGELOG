@@ -1,7 +1,12 @@
+2016-03-31 Changes in burp-2.0.36:
   * Support xattrs and acls in protocol2.
   * Fix acl+xattr bug introduced in 2.0.28.
   * Fix default acl bug that has existed forever.
   * Fix acl memory leak.
+  * Some tests for status_client_ncurses.c.
+  * Add server_can_override_includes option.
+  * Fix Travis Darwin builds.
+  * More test coverage for champ_chooser.
 
 2016-02-29 Changes in burp-2.0.34:
   * Add support for glibc's additional algorithms in crypt(3)-style passwords

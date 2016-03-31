@@ -925,10 +925,12 @@ static int request_status(struct asfd *asfd,
 	return 0;
 }
 
+#ifdef HAVE_NCURSES
 static void ncurses_free()
 {
 	endwin();
 }
+#endif
 
 static void sighandler(int sig)
 {

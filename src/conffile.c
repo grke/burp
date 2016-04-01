@@ -849,7 +849,7 @@ static int finalise_glob(struct conf **c)
 	}
 
 	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
-		if(add_to_strlist_include(c[OPT_INCLUDE], globbuf.gl_pathv[i]))
+		if(add_to_strlist_include_uniq(c[OPT_INCLUDE], globbuf.gl_pathv[i]))
 			goto end;
 
 	globfree(&globbuf);

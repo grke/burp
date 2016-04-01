@@ -238,6 +238,11 @@ int add_to_strlist(struct conf *conf, const char *value, int include)
 		return strlist_add(&(conf->data.sl), value, include);
 }
 
+int add_to_strlist_include_uniq(struct conf *conf, const char *value)
+{
+	return strlist_add_sorted_uniq(&(conf->data.sl), value, 1);
+}
+
 int add_to_strlist_include(struct conf *conf, const char *value)
 {
 	return add_to_strlist(conf, value, 1);

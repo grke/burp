@@ -84,11 +84,6 @@ ssl_peer_cn = burpserver
 #restore_script_pre=/path/to/a/script
 #restore_script_post=/path/to/a/script
 
-# Whether to evaluate glob after the pre scripts return or not. The default
-# is 1. If set to 0, files created by pre scripts will not be included in the
-# backup.
-# glob_after_script_pre = 1
-
 # The following options specify exactly what to backup.
 # The server will override them if there is at least one 'include=' line on
 # the server side and 'server_can_override_includes=1'.

@@ -166,10 +166,9 @@ static int run_restore(struct asfd *asfd,
 		goto end;
 	}
 	backupnostr++;
+	if((cp=strchr(backupnostr, ':'))) *cp='\0';
 	if(set_string(cconfs[OPT_BACKUP], backupnostr))
 		goto end;
-	// FIX THIS.
-	if((cp=strchr(cconfs[OPT_BACKUP]->data.s, ':'))) *cp='\0';
 
 	if(act==ACTION_RESTORE)
 	{

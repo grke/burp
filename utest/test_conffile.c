@@ -7,6 +7,7 @@
 #include "../src/conf.h"
 #include "../src/conffile.h"
 #include "../src/fsops.h"
+#include "../src/pathcmp.h"
 
 #define BASE		"utest_conffile"
 #define CONFFILE	BASE "/burp.conf"
@@ -189,6 +190,92 @@ START_TEST(test_client_include_failures)
 		fail_unless(conf_load_global_only(CONFFILE, confs)==-1);
 		tear_down(NULL, &confs);
 	}
+}
+END_TEST
+
+static void assert_in_strlist(struct strlist **s, const char *path, int flag)
+{
+	struct strlist *p;
+	struct strlist *found = NULL;
+	if(!path)
+	{
+		fail_unless(*s==NULL);
+		return;
+	}
+	for(p=*s; p; p=p->next)
+	{
+		if(!pathcmp(path, p->path))
+		{
+			found = p;
+			break;
+		}
+	}
+	fail_unless(found!=NULL);
+	fail_unless(found->flag==flag);
+}
+
+static void assert_in_include_list(struct strlist **s, const char *path)
+{
+	assert_in_strlist(s, path, 1);
+}
+
+static void assert_not_in_strlist(struct strlist **s, const char *path)
+{
+	struct strlist *p;
+	struct strlist *found = NULL;
+	if(!path)
+	{
+		fail_unless(*s==NULL);
+		return;
+	}
+	for(p=*s; p; p=p->next)
+	{
+		if(!pathcmp(path, p->path))
+		{
+			found = p;
+			break;
+		}
+	}
+	fail_unless(found==NULL);
+}
+
+START_TEST(test_client_include_glob)
+{
+	char cwd[1024];
+	char buf[4096];
+	char path1[2048];
+	char path2[2048];
+	struct strlist *s;
+	struct conf **confs=NULL;
+	fail_unless(getcwd(cwd, sizeof(cwd))!=NULL);
+	fail_unless(snprintf(buf, 4096,
+				"%sinclude_glob=%s/%s/*.glob\ninclude=/a\n",
+				MIN_CLIENT_CONF, cwd, BASE)>0);
+	fail_unless(snprintf(path1, 2048, "%s/%s/a.glob", cwd, BASE)>0);
+	fail_unless(snprintf(path2, 2048, "%s/%s/b.glob", cwd, BASE)>0);
+	setup(&confs, NULL);
+	build_file(CONFFILE, buf);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+	s=get_strlist(confs[OPT_INCLUDE]);
+	assert_in_include_list(&s, "/a");
+	assert_not_in_strlist(&s, path1);
+	assert_not_in_strlist(&s, path2);
+	// create one file that matches the glob and test it is included
+	build_file(path1, "a");
+	fail_unless(!reeval_glob(confs));
+	assert_in_include_list(&s, "/a");
+	assert_in_include_list(&s, path1);
+	assert_not_in_strlist(&s, path2);
+	build_file(path2, "b");
+	fail_unless(!reeval_glob(confs));
+	assert_in_include_list(&s, "/a");
+	assert_in_include_list(&s, path1);
+	assert_in_include_list(&s, path2);
+	// Now test include is in the right order
+	assert_include(&s, "/a");
+	assert_include(&s, path1);
+	assert_include(&s, path2);
+	tear_down(NULL, &confs);
 }
 END_TEST
 
@@ -655,6 +742,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_client_conf);
 	tcase_add_test(tc_core, test_client_includes_excludes);
 	tcase_add_test(tc_core, test_client_include_failures);
+	tcase_add_test(tc_core, test_client_include_glob);
 	tcase_add_test(tc_core, test_server_conf);
 	tcase_add_test(tc_core, test_server_script_pre_post);
 	tcase_add_test(tc_core, test_server_script);

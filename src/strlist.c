@@ -61,7 +61,11 @@ static int do_strlist_add(struct strlist **strlist,
 	// find the last entry. Can this be made better?
 	for(s=*strlist; s; s=s->next)
 	{
-		if (uniq && !pathcmp(path, s->path)) return 0;
+		if (uniq && !pathcmp(path, s->path))
+		{
+			strlist_free(slnew);
+			return 0;
+		}
 		if(sorted && pathcmp(path, s->path)<0) break;
 		slast=s;
 	}

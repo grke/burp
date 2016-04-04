@@ -595,6 +595,9 @@ Path to include in the backup. You can have multiple include lines. Use forward 
 \fBexclude=[path]\fR
 Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
 .TP
+\fBinclude_glob=[glob expression]\fR
+Include paths that match the glob expression. For example, '/home/*/Documents' will include '/home/user1/Documents' and '/home/user2/Documents' if directories 'user1' and 'user2' exist in '/home'. The Windows implementation currently limit the expression to contain only one '*'.
+.TP
 \fBinclude_regex=[regular expression]\fR
 Not implemented.
 .TP

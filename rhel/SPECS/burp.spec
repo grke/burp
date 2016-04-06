@@ -1,34 +1,35 @@
 Name:		burp
 Summary:	Burp is a network-based simple yet powerful backup and restore program for Unix and Windows.
-Version:	2.0.28
-Release:	4%{?dist}
+Version:	2.0.36
+Release:	1%{?dist}
 License:	GPL
 URL:		http://burp.grke.org/
-Source0:	https://github.com/grke/burp/archive/burp-%{version}.tar.bz2
+Source0:	https://github.com/grke/burp/archive/burp-%{version}.tar.gz
 Source1:	burp.init
 Source2:	burp.service
-BuildRequires:	librsync-devel, zlib-devel, openssl-devel, ncurses-devel, libacl-devel, uthash
+BuildRequires:	librsync-devel, zlib-devel, openssl-devel, ncurses-devel, libacl-devel, uthash, autoconf, automake, libtool, pkgconfig
 Requires:	openssl-perl
 
-%define _unpackaged_files_terminate_build 0 
+%define _unpackaged_files_terminate_build 0
 
 %description
 Burp is a network backup and restore program, using client and server.
-It uses librsync in order to save network traffic and to save on the 
-amount of space that is used by each backup. 
-It also uses VSS (Volume Shadow Copy Service) to make snapshots when 
+It uses librsync in order to save network traffic and to save on the
+amount of space that is used by each backup.
+It also uses VSS (Volume Shadow Copy Service) to make snapshots when
 backing up Windows computers.
 
 %prep
 %setup -q -n %{name}-%{version}
 
 %build
+autoreconf -vif
 %configure --sysconfdir=%{_sysconfdir}/%{name}
 make %{?_smp_mflags}
 
 %install
 rm -rf %{buildroot}
-make install DESTDIR=%{buildroot}
+make install-all DESTDIR=%{buildroot}
 %if ! (0%{?rhel} >= 7 || 0%{?fedora} >= 15)
 mkdir -p %{buildroot}%{_initrddir}
 install -p -m 0755 %{SOURCE1} %{buildroot}%{_initrddir}/
@@ -64,6 +65,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Apr 05 2016 Marco Fretz <marco.fretz@vshn.ch>
+- Change Version, Test build for CentOS 7
+- Version 2.0.36
+
 * Thu Dec 10 2015 Marco Fretz <marco.fretz@gmail.com>
 - Trying to build quick and dirty rpm for CentOS 7
 - Version 2.0.28

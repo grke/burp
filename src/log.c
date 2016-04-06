@@ -25,7 +25,7 @@ void log_init(char *progname)
 	else prog=progname;
 }
 
-//#ifndef UTEST
+#ifndef UTEST
 static char *gettm(void)
 {
         time_t t=0;
@@ -39,11 +39,11 @@ static char *gettm(void)
         strftime(tmbuf, sizeof(tmbuf), "%Y-%m-%d %H:%M:%S", ctm);
 	return tmbuf;
 }
-//#endif
+#endif
 
 void logp(const char *fmt, ...)
 {
-//#ifndef UTEST
+#ifndef UTEST
 	int pid;
 	char buf[512]="";
 	va_list ap;
@@ -72,7 +72,7 @@ void logp(const char *fmt, ...)
 		}
 	}
 	va_end(ap);
-//#endif
+#endif
 }
 
 void logp_ssl_err(const char *fmt, ...)

@@ -69,9 +69,23 @@ static void do_assert_bu_list(struct bu *bu_list,
 	fail_unless(bu==NULL);
 }
 
+static void proto2_hack(struct sd *s, unsigned int len)
+{
+	unsigned int count;
+	for(count=0; count<len; count++)
+	{
+		// Protocol2 backups are never hardlinked, and are always
+		// deletable.
+		s[count].flags&=~BU_HARDLINKED;
+		s[count].flags|=BU_DELETABLE;
+	}
+}
+
 void assert_bu_list(struct sdirs *sdirs, struct sd *s, unsigned int len)
 {
 	struct bu *bu_list=NULL;
+	if(sdirs->protocol==PROTO_2)
+		proto2_hack(s, len);
 	fail_unless(!bu_get_list(sdirs, &bu_list));
 	do_assert_bu_list(bu_list, s, len);
 	bu_list_free(&bu_list);
@@ -228,6 +242,8 @@ static void assert_bu_list_with_working(struct sdirs *sdirs,
 	struct bu *bu_list=NULL;
 	struct cstat cstat;
 	struct cntr cntr;
+	if(sdirs->protocol==PROTO_2)
+		proto2_hack(s, len);
 	memset(&cstat, 0, sizeof(cstat));
 	memset(&cntr, 0, sizeof(cntr));
 	cstat.run_status=run_status;

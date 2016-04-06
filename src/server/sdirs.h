@@ -9,6 +9,8 @@
 // Server directories.
 struct sdirs
 {
+	enum protocol protocol;
+
 	char *base;
 	char *dedup;
 	char *champlock;

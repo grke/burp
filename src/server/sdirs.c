@@ -207,6 +207,8 @@ int sdirs_init(struct sdirs *sdirs, enum protocol protocol,
 	if(!(sdirs->base=strdup_w(directory, __func__)))
 		goto error;
 
+	sdirs->protocol=protocol;
+
 	if(protocol==PROTO_1)
 	{
 		if(do_protocol1_dirs(sdirs, cname, manual_delete))

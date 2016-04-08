@@ -86,7 +86,7 @@ ssl_peer_cn = burpserver
 
 # The following options specify exactly what to backup.
 # The server will override them if there is at least one 'include=' line on
-# the server side.
+# the server side and 'server_can_override_includes=1'.
 include = /home
 #exclude = /home/graham/testdir/librsync-0.9.7/testsuite
 #include = /home/graham/testdir/librsync-0.9.7/testsuite/deep

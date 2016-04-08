@@ -193,6 +193,9 @@ enum conf_opt
 	OPT_R_SCRIPT_POST_RUN_ON_FAIL,
 	OPT_R_SCRIPT_RESERVED_ARGS,
 
+	// eval glob after script pre.
+	OPT_GLOB_AFTER_SCRIPT_PRE,
+
 	// Server scripts.
 	OPT_S_SCRIPT_PRE,
 	OPT_S_SCRIPT_PRE_ARG,
@@ -318,6 +321,7 @@ extern int set_uint64_t(struct conf *conf, uint64_t s);
 extern int add_to_strlist(struct conf *conf, const char *value, int include);
 extern int add_to_strlist_include(struct conf *conf, const char *value);
 extern int add_to_strlist_exclude(struct conf *conf, const char *value);
+extern int add_to_strlist_include_uniq(struct conf *conf, const char *value);
 
 extern enum burp_mode str_to_burp_mode(const char *str);
 extern enum protocol str_to_protocol(const char *str);

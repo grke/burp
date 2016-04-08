@@ -17,6 +17,8 @@ extern const char *confs_get_lockfile(struct conf **confs);
 extern int conf_switch_to_orig_client(struct conf **globalcs,
 	struct conf **cconfs, const char *orig_client);
 
+extern int reeval_glob(struct conf **c);
+
 #ifdef UTEST
 extern int conf_load_lines_from_buf(const char *buf, struct conf **c);
 extern int conf_finalise(struct conf **c);

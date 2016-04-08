@@ -849,7 +849,7 @@ static int finalise_glob(struct conf **c)
 	}
 
 	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
-		if(add_to_strlist_include(c[OPT_INCLUDE], globbuf.gl_pathv[i]))
+		if(add_to_strlist_include_uniq(c[OPT_INCLUDE], globbuf.gl_pathv[i]))
 			goto end;
 
 	globfree(&globbuf);
@@ -857,6 +857,18 @@ static int finalise_glob(struct conf **c)
 	ret=0;
 end:
 	return ret;
+}
+
+// Reeval the glob after script pre
+int reeval_glob(struct conf **c)
+{
+	if(finalise_glob(c))
+		return -1;
+
+	if(finalise_incexc_dirs(c)
+	  || finalise_start_dirs(c)) return -1;
+
+	return 0;
 }
 
 // Set the flag of the first item in a list that looks at extensions to the

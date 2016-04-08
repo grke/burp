@@ -47,7 +47,7 @@ static struct strlist *strlist_alloc(const char *path, long flag)
 }
 
 static int do_strlist_add(struct strlist **strlist,
-	const char *path, long flag, int sorted)
+	const char *path, long flag, int sorted, int uniq)
 {
 	struct strlist *s=NULL;
 	struct strlist *slast=NULL;
@@ -61,6 +61,11 @@ static int do_strlist_add(struct strlist **strlist,
 	// find the last entry. Can this be made better?
 	for(s=*strlist; s; s=s->next)
 	{
+		if (uniq && !pathcmp(path, s->path))
+		{
+			strlist_free(slnew);
+			return 0;
+		}
 		if(sorted && pathcmp(path, s->path)<0) break;
 		slast=s;
 	}
@@ -81,13 +86,19 @@ static int do_strlist_add(struct strlist **strlist,
 int strlist_add(struct strlist **strlist,
 	const char *path, long flag)
 {
-	return do_strlist_add(strlist, path, flag, 0 /* unsorted */);
+	return do_strlist_add(strlist, path, flag, 0 /* unsorted */, 0 /* not uniq */);
 }
 
 int strlist_add_sorted(struct strlist **strlist,
 	const char *path, long flag)
 {
-	return do_strlist_add(strlist, path, flag, 1 /* sorted */);
+	return do_strlist_add(strlist, path, flag, 1 /* sorted */, 0 /* not uniq */);
+}
+
+int strlist_add_sorted_uniq(struct strlist **strlist,
+	const char *path, long flag)
+{
+	return do_strlist_add(strlist, path, flag, 1 /* sorted */, 1 /* uniq */);
 }
 
 int strlist_compile_regexes(struct strlist *strlist)

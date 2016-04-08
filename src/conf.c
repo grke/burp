@@ -238,6 +238,11 @@ int add_to_strlist(struct conf *conf, const char *value, int include)
 		return strlist_add(&(conf->data.sl), value, include);
 }
 
+int add_to_strlist_include_uniq(struct conf *conf, const char *value)
+{
+	return strlist_add_sorted_uniq(&(conf->data.sl), value, 1);
+}
+
 int add_to_strlist_include(struct conf *conf, const char *value)
 {
 	return add_to_strlist(conf, value, 1);
@@ -499,6 +504,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "browsefile");
 	case OPT_BROWSEDIR:
 	  return sc_str(c[o], 0, 0, "browsedir");
+	case OPT_GLOB_AFTER_SCRIPT_PRE:
+	  return sc_int(c[o], 1, 0, "glob_after_script_pre");
 	case OPT_B_SCRIPT_PRE:
 	  return sc_str(c[o], 0, 0, "backup_script_pre");
 	case OPT_B_SCRIPT_PRE_ARG:

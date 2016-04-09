@@ -39,14 +39,13 @@ static int try_to_get_lock(struct lock *lock)
 				if(lock_tries>lock_tries_max)
 				{
 					try_lock_msg(lock_tries_max*sleeptime);
+					logp("Giving up.\n");
 					return -1;
 				}
 				// Log every 10 seconds.
 				if(lock_tries%(10/sleeptime))
 				{
-					try_lock_msg(lock_tries_max*sleeptime);
-					logp("Giving up.\n");
-					return -1;
+					try_lock_msg(lock_tries*sleeptime);
 				}
 				sleep(sleeptime);
 				continue;

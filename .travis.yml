@@ -38,6 +38,7 @@ script:
 
 after_failure:
   - tail burp-*/_build/sub/test-suite.log
+  - sleep 2
 
 deploy:
   provider: script

@@ -10,7 +10,9 @@ EXTRA_DIST = \
 	android/README \
 	configs/client/burp.conf.in \
 	configs/server/burp.conf.in \
+	configs/server/summary_script.in \
 	configs/certs/CA/CA.cnf.in \
+	configs/certs/CA/burp_ca.in \
 	debian \
 	freebsd \
 	rhel \
@@ -85,13 +87,18 @@ bin_PROGRAMS = vss_strip
 
 sbin_PROGRAMS = burp
 
-dist_sbin_SCRIPTS = configs/certs/CA/burp_ca
+sbin_SCRIPTS = burp_ca
 
 dist_script_SCRIPTS = \
 	configs/server/timer_script \
 	configs/server/notify_script \
-	configs/server/ssl_extra_checks_script \
-	configs/server/summary_script
+	configs/server/ssl_extra_checks_script
+
+EXTRA_script_SCRIPTS = summary_script
+
+EXTRA_scriptdir = $(scriptdir)
+
+CLEANFILES+= $(sbin_SCRIPTS) $(EXTRA_script_SCRIPTS)
 
 vss_strip_SOURCES = src/server/protocol1/vss_strip.c
 
@@ -419,6 +426,14 @@ burp-server.conf: $(srcdir)/configs/server/burp.conf.in
 CA.cnf: $(srcdir)/configs/certs/CA/CA.cnf.in
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/CA.cnf.in >$@
+
+burp_ca: $(srcdir)/configs/certs/CA/burp_ca.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/burp_ca.in >$@
+
+summary_script: $(srcdir)/configs/server/summary_script.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/summary_script.in >$@
 
 do_subst = ( sed \
   -e 's,[@]localstatedir[@],$(localstatedir),g' \

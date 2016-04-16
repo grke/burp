@@ -338,6 +338,7 @@ runner_SOURCES = \
 	utest/server/test_manio.c \
 	utest/server/test_resume.c \
 	utest/server/test_restore.c \
+	utest/server/test_run_action.c \
 	utest/server/test_sdirs.c
 
 runner_SOURCES+= $(burp_SOURCES)

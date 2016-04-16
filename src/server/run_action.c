@@ -139,36 +139,92 @@ static void maybe_do_notification(struct asfd *asfd,
 	}
 }
 
-static int run_restore(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf **cconfs, int srestore)
+static int parse_restore_str(const char *str, enum action *act,
+	char **backupnostr, char **restoreregex)
 {
 	int ret=-1;
 	char *cp=NULL;
 	char *copy=NULL;
-	enum action act;
-	char *backupnostr=NULL;
-	char *restoreregex=NULL;
-	char *dir_for_notify=NULL;
-	struct iobuf *rbuf=asfd->rbuf;
-	const char *cname=get_string(cconfs[OPT_CNAME]);
 
-	if(!(copy=strdup_w(rbuf->buf, __func__)))
+	if(!str)
+	{
+		logp("NULL passed to %s\n", __func__);
+		goto end;
+	}
+
+	if(!(copy=strdup_w(str, __func__)))
 		goto end;
 
-	iobuf_free_content(rbuf);
-
-	if(!strncmp_w(copy, "restore ")) act=ACTION_RESTORE;
-	else act=ACTION_VERIFY;
-
-	if(!(backupnostr=strchr(copy, ' ')))
+	if(!strncmp_w(copy, "restore "))
+		*act=ACTION_RESTORE;
+	else if(!strncmp_w(copy, "verify "))
+		*act=ACTION_VERIFY;
+	else
 	{
 		logp("Could not parse %s in %s\n", copy, __func__);
 		goto end;
 	}
-	backupnostr++;
-	if((cp=strchr(backupnostr, ':'))) *cp='\0';
+
+	if(!(cp=strchr(copy, ' ')))
+	{
+		logp("Could not parse %s in %s\n", copy, __func__);
+		goto end;
+	}
+	cp++;
+	if(!(*backupnostr=strdup_w(cp, __func__)))
+		goto end;
+	if((cp=strchr(*backupnostr, ':')))
+	{
+		*cp='\0';
+		cp++;
+		if(!(*restoreregex=strdup_w(cp, __func__)))
+			goto end;
+	}
+
+	ret=0;
+end:
+	free_w(&copy);
+	return ret;
+}
+
+#ifndef UTEST
+static
+#endif
+int parse_restore_str_and_set_confs(const char *str, enum action *act,
+	struct conf **cconfs)
+{
+	int ret=-1;
+	char *backupnostr=NULL;
+	char *restoreregex=NULL;
+
+	if(parse_restore_str(str, act, &backupnostr, &restoreregex))
+		goto end;
+
 	if(set_string(cconfs[OPT_BACKUP], backupnostr))
 		goto end;
+	if(restoreregex && *restoreregex
+	  && set_string(cconfs[OPT_REGEX], restoreregex))
+		goto end;
+	ret=0;
+end:
+	free_w(&backupnostr);
+	free_w(&restoreregex);
+	return ret;
+}
+
+static int run_restore(struct asfd *asfd,
+	struct sdirs *sdirs, struct conf **cconfs, int srestore)
+{
+	int ret=-1;
+	char *dir_for_notify=NULL;
+	enum action act=ACTION_RESTORE;
+	struct iobuf *rbuf=asfd->rbuf;
+	const char *cname=get_string(cconfs[OPT_CNAME]);
+
+	if(parse_restore_str_and_set_confs(rbuf->buf, &act, cconfs))
+		goto end;
+
+	iobuf_free_content(rbuf);
 
 	if(act==ACTION_RESTORE)
 	{
@@ -192,14 +248,6 @@ static int run_restore(struct asfd *asfd,
 		goto end;
 	}
 
-	if((restoreregex=strchr(copy, ':')))
-	{
-		*restoreregex='\0';
-		restoreregex++;
-	}
-	if(restoreregex && *restoreregex
-	  && set_string(cconfs[OPT_REGEX], restoreregex))
-		goto end;
 	if(asfd->write_str(asfd, CMD_GEN, "ok"))
 		goto end;
 	ret=do_restore_server(asfd, sdirs, act,
@@ -211,7 +259,6 @@ static int run_restore(struct asfd *asfd,
 			act==ACTION_RESTORE?"restore":"verify",
 			cconfs);
 end:
-	free_w(&copy);
 	free_w(&dir_for_notify);
 	return ret;
 }

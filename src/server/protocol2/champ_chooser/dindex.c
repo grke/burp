@@ -25,7 +25,7 @@ static int backup_in_progress(const char *fullpath)
 	  || !lstat(finishing, &statp))
 	{
 		logp("%s looks like it has a backup in progress.\n",
-				fullpath);
+			fullpath);
 		logp("Give up clean up attempt.\n");
 		ret=1;
 		goto end;

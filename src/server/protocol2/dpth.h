@@ -4,7 +4,7 @@
 #include "../dpth.h"
 
 extern int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
-	int max_storage_subdirs);
+	const char *cname, const char *cfiles, int max_storage_subdirs);
 
 extern int dpth_protocol2_incr_sig(struct dpth *dpth);
 extern char *dpth_protocol2_mk(struct dpth *dpth);

@@ -28,6 +28,7 @@ struct sdirs
 	char *deleteme;
 	char *dindex;
 	char *dfiles;
+	char *cfiles; // For tracking data files created by backups.
 	char *global_sparse;
 
 	char *timestamp;

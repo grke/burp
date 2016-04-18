@@ -169,6 +169,7 @@ static int do_protocol2_dirs(struct sdirs *sdirs,
 	  || !(sdirs->dfiles=prepend_s(sdirs->client, "dfiles"))
 	  || do_common_dirs(sdirs, manual_delete)
 	  || !(sdirs->data=prepend_s(sdirs->dedup, DATA_DIR))
+	  || !(sdirs->cfiles=prepend_s(sdirs->data, "cfiles"))
 	  || !(sdirs->global_sparse=prepend_s(sdirs->data, "sparse"))
 	  || !(sdirs->champlock=prepend_s(sdirs->data, "cc.lock"))
 	  || !(sdirs->champsock=prepend_s(sdirs->data, "cc.sock"))
@@ -246,6 +247,7 @@ void sdirs_free_content(struct sdirs *sdirs)
         free_w(&sdirs->deleteme);
         free_w(&sdirs->dindex);
         free_w(&sdirs->dfiles);
+        free_w(&sdirs->cfiles);
         free_w(&sdirs->global_sparse);
 
         free_w(&sdirs->timestamp);

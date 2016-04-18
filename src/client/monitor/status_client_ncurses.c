@@ -69,7 +69,8 @@ static char *get_bu_str(struct bu *bu)
 	static char ret[32];
 	if(!bu) snprintf(ret, sizeof(ret), "never");
 	else if(!bu->bno) snprintf(ret, sizeof(ret), "%s", bu->timestamp);
-	else snprintf(ret, sizeof(ret), "%07lu %s", bu->bno, bu->timestamp);
+	else snprintf(ret, sizeof(ret), "%07"PRIu64" %s",
+		bu->bno, bu->timestamp);
 	return ret;
 }
 
@@ -157,14 +158,14 @@ static void print_cntr_ent(const char *field,
 	  || phase==STATUS_VERIFYING)
 	{
 		to_msg(msg, sizeof(msg),
-			"% 15s % 9s % 9llu % 9llu",
+			"% 15s % 9s % 9"PRIu64" % 9"PRIu64,
 			field, "", t, e);
 	}
 	else
 	{
 */
 		to_msg(msg, sizeof(msg),
-			"% 15s % 9llu % 9llu % 9llu % 9llu % 9llu % 9llu",
+			"% 15s % 9"PRIu64" % 9"PRIu64" % 9"PRIu64" % 9"PRIu64" % 9"PRIu64" % 9"PRIu64"",
 			field, a, b, c, d, t, e);
 //	}
 	print_line(msg, (*x)++, col);
@@ -176,12 +177,12 @@ static void print_cntr_ent(const char *field,
 	  if(phase==STATUS_RESTORING
 	    || phase==STATUS_VERIFYING)
 	  {
-	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9llu%% % 9s",
+	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9"PRIu64"%% % 9s",
 		"", "", p, "");
 	  }
 	  else
 	  {
-	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9llu%% % 9s",
+	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9"PRIu64"%% % 9s",
 		"", "", "", "", "", p, "");
 	  print_line(msg, (*x)++, col);
 	}
@@ -212,7 +213,7 @@ static void print_detail2(const char *field, uint64_t value1, const char *value2
 {
 	char msg[256]="";
 	if(!field || !value1 || !value2 || !*value2) return;
-	snprintf(msg, sizeof(msg), "%s: %llu%s", field, value1, value2);
+	snprintf(msg, sizeof(msg), "%s: %"PRIu64"%s", field, value1, value2);
 	print_line(msg, (*x)++, col);
 }
 
@@ -862,7 +863,7 @@ static int request_status(struct asfd *asfd,
 			break;
 		case PAGE_BACKUP_LOGS:
 			if(sel->backup)
-				snprintf(buf, sizeof(buf), "c:%s:b:%lu\n",
+				snprintf(buf, sizeof(buf), "c:%s:b:%"PRIu64"\n",
 					client, sel->backup->bno);
 			break;
 		case PAGE_VIEW_LOG:
@@ -891,7 +892,7 @@ static int request_status(struct asfd *asfd,
 					// Make sure a request is sent, so that
 					// the counters update.
 					snprintf(buf, sizeof(buf),
-						"c:%s:b:%lu\n",
+						"c:%s:b:%"PRIu64"\n",
 						client, sel->backup->bno);
 					break;
 				}
@@ -904,7 +905,8 @@ static int request_status(struct asfd *asfd,
 				lname="verify_stats";
 
 			if(sel->backup && lname)
-				snprintf(buf, sizeof(buf), "c:%s:b:%lu:l:%s\n",
+				snprintf(buf, sizeof(buf),
+					"c:%s:b:%"PRIu64":l:%s\n",
 					client, sel->backup->bno, lname);
 			break;
 		}

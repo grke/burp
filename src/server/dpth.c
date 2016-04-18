@@ -15,6 +15,7 @@ void dpth_free(struct dpth **dpth)
 {
 	if(!dpth || !*dpth) return;
 	dpth_release_all(*dpth);
+	fzp_close(&(*dpth)->cfile_fzp);
 	free_w(&((*dpth)->base_path));
 	free_v((void **)dpth);
 }

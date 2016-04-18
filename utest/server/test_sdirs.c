@@ -134,6 +134,7 @@ static void protocol2_tests(struct sdirs *sdirs)
 	ck_assert_str_eq(sdirs->deleteme, CLIENT2 "/deleteme");
 	ck_assert_str_eq(sdirs->dindex, CLIENT2 "/dindex");
 	ck_assert_str_eq(sdirs->dfiles, CLIENT2 "/dfiles");
+	ck_assert_str_eq(sdirs->cfiles, DATA "/cfiles");
 	ck_assert_str_eq(sdirs->global_sparse, DATA "/sparse");
 	ck_assert_str_eq(sdirs->timestamp, WORKING2 "/timestamp");
 	ck_assert_str_eq(sdirs->changed, WORKING2 "/changed");

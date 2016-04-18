@@ -50,7 +50,7 @@ static int recursive_delete_w(struct sdirs *sdirs, struct bu *bu,
 static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu,
 	const char *manual_delete)
 {
-	logp("deleting %s backup %lu\n", cname, bu->bno);
+	logp("deleting %s backup %"PRId64"\n", cname, bu->bno);
 
 	if(sdirs->global_sparse)
 	{

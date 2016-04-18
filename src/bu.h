@@ -29,12 +29,12 @@ struct bu
 	uint16_t flags;
 
 	// The number of the backup.
-	unsigned long bno;
+	uint64_t bno;
 	// Transposed backup number - will set the oldest backup to 1.
-	unsigned long trbno;
+	uint64_t trbno;
 
 	// The position of this item in the array.
-	unsigned long index;
+	uint64_t index;
 
 	struct bu *next;
 	struct bu *prev;

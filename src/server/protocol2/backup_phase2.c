@@ -844,7 +844,10 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 
 	if(!(dpth=dpth_alloc())
 	  || dpth_protocol2_init(dpth,
-		sdirs->data, get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
+		sdirs->data,
+		get_string(confs[OPT_CNAME]),
+		sdirs->cfiles,
+		get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto end;
 	if(resume && !(p1pos=do_resume(sdirs, dpth, confs)))
                 goto end;

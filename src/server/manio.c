@@ -405,6 +405,7 @@ int manio_close(struct manio **manio)
 			(*manio)->manifest, strerror(errno));
 		ret=-1;
 	}
+	// Should probably have a flush before fsync too.
 	if(fsync(fd))
 	{
 		logp("Error in fsync in %s for %s: %s\n", __func__,

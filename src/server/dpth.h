@@ -30,6 +30,9 @@ struct dpth
 	// Currently open data file. Only one is open at a time, while many
 	// may be locked.
 	struct fzp *fzp;
+	// For keeping track of files that were created, in case the backup
+	// is interrupted and cleanup is required.
+	struct fzp *cfile_fzp;
 	// List of locked data files. 
 	struct dpth_lock *head;
 	struct dpth_lock *tail;

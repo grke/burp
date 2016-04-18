@@ -432,7 +432,7 @@ end:
    based on the first 'keep' value. This is so that we have more choice
    of backups to delete than just the oldest.
 */
-static int need_hardlinked_archive(struct conf **cconfs, unsigned long bno)
+static int need_hardlinked_archive(struct conf **cconfs, uint64_t bno)
 {
 	int kp=0;
 	int ret=0;
@@ -452,11 +452,11 @@ static int need_hardlinked_archive(struct conf **cconfs, unsigned long bno)
 	// periodically hardlink, based on the first 'keep' value.
 	kp=keep->flag;
 
-	logp("First keep value: %d, backup: %lu (%lu-1=%lu)\n",
+	logp("First keep value: %d, backup: %"PRIu64" (%"PRIu64"-1=%"PRIu64")\n",
 			kp, bno, bno, bno-1);
 
 	ret=(bno-1)%kp;
-	logp("New backup is %sa hardlinked_archive (%lu%%%d=%d)\n",
+	logp("New backup is %sa hardlinked_archive (%"PRIu64"%%%d=%d)\n",
 		ret?"not ":"", bno-1, kp, ret);
 
 	return !ret;
@@ -567,7 +567,7 @@ end:
 /* Need to make all the stuff that this does atomic so that existing backups
    never get broken, even if somebody turns the power off on the server. */ 
 static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
-	int hardlinked_current, struct conf **cconfs, unsigned long bno)
+	int hardlinked_current, struct conf **cconfs, uint64_t bno)
 {
 	int ret=-1;
 	char *datapth=NULL;
@@ -664,7 +664,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	struct stat statp;
 	ssize_t len=0;
 	char realcurrent[256]="";
-	unsigned long bno=0;
+	uint64_t bno=0;
 	int hardlinked_current=0;
 	char tstmp[64]="";
 	int previous_backup=0;
@@ -736,7 +736,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 		goto end;
 	}
 	// Get the backup number.
-	bno=strtoul(tstmp, NULL, 10);
+	bno=strtoull(tstmp, NULL, 10);
 
 	// Determine whether the new backup should be a hardlinked
 	// archive or not, from the confs and the backup number...

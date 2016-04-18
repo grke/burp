@@ -142,8 +142,39 @@ int dpth_protocol2_incr_sig(struct dpth *dpth)
 	return dpth_incr(dpth);
 }
 
+static int open_cfile_fzp(struct dpth *dpth,
+	const char *cname, const char *cfiles)
+{
+	int fd;
+	int ret=-1;
+	char *fname=NULL;
+	char *fullpath=NULL;
+
+	if(!(fname=prepend(cname, "XXXXXX")))
+		goto end;
+	if(!(fullpath=prepend_s(cfiles, fname)))
+		goto end;
+	logp("cfile_fzp is %s\n", fullpath);
+	if(build_path_w(fullpath))
+		goto end;
+	if((fd=mkstemp(fullpath))<0)
+	{
+		logp("Could not mkstemp from template %s: %s\n",
+			fullpath, strerror(errno));
+		goto end;
+	}
+	if(!(dpth->cfile_fzp=fzp_dopen(fd, "wb")))
+		goto end;
+
+	ret=0;
+end:
+	free_w(&fname);
+	free_w(&fullpath);
+	return ret;
+}
+
 int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
-	int max_storage_subdirs)
+	const char *cname, const char *cfiles, int max_storage_subdirs)
 {
 	int max;
 	int ret=0;
@@ -154,6 +185,8 @@ int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 		logp("No base_path supplied in %s()\n", __func__);
 		goto error;
 	}
+
+	if(open_cfile_fzp(dpth, cname, cfiles)) goto error;
 
 	dpth->max_storage_subdirs=max_storage_subdirs;
 
@@ -230,6 +263,22 @@ static struct fzp *file_open_w(const char *path, const char *mode)
 	return fzp_open(path, "wb");
 }
 
+static int write_to_cfile(struct dpth *dpth, struct blk *blk)
+{
+	struct iobuf wbuf;
+	blk_to_iobuf_savepath(blk, &wbuf);
+	if(iobuf_send_msg_fzp(&wbuf, dpth->cfile_fzp))
+		return -1;
+	if(fzp_flush(dpth->cfile_fzp))
+		return -1;
+	if(fsync(fzp_fileno(dpth->cfile_fzp)))
+	{
+		logp("fsync on cfile_fzp failed: %s\n", strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 static struct fzp *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 {
 	char *path=NULL;
@@ -254,6 +303,8 @@ static struct fzp *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 	}
 
 	if(!(path=prepend_slash(dpth->base_path, savepathstr, 14)))
+		goto end;
+	if(write_to_cfile(dpth, blk))
 		goto end;
 	fzp=file_open_w(path, "wb");
 end:

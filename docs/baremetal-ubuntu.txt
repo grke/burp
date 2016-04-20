@@ -1,0 +1,79 @@
+Ubuntu bare metal restore steps
+-------------------------------
+
+Author
+------
+
+Wybren Buijs
+
+
+To do a bare metal restore, boot some sort of live environment that is able to
+run burp.
+In our case we use a 15.10 ubuntu live cd booted from the network or a usb
+drive.
+
+On the backup server
+You need to rename the keys because the live cd does not have these burp keys.
+On the server go to /etc/burp/CA/ and rename the keys of the host you are
+going to restore.
+Get the password the client used from /etc/burp/clientconfdir/clientname
+
+On the client.
+Boot your live environment. If burp is not installed install it.
+Edit /etc/burp/burp.conf
+Change the following items in the config:
+
+server = 10.0.0.10 (use the ip address of your server to avoid resolving
+problems)
+password = get it from the backup server
+cname = get it from the backup server
+
+Determine the disk the os was running on and mount it.
+In this case we mounted /dev/sda1 to /home/ubuntu/restore
+
+mkdir /home/ubuntu/restore
+sudo mount /dev/sda1 /home/ubuntu/restore
+
+Start the restore procedure add -f if you need to overwrite files
+
+sudo burp -a r -d /home/ubuntu/restore/
+
+Once the restore is done you need to install grub to the boot drive to do this
+we chroot into the restore directory.
+Mount the critical virtual filesystems. Run the following as a single command:
+
+for i in /dev /dev/pts /proc /sys /run; do sudo mount -B $i
+/home/ubuntu/restore$i; done
+
+Chroot into your restore system device:
+
+sudo chroot /home/ubuntu/restore
+
+Install GRUB 2 (substitute the correct device with the device you used
+before):
+
+grub-install /dev/sdX
+
+
+If the system partitions are on a software RAID install GRUB 2 on all disks in
+the RAID. Example (software RAID using /dev/sda and /dev/sdb):
+
+grub-install /dev/sda
+grub-install /dev/sdb
+
+
+Recreate the GRUB 2 menu file (grub.cfg)
+
+update-grub
+
+
+Exit chroot: CTRL-D on keyboard
+
+Reboot.
+
+sudo reboot
+
+On the backup server move the old keys back in place and your good to go.
+
+Info on installing grub
+https://help.ubuntu.com/community/Grub2/Installing

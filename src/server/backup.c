@@ -177,7 +177,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	}
 
 	if(protocol==PROTO_2
-	  && !(chfd=champ_chooser_connect(as, sdirs, cconfs)))
+	  && !(chfd=champ_chooser_connect(as, sdirs, cconfs, resume)))
 	{
 		logp("problem connecting to champ chooser\n");
 		goto error;

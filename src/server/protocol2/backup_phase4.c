@@ -9,6 +9,7 @@
 #include "../../prepend.h"
 #include "../../protocol2/blk.h"
 #include "../../sbuf.h"
+#include "../../strlist.h"
 #include "../../server/bu_get.h"
 #include "../../server/manio.h"
 #include "../../server/sdirs.h"
@@ -487,6 +488,83 @@ end:
 	free_w(&srcb);
 	free_w(&dst);
 	free_w(&fullsrcdir);
+	return ret;
+}
+
+int merge_files_in_dir_no_fcount(const char *final,
+	const char *fmanifest, const char *srcdir,
+	int merge(const char *dst, const char *srca, const char *srcb))
+{
+	int ret=-1;
+	int n=0;
+	int i=0;
+	char *dst=NULL;
+	char *dstdir=NULL;
+	char compd[32]="";
+	char *fullpath=NULL;
+	uint64_t fcount=0;
+	struct dirent **dir=NULL;
+	struct strlist *s=NULL;
+	struct strlist *slist=NULL;
+
+	if(!(dstdir=prepend_s(fmanifest, "n1")))
+		goto end;
+	if(recursive_delete(dstdir))
+		goto end;
+
+	// Files are unsorted, and not named sequentially.
+	if(entries_in_directory_no_sort(fmanifest, &dir, &n, 1 /*atime*/))
+	{
+		logp("scandir failed for %s in %s: %s\n",
+			fmanifest, __func__, strerror(errno));
+		goto end;
+	}
+	for(i=0; i<n; i++)
+	{
+		free_w(&fullpath);
+		if(!(fullpath=prepend_s(fmanifest, dir[i]->d_name)))
+			goto end;
+		switch(is_dir(fullpath, dir[i]))
+		{
+			case 0: break;
+			case 1: continue;
+			default: logp("is_dir(%s): %s\n",
+					fullpath, strerror(errno));
+				goto end;
+		}
+
+		// Have a good entry. Add it to the list.
+		if(strlist_add(&slist, fullpath, 0))
+			goto end;
+		fcount++;
+	}
+
+	// Merge them all into a directory, name the files sequentially.
+	i=0;
+	for(s=slist; s; s=s->next)
+	{
+		snprintf(compd, sizeof(compd), "%08"PRIX64, (uint64_t)i++);
+		if(!(dst=prepend_s(dstdir, compd)))
+			goto end;
+		if(merge(dst, s->path, s->next?s->next->path:NULL))
+			goto end;
+	}
+
+	// Now do a normal merge.
+	if(merge_files_in_dir(final, fmanifest, "n1", fcount, merge))
+		goto end;
+
+	ret=0;
+end:
+	recursive_delete(dstdir);
+	free_w(&dstdir);
+	free_w(&dst);
+	free_w(&fullpath);
+	if(dir)
+	{
+		for(i=0; i<n; i++) free_v((void **)&dir[i]);
+		free_v((void **)&dir);
+	}
 	return ret;
 }
 

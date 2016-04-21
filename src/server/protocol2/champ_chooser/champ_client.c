@@ -14,7 +14,8 @@
 
 #include <sys/un.h>
 
-static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs)
+static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs,
+	int resume)
 {
 	pid_t childpid=-1;
 
@@ -35,7 +36,7 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs)
 			// Child.
 			int cret;
 			log_fzp_set(NULL, confs);
-			switch(champ_chooser_server(sdirs, confs))
+			switch(champ_chooser_server(sdirs, confs, resume))
 			{
 				case 0:
 					cret=0;
@@ -53,7 +54,8 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs)
 	return -1; // Not reached.
 }
 
-static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf **confs)
+static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf **confs,
+	int resume)
 {
 	int len;
 	int s=-1;
@@ -65,7 +67,8 @@ static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf **confs)
 	{
 		// Champ chooser is not running.
 		// Try to fork a new champ chooser process.
-		if(champ_chooser_fork(sdirs, confs)) return -1;
+		if(champ_chooser_fork(sdirs, confs, resume))
+			return -1;
 	}
 
 	// Champ chooser should either be running now, or about to run.
@@ -105,7 +108,7 @@ static int connect_to_champ_chooser(struct sdirs *sdirs, struct conf **confs)
 }
 
 struct asfd *champ_chooser_connect(struct async *as,
-	struct sdirs *sdirs, struct conf **confs)
+	struct sdirs *sdirs, struct conf **confs, int resume)
 {
 	int champsock=-1;
 	char *champname=NULL;
@@ -116,7 +119,7 @@ struct asfd *champ_chooser_connect(struct async *as,
 	// This may start up a new champ chooser. On a machine with multiple
 	// cores, it may be faster to do now, way before it is actually needed
 	// in phase2.
-	if((champsock=connect_to_champ_chooser(sdirs, confs))<0)
+	if((champsock=connect_to_champ_chooser(sdirs, confs, resume))<0)
 	{
 		logp("could not connect to champ chooser\n");
 		goto error;

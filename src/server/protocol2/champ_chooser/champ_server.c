@@ -200,7 +200,8 @@ error:
 	return -1;
 }
 
-int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
+int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
+	int resume)
 {
 	int s;
 	int ret=-1;
@@ -268,7 +269,10 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs)
 	// I think that this is probably the best point at which to run a
 	// cleanup job to delete unused data files, because no other process
 	// can fiddle with the dedup_group at this point.
-	if(delete_unused_data_files(sdirs))
+	// Cannot do it on a resume, or it will delete files that are
+	// referenced in the backup we are resuming.
+	if(!resume
+	  && delete_unused_data_files(sdirs))
 		goto end;
 
 	// Load the sparse indexes for this dedup group.
@@ -377,7 +381,7 @@ int champ_chooser_server_standalone(struct conf **globalcs)
 	  || conf_load_clientconfdir(globalcs, cconfs)
 	  || !(sdirs=sdirs_alloc())
 	  || sdirs_init_from_confs(sdirs, cconfs)
-	  || champ_chooser_server(sdirs, cconfs))
+	  || champ_chooser_server(sdirs, cconfs, 0 /* resume */))
 		goto end;
 	ret=0;
 end:

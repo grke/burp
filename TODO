@@ -7,9 +7,6 @@ However, that is mostly relating to protocol1 issues.
 So, this is a list of important stuff that needs to be done for protocol2,
 roughly in order of most important to least.
 
-* Rubble cleanup with working_dir_recovery_method=delete doesn't delete any
-  data files.
-
 * Need to improve restore speed - come up with a way to efficiently read the
   blocks into memory by looking ahead in the manifests.
 

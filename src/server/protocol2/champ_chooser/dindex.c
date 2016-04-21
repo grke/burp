@@ -47,8 +47,6 @@ static int get_dfiles_to_merge(struct sdirs *sdirs, struct strlist **s)
 	char *dfiles=NULL;
 	struct dirent **dir=NULL;
 
-	logp("Attempting to clean up unused data files %s\n", sdirs->clients);
-
 	if(entries_in_directory_no_sort(sdirs->clients, &dir, &n, 1 /*atime*/))
 	{
 		logp("scandir failed for %s in %s: %s\n",
@@ -237,24 +235,67 @@ int delete_unused_data_files(struct sdirs *sdirs)
 	int ret=-1;
 	uint64_t fcount=0;
 	char hfile[32];
-	char *tmpdir=NULL;
 	char *hlinks=NULL;
 	char *fullpath=NULL;
+	char *cindex_tmp=NULL;
+	char *cindex_new=NULL;
+	char *dindex_tmp=NULL;
 	char *dindex_new=NULL;
 	char *dindex_old=NULL;
 	struct strlist *s=NULL;
 	struct strlist *slist=NULL;
 	struct stat statp;
 
-	if(get_dfiles_to_merge(sdirs, &slist)
-	  || !(dindex_old=prepend_s(sdirs->data, "dindex"))
-	  || !(tmpdir=prepend_s(sdirs->data, "dindex.new"))
-	  || !(hlinks=prepend_s(tmpdir, "hlinks"))
-	  || recursive_delete(tmpdir)
-	  || mkdir(tmpdir, 0777)
-	  || mkdir(hlinks, 0777))
+	logp("Attempting to clean up unused data files %s\n", sdirs->clients);
+
+	// Get all lists of files in all backups.
+	if(get_dfiles_to_merge(sdirs, &slist))
 		goto end;
 
+	if(!(dindex_tmp=prepend_s(sdirs->data, "dindex.tmp"))
+	  || !(dindex_old=prepend_s(sdirs->data, "dindex")))
+		goto end;
+
+	// Get a list of the files that have been created since last time.
+	// (this enables us to clean up data files that were created for
+	// interrupted backups).
+	if(!(cindex_tmp=prepend_s(sdirs->cfiles, "cindex.tmp"))
+	  || recursive_delete(cindex_tmp))
+		goto end;
+	if(!lstat(sdirs->cfiles, &statp))
+	{
+		if(mkdir(cindex_tmp, 0777)
+		  || !(cindex_new=prepend_s(cindex_tmp, "cindex"))
+		  || merge_files_in_dir_no_fcount(cindex_new,
+			sdirs->cfiles, "n1", merge_dindexes))
+				goto end;
+		if(!lstat(cindex_new, &statp))
+		{
+			if(lstat(dindex_old, &statp))
+			{
+				// The dindex file does not exist.
+				// Just rename cindex_new.
+				if(do_rename(cindex_new, dindex_old))
+					goto end;
+			}
+			else
+			{
+				// Merge it into the previous list of files
+				// from all backups.
+				if(merge_dindexes(dindex_tmp,
+					dindex_old, cindex_new)
+				  || do_rename(dindex_tmp, dindex_old))
+					goto end;
+			}
+		}
+	}
+
+	// Create a directory of hardlinks to each list of files.
+	if(!(hlinks=prepend_s(dindex_tmp, "hlinks"))
+	  || recursive_delete(dindex_tmp)
+	  || mkdir(dindex_tmp, 0777)
+	  || mkdir(hlinks, 0777))
+		goto end;
 	for(s=slist; s; s=s->next)
 	{
 		snprintf(hfile, sizeof(hfile), "%08"PRIX64, fcount++);
@@ -269,11 +310,11 @@ int delete_unused_data_files(struct sdirs *sdirs)
 		}
 	}
 
-	if(!(dindex_new=prepend_s(tmpdir, "dindex")))
+	// Create a single list of files in all backups.
+	if(!(dindex_new=prepend_s(dindex_tmp, "dindex")))
 		goto end;
-
 	if(merge_files_in_dir(dindex_new,
-		tmpdir, "hlinks", fcount, merge_dindexes))
+		dindex_tmp, "hlinks", fcount, merge_dindexes))
 			goto end;
 
 	if(!lstat(dindex_new, &statp))
@@ -284,15 +325,21 @@ int delete_unused_data_files(struct sdirs *sdirs)
 				goto end;
 		if(do_rename(dindex_new, dindex_old))
 			goto end;
+
+		// No longer need the current cfiles directory.
+		if(recursive_delete(sdirs->cfiles))
+			goto end;
 	}
 
 	ret=0;
 end:
 	strlists_free(&slist);
-	if(tmpdir) recursive_delete(tmpdir);
+	if(cindex_tmp) recursive_delete(cindex_tmp);
+	if(dindex_tmp) recursive_delete(dindex_tmp);
 	free_w(&fullpath);
 	free_w(&hlinks);
-	free_w(&tmpdir);
+	free_w(&cindex_tmp);
+	free_w(&dindex_tmp);
 	free_w(&dindex_new);
 	free_w(&dindex_old);
 	return ret;

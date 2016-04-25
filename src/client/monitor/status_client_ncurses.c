@@ -38,30 +38,50 @@ static struct fzp *lfzp=NULL;
 // screen.
 static uint8_t toggle=0;
 
-static void print_line(const char *string, int row, int col)
+#ifdef HAVE_NCURSES
+static void print_line_ncurses(const char *string, int row, int col)
 {
 	int k=0;
 	const char *cp=NULL;
-#ifdef HAVE_NCURSES
-	if(actg==ACTION_STATUS)
-	{
-		while(k<LEFT_SPACE) mvprintw(row+TOP_SPACE, k++, " ");
-		for(cp=string; (*cp && k<col); cp++)
-			mvprintw(row+TOP_SPACE, k++, "%c", *cp);
-		while(k<col) mvprintw(row+TOP_SPACE, k++, " ");
-		return;
-	}
+	while(k<LEFT_SPACE) mvprintw(row+TOP_SPACE, k++, " ");
+	for(cp=string; (*cp && k<col); cp++)
+		mvprintw(row+TOP_SPACE, k++, "%c", *cp);
+	while(k<col) mvprintw(row+TOP_SPACE, k++, " ");
+}
 #endif
-	while(k<LEFT_SPACE) { printf(" "); k++; }
+
+static struct asfd *stdout_asfd=NULL;
+
+static void print_line_stdout(const char *string, int row, int col)
+{
+	int k=0;
+	const char *cp=NULL;
+	while(k<LEFT_SPACE)
+	{
+		stdout_asfd->write_str(stdout_asfd, CMD_GEN, " ");
+		k++;
+	}
 	for(cp=string; *cp; cp++)
 	{
-		printf("%c", *cp);
-		k++;
+		stdout_asfd->write_str(stdout_asfd, CMD_GEN, string);
+		k+=strlen(string);
 #ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS && k<col) break;
 #endif
 	}
-	printf("\n");
+	stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n");
+}
+
+static void print_line(const char *string, int row, int col)
+{
+#ifdef HAVE_NCURSES
+	if(actg==ACTION_STATUS)
+	{
+		print_line_ncurses(string, row, col);
+		return;
+	}
+#endif
+	print_line_stdout(string, row, col);
 }
 
 static char *get_bu_str(struct bu *bu)
@@ -361,42 +381,64 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 	}
 	if(path && *path)
 	{
+		char pathstr[256]="";
+		snprintf(pathstr, sizeof(pathstr), "\n%s\n", path);
 #ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS)
 		{
-			printw("\n%s\n", path);
+			printw("%s", pathstr);
 			return;
 		}
-#else
-		printf("\n%s\n", path);
 #endif
+		stdout_asfd->write_str(stdout_asfd, CMD_GEN, pathstr);
 	}
 }
 */
 
+#ifdef HAVE_NCURSES
+static void screen_header_ncurses(const char *date, int l, int row, int col)
+{
+	char v[32]="";
+	snprintf(v, sizeof(v), " burp monitor %s", VERSION);
+	print_line(v, 0-TOP_SPACE, col);
+	mvprintw(0, col-l-1, date);
+}
+#endif
+
+static void screen_header_stdout(const char *date, int l, int row, int col)
+{
+	size_t c=0;
+	char spaces[512]="";
+	stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n burp status");
+	for(c=0;
+	  c<(col-strlen(" burp status")-l-1)
+		&& c<sizeof(spaces)-1; c++)
+			spaces[c]=' ';
+	spaces[c]='\0';
+	stdout_asfd->write_str(stdout_asfd, CMD_GEN, spaces);
+	stdout_asfd->write_str(stdout_asfd, CMD_GEN, date);
+	stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n\n");
+}
+
 static void screen_header(int row, int col)
 {
-	int c=0;
-	int l=0;
+	int l;
 	const char *date=NULL;
+#ifdef UTEST
+	date="1977-10-02 00:10:20";
+#else
 	time_t t=time(NULL);
 	date=getdatestr(t);
+#endif
 	l=strlen(date);
 #ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
-		char v[32]="";
-		snprintf(v, sizeof(v), " burp monitor %s", VERSION);
-		print_line(v, 0-TOP_SPACE, col);
-		mvprintw(0, col-l-1, date);
+		screen_header_ncurses(date, l, row, col);
 		return;
 	}
 #endif
-
-	printf("\n burp status");
-
-	for(c=0; c<(int)(col-strlen(" burp status")-l-1); c++) printf(" ");
-	printf("%s\n\n", date);
+	screen_header_stdout(date, l, row, col);
 }
 
 static int need_status(struct sel *sel)
@@ -1264,7 +1306,9 @@ static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 #ifndef UTEST
 static
 #endif
-int status_client_ncurses_main_loop(struct async *as, const char *orig_client)
+int status_client_ncurses_main_loop(struct async *as,
+	struct asfd *so_asfd,
+	const char *orig_client)
 {
 	int ret=-1;
 	char *client=NULL;
@@ -1274,7 +1318,10 @@ int status_client_ncurses_main_loop(struct async *as, const char *orig_client)
 	int reqdone=0;
 	struct sel *sel=NULL;
 
+	stdout_asfd=so_asfd;
+
 	if(!as
+	  || !(stdout_asfd=so_asfd)
 	  || !(sfd=as->asfd))
 	{
 		logp("async not set up correctly in %s\n", __func__);
@@ -1355,9 +1402,7 @@ int status_client_ncurses_main_loop(struct async *as, const char *orig_client)
 		{
 			if(update_screen(sel))
 				goto error;
-			// FIX THIS - should probably set up stdout with an
-			// asfd.
-			printf("\n");
+			stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n");
 			break;
 		}
 	}
@@ -1417,12 +1462,14 @@ int status_client_ncurses_init(enum action act)
 
 int status_client_ncurses(struct conf **confs)
 {
+        int ret=-1;
 	int csin=-1;
 	int csout=-1;
-        int ret=-1;
+	int stdoutfd=fileno(stdout);
 	pid_t childpid=-1;
 	struct async *as=NULL;
 	const char *monitor_logfile=get_string(confs[OPT_MONITOR_LOGFILE]);
+	struct asfd *so_asfd=NULL;
 
 	setup_signals();
 
@@ -1453,12 +1500,17 @@ int status_client_ncurses(struct conf **confs)
 		ncurses_init();
 	}
 #endif
+	if(!(so_asfd=setup_asfd(as, "stdout", &stdoutfd,
+		NULL, ASFD_STREAM_LINEBUF,
+		ASFD_FD_CLIENT_NCURSES_STDOUT, -1, confs)))
+			goto end;
+
 	if(monitor_logfile
 	  && !(lfzp=fzp_open(monitor_logfile, "wb")))
 		goto end;
 	log_fzp_set_direct(lfzp);
 
-	ret=status_client_ncurses_main_loop(as,
+	ret=status_client_ncurses_main_loop(as, so_asfd,
 		get_string(confs[OPT_ORIG_CLIENT]));
 end:
 #ifdef HAVE_NCURSES

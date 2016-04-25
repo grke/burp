@@ -55,7 +55,8 @@ static int async_io(struct async *as, int doread)
 	{
 		if(asfd->fdtype==ASFD_FD_SERVER_PIPE_WRITE
 		 || asfd->fdtype==ASFD_FD_CHILD_PIPE_WRITE
-		 || asfd->fdtype==ASFD_FD_CLIENT_MONITOR_WRITE)
+		 || asfd->fdtype==ASFD_FD_CLIENT_MONITOR_WRITE
+		 || asfd->fdtype==ASFD_FD_CLIENT_NCURSES_STDOUT)
 			asfd->doread=0;
 		else
 			asfd->doread=doread;

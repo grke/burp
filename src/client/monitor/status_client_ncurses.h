@@ -8,6 +8,7 @@ extern int status_client_ncurses(struct conf **confs);
 
 #ifdef UTEST
 extern int status_client_ncurses_main_loop(struct async *as,
+	struct asfd *so_asfd,
 	const char *orig_client);
 #endif
 

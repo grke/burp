@@ -7,6 +7,8 @@
 
 static struct ioevent_list reads;
 static struct ioevent_list writes;
+static struct ioevent_list reads_so;
+static struct ioevent_list writes_so;
 
 static struct async *setup_async(void)
 {
@@ -21,6 +23,7 @@ START_TEST(test_status_client_ncurses_null_as)
 	fail_unless(!status_client_ncurses_init(ACTION_STATUS_SNAPSHOT));
 	fail_unless(status_client_ncurses_main_loop(
 		NULL, // as
+		NULL, // so_asfd
 		NULL // orig_client
 	)==-1);
 	alloc_check();
@@ -67,30 +70,49 @@ static void setup_read_error(struct asfd *asfd)
 	asfd_mock_read(asfd, &r, -1, CMD_GEN, "");
 }
 
+static void setup_stdout_header(struct asfd *so_asfd)
+{
+	int w=0;
+	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "\n burp status");
+	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "                                                ");
+	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "1977-10-02 00:10:20");
+	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "\n\n");
+	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "\n");
+}
+
 static void do_simple_test(
 	const char *orig_client,
 	int expected_ret,
-	void setup_callback(struct asfd *asfd)
+	void setup_callback(struct asfd *asfd),
+	void setup_stdout_callback(struct asfd *asfd)
 )
 {
 	struct asfd *asfd;
+	struct asfd *so_asfd;
 	struct async *as;
 
 	as=setup_async();
 	asfd=asfd_mock_setup(&reads, &writes);
+	so_asfd=asfd_mock_setup(&reads_so, &writes_so);
 	as->asfd_add(as, asfd);
+	as->asfd_add(as, so_asfd);
 	asfd->as=as;
 	as->read_write=async_rw_simple;
 	as->write=async_write_simple;
 	setup_callback(asfd);
+	if(setup_stdout_callback)
+		setup_stdout_callback(so_asfd);
 
 	fail_unless(!status_client_ncurses_init(ACTION_STATUS_SNAPSHOT));
 	fail_unless(status_client_ncurses_main_loop(
 		as,
+		so_asfd,
 		orig_client
 	)==expected_ret);
 	asfd_free(&asfd);
+	asfd_free(&so_asfd);
 	asfd_mock_teardown(&reads, &writes);
+	asfd_mock_teardown(&reads_so, &writes_so);
 	async_free(&as);
 
 	alloc_check();
@@ -98,27 +120,25 @@ static void do_simple_test(
 
 START_TEST(test_status_client_ncurses_simplest_json)
 {
-	do_simple_test(NULL, 0, setup_simplest_json);
-	// FIX THIS: causes segfault.
-	//do_simple_test("otherclient", 0, setup_simplest_json);
+	do_simple_test(NULL, 0, setup_simplest_json, setup_stdout_header);
 }
 END_TEST
 
 START_TEST(test_status_client_ncurses_multiline_json)
 {
-	do_simple_test(NULL, 0, setup_multiline_json);
+	do_simple_test(NULL, 0, setup_multiline_json, setup_stdout_header);
 }
 END_TEST
 
 START_TEST(test_status_client_ncurses_bad_json)
 {
-	do_simple_test(NULL, -1, setup_bad_json);
+	do_simple_test(NULL, -1, setup_bad_json, NULL);
 }
 END_TEST
 
 START_TEST(test_status_client_ncurses_read_error)
 {
-	do_simple_test(NULL, -1, setup_read_error);
+	do_simple_test(NULL, -1, setup_read_error, NULL);
 }
 END_TEST
 

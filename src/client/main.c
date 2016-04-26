@@ -489,6 +489,12 @@ int client(struct conf **confs, enum action action, int vss_restore)
 {
 	enum cliret ret=CLIENT_OK;
 
+	if(get_int(confs[OPT_DISABLED]))
+	{
+		logp("Client disabled\n");
+		return ret;
+	}
+
 #ifdef HAVE_WIN32
 	// prevent sleep when idle
 	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);

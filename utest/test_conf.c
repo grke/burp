@@ -78,6 +78,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 			break;
 		case OPT_CLIENT_IS_WINDOWS:
 		case OPT_RANDOMISE:
+		case OPT_DISABLED:
 		case OPT_B_SCRIPT_POST_RUN_ON_FAIL:
 		case OPT_R_SCRIPT_POST_RUN_ON_FAIL:
 		case OPT_SEND_CLIENT_CNTR:

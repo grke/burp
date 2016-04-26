@@ -237,6 +237,13 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		goto end;
 	}
 
+	if(get_int(cconfs[OPT_DISABLED]))
+	{
+		log_and_send(as->asfd, "client disabled on server");
+		sleep(1);
+		goto end;
+	}
+
 	// Set up counters. Have to wait until here to get cname.
 	if(!(cntr=cntr_alloc())
 	  || cntr_init(cntr, cname))

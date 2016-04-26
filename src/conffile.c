@@ -181,6 +181,7 @@ static struct fstype fstypes[]={
 	{ "devfs",		0x00001373 },
 	{ "devpts",		0x00001CD1 },
 	{ "devtmpfs",		0x00009FA0 },
+	{ "ecryptfs",		0x0000f15f },
 	{ "ext2",		0x0000EF53 },
 	{ "ext3",		0x0000EF53 },
 	{ "ext4",		0x0000EF53 },

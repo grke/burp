@@ -55,7 +55,7 @@ fi
 
 set -e
 
-etc=/etc/burp
+etc=@sysconfdir@
 dir=${etc}/CA
 conf=${etc}/CA.cnf
 ca_days=7300

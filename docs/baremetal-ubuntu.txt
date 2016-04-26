@@ -9,7 +9,9 @@ Wybren Buijs
 
 To do a bare metal restore, boot some sort of live environment that is able to
 run burp.
-In our case we use a 15.10 ubuntu live cd booted from the network or a usb
+Also before you try a bare-metal restore be sure the backups are backups of
+the complete system and not just a part like /home.
+In our case we use a 15.10 ubuntu live image booted from the network or a usb
 drive.
 
 On the backup server
@@ -23,12 +25,115 @@ Boot your live environment. If burp is not installed install it.
 Edit /etc/burp/burp.conf
 Change the following items in the config:
 
-server = 10.0.0.10 (use the ip address of your server to avoid resolving
-problems)
+server = xx.xx.xx.xx (use the ip address to avoid resolving problems)
 password = get it from the backup server
 cname = get it from the backup server
 
-Determine the disk the os was running on and mount it.
+If it is a new disk/system.
+You first need to partition it in the right way.
+But before doing that you need to know a few things.
+
+    What was the partition scheme?
+    Was it gpt or mbr
+    Was it a md raid system
+    Do I want the same scheme as before?
+
+You could have a peek in /etc/fstab of your backup to find out if there was a
+md raid installed.
+You could use the size of your backup to determine the minimum partition space
+needed for the restore.
+You can set your swap with chroot.
+But I think it might be of good practice if you want to be able to do smooth
+bare-metal restores to make note how your systems should be partitioned.
+
+So let's start creating a system with all disk space available - swap.
+Start parted on the disk of choice and create 10GB primary partition and 2GB
+swap.
+Some parted info
+http://www.thegeekstuff.com/2011/09/parted-command-examples/
+
+For gpt
+
+parted /dev/sda
+mklabel gpt
+mkpart boot 1049KB 10.5MB   <- you need this for non uefi systems on uefi not
+                               sure if you have to.
+mkpart root 12MB 10GB
+mkpart swap 10GB 12GB
+set 1 bios_grub on
+print
+quit
+
+For mbr
+
+parted
+mkpart primary 1049KB 10GB
+mkpart extended 10GB 12GB
+mkpart logical 10GB 12GB
+set 1 boot on
+set 2 lba off
+print
+quit
+
+If your boot disk is a raid than you will need mdadm to create a new raid
+system.
+Mdadm is probably not installed so install it.
+
+Start parted on sda
+
+parted /dev/sda
+mklabel gpt
+mkpart boot 1049KB 2097KB
+mkpart root 2098KB 12GB
+mkpart swap 12GB 14GB
+set 1 bios_grub on
+set 2 raid on
+set 3 raid on
+
+
+Select sdb
+
+select /dev/sdb
+mklabel gpt
+mkpart boot 1049KB 2097KB
+mkpart root 2098KB 12GB
+mkpart swap 12GB 14GB
+set 1 bios_grub on
+set 2 raid on
+set 3 raid on
+quit
+
+
+Create your raids.
+
+mdadm --create /dev/md0 --bitmap=internal --level=1 -n 2 /dev/sd[ab]2
+mdadm --create /dev/md1 --bitmap=internal --level=1 -n 2 /dev/sd[ab]3
+
+
+create partitions on your raids.
+
+parted /dev/md0
+mklabel loop
+select /dev/md1
+mklabel loop
+quit
+
+
+For all the following commands if you use a raid use md0 and md1 instead of
+sda and sdb accept for installing grub.
+
+Create an ext4 file system
+
+mkfs.ext4 /dev/sda1
+
+If you want you can already create your swap it can also be done when your
+system is restored and running.
+
+gpt-> mkswap /dev/sda3
+mbr-> mkswap /dev/sda5
+
+When done with the partitioning or your using a disk that was already
+partitioned, mount the partition of the os.
 In this case we mounted /dev/sda1 to /home/ubuntu/restore
 
 mkdir /home/ubuntu/restore
@@ -40,19 +145,29 @@ sudo burp -a r -d /home/ubuntu/restore/
 
 Once the restore is done you need to install grub to the boot drive to do this
 we chroot into the restore directory.
+If it is a new disk create the excluded proc dir.
+
+mkdir restore/proc
+
 Mount the critical virtual filesystems. Run the following as a single command:
 
 for i in /dev /dev/pts /proc /sys /run; do sudo mount -B $i
 /home/ubuntu/restore$i; done
 
+
+If it complains about a missing folder in your restore folder like proc create
+it.
+
 Chroot into your restore system device:
 
 sudo chroot /home/ubuntu/restore
+If its a md raid first install mdadm
+apt-get install mdadm
 
 Install GRUB 2 (substitute the correct device with the device you used
 before):
 
-grub-install /dev/sdX
+grub-install /dev/sda
 
 
 If the system partitions are on a software RAID install GRUB 2 on all disks in
@@ -73,7 +188,46 @@ Reboot.
 
 sudo reboot
 
-On the backup server move the old keys back in place and your good to go.
+If you did all of this on a new disk or system some things will be messed up.
+Your fstab will have wrong uuid's in it. You should match them with your
+current uuid's
+You might need to create a swap space.
+
+To check if you have a working swap
+
+free
+
+If all the numbers next to swap are 0 you have no swap
+
+When it was a raid system check what the current name of your raid is it can
+be quite different.
+
+cat /proc/mdstat
+
+
+Create and enable a swap
+
+mkswap /dev/sda5
+swapon /dev/sda5
+
+Correct the uuids in your fstab.
+Fist list your uuids.
+
+ls -la /dev/disk/by-uuid
+lrwxrwxrwx 1 root root  10 Apr 22 17:08 e4e0f3f6-f774-46a0-a476-ea56a00dd4cf -> ../../sda5
+lrwxrwxrwx 1 root root  10 Apr 22 17:08 f757c477-2c7f-4073-a6ae-6d53625c3573 -> ../../sda1
+
+
+If you do not have 2 uuid's you probably did not do the mkswap step.
+
+Edit your fstab and change the uuid's for the correct ones
+
+vi /etc/fstab
 
 Info on installing grub
 https://help.ubuntu.com/community/Grub2/Installing
+Info on creating a swap.
+https://www.centos.org/docs/rhel-sag-en-3/s1-swap-adding.html
+Info on creating mdraid.
+http://askubuntu.com/questions/505446/how-to-install-ubuntu-14-04-with-raid-1-using-desktop-installer
+

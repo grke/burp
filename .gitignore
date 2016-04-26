@@ -20,6 +20,7 @@
 /autoconf/test-driver
 /autom4te.cache
 /burp
+/burp_ca
 /burp.conf
 /burp-server.conf
 /burp-coverage/
@@ -32,6 +33,7 @@
 /runner.trs
 /src/server/protocol1/vss_strip
 /src/stamp-h1
+/summary_script
 /test-suite.log
 /utest_find/
 /utest_lockfile

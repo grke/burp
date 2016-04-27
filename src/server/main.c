@@ -237,9 +237,9 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		goto end;
 	}
 
-	if(get_int(cconfs[OPT_DISABLED]))
+	if(!get_int(cconfs[OPT_ENABLED]))
 	{
-		log_and_send(as->asfd, "client disabled on server");
+		log_and_send(as->asfd, "client not enabled on server");
 		sleep(1);
 		goto end;
 	}

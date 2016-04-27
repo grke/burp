@@ -490,8 +490,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "ca_csr_dir");
 	case OPT_RANDOMISE:
 	  return sc_int(c[o], 0, 0, "randomise");
-	case OPT_DISABLED:
-	  return sc_int(c[o], 0, 0, "disabled");
+	case OPT_ENABLED:
+	  return sc_int(c[o], 1, 0, "enabled");
 	case OPT_SERVER_CAN_OVERRIDE_INCLUDES:
 	  return sc_int(c[o], 1, 0, "server_can_override_includes");
 	case OPT_BACKUP:

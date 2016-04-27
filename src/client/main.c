@@ -489,9 +489,9 @@ int client(struct conf **confs, enum action action, int vss_restore)
 {
 	enum cliret ret=CLIENT_OK;
 
-	if(get_int(confs[OPT_DISABLED]))
+	if(!get_int(confs[OPT_ENABLED]))
 	{
-		logp("Client disabled\n");
+		logp("Client not enabled\n");
 		return ret;
 	}
 

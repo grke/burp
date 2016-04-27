@@ -271,8 +271,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 	// can fiddle with the dedup_group at this point.
 	// Cannot do it on a resume, or it will delete files that are
 	// referenced in the backup we are resuming.
-	if(!resume
-	  && delete_unused_data_files(sdirs))
+	if(delete_unused_data_files(sdirs, resume))
 		goto end;
 
 	// Load the sparse indexes for this dedup group.

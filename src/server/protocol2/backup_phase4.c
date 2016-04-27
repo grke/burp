@@ -543,6 +543,7 @@ int merge_files_in_dir_no_fcount(const char *final,
 	i=0;
 	for(s=slist; s; s=s->next)
 	{
+		free_w(&dst);
 		snprintf(compd, sizeof(compd), "%08"PRIX64, (uint64_t)i++);
 		if(!(dst=prepend_s(dstdir, compd)))
 			goto end;
@@ -557,6 +558,7 @@ int merge_files_in_dir_no_fcount(const char *final,
 	ret=0;
 end:
 	recursive_delete(dstdir);
+	strlists_free(&slist);
 	free_w(&dstdir);
 	free_w(&dst);
 	free_w(&fullpath);

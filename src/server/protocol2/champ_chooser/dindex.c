@@ -37,6 +37,7 @@ end:
 	return ret;
 }
 
+// Returns 0 on OK, -1 on error, 1 if there were backups already in progress.
 static int get_dfiles_to_merge(struct sdirs *sdirs, struct strlist **s)
 {
 	int i=0;
@@ -72,7 +73,7 @@ static int get_dfiles_to_merge(struct sdirs *sdirs, struct strlist **s)
 			switch(backup_in_progress(fullpath))
 			{
 				case 0: break;
-				case 1: ret=0;
+				case 1: ret=1;
 				default: goto end;
 			}
 		}
@@ -230,7 +231,7 @@ end:
 	return ret;
 }
 
-int delete_unused_data_files(struct sdirs *sdirs)
+int delete_unused_data_files(struct sdirs *sdirs, int resume)
 {
 	int ret=-1;
 	uint64_t fcount=0;
@@ -246,11 +247,35 @@ int delete_unused_data_files(struct sdirs *sdirs)
 	struct strlist *slist=NULL;
 	struct stat statp;
 
+	if(!sdirs)
+	{
+		logp("No sdirs passed to %s\n", __func__);
+		goto end;
+	}
+
+	if(resume)
+	{
+        	// Cannot do it on a resume, or it will delete files that are
+        	// referenced in the backup we are resuming.
+		logp("Not attempting to clean up unused data files\n");
+		logp("because %s is resuming\n", sdirs->clients);
+		ret=0;
+		goto end;
+	}
 	logp("Attempting to clean up unused data files %s\n", sdirs->clients);
 
 	// Get all lists of files in all backups.
-	if(get_dfiles_to_merge(sdirs, &slist))
-		goto end;
+	switch(get_dfiles_to_merge(sdirs, &slist))
+	{
+		case 0:
+			break; // OK.
+		case 1:
+			// Backups are in progress, cannot continue.
+			// But do not return an error.
+			ret=0;
+		default:
+			goto end; // Error.
+	}
 
 	if(!(dindex_tmp=prepend_s(sdirs->data, "dindex.tmp"))
 	  || !(dindex_old=prepend_s(sdirs->data, "dindex")))
@@ -339,6 +364,7 @@ end:
 	free_w(&fullpath);
 	free_w(&hlinks);
 	free_w(&cindex_tmp);
+	free_w(&cindex_new);
 	free_w(&dindex_tmp);
 	free_w(&dindex_new);
 	free_w(&dindex_old);

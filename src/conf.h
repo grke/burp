@@ -131,6 +131,7 @@ enum conf_opt
 	OPT_CNAME, // set on the server when client connects
 	OPT_PASSWORD, // also a clientconfdir option
 	OPT_PASSWD, // also a clientconfdir option
+	OPT_ENABLED, // also a clientconfdir option
 	OPT_SERVER,
 	OPT_ENCRYPTION_PASSWORD,
 	OPT_AUTOUPGRADE_OS,

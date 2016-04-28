@@ -108,6 +108,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_DAEMON:
 		case OPT_STDOUT:
 		case OPT_FORK:
+		case OPT_ENABLED:
 		case OPT_DIRECTORY_TREE:
 		case OPT_PASSWORD_CHECK:
 		case OPT_LIBRSYNC:

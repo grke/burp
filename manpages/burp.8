@@ -435,6 +435,9 @@ Whether or not the server should cache the directory tree when a monitor client 
 .TP
 \fBlabel=[string]\fR
 You can have multiple labels, and they can be overridden in the client configuration files in clientconfdir on the server. They will appear as an array of strings in the server status monitor JSON output. The idea is to provide a mechanism for arbirtrary values to be passed to clients of the server status monitor.
+.TP
+\fBenabled=[0|1]\fR
+Set this to 0 if you want to disable all clients. The default is 1. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -678,6 +681,7 @@ The file name must match the name in the 'cname' field on the client.
 The file needs to contain a line like \fBpassword=[password]\fR that matches the same field on the client, or \fBpasswd=[hash]\fR \- where the plain text password on the client will be tested against a hash of the kind you might find in /etc/passwd.
 .TP
 Additionally, the following options can be overridden here for each client:
+\fBenabled\fR
 \fBprotocol\fR
 \fBdirectory\fR
 \fBdirectory_tree\fR

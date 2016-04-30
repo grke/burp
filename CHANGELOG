@@ -1,3 +1,24 @@
+2016-04-30 Changes in burp-2.0.38:
+  * Add 'enabled' option (from Benjamin Sans).
+  * Fix bugs in protocol2 delete_unused_data_files().
+  * Remove some hardcoded paths in scripts.
+  * Add ecryptfs to the list of file types that can be excluded (from
+    scosu).
+  * Added ubuntu baremetal restore instructions (from Wybren Buijs).
+  * Use an asfd for stdout in status_client_ncurses.
+  * Make rubble cleanup with working_dir_recovery_method=delete delete
+    unused data files.
+  * Fix bno printf 32bit compile warnings.
+  * Fix bug in server side restore regex parsing introduced in 2.0.36.
+  * Don't try to set IPTOS_THROUGHPUT if it is not defined.
+  * Fix and tidy up include_glob test.
+  * Fix champ_chooser to try until max_tries instead of 10 seconds (from
+    Stéphane Berthelot)
+  * Add glob_after_script_pre option to evaaluate glob after script pre
+    execution (from Benjamin Sans).
+  * Adapt rpm spec file for 2.0.36, test on CentOS7 (from Marco Fretz).
+  * Fix protocol2 backup deletion not obeying multiple 'keep' values.
+
 2016-03-31 Changes in burp-2.0.36:
   * Support xattrs and acls in protocol2.
   * Fix acl+xattr bug introduced in 2.0.28.

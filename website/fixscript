@@ -64,6 +64,7 @@ burp_ca=content/docs/burp_ca.content
 serverbasics=content/docs/server-basics.content
 baremetal=content/docs/baremetal-windows.content
 baremetalhirens=content/docs/baremetal-windows-hirens.content
+baremetalubuntu=content/docs/baremetal-ubuntu.content
 donations=content/html/donations.content
 licence=content/html/licence.content
 shuffling=content/docs/shuffling.content
@@ -84,6 +85,7 @@ generic_page "$burp_ca" "../docs/burp_ca.txt"
 generic_page "$serverbasics" "../docs/server-basics.txt"
 generic_page "$baremetal" "../docs/baremetal-windows7and8.txt"
 generic_page "$baremetalhirens" "../docs/baremetal-windows7-hirens.txt"
+generic_page "$baremetalubuntu" "../docs/baremetal-ubuntu.txt"
 generic_page "$donations" "../DONATIONS"
 generic_page "$licence" "../LICENSE"
 generic_page "$shuffling" "../docs/shuffling.txt"

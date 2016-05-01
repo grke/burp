@@ -31,6 +31,8 @@
 <li><A HREF="docs/monitor.html">Status monitor</A> -
 	An explanation of how the status monitor works, and the format of its
 	interface.
+<li><A HREF="docs/baremetal-ubuntu.html">Bare metal restore for Ubuntu</A> -
+	Restoring Ubuntu from nothing.
 <li><A HREF="docs/baremetal-windows.html">Bare metal restore for Windows 7 and 8</A> -
 	Restoring Windows from nothing.
 <li><A HREF="docs/baremetal-windows-hirens.html">Bare metal restore for Windows 7 and others (using Hiren's Boot CD)</A> -

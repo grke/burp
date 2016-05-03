@@ -23,11 +23,8 @@
 #include <ncurses/ncurses.h>
 #endif
 
-#ifdef HAVE_NCURSES
 // So that the sighandler can call endwin():
 static enum action actg=ACTION_STATUS;
-#endif
-
 
 #define LEFT_SPACE	3
 #define TOP_SPACE	2
@@ -1448,9 +1445,8 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 
 int status_client_ncurses_init(enum action act)
 {
-#ifdef HAVE_NCURSES
-	actg=act; // So that the sighandler can call endwin().
-#else
+	actg=act;
+#ifndef HAVE_NCURSES
 	if(act==ACTION_STATUS)
 	{
 		printf("To use the live status monitor, you need to recompile with ncurses support.\n");

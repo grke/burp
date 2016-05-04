@@ -779,6 +779,8 @@ static int update_screen(struct sel *sel)
 
 	screen_header(row, col);
 
+	if(!sel->client) return 0;
+
 #ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{

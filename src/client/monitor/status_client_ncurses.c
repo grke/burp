@@ -52,20 +52,12 @@ static struct asfd *stdout_asfd=NULL;
 static void print_line_stdout(const char *string, int row, int col)
 {
 	int k=0;
-	const char *cp=NULL;
 	while(k<LEFT_SPACE)
 	{
 		stdout_asfd->write_str(stdout_asfd, CMD_GEN, " ");
 		k++;
 	}
-	for(cp=string; *cp; cp++)
-	{
-		stdout_asfd->write_str(stdout_asfd, CMD_GEN, string);
-		k+=strlen(string);
-#ifdef HAVE_NCURSES
-		if(actg==ACTION_STATUS && k<col) break;
-#endif
-	}
+	stdout_asfd->write_str(stdout_asfd, CMD_GEN, string);
 	stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n");
 }
 

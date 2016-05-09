@@ -338,6 +338,7 @@ runner_SOURCES = \
 	utest/server/protocol2/test_backup_phase4.c \
 	utest/server/protocol2/test_dpth.c \
 	utest/server/test_auth.c \
+	utest/server/test_ca.c \
 	utest/server/test_backup_phase3.c \
 	utest/server/test_bu_get.c \
 	utest/server/test_delete.c \

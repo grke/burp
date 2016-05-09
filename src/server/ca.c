@@ -482,6 +482,12 @@ int ca_server_maybe_sign_client_cert(struct asfd *asfd,
 	// Clients before 1.3.2 did not know how to send cert signing requests.
 	if(cli_ver<min_ver) return 0;
 
+	if(!asfd)
+	{
+		logp("asfd not set up in %s\n", __func__);
+		return -1;
+	}
+
 	if(asfd->simple_loop(asfd, confs, &cname, __func__,
 		csr_server_func)) return -1;
 	return csr_done;

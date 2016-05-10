@@ -30,6 +30,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_CA_SERVER_NAME:
 		case OPT_CA_BURP_CA:
 		case OPT_CA_CSR_DIR:
+		case OPT_CA_CRL:
 		case OPT_PEER_VERSION:
 		case OPT_CLIENT_LOCKDIR:
 		case OPT_MONITOR_LOGFILE:

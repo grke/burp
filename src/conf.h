@@ -122,6 +122,7 @@ enum conf_opt
 	OPT_CA_SERVER_NAME,
 	OPT_CA_BURP_CA,
 	OPT_CA_CRL_CHECK,
+	OPT_CA_CRL,
 	OPT_PASSWORD_CHECK,
 	OPT_MANUAL_DELETE,
 	OPT_MONITOR_LOGFILE, // An ncurses client option, from command line.

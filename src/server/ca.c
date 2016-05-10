@@ -14,16 +14,14 @@
 
 static int setup_stuff_done=0;
 
-/* Remember the directory so that it can be used later for client certificate
-   signing requests. */
-static char *gca_dir=NULL;
-
-static char *get_ca_dir(struct conf **confs)
+static char *get_ca_dir(const char *ca_conf)
 {
 	struct fzp *fzp=NULL;
 	char buf[4096]="";
-	const char *ca_conf=get_string(confs[OPT_CA_CONF]);
-	if(!(fzp=fzp_open(ca_conf, "r"))) goto end;
+	char *ca_dir=NULL;
+
+	if(!(fzp=fzp_open(ca_conf, "r")))
+		goto end;
 	while(fzp_gets(fzp, buf, sizeof(buf)))
 	{
 		char *field=NULL;
@@ -33,31 +31,44 @@ static char *get_ca_dir(struct conf **confs)
 
 		if(!strcasecmp(field, "CA_DIR"))
 		{
-			if(!(gca_dir=strdup_w(value, __func__)))
+			if(!(ca_dir=strdup_w(value, __func__)))
 				goto end;
 			break;
 		}
 	}
 end:
 	fzp_close(&fzp);
-	return gca_dir;
+	return ca_dir;
 }
 
-static char *get_crl_path(const char *ca_name)
+static char *get_generated_crl_path(const char *ca_dir, const char *ca_name)
 {
 	int flen=0;
 	char *fname=NULL;
 	char *crl_path=NULL;
+
 	flen+=strlen(ca_name);
 	flen+=strlen("CA_");
 	flen+=strlen(".crl")+1;
 	if(!(fname=(char *)malloc_w(flen, __func__)))
 		goto end;
 	snprintf(fname, flen, "CA_%s.crl", ca_name);
-	crl_path=prepend_s(gca_dir, fname);
+	crl_path=prepend_s(ca_dir, fname);
 end:
 	free_w(&fname);
 	return crl_path;
+}
+
+static char *get_crl_path(struct conf **confs,
+	const char *ca_dir, const char *ca_name)
+{
+	char *crl_path;
+	// If the conf told us the path, use it.
+	if((crl_path=get_string(confs[OPT_CA_CRL])))
+		return strdup_w(crl_path, __func__);
+
+	// Otherwise, build it ourselves.
+	return get_generated_crl_path(ca_dir, ca_name);
 }
 
 static void remove_file(const char *path)
@@ -240,7 +251,7 @@ static int maybe_make_crl(struct conf **confs, const char *ca_dir,
 	  || !ca_burp_ca || !*ca_burp_ca
 	  || !ca_name || !*ca_name)
 		return 0;
-	if(!(crl_path=get_crl_path(ca_name)))
+	if(!(crl_path=get_crl_path(confs, ca_dir, ca_name)))
 		goto end;
 	if(!lstat(crl_path, &statp))
 	{
@@ -290,8 +301,7 @@ int ca_server_setup(struct conf **confs)
 		goto end;
 	}
 
-	/* Need to read CA_DIR from ca_conf. */
-	if(!(ca_dir=get_ca_dir(confs)))
+	if(!(ca_dir=get_ca_dir(ca_conf)))
 		goto end;
 
 	if(maybe_make_dhfile(confs, ca_dir))
@@ -308,14 +318,27 @@ int ca_server_setup(struct conf **confs)
 
 	ret=0;
 end:
-	// Keeping it in gca_dir for later.
-	//free_w(&ca_dir);
+	free_w(&ca_dir);
 	if(setup_stuff_done)
 	{
 		if(ret) logp("CA setup failed\n");
 		else logp("CA setup succeeded\n");
 	}
 	return ret;
+}
+
+static int check_path_does_not_exist(struct asfd *asfd,
+	const char *client, const char *path)
+{
+	struct stat statp;
+	if(!lstat(path, &statp))
+	{
+		char msg[512]="";
+		snprintf(msg, sizeof(msg), "Will not accept a client certificate request for '%s' - %s already exists!", client, path);
+		log_and_send(asfd, msg);
+		return -1;
+	}
+	return 0;
 }
 
 static int csr_done=0;
@@ -329,7 +352,7 @@ static int sign_client_cert(struct asfd *asfd,
 	char msg[256]="";
 	char csrpath[512]="";
 	char crtpath[512]="";
-	struct stat statp;
+	char *ca_dir=NULL;
 	const char *args[15];
 	csr_done=0;
 	const char *ca_name=get_string(confs[OPT_CA_NAME]);
@@ -338,54 +361,41 @@ static int sign_client_cert(struct asfd *asfd,
 	const char *ca_server_name=get_string(confs[OPT_CA_SERVER_NAME]);
 	const char *ssl_cert_ca=get_string(confs[OPT_SSL_CERT_CA]);
 	struct cntr *cntr=get_cntr(confs);
-	snprintf(csrpath, sizeof(csrpath), "%s/%s.csr", gca_dir, client);
-	snprintf(crtpath, sizeof(crtpath), "%s/%s.crt", gca_dir, client);
+
+	if(!(ca_dir=get_ca_dir(ca_conf)))
+		goto error;
+
+	snprintf(csrpath, sizeof(csrpath), "%s/%s.csr", ca_dir, client);
+	snprintf(crtpath, sizeof(crtpath), "%s/%s.crt", ca_dir, client);
 
 	if(!strcmp(client, ca_name))
 	{
 		char msg[512]="";
 		snprintf(msg, sizeof(msg), "Will not accept a client certificate request with the same name as the CA (%s)!", ca_name);
 		log_and_send(asfd, msg);
-		// Do not goto end, as it will delete things;
-		return -1;
+		goto error;
 	}
 
-	if(!lstat(crtpath, &statp))
-	{
-		char msg[512]="";
-		snprintf(msg, sizeof(msg), "Will not accept a client certificate request for '%s' - %s already exists!", client, crtpath);
-		log_and_send(asfd, msg);
-		// Do not goto end, as it will delete things;
-		return -1;
-	}
-
-	if(!lstat(csrpath, &statp))
-	{
-		char msg[512]="";
-		snprintf(msg, sizeof(msg), "Will not accept a client certificate request for '%s' - %s already exists!", client, csrpath);
-		log_and_send(asfd, msg);
-		// Do not goto end, as it will delete things;
-		return -1;
-	}
+	if(check_path_does_not_exist(asfd, client, crtpath)
+	  || check_path_does_not_exist(asfd, client, csrpath))
+		goto error;
 
 	// Tell the client that we will do it, and send the server name at the
 	// same time.
 	snprintf(msg, sizeof(msg), "csr ok:%s", ca_server_name);
 	if(asfd->write_str(asfd, CMD_GEN, msg))
-	{
-		// Do not goto end, as it will delete things;
-		return -1;
-	}
+		goto error;
 
 	/* After this point, we might have uploaded files, so on error, go
 	   to end and delete any new files. */
 
 	// Get the CSR from the client.
-	if(receive_a_file(asfd, csrpath, cntr)) goto end;
+	if(receive_a_file(asfd, csrpath, cntr))
+		goto del_files;
 
 	// Now, sign it.
 	logp("Signing certificate signing request from %s\n", client);
-	logp("Running '%s --name %s --ca %s --sign --batch --dir %s --config %s'\n", ca_burp_ca, client, ca_name, gca_dir, ca_conf);
+	logp("Running '%s --name %s --ca %s --sign --batch --dir %s --config %s'\n", ca_burp_ca, client, ca_name, ca_dir, ca_conf);
 	a=0;
 	args[a++]=ca_burp_ca;
 	args[a++]="--name";
@@ -395,7 +405,7 @@ static int sign_client_cert(struct asfd *asfd,
 	args[a++]="--sign";
 	args[a++]="--batch";
 	args[a++]="--dir";
-	args[a++]=gca_dir;
+	args[a++]=ca_dir;
 	args[a++]="--config";
 	args[a++]=ca_conf;
 	args[a++]=NULL;
@@ -404,42 +414,47 @@ static int sign_client_cert(struct asfd *asfd,
 		        one at a time with no way to turn it off */))
 	{
 		logp("Error running %s\n", ca_burp_ca);
-		goto end;
+		goto del_files;
 	}
 
 	// Now, we should have a signed certificate.
 	// Need to send it back to the client.
 	if(send_a_file(asfd, crtpath, cntr))
-		goto end;
+		goto del_files;
 
 	// Also need to send the CA public certificate back to the client.
 	if(send_a_file(asfd, ssl_cert_ca, cntr))
-		goto end;
+		goto del_files;
 
 	ret=0;
 	csr_done++;
-end:
+del_files:
 	if(ret<0)
 	{
 		unlink(crtpath);
 		unlink(csrpath);
 	}
+error:
+	free_w(&ca_dir);
 	return ret;
 }
 
 static enum asl_ret csr_server_func(struct asfd *asfd,
 	struct conf **confs, void *param)
 {
-	static const char **client;
-	static struct iobuf *rbuf;
-	const char *ca_conf=get_string(confs[OPT_CA_CONF]);
-	client=(const char **)param;
+	struct iobuf *rbuf;
+	const char *ca_conf;
+	const char **cname;
+
 	rbuf=asfd->rbuf;
+	cname=(const char **)param;
+	ca_conf=get_string(confs[OPT_CA_CONF]);
+
 	if(!strcmp(rbuf->buf, "csr"))
 	{
 		// Client wants to sign a certificate.
-		logp("Client %s wants a certificate signed\n", *client);
-		if(!ca_conf || !gca_dir)
+		logp("Client %s wants a certificate signed\n", *cname);
+		if(!ca_conf)
 		{
 			logp("But server is not configured to sign client certificate requests.\n");
 			logp("See option 'ca_conf'.\n");
@@ -447,7 +462,7 @@ static enum asl_ret csr_server_func(struct asfd *asfd,
 			  "server not configured to sign client certificates");
 			return ASL_END_ERROR;
 		}
-		if(sign_client_cert(asfd, *client, confs))
+		if(sign_client_cert(asfd, *cname, confs))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
 	}
@@ -455,7 +470,7 @@ static enum asl_ret csr_server_func(struct asfd *asfd,
 	{
 		// Client does not want to sign a certificate.
 		// No problem, just carry on.
-		logp("Client %s does not want a certificate signed\n", *client);
+		logp("Client %s does not want a certificate signed\n", *cname);
 		if(asfd->write_str(asfd, CMD_GEN, "nocsr ok"))
 			return ASL_END_ERROR;
 		return ASL_END_OK;
@@ -474,7 +489,7 @@ int ca_server_maybe_sign_client_cert(struct asfd *asfd,
 {
 	long min_ver=0;
 	long cli_ver=0;
-	const char *cname=get_string(cconfs[OPT_CNAME]);
+	const char *cname=NULL;
 
 	if((min_ver=version_to_long("1.3.2"))<0
 	 || (cli_ver=version_to_long(get_string(cconfs[OPT_PEER_VERSION])))<0)
@@ -488,8 +503,11 @@ int ca_server_maybe_sign_client_cert(struct asfd *asfd,
 		return -1;
 	}
 
-	if(asfd->simple_loop(asfd, confs, &cname, __func__,
-		csr_server_func)) return -1;
+	cname=get_string(cconfs[OPT_CNAME]);
+
+	if(asfd->simple_loop(asfd, confs, &cname, __func__, csr_server_func))
+		return -1;
+
 	return csr_done;
 }
 
@@ -505,18 +523,23 @@ int ca_x509_verify_crl(struct conf **confs,
 	X509_REVOKED *revoked;
 	ASN1_INTEGER *serial=NULL;
 	char *crl_path=NULL;
+	char *ca_dir=NULL;
 	const char *ca_name=get_string(confs[OPT_CA_NAME]);
+	const char *ca_conf=get_string(confs[OPT_CA_CONF]);
 	int crl_check=get_int(confs[OPT_CA_CRL_CHECK]);
+
+	if(!(ca_dir=get_ca_dir(ca_conf)))
+		goto end;
 
 	if(!crl_check
 	  || !ca_name || !*ca_name
-	  || !gca_dir)
+	  || !ca_dir)
 	{
 		ret=0;
 		goto end;
 	}
 
-	if(!(crl_path=get_crl_path(ca_name)))
+	if(!(crl_path=get_crl_path(confs, ca_dir, ca_name)))
 		goto end;
 
 	if(!(in=BIO_new_file(crl_path, "r")))
@@ -559,5 +582,6 @@ end:
 	if(in) BIO_free(in);
 	if(crl) X509_CRL_free(crl);
 	free_w(&crl_path);
+	free_w(&ca_dir);
 	return ret;
 }

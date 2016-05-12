@@ -24,6 +24,10 @@ static int main_loop(struct async *as, struct conf **confs)
 	sin=sfd->next;
 	sout=sin->next;
 
+	// Send a blank line to kick the server off.
+	if(sfd->write_str(sfd, CMD_GEN, "\n"))
+		goto error;
+
 	while(1)
 	{
 		if(as->read_write(as))

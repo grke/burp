@@ -92,6 +92,19 @@ static int parse_client_data(struct asfd *srfd,
 //printf("got client data: '%s'\n", srfd->rbuf->buf);
 
 	cp=srfd->rbuf->buf;
+
+	// The client monitor will send an initial blank line to kick things
+	// off. Until it is sent, we will not even have entered the code
+	// in this file. So, without it, data from the parent will not have
+	// been read, and the monitor client will be given incomplete
+	// information for its first response.
+	// Just ignore the new line at this point, it has served its purpose.
+	if(srfd->rbuf->len==1
+	  && !strcmp(cp, "\n"))
+	{
+		ret=0;
+		goto end;
+	}
 	command=get_str(&cp, "j:", 0);
 	client=get_str(&cp, "c:", 0);
 	backup=get_str(&cp, "b:", 0);

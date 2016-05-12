@@ -128,9 +128,7 @@ int reload(struct conf **confs, const char *conffile, bool firsttime,
 
 #ifndef HAVE_WIN32
 	if(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER)
-		setup_signals(oldmax_children, get_int(confs[OPT_MAX_CHILDREN]),
-			oldmax_status_children,
-			get_int(confs[OPT_MAX_STATUS_CHILDREN]));
+		setup_signals();
 #endif
 
 	// Do not try to change user or group after the first time.

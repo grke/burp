@@ -164,16 +164,13 @@ static int init_listen_socket(const char *address, const char *port, int *fds)
 	return 0;
 }
 
-int setup_signals(int oldmax_children, int max_children,
-	int oldmax_status_children, int max_status_children)
+void setup_signals(void)
 {
 	// Ignore SIGPIPE - we are careful with read and write return values.
 	signal(SIGPIPE, SIG_IGN);
 
 	setup_signal(SIGHUP, huphandler);
 	setup_signal(SIGUSR2, usr2handler);
-
-	return 0;
 }
 
 static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,

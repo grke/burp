@@ -57,6 +57,7 @@ static int run_script_select(struct asfd *asfd,
 	struct timeval tval;
 	int soutfd=fzp_fileno(*sout);
 	int serrfd=fzp_fileno(*serr);
+	// FIX THIS: convert to asfd?
 	fzp_setlinebuf(*sout);
 	fzp_setlinebuf(*serr);
 	set_non_blocking(soutfd);

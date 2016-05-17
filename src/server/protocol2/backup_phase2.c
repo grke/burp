@@ -15,6 +15,7 @@
 #include "../../slist.h"
 #include "../manios.h"
 #include "../resume.h"
+#include "champ_chooser/champ_client.h"
 #include "champ_chooser/champ_server.h"
 #include "dpth.h"
 
@@ -754,15 +755,6 @@ end:
 	return ret;
 }
 
-static struct asfd *get_asfd_from_list_by_fdtype(struct async *as,
-	enum asfd_fdtype fdtype)
-{
-	struct asfd *a;
-	for(a=as->asfd; a; a=a->next)
-		if(a->fdtype==fdtype) return a;
-	return NULL;
-}
-
 static int check_for_missing_work_in_slist(struct slist *slist)
 {
 	struct sbuf *sb=NULL;
@@ -786,8 +778,11 @@ static int check_for_missing_work_in_slist(struct slist *slist)
 	return 0;
 }
 
-int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
-	int resume, struct conf **confs)
+#ifndef UTEST
+static
+#endif
+int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
+	struct sdirs *sdirs, int resume, struct conf **confs)
 {
 	int ret=-1;
 	uint8_t end_flags=0;
@@ -800,7 +795,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 	// have been found and can be freed.
 	uint64_t wrap_up=0;
 	struct asfd *asfd=NULL;
-	struct asfd *chfd=NULL;
 	struct cntr *cntr=NULL;
 	struct sbuf *csb=NULL;
 	uint64_t file_no=1;
@@ -826,7 +820,6 @@ int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
 		logp("asfd not provided to %s()\n", __func__);
 		goto end;
 	}
-	chfd=get_asfd_from_list_by_fdtype(as, ASFD_FD_SERVER_TO_CHAMP_CHOOSER);
 	if(!chfd)
 	{
 		logp("chfd not provided to %s()\n", __func__);
@@ -953,5 +946,22 @@ end:
 	dpth_free(&dpth);
 	manios_close(&manios);
 	man_off_t_free(&p1pos);
+	return ret;
+}
+
+int backup_phase2_server_protocol2(struct async *as, struct sdirs *sdirs,
+	int resume, struct conf **confs)
+{
+	int ret=-1;
+	struct asfd *chfd=NULL;
+	if(!(chfd=champ_chooser_connect(as, sdirs, confs, resume)))
+	{
+		logp("problem connecting to champ chooser\n");
+		goto end;
+	}
+	ret=do_backup_phase2_server_protocol2(as, chfd, sdirs, resume, confs);
+end:
+	if(chfd) as->asfd_remove(as, chfd);
+	asfd_free(&chfd);
 	return ret;
 }

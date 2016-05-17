@@ -6,7 +6,10 @@
 extern int write_status(enum cntr_status cntr_status,
 	const char *path, struct cntr *cntr);
 
-extern int child(struct async *as, int status_wfd,
-	struct conf **confs, struct conf **cconfs);
+extern int child(struct async *as,
+	int is_status_server,
+	int status_wfd,
+	struct conf **confs,
+	struct conf **cconfs);
 
 #endif

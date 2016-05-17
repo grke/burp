@@ -271,8 +271,6 @@ static enum cliret initial_comms(struct async *as,
 		}
 	}
 
-	set_non_blocking(asfd->fd);
-
 	if(ssl_check_cert(asfd->ssl, NULL, confs))
 	{
 		logp("check cert failed\n");
@@ -397,12 +395,11 @@ static enum cliret do_client(struct conf **confs,
 		goto could_not_connect;
 
 	if(!(as=async_alloc())
-	  || !(asfd=asfd_alloc())
 	  || as->init(as, act==ACTION_ESTIMATE)
-	  || asfd->init(asfd, "main socket", as, rfd, ssl,
-		ASFD_STREAM_STANDARD, confs))
-			goto end;
-	as->asfd_add(as, asfd);
+	  || !(asfd=setup_asfd_ssl(as, "main socket", &rfd, ssl)))
+		goto end;
+	asfd->set_timeout(asfd, get_int(confs[OPT_NETWORK_TIMEOUT]));
+	asfd->ratelimit=get_float(confs[OPT_RATELIMIT]);
 
 	// Set quality of service bits on backup packets.
 	if(act==ACTION_BACKUP

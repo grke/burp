@@ -493,24 +493,27 @@ error:
 	return -1;
 }
 
+static void asfd_set_timeout(struct asfd *asfd, int max_network_timeout)
+{
+	asfd->max_network_timeout=max_network_timeout;
+	asfd->network_timeout=asfd->max_network_timeout;
+}
 
 static int asfd_init(struct asfd *asfd, const char *desc,
-	struct async *as, int afd, SSL *assl,
-	enum asfd_streamtype streamtype, struct conf **confs)
+	struct async *as, int afd, SSL *assl)
 {
 	asfd->as=as;
 	asfd->fd=afd;
 	asfd->ssl=assl;
-	asfd->streamtype=streamtype;
-	asfd->max_network_timeout=get_int(confs[OPT_NETWORK_TIMEOUT]);
-	asfd->network_timeout=asfd->max_network_timeout;
-	asfd->ratelimit=get_float(confs[OPT_RATELIMIT]);
+	asfd->streamtype=ASFD_STREAM_STANDARD;
 	asfd->rlsleeptime=10000;
 	asfd->pid=-1;
+	asfd->attempt_reads=1;
 
 	asfd->parse_readbuf=asfd_parse_readbuf;
 	asfd->append_all_to_write_buffer=asfd_append_all_to_write_buffer;
 	asfd->set_bulk_packets=asfd_set_bulk_packets;
+	asfd->set_timeout=asfd_set_timeout;
 	if(asfd->ssl)
 	{
 		asfd->do_read=asfd_do_read_ssl;
@@ -562,11 +565,7 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 
 struct asfd *asfd_alloc(void)
 {
-	struct asfd *asfd;
-	if(!(asfd=(struct asfd *)calloc_w(1, sizeof(struct asfd), __func__)))
-		return NULL;
-	asfd->init=asfd_init;
-	return asfd;
+	return (struct asfd *)calloc_w(1, sizeof(struct asfd), __func__);
 }
 
 void asfd_close(struct asfd *asfd)
@@ -612,22 +611,21 @@ void asfd_free(struct asfd **asfd)
 	free_v((void **)asfd);
 }
 
-struct asfd *setup_asfd(struct async *as, const char *desc, int *fd, SSL *ssl,
-	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
-	pid_t pid, struct conf **conf)
+struct asfd *setup_asfd_ssl(struct async *as,
+	const char *desc, int *fd, SSL *ssl)
 {
 	struct asfd *asfd=NULL;
+
 	if(!fd || *fd<0)
 	{
 		logp("Given invalid descriptor in %s\n", __func__);
 		goto error;
 	}
+
 	set_non_blocking(*fd);
 	if(!(asfd=asfd_alloc())
-	  || asfd->init(asfd, desc, as, *fd, ssl, asfd_streamtype, conf))
+	  || asfd_init(asfd, desc, as, *fd, ssl))
 		goto error;
-	asfd->fdtype=fdtype;
-	asfd->pid=pid;
 	*fd=-1;
 	as->asfd_add(as, asfd);
 	return asfd;
@@ -636,6 +634,55 @@ error:
 	return NULL;
 }
 
+struct asfd *setup_asfd(struct async *as,
+	const char *desc, int *fd)
+{
+	return setup_asfd_ssl(as, desc, fd, NULL);
+}
+
+static struct asfd *setup_asfd_linebuf(struct async *as,
+	const char *desc, int *fd)
+{
+	struct asfd *asfd;
+	if((asfd=setup_asfd_ssl(as, desc, fd, NULL)))
+		asfd->streamtype=ASFD_STREAM_LINEBUF;
+	return asfd;
+}
+
+struct asfd *setup_asfd_linebuf_read(struct async *as,
+	const char *desc, int *fd)
+{
+	return setup_asfd_linebuf(as, desc, fd);
+}
+
+struct asfd *setup_asfd_linebuf_write(struct async *as,
+	const char *desc, int *fd)
+{
+	struct asfd *asfd;
+	if((asfd=setup_asfd_linebuf(as, desc, fd)))
+		asfd->attempt_reads=0;
+	return asfd;
+}
+
+struct asfd *setup_asfd_stdin(struct async *as)
+{
+	int fd=fileno(stdin);
+	return setup_asfd_linebuf_read(as, "stdin", &fd);
+}
+
+struct asfd *setup_asfd_stdout(struct async *as)
+{
+	int fd=fileno(stdout);
+	return setup_asfd_linebuf_write(as, "stdout", &fd);
+}
+
+struct asfd *setup_asfd_ncurses_stdin(struct async *as)
+{
+	struct asfd *asfd;
+	if((asfd=setup_asfd_stdin(as)))
+		asfd->streamtype=ASFD_STREAM_NCURSES_STDIN;
+	return asfd;
+}
 
 // Want to make sure that we are listening for reads too - this will let us
 // exit promptly if the client was killed.

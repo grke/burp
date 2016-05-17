@@ -125,9 +125,8 @@ struct asfd *champ_chooser_connect(struct async *as,
 		goto error;
 	}
 
-	if(!(chfd=setup_asfd(as, "champ chooser socket", &champsock, NULL,
-		ASFD_STREAM_STANDARD, ASFD_FD_SERVER_TO_CHAMP_CHOOSER, -1,
-			confs))) goto error;
+	if(!(chfd=setup_asfd(as, "champ chooser socket", &champsock)))
+		goto error;
 
 	cname=get_string(confs[OPT_CNAME]);
 	if(!(champname=prepend_n("cname", cname, strlen(cname), ":")))

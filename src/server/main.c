@@ -185,6 +185,8 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	struct cntr *cntr=NULL;
 	struct async *as=NULL;
 	const char *cname=NULL;
+	struct asfd *asfd=NULL;
+	int is_status_server=0;
 
 	if(!(confs=confs_alloc())
 	  || !(cconfs=confs_alloc()))
@@ -220,9 +222,10 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		goto end;
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
-	  || !setup_asfd(as, "main socket",
-		cfd, ssl, ASFD_STREAM_STANDARD, ASFD_FD_CHILD_MAIN, -1, confs))
-			goto end;
+	  || !(asfd=setup_asfd_ssl(as, "main socket", cfd, ssl)))
+		goto end;
+	asfd->set_timeout(asfd, get_int(confs[OPT_NETWORK_TIMEOUT]));
+	asfd->ratelimit=get_float(confs[OPT_RATELIMIT]);
 
 	if(authorise_server(as->asfd, confs, cconfs)
 	  || !(cname=get_string(cconfs[OPT_CNAME])) || !*cname)
@@ -275,12 +278,14 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		goto end;
 	}
 
-	if(status_rfd>=0 && !setup_asfd(as, "status server parent socket",
-		&status_rfd, NULL,
-		ASFD_STREAM_STANDARD, ASFD_FD_CHILD_PIPE_READ, -1, cconfs))
+	if(status_rfd>=0)
+	{
+		is_status_server=1;
+		if(!setup_asfd(as, "status server parent socket", &status_rfd))
 			goto end;
+	}
 
-	ret=child(as, status_wfd, confs, cconfs);
+	ret=child(as, is_status_server, status_wfd, confs, cconfs);
 end:
 	*cfd=-1;
 	if(as && asfd_flush_asio(as->asfd))
@@ -336,6 +341,53 @@ static int chld_check_counts(struct conf **confs, struct asfd *asfd)
 		default:
 			logp("Unexpected fdtype in %s: %d.\n",
 				__func__, asfd->fdtype);
+			return -1;
+	}
+
+	return 0;
+}
+
+static struct asfd *setup_parent_child_pipe(struct async *as,
+	const char *desc,
+	int *fd_to_use, int *fd_to_close, pid_t childpid,
+	enum asfd_fdtype fdtype)
+{
+	struct asfd *newfd;
+	close_fd(fd_to_close);
+	if(!(newfd=setup_asfd(as, desc, fd_to_use)))
+		return NULL;
+	newfd->pid=childpid;
+	newfd->fdtype=fdtype;
+	return newfd;
+}
+
+static int setup_parent_child_pipes(struct asfd *asfd,
+	pid_t childpid, int *rfd, int *wfd)
+{
+	struct asfd *newfd;
+	struct async *as=asfd->as;
+	switch(asfd->fdtype)
+	{
+		case ASFD_FD_SERVER_LISTEN_MAIN:
+			logp("forked child: %d\n", childpid);
+			if(!(newfd=setup_parent_child_pipe(as,
+				"pipe from child",
+				rfd, wfd, childpid,
+				ASFD_FD_SERVER_PIPE_READ)))
+					return -1;
+			return 0;
+		case ASFD_FD_SERVER_LISTEN_STATUS:
+			logp("forked status server child: %d\n", childpid);
+			if(!(newfd=setup_parent_child_pipe(as,
+				"pipe to status child",
+				wfd, rfd, childpid,
+				ASFD_FD_SERVER_PIPE_WRITE)))
+					return -1;
+			newfd->attempt_reads=0;
+			return 0;
+		default:
+			logp("Strange fdtype after fork: %d\n",
+				asfd->fdtype);
 			return -1;
 	}
 
@@ -439,42 +491,8 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 			close(pipe_wfd[0]); // close read end
 			close_fd(&cfd);
 
-			switch(asfd->fdtype)
-			{
-				case ASFD_FD_SERVER_LISTEN_MAIN:
-					logp("forked child: %d\n", childpid);
-	  				if(!setup_asfd(asfd->as,
-						"pipe from child",
-						&pipe_rfd[0], NULL,
-						ASFD_STREAM_STANDARD,
-						ASFD_FD_SERVER_PIPE_READ,
-						childpid,
-						confs)) return -1;
-					// Do not need to write to normal
-					// children.
-					close(pipe_wfd[1]);
-					break;
-				case ASFD_FD_SERVER_LISTEN_STATUS:
-					logp("forked status server child: %d\n",
-						childpid);
-					// Do not need to read from status
-					// children.
-					close(pipe_rfd[0]);
-	  				if(!setup_asfd(asfd->as,
-						"pipe to status child",
-						&pipe_wfd[1], NULL,
-						ASFD_STREAM_STANDARD,
-						ASFD_FD_SERVER_PIPE_WRITE,
-						childpid,
-						confs)) return -1;
-					break;
-				default:
-					logp("Strange fdtype after fork: %d\n",
-						asfd->fdtype);
-					return -1;
-			}
-
-			return 0;
+			return setup_parent_child_pipes(asfd, childpid,
+				&pipe_rfd[0], &pipe_wfd[1]);
 	}
 }
 
@@ -582,15 +600,21 @@ static int run_server(struct conf **confs, const char *conffile,
 		goto end;
 
 	for(i=0; i<LISTEN_SOCKETS && rfds[i]!=-1; i++)
-		if(!setup_asfd(mainas,
-		  "main server socket", &rfds[i], NULL,
-		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_MAIN, -1, confs))
-			goto end;
+	{
+		struct asfd *newfd;
+		if(!(newfd=setup_asfd(mainas,
+			"main server socket", &rfds[i])))
+				goto end;
+		newfd->fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
+	}
 	for(i=0; i<LISTEN_SOCKETS && sfds[i]!=-1; i++)
-		if(!setup_asfd(mainas,
-		  "main server status socket", &sfds[i], NULL,
-		  ASFD_STREAM_STANDARD, ASFD_FD_SERVER_LISTEN_STATUS, -1, confs))
-			goto end;
+	{
+		struct asfd *newfd;
+		if(!(newfd=setup_asfd(mainas,
+			"main server status socket", &sfds[i])))
+				goto end;
+		newfd->fdtype=ASFD_FD_SERVER_LISTEN_STATUS;
+	}
 
 	while(!hupreload)
 	{

@@ -22,13 +22,13 @@
 
 #include <sys/un.h>
 
-// FIX THIS: test error conditions.
 static int champ_chooser_new_client(struct async *as, struct conf **confs)
 {
-	socklen_t t;
 	int fd=-1;
+	socklen_t t;
 	struct asfd *newfd=NULL;
 	struct sockaddr_un remote;
+	struct blist *blist=NULL;
 
 	t=sizeof(remote);
 	if((fd=accept(as->asfd->fd, (struct sockaddr *)&remote, &t))<0)
@@ -36,20 +36,19 @@ static int champ_chooser_new_client(struct async *as, struct conf **confs)
 		logp("accept error in %s: %s\n", __func__, strerror(errno));
 		goto error;
 	}
-	set_non_blocking(fd);
 
-	if(!(newfd=asfd_alloc())
-	  || newfd->init(newfd, "(unknown)", as, fd, NULL,
-		ASFD_STREAM_STANDARD, confs)
-	  || !(newfd->blist=blist_alloc()))
+	if(!(blist=blist_alloc())
+	  || !(newfd=setup_asfd(as, "(unknown)", &fd)))
 		goto error;
-	as->asfd_add(as, newfd);
+	newfd->blist=blist;
+	newfd->set_timeout(newfd, get_int(confs[OPT_NETWORK_TIMEOUT]));
 
 	logp("Connected to fd %d\n", newfd->fd);
 
 	return 0;
 error:
-	asfd_free(&newfd);
+	close_fd(&fd);
+	blist_free(&blist);
 	return -1;
 }
 
@@ -255,16 +254,13 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 		logp("listen error in %s: %s\n", __func__, strerror(errno));
 		goto end;
 	}
-	set_non_blocking(s);
 
 	if(!(as=async_alloc())
-	  || !(asfd=asfd_alloc())
 	  || as->init(as, 0)
-	  || asfd->init(asfd, "champ chooser main socket", as, s, NULL,
-		ASFD_STREAM_STANDARD, confs))
-			goto end;
-	as->asfd_add(as, asfd);
+	  || !(asfd=setup_asfd(as, "champ chooser main socket", &s)))
+		goto end;
 	asfd->fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
+	asfd->set_timeout(asfd, get_int(confs[OPT_NETWORK_TIMEOUT]));
 
 	// I think that this is probably the best point at which to run a
 	// cleanup job to delete unused data files, because no other process

@@ -1455,7 +1455,6 @@ int status_client_ncurses(struct conf **confs)
         int ret=-1;
 	int csin=-1;
 	int csout=-1;
-	int stdoutfd=fileno(stdout);
 	pid_t childpid=-1;
 	struct async *as=NULL;
 	const char *monitor_logfile=get_string(confs[OPT_MONITOR_LOGFILE]);
@@ -1468,32 +1467,23 @@ int status_client_ncurses(struct conf **confs)
 	if((childpid=fork_monitor(&csin, &csout, confs))<0)
 		goto end;
 //printf("childpid: %d\n", childpid);
-	set_non_blocking(csin);
-	set_non_blocking(csout);
 
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
-	  || !setup_asfd(as, "monitor stdin", &csin, NULL,
-		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_WRITE, -1, confs)
-	  || !setup_asfd(as, "monitor stdout", &csout, NULL,
-		ASFD_STREAM_LINEBUF, ASFD_FD_CLIENT_MONITOR_READ, -1, confs))
-			goto end;
+	  || !setup_asfd_linebuf_write(as, "monitor stdin", &csin)
+	  || !setup_asfd_linebuf_read(as, "monitor stdout", &csout))
+		goto end;
 //printf("ml: %s\n", monitor_logfile);
 #ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
-		int stdinfd=fileno(stdin);
-		if(!setup_asfd(as, "stdin", &stdinfd, NULL,
-			ASFD_STREAM_NCURSES_STDIN, ASFD_FD_CLIENT_NCURSES_READ,
-			-1, confs))
-				goto end;
+		if(!setup_asfd_ncurses_stdin(as))
+			goto end;
 		ncurses_init();
 	}
 #endif
-	if(!(so_asfd=setup_asfd(as, "stdout", &stdoutfd,
-		NULL, ASFD_STREAM_LINEBUF,
-		ASFD_FD_CLIENT_NCURSES_STDOUT, -1, confs)))
-			goto end;
+	if(!(so_asfd=setup_asfd_stdout(as)))
+		goto end;
 
 	if(monitor_logfile
 	  && !(lfzp=fzp_open(monitor_logfile, "wb")))

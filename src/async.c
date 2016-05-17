@@ -53,13 +53,11 @@ static int async_io(struct async *as, int doread)
 
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
-		if(asfd->fdtype==ASFD_FD_SERVER_PIPE_WRITE
-		 || asfd->fdtype==ASFD_FD_CHILD_PIPE_WRITE
-		 || asfd->fdtype==ASFD_FD_CLIENT_MONITOR_WRITE
-		 || asfd->fdtype==ASFD_FD_CLIENT_NCURSES_STDOUT)
-			asfd->doread=0;
-		else
+		if(asfd->attempt_reads)
 			asfd->doread=doread;
+		else
+			asfd->doread=0;
+
 		asfd->dowrite=0;
 
 		if(doread)
@@ -144,18 +142,14 @@ static int async_io(struct async *as, int doread)
 			if(asfd->do_write(asfd))
 				return asfd_problem(asfd);
 		}
-	
+
 		if((!asfd->doread || !FD_ISSET(asfd->fd, &fsr))
 		  && (!asfd->dowrite || !FD_ISSET(asfd->fd, &fsw)))
 		{
 			// Be careful to avoid 'read quick' mode.
 			if((as->setsec || as->setusec)
-			  && asfd->fdtype!=ASFD_FD_SERVER_LISTEN_MAIN
-			  && asfd->fdtype!=ASFD_FD_SERVER_LISTEN_STATUS
-			  && asfd->fdtype!=ASFD_FD_CHILD_PIPE_WRITE
-			  && as->now-as->last_time>0
-			  && as->now-as->last_time>0
 			  && asfd->max_network_timeout>0
+			  && as->now-as->last_time>0
 			  && asfd->network_timeout--<=0)
 			{
 				logp("%s: no activity for %d seconds.\n",

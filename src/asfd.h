@@ -28,15 +28,6 @@ enum asfd_fdtype
 	ASFD_FD_SERVER_LISTEN_STATUS,
 	ASFD_FD_SERVER_PIPE_READ,
 	ASFD_FD_SERVER_PIPE_WRITE,
-	ASFD_FD_SERVER_CHILD_MAIN,
-	ASFD_FD_SERVER_TO_CHAMP_CHOOSER,
-	ASFD_FD_CHILD_MAIN,
-	ASFD_FD_CHILD_PIPE_READ,
-	ASFD_FD_CHILD_PIPE_WRITE,
-	ASFD_FD_CLIENT_MONITOR_READ,
-	ASFD_FD_CLIENT_MONITOR_WRITE,
-	ASFD_FD_CLIENT_NCURSES_READ,
-	ASFD_FD_CLIENT_NCURSES_STDOUT
 };
 
 enum append_ret
@@ -64,6 +55,8 @@ struct asfd
 	uint64_t rlbytes;
 
 	struct iobuf *rbuf;
+
+	int attempt_reads;
 
 	int doread;
 	char *readbuf;
@@ -93,14 +86,12 @@ struct asfd
 	enum asfd_fdtype fdtype;
 
 	// Function pointers.
-	int (*init)(struct asfd *, const char *,
-		struct async *, int, SSL *,
-		enum asfd_streamtype, struct conf **);
 	int (*parse_readbuf)(struct asfd *);
 	int (*parse_readbuf_specific)(struct asfd *);
 	enum append_ret
 		(*append_all_to_write_buffer)(struct asfd *, struct iobuf *);
 	int (*set_bulk_packets)(struct asfd *);
+	void (*set_timeout)(struct asfd *, int max_network_timeout);
 	int (*do_read)(struct asfd *);
 	int (*do_write)(struct asfd *);
 	int (*read)(struct asfd *);
@@ -122,9 +113,16 @@ extern void asfd_close(struct asfd *asfd); // Maybe should be in the struct.
 extern void asfd_free(struct asfd **asfd);
 
 extern struct asfd *setup_asfd(struct async *as,
-	const char *desc, int *fd, SSL *ssl,
-	enum asfd_streamtype asfd_streamtype, enum asfd_fdtype fdtype,
-	pid_t pid, struct conf **conf);
+	const char *desc, int *fd);
+extern struct asfd *setup_asfd_ssl(struct async *as,
+	const char *desc, int *fd, SSL *ssl);
+extern struct asfd *setup_asfd_linebuf_read(struct async *as,
+	const char *desc, int *fd);
+extern struct asfd *setup_asfd_linebuf_write(struct async *as,
+	const char *desc, int *fd);
+extern struct asfd *setup_asfd_stdin(struct async *as);
+extern struct asfd *setup_asfd_stdout(struct async *as);
+extern struct asfd *setup_asfd_ncurses_stdin(struct async *as);
 
 extern int asfd_flush_asio(struct asfd *asfd);
 extern int asfd_write_wrapper(struct asfd *asfd, struct iobuf *wbuf);

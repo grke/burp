@@ -80,8 +80,9 @@ static void tear_down(struct async **as,
 START_TEST(test_phase2_unset_as_sdirs_confs)
 {
 	setup(NULL, NULL, NULL);
-	fail_unless(backup_phase2_server_protocol2(
+	fail_unless(do_backup_phase2_server_protocol2(
 		NULL, // as
+		NULL, // chfd
 		NULL, // sdirs
 		0, // resume
 		NULL // confs
@@ -94,8 +95,9 @@ START_TEST(test_phase2_unset_sdirs_confs)
 {
 	struct async *as;
 	setup(&as, NULL, NULL);
-	fail_unless(backup_phase2_server_protocol2(
+	fail_unless(do_backup_phase2_server_protocol2(
 		as,
+		NULL, // chfd
 		NULL, // sdirs
 		0, // resume
 		NULL // confs
@@ -109,8 +111,9 @@ START_TEST(test_phase2_unset_confs)
 	struct async *as;
 	struct sdirs *sdirs;
 	setup(&as, &sdirs, NULL);
-	fail_unless(backup_phase2_server_protocol2(
+	fail_unless(do_backup_phase2_server_protocol2(
 		as,
+		NULL, // chfd
 		sdirs,
 		0, // resume
 		NULL // confs
@@ -124,8 +127,9 @@ START_TEST(test_phase2_unset_sdirs)
 	struct async *as;
 	struct conf **confs;
 	setup(&as, NULL, &confs);
-	fail_unless(backup_phase2_server_protocol2(
+	fail_unless(do_backup_phase2_server_protocol2(
 		as,
+		NULL, // chfd
 		NULL, // sdirs
 		0, // resume
 		confs
@@ -140,8 +144,9 @@ START_TEST(test_phase2_unset_asfd)
 	struct sdirs *sdirs;
 	struct conf **confs;
 	setup(&as, &sdirs, &confs);
-	fail_unless(backup_phase2_server_protocol2(
+	fail_unless(do_backup_phase2_server_protocol2(
 		as,
+		NULL, // chfd
 		sdirs,
 		0, // resume
 		confs
@@ -160,8 +165,9 @@ START_TEST(test_phase2_unset_chfd)
 	asfd=asfd_mock_setup(&areads, &awrites);
 	as->asfd_add(as, asfd);
 
-	fail_unless(backup_phase2_server_protocol2(
+	fail_unless(do_backup_phase2_server_protocol2(
 		as,
+		NULL, // chfd
 		sdirs,
 		0, // resume
 		confs
@@ -709,7 +715,6 @@ static void run_test(int expected_ret,
 	chfd=asfd_mock_setup(&creads, &cwrites);
 	fail_unless((asfd->desc=strdup_w("a", __func__))!=NULL);
 	fail_unless((chfd->desc=strdup_w("c", __func__))!=NULL);
-	chfd->fdtype=ASFD_FD_SERVER_TO_CHAMP_CHOOSER;
 	as->asfd_add(as, asfd);
 	as->asfd_add(as, chfd);
 	as->read_write=async_read_write_callback;
@@ -719,8 +724,9 @@ static void run_test(int expected_ret,
 			PROTO_2, manio_entries, 1 /*phase*/);
 	setup_asfds_callback(asfd, chfd, slist);
 
-	fail_unless(backup_phase2_server_protocol2(
+	fail_unless(do_backup_phase2_server_protocol2(
 		as,
+		chfd,
 		sdirs,
 		0, // resume
 		confs

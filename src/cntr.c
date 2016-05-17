@@ -571,17 +571,12 @@ int cntr_stats_to_file(struct cntr *cntr,
 			path, __func__, strerror(errno));
 		goto end;
 	}
-	// FIX THIS:
-	// Pretty heavy duty to set up all this async stuff just so that the
-	// json stuff can write to a simple file.
+
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
-	  || !(wfd=asfd_alloc())
-	  || wfd->init(wfd, "stats file",
-		as, fd, NULL, ASFD_STREAM_LINEBUF, confs))
+	  || !(wfd=setup_asfd_linebuf_write(as, "stats file", &fd)))
 			goto end;
-	as->asfd_add(as, wfd);
-	fd=-1;
+
 	if(json_cntr_to_file(wfd, cntr))
 		goto end;
 

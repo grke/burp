@@ -16,11 +16,11 @@
 #include "backup_phase3.h"
 #include "compress.h"
 #include "delete.h"
+#include "sdirs.h"
 #include "protocol1/backup_phase2.h"
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase2.h"
 #include "protocol2/backup_phase4.h"
-#include "protocol2/champ_chooser/champ_client.h"
 
 static int open_log(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs)
@@ -139,7 +139,6 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 {
 	int ret=0;
 	int do_phase2=1;
-	struct asfd *chfd=NULL;
 	struct asfd *asfd=as->asfd;
 	enum protocol protocol=get_protocol(cconfs);
 
@@ -174,13 +173,6 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 			logp("error in phase 1\n");
 			goto error;
 		}
-	}
-
-	if(protocol==PROTO_2
-	  && !(chfd=champ_chooser_connect(as, sdirs, cconfs, resume)))
-	{
-		logp("problem connecting to champ chooser\n");
-		goto error;
 	}
 
 	if(resume)
@@ -248,8 +240,6 @@ error:
 end:
 
 	log_fzp_set(NULL, cconfs);
-	if(chfd) as->asfd_remove(as, chfd);
-	asfd_free(&chfd);
 	return ret;
 }
 

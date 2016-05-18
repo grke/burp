@@ -500,12 +500,12 @@ static void asfd_set_timeout(struct asfd *asfd, int max_network_timeout)
 }
 
 static int asfd_init(struct asfd *asfd, const char *desc,
-	struct async *as, int afd, SSL *assl)
+	struct async *as, int afd, SSL *assl, enum asfd_streamtype streamtype)
 {
 	asfd->as=as;
 	asfd->fd=afd;
 	asfd->ssl=assl;
-	asfd->streamtype=ASFD_STREAM_STANDARD;
+	asfd->streamtype=streamtype;
 	asfd->rlsleeptime=10000;
 	asfd->pid=-1;
 	asfd->attempt_reads=1;
@@ -611,8 +611,8 @@ void asfd_free(struct asfd **asfd)
 	free_v((void **)asfd);
 }
 
-struct asfd *setup_asfd_ssl(struct async *as,
-	const char *desc, int *fd, SSL *ssl)
+static struct asfd *do_setup_asfd(struct async *as,
+	const char *desc, int *fd, SSL *ssl, enum asfd_streamtype streamtype)
 {
 	struct asfd *asfd=NULL;
 
@@ -624,7 +624,7 @@ struct asfd *setup_asfd_ssl(struct async *as,
 
 	set_non_blocking(*fd);
 	if(!(asfd=asfd_alloc())
-	  || asfd_init(asfd, desc, as, *fd, ssl))
+	  || asfd_init(asfd, desc, as, *fd, ssl, streamtype))
 		goto error;
 	*fd=-1;
 	as->asfd_add(as, asfd);
@@ -634,19 +634,25 @@ error:
 	return NULL;
 }
 
+struct asfd *setup_asfd_ssl(struct async *as,
+	const char *desc, int *fd, SSL *ssl)
+{
+	return do_setup_asfd(as, desc, fd,
+		ssl, ASFD_STREAM_STANDARD);
+}
+
 struct asfd *setup_asfd(struct async *as,
 	const char *desc, int *fd)
 {
-	return setup_asfd_ssl(as, desc, fd, NULL);
+	return do_setup_asfd(as, desc, fd,
+		/*ssl=*/NULL, ASFD_STREAM_STANDARD);
 }
 
 static struct asfd *setup_asfd_linebuf(struct async *as,
 	const char *desc, int *fd)
 {
-	struct asfd *asfd;
-	if((asfd=setup_asfd_ssl(as, desc, fd, NULL)))
-		asfd->streamtype=ASFD_STREAM_LINEBUF;
-	return asfd;
+	return do_setup_asfd(as, desc, fd,
+		/*ssl=*/NULL, ASFD_STREAM_LINEBUF);
 }
 
 struct asfd *setup_asfd_linebuf_read(struct async *as,
@@ -678,10 +684,9 @@ struct asfd *setup_asfd_stdout(struct async *as)
 
 struct asfd *setup_asfd_ncurses_stdin(struct async *as)
 {
-	struct asfd *asfd;
-	if((asfd=setup_asfd_stdin(as)))
-		asfd->streamtype=ASFD_STREAM_NCURSES_STDIN;
-	return asfd;
+	int fd=fileno(stdin);
+	return do_setup_asfd(as, "stdin", &fd,
+		/*ssl=*/NULL, ASFD_STREAM_NCURSES_STDIN);
 }
 
 // Want to make sure that we are listening for reads too - this will let us

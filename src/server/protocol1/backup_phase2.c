@@ -361,28 +361,25 @@ static int maybe_process_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
 	struct manio *ucmanio, struct conf **cconfs)
 {
-	switch(sbuf_pathcmp(cb, p1b))
+	int pcmp;
+	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
+		return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
+			ucmanio, cconfs);
+	else if(pcmp>0)
 	{
-		case 0:
-			return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
-				ucmanio, cconfs);
-		case 1:
-			//logp("ahead: %s\n", p1b->path);
-			// ahead - need to get the whole file
-			if(process_new(sdirs, cconfs, p1b, ucmanio))
-				return -1;
-			// Do not free.
-			return 1;
-		case -1:
-		default:
-			//logp("behind: %s\n", p1b->path);
-			// Behind - need to read more from the old manifest.
-			// Count a deleted file - it was in the old manifest
-			// but not the new.
-			cntr_add_deleted(get_cntr(cconfs),
-				cb->path.cmd);
-			return 0;
+		//logp("ahead: %s\n", p1b->path);
+		// ahead - need to get the whole file
+		if(process_new(sdirs, cconfs, p1b, ucmanio))
+			return -1;
+		// Do not free.
+		return 1;
 	}
+	//logp("behind: %s\n", p1b->path);
+	// Behind - need to read more from the old manifest.
+	// Count a deleted file - it was in the old manifest
+	// but not the new.
+	cntr_add_deleted(get_cntr(cconfs), cb->path.cmd);
+	return 0;
 }
 
 // Return 1 if there is still stuff needing to be sent.

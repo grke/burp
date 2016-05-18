@@ -111,6 +111,7 @@ static int entry_changed(struct sbuf *sb,
 {
 	static int finished=0;
 	static struct blk *blk=NULL;
+	int pcmp;
 
 	if(finished) return 1;
 
@@ -142,25 +143,21 @@ static int entry_changed(struct sbuf *sb,
 
 	while(1)
 	{
-		switch(sbuf_pathcmp(*csb, sb))
-		{
-			case 0: return found_in_current_manifest(*csb, sb,
+		if(!(pcmp=sbuf_pathcmp(*csb, sb)))
+			return found_in_current_manifest(*csb, sb,
 					manios, &blk, chfd);
-			case 1: return 1;
-			case -1:
-				// Behind - need to read more data from the old
-				// manifest.
-				switch(manio_read_with_blk(manios->current,
-					*csb, blk, NULL))
-				{
-					case 1: // Reached the end.
-						sbuf_free(csb);
-						blk_free(&blk);
-						return 1;
-					case -1: return -1;
-				}
-				// Got something, go back around the loop.
+		else if(pcmp>0)
+			return 1;
+		// Behind - need to read more data from the old manifest.
+		switch(manio_read_with_blk(manios->current, *csb, blk, NULL))
+		{
+			case 1: // Reached the end.
+				sbuf_free(csb);
+				blk_free(&blk);
+				return 1;
+			case -1: return -1;
 		}
+		// Got something, go back around the loop.
 	}
 
 	return 0;

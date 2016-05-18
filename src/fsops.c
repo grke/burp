@@ -440,12 +440,12 @@ static int entries_in_directory(const char *path, struct dirent ***nl,
 
 static int my_alphasort(const struct dirent **a, const struct dirent **b)
 {
-	return strcmp((*a)->d_name, (*b)->d_name);
+	return pathcmp((*a)->d_name, (*b)->d_name);
 }
 
 static int rev_alphasort(const struct dirent **a, const struct dirent **b)
 {
-	return strcmp((*a)->d_name, (*b)->d_name)*-1;
+	return pathcmp((*a)->d_name, (*b)->d_name)*-1;
 }
 
 int entries_in_directory_alphasort(const char *path, struct dirent ***nl,

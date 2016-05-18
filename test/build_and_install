@@ -35,6 +35,10 @@ build_and_install()
 	ln "$tolink" "$build/utest/testhardlink2" || fail
 	ln "$tolink" "$build/utest/testhardlink3" || fail
 	ln "$tolink" "$build/utest/testhardlink4" || fail
+	# Add a file starting with a character whose ASCII number is greater
+	# than 127, to check for differences between client phase1 sorting and
+	# server sorting.
+	touch "$build/utest/á" || fail
 
 	# Create a .bz2 file, to exercise exclude_comp.
 	# Some tars (like on NetBSd) do not like having '..' in the arguments.

@@ -29,20 +29,32 @@ int is_subdir(const char *dir, const char *sub)
 
 int pathcmp(const char *a, const char *b)
 {
+	// This should have used 'unsigned chars', but now its too late and
+	// everybody has backups with odd sorting. Will have to live with it.
 	const char *x=NULL;
 	const char *y=NULL;
-	if(!a && !b) return 0; // equal
-	if( a && !b) return 1; // a is longer
-	if(!a &&  b) return -1; // b is longer
+	if(!a && !b)
+		return 0; // equal
+	if( a && !b)
+		return 1; // a is longer
+	if(!a &&  b)
+		return -1; // b is longer
 	for(x=a, y=b; *x && *y ; x++, y++)
 	{
-		if(*x==*y) continue;
-		if(*x=='/' && *y!='/') return -1;
-		if(*x!='/' && *y=='/') return 1;
-		if(*x<*y) return -1;
-		if(*x>*y) return 1;
+		if(*x==*y)
+			continue;
+		if(*x=='/' && *y!='/')
+			return -1;
+		if(*x!='/' && *y=='/')
+			return 1;
+		if(*x<*y)
+			return -1;
+		if(*x>*y)
+			return 1;
 	}
-	if(!*x && !*y) return 0; // equal
-	if( *x && !*y) return 1; // x is longer
+	if(!*x && !*y)
+		return 0; // equal
+	if( *x && !*y)
+		return 1; // x is longer
 	return -1; // y is longer
 }

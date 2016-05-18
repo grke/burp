@@ -30,12 +30,44 @@ static struct data p[] = {
 	{ APRIOR,	"/some/path",	"/some/path/" },
 	{ APRIOR,	"/some/path",	"/some/pathy" },
 	{ ALATER,	"/some/path",	"/som/path" },
-	{ ALATER,	"/long/p/a/t/h","/long/p/a/s/t" }
+	{ ALATER,	"/long/p/a/t/h","/long/p/a/s/t" },
+	{ APRIOR,	"/some/path",	"/someppath" },
+	{ APRIOR,	"/some/path",	"/some path" },
 };
 
 START_TEST(test_pathcmp)
 {
 	FOREACH(p) fail_unless(pathcmp(p[i].a, p[i].b)==p[i].expected);
+}
+END_TEST
+
+struct data_s
+{
+	int expected;
+	int a;
+	int b;
+};
+
+// pathcmp has a bug that we have to live with, where it compares signed chars
+// instead of unsigned chars. It means that it orders chars above 127 (0x7F)
+// first.
+static struct data_s p_s[] = {
+	{ APRIOR,	0x00,		0xFF },
+	{ APRIOR,	0x7E,		0x7F },
+	{ APRIOR,	0x80,		0x7F },
+	{ APRIOR,	0x80,		0x81 },
+};
+
+START_TEST(test_pathcmp_s)
+{
+	char a[2]="";
+	char b[2]="";
+	FOREACH(p_s)
+	{
+		snprintf(a, sizeof(a), "%c", p_s[i].a);
+		snprintf(b, sizeof(b), "%c", p_s[i].b);
+		fail_unless(pathcmp(a, b)==p_s[i].expected);
+	}
 }
 END_TEST
 
@@ -76,6 +108,7 @@ Suite *suite_pathcmp(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_pathcmp);
+	tcase_add_test(tc_core, test_pathcmp_s);
 	tcase_add_test(tc_core, test_is_subdir);
 	suite_add_tcase(s, tc_core);
 

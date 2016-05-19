@@ -93,18 +93,6 @@ static int parse_client_data(struct asfd *srfd,
 
 	cp=srfd->rbuf->buf;
 
-	// The client monitor will send an initial blank line to kick things
-	// off. Until it is sent, we will not even have entered the code
-	// in this file. So, without it, data from the parent will not have
-	// been read, and the monitor client will be given incomplete
-	// information for its first response.
-	// Just ignore the new line at this point, it has served its purpose.
-	if(srfd->rbuf->len==1
-	  && !strcmp(cp, "\n"))
-	{
-		ret=0;
-		goto end;
-	}
 	command=get_str(&cp, "j:", 0);
 	client=get_str(&cp, "c:", 0);
 	backup=get_str(&cp, "b:", 0);
@@ -233,6 +221,51 @@ static int parse_data(struct asfd *asfd, struct cstat *clist,
 	return parse_parent_data(asfd, clist);
 }
 
+static int have_data_for_running_clients(struct cstat *clist)
+{
+	struct cstat *c;
+	for(c=clist; c; c=c->next)
+		if(c->run_status==RUN_STATUS_RUNNING
+		  && c->cntr->cntr_status==CNTR_STATUS_UNSET)
+			return 0;
+	return 1;
+}
+
+static int get_initial_data(struct async *as,
+	struct cstat **clist,
+	struct conf **confs, struct conf **cconfs)
+{
+	int x=5;
+	struct asfd *asfd=NULL;
+
+	if(cstat_load_data_from_disk(clist, confs, cconfs))
+		return -1;
+
+	// Try to get the initial data for running clients, but do not
+	// wait forever.
+	while(x--)
+	{
+		if(have_data_for_running_clients(*clist))
+			return 0;
+		if(as->read_write(as))
+		{
+			logp("Exiting main status server loop\n");
+			return -1;
+		}
+		asfd=as->asfd->next;
+		if(asfd->rbuf->buf)
+		{
+			if(parse_data(asfd, *clist, NULL, confs))
+			{
+				iobuf_free_content(asfd->rbuf);
+				return -1;
+			}
+			iobuf_free_content(asfd->rbuf);
+		}
+	}
+	return 0;
+}
+
 int status_server(struct async *as, struct conf **confs)
 {
 	int ret=-1;
@@ -243,6 +276,9 @@ int status_server(struct async *as, struct conf **confs)
 	struct conf **cconfs=NULL;
 
 	if(!(cconfs=confs_alloc()))
+		goto end;
+
+	if(get_initial_data(as, &clist, confs, cconfs))
 		goto end;
 
 	while(1)

@@ -668,8 +668,10 @@ static int run_server(struct conf **confs, const char *conffile,
 
 		for(asfd=mainas->asfd; asfd; asfd=asfd->next)
 		{
+			size_t wlen;
 			if(asfd->fdtype!=ASFD_FD_SERVER_PIPE_READ
 			  || !asfd->rbuf->buf) continue;
+			wlen=asfd->rbuf->len;
 			// One of the child processes is giving us information.
 			// Try to append it to any of the status child pipes.
 			for(scfd=mainas->asfd; scfd; scfd=scfd->next)
@@ -680,6 +682,12 @@ static int run_server(struct conf **confs, const char *conffile,
 					asfd->rbuf))
 				{
 					case APPEND_OK:
+						// Hack - the append function
+						// will set the length to zero
+						// on success. Set it back for
+						// the next status child pipe.
+						asfd->rbuf->len=wlen;
+						break;
 					case APPEND_BLOCKED:
 						break;
 					default:

@@ -10,6 +10,7 @@ int main(void)
 	sr=srunner_create(NULL);
 
 	srunner_add_suite(sr, suite_alloc());
+	srunner_add_suite(sr, suite_asfd());
 	srunner_add_suite(sr, suite_attribs());
 	srunner_add_suite(sr, suite_base64());
 #ifdef HAVE_ACL
@@ -24,6 +25,7 @@ int main(void)
 #endif
 #endif
 	srunner_add_suite(sr, suite_client_find());
+	srunner_add_suite(sr, suite_client_monitor());
 	srunner_add_suite(sr, suite_client_monitor_json_input());
 	srunner_add_suite(sr, suite_client_monitor_lline());
 	srunner_add_suite(sr, suite_client_monitor_status_client_ncurses());

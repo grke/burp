@@ -290,18 +290,6 @@ runner_SOURCES = \
 	utest/builders/server/protocol2/champ_chooser/build_dindex.c utest/builders/server/protocol2/champ_chooser/build_dindex.h \
 	utest/main.c \
 	utest/prng.c utest/prng.h \
-	utest/test_alloc.c \
-	utest/test_attribs.c \
-	utest/test_base64.c \
-	utest/test_cmd.c \
-	utest/test_conf.c \
-	utest/test_conffile.c \
-	utest/test_fzp.c \
-	utest/test_hexmap.c \
-	utest/test_lock.c \
-	utest/test_pathcmp.c \
-	utest/test_slist.c \
-	utest/test.h \
 	utest/protocol1/test_handy.c \
 	utest/protocol1/test_rs_buf.c \
 	utest/protocol2/test_blist.c \
@@ -316,8 +304,10 @@ runner_SOURCES = \
 	utest/client/protocol2/test_rabin_read.c \
 	utest/client/test_acl.c \
 	utest/client/test_auth.c \
+	utest/client/test_delete.c \
 	utest/client/test_extrameta.c \
 	utest/client/test_find.c \
+	utest/client/test_monitor.c \
 	utest/client/test_restore.c \
 	utest/client/test_xattr.c \
 	utest/server/monitor/test_browse.c \
@@ -347,7 +337,20 @@ runner_SOURCES = \
 	utest/server/test_resume.c \
 	utest/server/test_restore.c \
 	utest/server/test_run_action.c \
-	utest/server/test_sdirs.c
+	utest/server/test_sdirs.c \
+	utest/test_alloc.c \
+	utest/test_asfd.c \
+	utest/test_attribs.c \
+	utest/test_base64.c \
+	utest/test_cmd.c \
+	utest/test_conf.c \
+	utest/test_conffile.c \
+	utest/test_fzp.c \
+	utest/test_hexmap.c \
+	utest/test_lock.c \
+	utest/test_pathcmp.c \
+	utest/test_slist.c \
+	utest/test.h
 
 runner_SOURCES+= $(burp_SOURCES)
 

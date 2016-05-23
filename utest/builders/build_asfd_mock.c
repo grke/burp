@@ -45,7 +45,7 @@ static int mock_asfd_read(struct asfd *asfd)
 //#include "../../src/protocol2/blk.h"
 //#include "../../src/hexmap.h"
 
-static int asfd_assert_write(struct asfd *asfd, struct iobuf *wbuf)
+static int do_asfd_assert_write(struct asfd *asfd, struct iobuf *wbuf)
 {
 	struct ioevent *w;
 	struct iobuf *expected;
@@ -86,14 +86,14 @@ static int mock_asfd_assert_write_str(struct asfd *asfd,
 {
 	struct iobuf wbuf;
 	iobuf_set(&wbuf, wcmd, (char *)wsrc, strlen(wsrc));
-	return asfd_assert_write(asfd, &wbuf);
+	return do_asfd_assert_write(asfd, &wbuf);
 }
 
 static enum append_ret mock_asfd_assert_append_all_to_write_buffer(
 	struct asfd *asfd, struct iobuf *wbuf)
 {
 	enum append_ret ret;
-	ret=(enum append_ret)asfd_assert_write(asfd, wbuf);
+	ret=(enum append_ret)do_asfd_assert_write(asfd, wbuf);
 	wbuf->len=0;
 	return ret;
 }
@@ -110,7 +110,7 @@ struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
 	fail_unless((asfd=asfd_alloc())!=NULL);
 	fail_unless((asfd->rbuf=iobuf_alloc())!=NULL);
 	asfd->read=mock_asfd_read;
-	asfd->write=asfd_assert_write;
+	asfd->write=do_asfd_assert_write;
 	asfd->write_str=mock_asfd_assert_write_str;
 	asfd->append_all_to_write_buffer=
 		mock_asfd_assert_append_all_to_write_buffer;

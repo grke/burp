@@ -437,10 +437,12 @@ static enum cliret do_client(struct conf **confs,
 				goto error;
 			break;
 		case ACTION_DELETE:
-			if(do_delete_client(asfd, confs)) goto error;
+			if(do_delete_client(asfd, confs))
+				goto error;
 			break;
 		case ACTION_MONITOR:
-			if(do_monitor_client(asfd, confs)) goto error;
+			if(do_monitor_client(asfd))
+				goto error;
 			break;
 		case ACTION_DIFF:
 		case ACTION_DIFF_LONG:

@@ -13,7 +13,10 @@ static int copy_input_to_output(struct asfd *in, struct asfd *out)
 	return out->write(out, &wbuf);
 }
 
-static int main_loop(struct async *as, struct conf **confs)
+#ifndef UTEST
+static
+#endif
+int monitor_client_main_loop(struct async *as)
 {
 	struct asfd *asfd;
 	struct asfd *sfd; // Server fd.
@@ -54,11 +57,10 @@ static int main_loop(struct async *as, struct conf **confs)
 	}
 
 error:
-	// FIX THIS: should probably be freeing a bunch of stuff here.
 	return -1;
 }
 
-int do_monitor_client(struct asfd *asfd, struct conf **confs)
+int do_monitor_client(struct asfd *asfd)
 {
 	int ret=-1;
 	struct async *as=asfd->as;
@@ -70,7 +72,7 @@ logp("in monitor\n");
 	if(!setup_asfd_stdin(as)
 	 || !setup_asfd_stdout(as))
 		goto end;
-	ret=main_loop(as, confs);
+	ret=monitor_client_main_loop(as);
 end:
 	return ret;
 }

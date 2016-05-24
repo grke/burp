@@ -161,20 +161,25 @@ static void add_no_op(struct ioevent_list *ioevent_list, int *i, int count)
 	(*i)++;
 }
 
+void asfd_mock_read_int(struct asfd *asfd,
+	int *r, int ret, enum cmd cmd, int ch)
+{
+	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
+	add_to_ioevent(reads, r, ret, cmd, (void *)&ch, sizeof(ch));
+}
+
 void asfd_mock_read(struct asfd *asfd,
 	int *r, int ret, enum cmd cmd, const char *str)
 {
 	struct ioevent_list *reads=(struct ioevent_list *)asfd->data1;
-	add_to_ioevent(reads, r, ret, cmd,
-		(void *)str, str?strlen(str):0);
+	add_to_ioevent(reads, r, ret, cmd, (void *)str, str?strlen(str):0);
 }
 
 void asfd_assert_write(struct asfd *asfd,
 	int *w, int ret, enum cmd cmd, const char *str)
 {
 	struct ioevent_list *writes=(struct ioevent_list *)asfd->data2;
-	add_to_ioevent(writes, w, ret, cmd,
-		(void *)str, str?strlen(str):0);
+	add_to_ioevent(writes, w, ret, cmd, (void *)str, str?strlen(str):0);
 }
 
 void asfd_mock_read_no_op(struct asfd *asfd, int *r, int count)

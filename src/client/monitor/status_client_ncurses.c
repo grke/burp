@@ -777,6 +777,12 @@ static int update_screen(struct sel *sel)
 	if(actg==ACTION_STATUS)
 	{
 		getmaxyx(stdscr, row, col);
+		// Unit tests give -1 for row and column.
+		// Hack around it so that the unit tests still work.
+		if(row<0)
+			row=24;
+		if(col<0)
+			col=80;
 		//if(!winmax) winmax=row;
 		switch(sel->page)
 		{
@@ -1037,22 +1043,26 @@ static void right(struct sel *sel)
 
 static void up_client(struct sel *sel)
 {
-	if(sel->client && sel->client->prev) sel->client=sel->client->prev;
+	if(sel->client && sel->client->prev)
+		sel->client=sel->client->prev;
 }
 
 static void down_client(struct sel *sel)
 {
-	if(sel->client && sel->client->next) sel->client=sel->client->next;
+	if(sel->client && sel->client->next)
+		sel->client=sel->client->next;
 }
 
 static void up_backup(struct sel *sel)
 {
-	if(sel->backup && sel->backup->prev) sel->backup=sel->backup->prev;
+	if(sel->backup && sel->backup->prev)
+		sel->backup=sel->backup->prev;
 }
 
 static void down_backup(struct sel *sel)
 {
-	if(sel->backup && sel->backup->next) sel->backup=sel->backup->next;
+	if(sel->backup && sel->backup->next)
+		sel->backup=sel->backup->next;
 }
 
 static void up_logs(struct sel *sel)
@@ -1087,12 +1097,14 @@ static void down_logs(struct sel *sel)
 
 static void up_view_log(struct sel *sel)
 {
-	if(sel->lline && sel->lline->prev) sel->lline=sel->lline->prev;
+	if(sel->lline && sel->lline->prev)
+		sel->lline=sel->lline->prev;
 }
 
 static void down_view_log(struct sel *sel)
 {
-	if(sel->lline && sel->lline->next) sel->lline=sel->lline->next;
+	if(sel->lline && sel->lline->next)
+		sel->lline=sel->lline->next;
 }
 
 static void up(struct sel *sel)
@@ -1224,8 +1236,9 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 	static int ch;
 	if(asfd->rbuf->len!=sizeof(ch))
 	{
-		logp("Unexpected input length in %s: %lu\n",
-			__func__, (unsigned long)asfd->rbuf->len);
+		logp("Unexpected input length in %s: %lu!=%lu\n",
+			__func__,
+			(unsigned long)asfd->rbuf->len, sizeof(ch));
 		return -1;
 	}
 	memcpy(&ch, asfd->rbuf->buf, sizeof(ch));
@@ -1298,7 +1311,7 @@ static int parse_data(struct asfd *asfd, struct sel *sel, int count)
 static
 #endif
 int status_client_ncurses_main_loop(struct async *as,
-	struct asfd *so_asfd,
+	struct asfd *so_asfd, struct sel *sel,
 	const char *orig_client)
 {
 	int ret=-1;
@@ -1307,20 +1320,16 @@ int status_client_ncurses_main_loop(struct async *as,
 	struct asfd *asfd=NULL;
 	struct asfd *sfd=NULL; // Server asfd.
 	int reqdone=0;
-	struct sel *sel=NULL;
 
-	stdout_asfd=so_asfd;
-
-	if(!as
+	if(!sel
+	  || !as
 	  || !(stdout_asfd=so_asfd)
 	  || !(sfd=as->asfd))
 	{
-		logp("async not set up correctly in %s\n", __func__);
+		logp("parameters not set up correctly in %s\n", __func__);
 		goto error;
 	}
 
-	if(!(sel=sel_alloc()))
-		goto error;
 	sel->page=PAGE_CLIENT_LIST;
 
 	if(orig_client)
@@ -1365,21 +1374,29 @@ int status_client_ncurses_main_loop(struct async *as,
 		}
 
 		for(asfd=as->asfd; asfd; asfd=asfd->next)
-			while(asfd->rbuf->buf)
 		{
-			switch(parse_data(asfd, sel, count))
+			while(asfd->rbuf->buf)
 			{
-				case 0: break;
-				case 1: goto end;
-				default: goto error;
+				switch(parse_data(asfd, sel, count))
+				{
+					case 0: break;
+					case 1: goto end;
+					default: goto error;
+				}
+				iobuf_free_content(asfd->rbuf);
+				if(asfd->parse_readbuf(asfd))
+					goto error;
 			}
-			iobuf_free_content(asfd->rbuf);
-			if(asfd->parse_readbuf(asfd))
-				goto error;
-		}
 
-		if(!sel->client) sel->client=sel->clist;
-		if(!sel->backup && sel->client) sel->backup=sel->client->bu;
+			// Select things if they are not already selected.
+			if(sel->client)
+			{
+				if(!sel->backup)
+					sel->backup=sel->client->bu;
+			}
+			else
+				sel->client=sel->clist;
+		}
 
 #ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS
@@ -1402,7 +1419,6 @@ end:
 	ret=0;
 error:
 	json_input_free();
-	sel_free(&sel);
 	return ret;
 }
 
@@ -1459,6 +1475,10 @@ int status_client_ncurses(struct conf **confs)
 	struct async *as=NULL;
 	const char *monitor_logfile=get_string(confs[OPT_MONITOR_LOGFILE]);
 	struct asfd *so_asfd=NULL;
+	struct sel *sel=NULL;
+
+	if(!(sel=sel_alloc()))
+		goto end;
 
 	setup_signals();
 
@@ -1490,7 +1510,7 @@ int status_client_ncurses(struct conf **confs)
 		goto end;
 	log_fzp_set_direct(lfzp);
 
-	ret=status_client_ncurses_main_loop(as, so_asfd,
+	ret=status_client_ncurses_main_loop(as, so_asfd, sel,
 		get_string(confs[OPT_ORIG_CLIENT]));
 end:
 #ifdef HAVE_NCURSES
@@ -1502,5 +1522,6 @@ end:
 	async_asfd_free_all(&as);
 	close_fd(&csin);
 	close_fd(&csout);
+	sel_free(&sel);
 	return ret;
 }

@@ -147,18 +147,18 @@ int authorise_server(struct asfd *asfd,
 			"whoareyou:%s", VERSION);
 	}
 
-	asfd->write_str(asfd, CMD_GEN, whoareyou);
-	if(asfd->read(asfd))
+	if(asfd->write_str(asfd, CMD_GEN, whoareyou)
+	  || asfd->read(asfd))
 	{
 		logp("unable to get client name\n");
 		goto end;
 	}
 	if(set_string(cconfs[OPT_CNAME], rbuf->buf))
 		goto end;
-	iobuf_init(rbuf);
+	iobuf_free_content(rbuf);
 
-	asfd->write_str(asfd, CMD_GEN, "okpassword");
-	if(asfd->read(asfd))
+	if(asfd->write_str(asfd, CMD_GEN, "okpassword")
+	  || asfd->read(asfd))
 	{
 		logp("unable to get password for client %s\n",
 			get_string(cconfs[OPT_CNAME]));
@@ -177,7 +177,8 @@ int authorise_server(struct asfd *asfd,
 		get_int(cconfs[OPT_PASSWORD_CHECK])?
 			"":" (no password needed)");
 
-	asfd->write_str(asfd, CMD_GEN, "ok");
+	if(asfd->write_str(asfd, CMD_GEN, "ok"))
+		goto end;
 
 	ret=0;
 end:

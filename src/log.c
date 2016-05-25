@@ -9,6 +9,7 @@
 #include "strlist.h"
 
 const char *prog="unknown";
+const char *prog_long="unknown";
 
 static struct fzp *logfzp=NULL;
 // Start with all logging on, so that something is said when initial startup
@@ -21,6 +22,7 @@ static int json=0;
 
 void log_init(char *progname)
 {
+	prog_long=progname;
 	if((prog=strrchr(progname, '/'))) prog++;
 	else prog=progname;
 }

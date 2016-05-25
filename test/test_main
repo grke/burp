@@ -259,6 +259,18 @@ rm -rf "$dir" || fail
 EOF
 }
 
+add_run_snapshot()
+{
+	cat >> "$clientscript" <<EOF
+[ -d "/cygdrive" ] \
+	&& echo "Status snapshot not supported on Windows" && exit 0
+"$burpbin" -c "$clientconfarg" -a S | grep testclient \
+	|| fail "Status snapshot did not show testclient"
+"$burpbin" -c "$clientconfarg" -a S -C testclient | grep 0000001 \
+	|| fail "Status snapshot did not show backup 0000001"
+EOF
+}
+
 do_diff_server()
 {
 	diff -ur "$1" "$2" >>"$difflog" 2>&1 || fail "$3"
@@ -430,6 +442,17 @@ add_protocol1_on()
 		append_client 'protocol = 1'
 }
 
+add_server_status_address_off()
+{
+	sed_rep_server '/^status_address = .*/d' "$serverconf"
+}
+
+add_server_status_address_on()
+{
+	add_server_status_address_off
+	append_server "status_address = 127.0.0.1"
+}
+
 add_server_breakpoint_off()
 {
 	sed_rep_server '/^breakpoint = .*/d' "$serverconf"
@@ -599,6 +622,7 @@ add_normal_settings()
 	add_server_breakpoint_off
 	add_client_breakpoint_off
 	add_recovery_method_resume
+	add_server_status_address_on
 
 	# Windows options
 	if [ -n "$SPLIT_VSS" ] ; then
@@ -751,6 +775,10 @@ all_tests()
 	add_run_list $bno
 	add_run_list_expect_fail 99999
 	run_scripts
+	end_test
+
+	start_test "Status monitor snapshot"
+	add_run_snapshot
 	end_test
 
 	start_test "Interrupt server phase4"

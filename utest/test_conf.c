@@ -211,8 +211,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 START_TEST(test_conf_defaults)
 {
 	int i=0;
-        struct conf **confs=NULL;
-        confs=confs_alloc();
+	struct conf **confs=NULL;
+	fail_unless((confs=confs_alloc())!=NULL);
 	confs_init(confs);
 	for(i=0; i<OPT_MAX; i++)
 		check_default(confs, (enum conf_opt)i);

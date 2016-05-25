@@ -19,7 +19,6 @@ struct sel
 	struct lline *lline;
 	enum page page;
 	int offset;
-	uint8_t gotfirstresponse;
 };
 
 extern struct sel *sel_alloc(void);

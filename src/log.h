@@ -2,6 +2,7 @@
 #define _LOG_ROUTINES
 
 extern const char *prog;
+extern const char *prog_long;
 
 extern void log_init(char *progname);
 extern const char *progname(void);

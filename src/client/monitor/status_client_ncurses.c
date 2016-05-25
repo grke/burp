@@ -1406,7 +1406,7 @@ int status_client_ncurses_main_loop(struct async *as,
 #endif
 
 		if(actg==ACTION_STATUS_SNAPSHOT
-		  && sel->gotfirstresponse)
+		  && sel->client)
 		{
 			if(update_screen(sel))
 				goto error;
@@ -1443,7 +1443,7 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 	char *args[12];
 
 	// FIX THIS: get all args from configuration.
-	args[a++]=(char *)"/usr/sbin/burp";
+	args[a++]=(char *)prog_long;
 	args[a++]=(char *)"-c";
 	args[a++]=get_string(confs[OPT_CONFFILE]);
 	args[a++]=(char *)"-a";

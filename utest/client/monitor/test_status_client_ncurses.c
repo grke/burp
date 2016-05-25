@@ -81,7 +81,7 @@ static void setup_simplest_json(struct asfd *csin, struct asfd *csout,
 	int r=0; int w=0;
 	asfd_assert_write(csin, &w, 0, CMD_GEN, "c:\n");
 	asfd_mock_read(csin, &r, 0, CMD_GEN, "{}");
-	setup_stdout_header(so_asfd);
+	asfd_mock_read(csin, &r, -1, CMD_GEN, "blah");
 }
 
 static void setup_multiline_json(struct asfd *csin, struct asfd *csout,
@@ -92,7 +92,7 @@ static void setup_multiline_json(struct asfd *csin, struct asfd *csout,
 	asfd_mock_read(csin, &r, 0, CMD_GEN, "\n{\n");
 	asfd_mock_read(csin, &r, 0, CMD_GEN, "\n\n\n");
 	asfd_mock_read(csin, &r, 0, CMD_GEN, "\n}\n");
-	setup_stdout_header(so_asfd);
+	asfd_mock_read(csin, &r, -1, CMD_GEN, "blah");
 }
 
 static void setup_bad_json(struct asfd *csin, struct asfd *csout,
@@ -165,13 +165,13 @@ static void do_snapshot_test(
 
 START_TEST(test_status_client_ncurses_simplest_json)
 {
-	do_snapshot_test(NULL, 0, setup_simplest_json);
+	do_snapshot_test(NULL, -1, setup_simplest_json);
 }
 END_TEST
 
 START_TEST(test_status_client_ncurses_multiline_json)
 {
-	do_snapshot_test(NULL, 0, setup_multiline_json);
+	do_snapshot_test(NULL, -1, setup_multiline_json);
 }
 END_TEST
 

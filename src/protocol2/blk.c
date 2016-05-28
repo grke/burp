@@ -77,7 +77,7 @@ int blk_verify(struct blk *blk)
 	return 0;
 }
 
-#define HOOK_MASK       0xF000000000000000
+#define HOOK_MASK       0xF000000000000000ULL
 
 int blk_fingerprint_is_hook(struct blk *blk)
 {

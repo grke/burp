@@ -140,4 +140,22 @@
 	#define __PDP_ENDIAN	PDP_ENDIAN
 #endif
 
+#if !defined(htobe64) && defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 9
+	#include <sys/param.h>
+	#include <byteswap.h>
+	#if __BYTE_ORDER == __LITTLE_ENDIAN
+		#define htobe64(x) bswap_64 (x)
+		#define htole64(x) (x)
+		#define be64toh(x) bswap_64 (x)
+		#define le64toh(x) (x)
+	#elif __BYTE_ORDER == __BIG_ENDIAN
+		#define htobe64(x) (x)
+		#define htole64(x) bswap_64 (x)
+		#define be64toh(x) (x)
+		#define le64toh(x) bswap_64 (x)
+	#else
+		#error byte order not supported
+	#endif
+#endif
+
 #endif

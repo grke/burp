@@ -537,7 +537,7 @@ int manio_write_sig_and_path(struct manio *manio, struct blk *blk)
 	if(manio->dindex_sort)
 	{
 		uint64_t savepath=blk->savepath;
-		savepath &= 0xFFFFFFFFFFFF0000;
+		savepath &= 0xFFFFFFFFFFFF0000ULL;
 		// Ignore obvious duplicates.
 		if(!manio->dindex_count
 		  || manio->dindex_sort[manio->dindex_count-1]!=savepath)

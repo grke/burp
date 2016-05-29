@@ -58,7 +58,7 @@ static int parse_cmd(struct iobuf *rbuf, struct blk *blk, struct sbuf *sb)
 	}
 	ret=0;
 end:
-	return ret;;
+	return ret;
 }
 
 int run_bsigs(int argc, char *argv[])

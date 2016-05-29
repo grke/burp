@@ -33,6 +33,13 @@ extern int entries_in_directory_no_sort(const char *path,
 
 #ifndef HAVE_WIN32
 extern int mksock(const char *path);
+
+extern int is_lnk(const char *path);
+extern int is_lnk_valid(const char *path);
+extern int do_symlink(const char *oldpath, const char *newpath);
+extern int readlink_w(const char *path, char buf[], size_t buflen);
+extern int readlink_w_in_dir(const char *dir, const char *lnk,
+	char buf[], size_t buflen);
 #endif
 
 #endif

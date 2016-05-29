@@ -451,7 +451,6 @@ static int looks_like_protocol1(const char *basedir)
 {
 	int ret=-1;
 	char *tmp=NULL;
-	struct stat statp;
 	if(!(tmp=prepend_s(basedir, "current")))
 	{
 		log_out_of_memory(__func__);
@@ -459,7 +458,7 @@ static int looks_like_protocol1(const char *basedir)
 	}
 	// If there is a 'current' symlink here, we think it looks like a
 	// protocol 1 backup.
-	if(!lstat(tmp, &statp) && S_ISLNK(statp.st_mode))
+	if(is_lnk(tmp)>0)
 	{
 		ret=1;
 		goto end;
@@ -472,18 +471,10 @@ end:
 
 static int get_link(const char *basedir, const char *lnk, char real[], size_t r)
 {
-	int len=0;
-	char *tmp=NULL;
-	if(!(tmp=prepend_s(basedir, lnk)))
-	{
-		log_out_of_memory(__func__);
-		return -1;
-	}
-	if((len=readlink(tmp, real, r-1))<0) len=0;
-	real[len]='\0';
-	free_w(&tmp);
+	readlink_w_in_dir(basedir, lnk, real, r);
 	// Strip any trailing slash.
-	if(real[strlen(real)-1]=='/') real[strlen(real)-1]='\0';
+	if(real[strlen(real)-1]=='/')
+		real[strlen(real)-1]='\0';
 	return 0;
 }
 

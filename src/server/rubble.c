@@ -48,10 +48,6 @@ static int working_delete(struct async *as, struct sdirs *sdirs,
 {
 	// Try to remove it and start again.
 	logp("deleting old working directory\n");
-	if(get_protocol(cconfs)==PROTO_2)
-	{
-		logp("protocol 2 - unimplemented - need cleanup of data directory\n");
-	}
 	if(recursive_delete(sdirs->rworking))
 	{
 		log_and_send(as->asfd,
@@ -238,48 +234,43 @@ end:
 
 static int recover_currenttmp(struct sdirs *sdirs)
 {
-	struct stat statp;
 	logp("Found currenttmp symlink\n");
-	if(stat(sdirs->currenttmp, &statp))
+	switch(is_lnk_valid(sdirs->currenttmp))
 	{
-		logp("But currenttmp is not pointing at something valid.\n");
-		logp("Deleting it.\n");
-		return unlink_w(sdirs->currenttmp, __func__);
+		case 0:
+			logp("But currenttmp is not pointing at something valid.\n");
+			logp("Deleting it.\n");
+			return unlink_w(sdirs->currenttmp, __func__);
+		case -1:
+			return -1;
 	}
 
-	if(!lstat(sdirs->current, &statp))
+	switch(is_lnk(sdirs->current))
 	{
-		if(S_ISLNK(statp.st_mode))
-		{
-			logp("But current symlink already exists!\n");
-			if(!stat(sdirs->current, &statp))
-			{
-				logp("And current symlink points at something valid.\n");
-				logp("Deleting currenttmp.\n");
-				return unlink_w(sdirs->currenttmp, __func__);
-				
-			}
-			else
-			{
-				logp("But current symlink is not pointing at something valid.\n");
-				logp("Replacing current with currenttmp.\n");
-				return do_rename(sdirs->currenttmp,
-					sdirs->current);
-			}
-		}
-		else
-		{
+		case 0:
 			logp("But current already exists and is not a symlink!\n");
 			logp("Giving up.\n");
 			return -1;
-		}
+		case 1:
+			logp("But current symlink already exists!\n");
+			switch(is_lnk_valid(sdirs->current))
+			{
+				case 0:
+					logp("But current symlink is not pointing at something valid.\n");
+					logp("Replacing current with currenttmp.\n");
+					return do_rename(sdirs->currenttmp,
+						sdirs->current);
+				case 1:
+					logp("And current symlink points at something valid.\n");
+					logp("Deleting currenttmp.\n");
+					return unlink_w(sdirs->currenttmp, __func__);
+				default:
+					return -1;
+			}
+		default:
+			logp("Renaming currenttmp to current\n");
+			return do_rename(sdirs->currenttmp, sdirs->current);
 	}
-	else
-	{
-		logp("Renaming currenttmp to current\n");
-		return do_rename(sdirs->currenttmp, sdirs->current);
-	}
-	return 0;
 }
 
 // Return 1 if the backup is now finalising.
@@ -287,36 +278,39 @@ int check_for_rubble(struct async *as,
 	struct sdirs *sdirs, const char *incexc,
 	int *resume, struct conf **cconfs)
 {
-	struct stat statp;
 	struct asfd *asfd=as->asfd;
 
-	if(!lstat(sdirs->finishing, &statp))
+	switch(is_lnk(sdirs->finishing))
 	{
-		if(S_ISLNK(statp.st_mode))
-		{
+		case 1:
 			if(recover_finishing(as, sdirs, cconfs))
 				return -1;
 			return 1;
-		}
-		log_and_send(asfd, "Finishing directory is not a symlink.\n");
-		return -1;
+		case 0:
+			log_and_send(asfd,
+				"Finishing directory is not a symlink.\n");
+			return -1;
 	}
 
-	if(!lstat(sdirs->working, &statp))
+	switch(is_lnk(sdirs->working))
 	{
-		if(S_ISLNK(statp.st_mode))
+		case 1:
 			return recover_working(as,
 				sdirs, incexc, resume, cconfs);
-		log_and_send(asfd, "Working directory is not a symlink.\n");
-		return -1;
+		case 0:
+			log_and_send(asfd,
+				"Working directory is not a symlink.\n");
+			return -1;
 	}
 
-	if(!lstat(sdirs->currenttmp, &statp))
+	switch(is_lnk(sdirs->currenttmp))
 	{
-		if(S_ISLNK(statp.st_mode))
+		case 1:
 			return recover_currenttmp(sdirs);
-		log_and_send(asfd, "Currenttmp directory is not a symlink.\n");
-		return -1;
+		case 0:
+			log_and_send(asfd,
+				"Currenttmp directory is not a symlink.\n");
+			return -1;
 	}
 
 	return 0;

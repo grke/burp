@@ -55,15 +55,13 @@ int sdirs_get_real_manifest(struct sdirs *sdirs, enum protocol protocol)
 
 int sdirs_get_real_working_from_symlink(struct sdirs *sdirs)
 {
-	ssize_t len=0;
 	char real[256]="";
-	if((len=readlink(sdirs->working, real, sizeof(real)-1))<0)
+	if(readlink_w(sdirs->working, real, sizeof(real))<0)
 	{
 		logp("Could not readlink %s: %s\n",
 			sdirs->working, strerror(errno));
 		return -1;
 	}
-	real[len]='\0';
 	if(free_prepend_s(&sdirs->rworking, sdirs->client, real)
 	  || free_prepend_s(&sdirs->treepath,
 		sdirs->rworking, DATA_DIR "/" TREE_DIR))
@@ -89,7 +87,8 @@ int sdirs_create_real_working(struct sdirs *sdirs, const char *timestamp_format)
 	// going into a directory. If the directory got created first,
 	// bedup might go into it in the moment before the symlink
 	// gets added.
-	if(symlink(fname, sdirs->working)) // relative link to the real work dir
+	if(do_symlink(fname, sdirs->working))
+		// relative link to the real work dir
 	{
 		logp("could not point working symlink to: %s\n",
 			sdirs->rworking);

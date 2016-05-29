@@ -83,12 +83,8 @@ static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu,
 		
 		target=bu->prev->basename;
 		unlink(sdirs->currenttmp);
-		if(symlink(target, sdirs->currenttmp))
-		{
-			logp("could not symlink '%s' to '%s': %s\n",
-				sdirs->currenttmp, target, strerror(errno));
+		if(do_symlink(target, sdirs->currenttmp))
 			return -1;
-		}
 		// If interrupted here, there is a currenttmp and a current
 		// symlink, and they both point to valid directories.
 		if(do_rename_w(bu->path, sdirs->deleteme, cname, bu))

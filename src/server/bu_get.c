@@ -10,14 +10,7 @@
 
 static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 {
-	ssize_t len=0;
-	char *tmp=NULL;
-	if(!(tmp=prepend_s(dir, lnk)))
-		return -1;
-	if((len=readlink(tmp, real, r-1))<0) len=0;
-	real[len]='\0';
-	free_w(&tmp);
-	return 0;
+	return readlink_w_in_dir(dir, lnk, real, r);
 }
 
 static void have_backup_file_name(struct bu *bu,

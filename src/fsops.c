@@ -1,6 +1,7 @@
 #include "burp.h"
 #include "alloc.h"
 #include "fsops.h"
+#include "fzp.h"
 #include "log.h"
 #include "pathcmp.h"
 #include "prepend.h"
@@ -24,9 +25,8 @@ void close_fd(int *fd)
 int is_dir_lstat(const char *path)
 {
         struct stat buf;
-
-        if(lstat(path, &buf)) return -1;
-
+        if(lstat(path, &buf))
+		return -1;
         return S_ISDIR(buf.st_mode);
 }
 
@@ -482,5 +482,60 @@ int mksock(const char *path)
 end:
 	if(fd>=0) close(fd);
 	return ret;
+}
+
+int do_symlink(const char *oldpath, const char *newpath)
+{
+	if(!symlink(oldpath, newpath))
+		return 0;
+	logp("could not symlink '%s' to '%s': %s\n",
+		newpath, oldpath, strerror(errno));
+	return -1;
+}
+
+static int do_readlink(const char *path, char buf[], size_t buflen)
+{
+	ssize_t len;
+	if((len=readlink(path, buf, buflen-1))<0)
+		return -1;
+	buf[len]='\0';
+	return 0;
+}
+
+int readlink_w(const char *path, char buf[], size_t buflen)
+{
+	struct stat statp;
+	if(lstat(path, &statp))
+		return -1;
+	if(S_ISLNK(statp.st_mode))
+		return do_readlink(path, buf, buflen);
+	return -1;
+}
+
+int readlink_w_in_dir(const char *dir, const char *lnk,
+	char buf[], size_t buflen)
+{
+	char *tmp=NULL;
+	if(!(tmp=prepend_s(dir, lnk)))
+		return -1;
+	readlink_w(tmp, buf, buflen);
+	free_w(&tmp);
+	return 0;
+}
+
+int is_lnk(const char *path)
+{
+	struct stat buf;
+	if(lstat(path, &buf))
+		return -1;
+	return S_ISLNK(buf.st_mode);
+}
+
+int is_lnk_valid(const char *path)
+{
+	struct stat buf;
+	if(stat(path, &buf))
+		return 0;
+	return 1;
 }
 #endif

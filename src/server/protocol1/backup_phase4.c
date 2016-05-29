@@ -662,7 +662,6 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 {
 	int ret=-1;
 	struct stat statp;
-	ssize_t len=0;
 	char realcurrent[256]="";
 	uint64_t bno=0;
 	int hardlinked_current=0;
@@ -670,9 +669,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	int previous_backup=0;
 	struct fdirs *fdirs=NULL;
 
-	if((len=readlink(sdirs->current, realcurrent, sizeof(realcurrent)-1))<0)
-		len=0;
-	realcurrent[len]='\0';
+	readlink_w(sdirs->current, realcurrent, sizeof(realcurrent));
 
 	if(!(fdirs=fdirs_alloc())
 	  || fdirs_init(fdirs, sdirs, realcurrent))

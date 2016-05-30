@@ -159,11 +159,11 @@ static void setup_happy_path_version_mismatch(struct asfd *asfd)
 	const char *cnames[] = {"testclient", NULL};
 	build_clientconfdir_files(cnames, "password=mypass\nkeep=4\n");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "hello:2.0.0");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "whoareyou:2.0.38");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "whoareyou:" VERSION);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "testclient");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okpassword");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
-	asfd_assert_write(asfd, &w, 0, CMD_WARNING, "Client 'testclient' version '2.0.0' does not match server version '2.0.38'. An upgrade is recommended.\n");
+	asfd_assert_write(asfd, &w, 0, CMD_WARNING, "Client 'testclient' version '2.0.0' does not match server version '" VERSION "'. An upgrade is recommended.\n");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
 }
 

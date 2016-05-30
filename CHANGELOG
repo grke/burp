@@ -1,3 +1,22 @@
+2016-05-30 Changes in burp-2.0.40:
+  * Tidy symlink/readlink functions.
+  * Yopito's patches to help RHEL5 builds.
+  * Fix 'burp -a S', which has been broken up to this point in burp-2.0.x.
+  * Add more unit tests.
+  * Fix for writing statuses down multiple server status child pipes.
+  * Fix for loading initial running client status server data.
+  * Fix bugs in sorting paths with characters with ASCII values higher
+    than 127. Make my_alphasort() use pathcmp(), like burp-1 did.
+  * Clean up network_timeout, ratelimit, streamtype and fdtype.
+  * Tidy up setup_signals().
+  * Make path to CRL configurable.
+  * Stéphane Berthelot's fix for too many lines for each client in the
+    status monitor summary.
+  * Fix segfault when using '-C <client> -a s'.
+  * Fix compilation without ncurses.
+  * Upgrade Windows depkgs to openssl-1.0.2h.
+  * Upgrade Windows depkgs to pcre-8.38.
+
 2016-04-30 Changes in burp-2.0.38:
   * Add 'enabled' option (from Benjamin Sans).
   * Fix bugs in protocol2 delete_unused_data_files().

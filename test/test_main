@@ -853,7 +853,7 @@ run_tests()
 	pre=0
 	res=0
 	echo
-	echo "Running burp$protocol tests"
+	echo "Running protocol $protocol tests"
 	all_tests
 }
 

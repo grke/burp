@@ -30,6 +30,7 @@ int blks_generate_init(void)
 void blks_generate_free(void)
 {
 	free_w(&gbuf);
+	blk_free(&blk);
 	win_free(&win);
 }
 
@@ -37,11 +38,11 @@ void blks_generate_free(void)
 // Return 1 for got a block, 0 for no block got.
 static int blk_read(void)
 {
-	char c;
+	unsigned char c;
 
 	for(; gcp<gbuf_end; gcp++)
 	{
-		c=*gcp;
+		c=(unsigned char)*gcp;
 
 		blk->fingerprint = (blk->fingerprint * rconf.prime) + c;
 		win->checksum    = (win->checksum    * rconf.prime) + c
@@ -49,7 +50,8 @@ static int blk_read(void)
 		win->data[win->pos] = c;
 
 		win->pos++;
-		if(blk->data) blk->data[blk->length] = c;
+		if(blk->data)
+			blk->data[blk->length] = c;
 		blk->length++;
 
 		if(win->pos == rconf.win_size) win->pos=0;
@@ -65,9 +67,18 @@ static int blk_read(void)
 	return 0;
 }
 
+static void win_reset(void)
+{
+	win->checksum=0;
+	win->pos=0;
+	memset(win->data, 0, rconf.win_size);
+}
+
 static int blk_read_to_list(struct sbuf *sb, struct blist *blist)
 {
 	if(!blk_read()) return 0;
+
+	win_reset();
 
 	// Got something.
 	if(first)
@@ -94,6 +105,9 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 
 	if(!blk && !(blk=blk_alloc_with_data(rconf.blk_max)))
 		return -1;
+
+	if(first)
+		win_reset();
 
 	if(gcp<gbuf_end)
 	{
@@ -157,10 +171,12 @@ int blk_read_verify(struct blk *blk_to_verify)
 		rconf_init(&rconf);
 		if(!(win=win_alloc(&rconf))) return -1;
 	}
+	win_reset();
 
-	gbuf=blk_to_verify->data;
+	memcpy(gbuf, blk_to_verify->data, blk_to_verify->length);
 	gbuf_end=gbuf+blk_to_verify->length;
 	gcp=gbuf;
+	blk_free(&blk);
 	if(!blk && !(blk=blk_alloc())) return -1;
 	blk->length=0;
 	blk->fingerprint=0;
@@ -172,6 +188,9 @@ int blk_read_verify(struct blk *blk_to_verify)
 	// So, here the return of blk_read is ignored and we look at the
 	// position of gcp instead.
 	blk_read();
+//printf("%016"PRIX64" %016"PRIX64" ",
+//	blk->fingerprint, blk_to_verify->fingerprint);
+//printf("%s\n", blk->fingerprint==blk_to_verify->fingerprint?"yes":"no");
 	if(gcp==gbuf_end
 	  && blk->fingerprint==blk_to_verify->fingerprint)
 		return 1;

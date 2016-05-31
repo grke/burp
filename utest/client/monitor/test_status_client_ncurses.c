@@ -65,16 +65,6 @@ static int async_write_simple(struct async *as)
 	return 0;
 }
 
-static void setup_stdout_header(struct asfd *so_asfd)
-{
-	int w=0;
-	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "\n burp status");
-	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "                                                ");
-	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "1977-10-02 00:10:20");
-	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "\n\n");
-	asfd_assert_write(so_asfd, &w, 0, CMD_GEN, "\n");
-}
-
 static void setup_simplest_json(struct asfd *csin, struct asfd *csout,
 	struct asfd *so_asfd)
 {

@@ -293,7 +293,9 @@ runner_SOURCES = \
 	utest/protocol1/test_handy.c \
 	utest/protocol1/test_rs_buf.c \
 	utest/protocol2/test_blist.c \
+	utest/protocol2/test_blk.c \
 	utest/protocol2/test_sbuf_protocol2.c \
+	utest/protocol2/rabin/test_rabin.c \
 	utest/protocol2/rabin/test_rconf.c \
 	utest/protocol2/rabin/test_win.c \
 	utest/client/monitor/test_json_input.c \

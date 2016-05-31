@@ -15,10 +15,12 @@ struct blk *blk_alloc(void)
 struct blk *blk_alloc_with_data(uint32_t max_data_length)
 {
 	struct blk *blk=NULL;
-	if(!(blk=blk_alloc())) return NULL;
-	if((blk->data=(char *)
-	  calloc_w(1, sizeof(char)*max_data_length, __func__)))
-		return blk;
+	if(!(blk=blk_alloc())
+	  || !(blk->data=(char *)
+		calloc_w(1, sizeof(char)*max_data_length, __func__)))
+			goto end;
+	return blk;
+end:
 	blk_free(&blk);
 	return NULL;
 }

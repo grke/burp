@@ -76,6 +76,8 @@ Suite *suite_pathcmp(void);
 Suite *suite_protocol1_handy(void);
 Suite *suite_protocol1_rs_buf(void);
 Suite *suite_protocol2_blist(void);
+Suite *suite_protocol2_blk(void);
+Suite *suite_protocol2_rabin_rabin(void);
 Suite *suite_protocol2_rabin_rconf(void);
 Suite *suite_protocol2_rabin_win(void);
 Suite *suite_protocol2_sbuf_protocol2(void);

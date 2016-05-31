@@ -20,6 +20,7 @@
 #include "manio.h"
 #include "protocol1/restore.h"
 #include "protocol2/dpth.h"
+#include "protocol2/rabin/rabin.h"
 #include "protocol2/rblk.h"
 #include "protocol2/restore.h"
 #include "protocol2/restore_spool.h"
@@ -569,8 +570,17 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	char *manifest=NULL;
 	char *logpath=NULL;
 	char *logpathz=NULL;
+	enum protocol protocol;
+	enum cntr_status cntr_status;
+
+	protocol=get_protocol(cconfs);
+
+	if(protocol==PROTO_2
+	  && blks_generate_init())
+		goto end;
+
 	// For sending status information up to the server.
-	enum cntr_status cntr_status=CNTR_STATUS_RESTORING;
+	cntr_status=CNTR_STATUS_RESTORING;
 
 	if(act==ACTION_RESTORE) cntr_status=CNTR_STATUS_RESTORING;
 	else if(act==ACTION_VERIFY) cntr_status=CNTR_STATUS_VERIFYING;
@@ -620,6 +630,8 @@ end:
 	free_w(&manifest);
 	free_w(&logpath);
 	free_w(&logpathz);
+	if(protocol==PROTO_2)
+		blks_generate_free();
 	return ret;
 }
 

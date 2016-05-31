@@ -46,6 +46,8 @@ int main(void)
 	srunner_add_suite(sr, suite_protocol1_handy());
 	srunner_add_suite(sr, suite_protocol1_rs_buf());
 	srunner_add_suite(sr, suite_protocol2_blist());
+	srunner_add_suite(sr, suite_protocol2_blk());
+	srunner_add_suite(sr, suite_protocol2_rabin_rabin());
 	srunner_add_suite(sr, suite_protocol2_rabin_rconf());
 	srunner_add_suite(sr, suite_protocol2_rabin_win());
 	srunner_add_suite(sr, suite_protocol2_sbuf_protocol2());

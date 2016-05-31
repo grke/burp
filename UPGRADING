@@ -1,5 +1,10 @@
 Things to watch out for when upgrading.
 
+2.0.42
+------
+A bug in generating protocol 2 rabin checksums was fixed. Any protocol 2
+backups made up to this point should be discarded.
+
 2.0.32
 ------
 'make install' will now install everything except configuration files.

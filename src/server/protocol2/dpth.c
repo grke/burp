@@ -10,14 +10,12 @@
 #include "../../protocol2/blk.h"
 #include "dpth.h"
 
-static int get_data_lock(struct lock *lock, struct dpth *dpth, const char *path)
+static int get_data_lock(struct lock *lock, const char *path)
 {
 	int ret=-1;
-	char *p=NULL;
 	char *lockfile=NULL;
 	// Use just the first three components, excluding sig number.
-	if(!(p=prepend_slash(dpth->base_path, path, 14))
-	  || !(lockfile=prepend(p, ".lock")))
+	if(!(lockfile=prepend(path, ".lock")))
 		goto end;
 	if(lock_init(lock, lockfile)
 	  || build_path_w(lock->path))
@@ -25,7 +23,6 @@ static int get_data_lock(struct lock *lock, struct dpth *dpth, const char *path)
 	lock_get_quick(lock);
 	ret=0;
 end:
-	free_w(&p);
 	free_w(&lockfile);
 	return ret;
 }
@@ -79,21 +76,46 @@ char *dpth_protocol2_get_save_path(struct dpth *dpth)
 
 char *dpth_protocol2_mk(struct dpth *dpth)
 {
+	char *p=NULL;
 	static char *save_path=NULL;
 	static struct lock *lock=NULL;
 	while(1)
 	{
+		free_w(&p);
 		save_path=dpth_protocol2_get_save_path(dpth);
-		if(!dpth->need_data_lock) return save_path;
+		if(!dpth->need_data_lock)
+			return save_path;
 
-		if(!lock && !(lock=lock_alloc())) goto error;
-		if(get_data_lock(lock, dpth, save_path)) goto error;
+		if(!lock && !(lock=lock_alloc()))
+			goto error;
+
+		// Use just the first three components, excluding sig number.
+		if(!(p=prepend_slash(dpth->base_path, save_path, 14)))
+			goto error;
+
+		if(get_data_lock(lock, p))
+			goto error;
+
 		switch(lock->status)
 		{
-			case GET_LOCK_GOT: break;
+			case GET_LOCK_GOT:
+				struct stat statp;
+				if(lstat(p, &statp))
+				{
+					// File does not exist yet, and we
+					// have the lock. All good.
+					break;
+				}
+				// The file that we want to write already
+				// exists.
+				if(lock_release(lock))
+					goto error;
+				lock_free(&lock);
+				// Fall through and try again.
 			case GET_LOCK_NOT_GOT:
 				// Increment and try again.
-				if(dpth_incr(dpth)) goto error;
+				if(dpth_incr(dpth))
+					goto error;
 				continue;
 			case GET_LOCK_ERROR:
 			default:
@@ -101,11 +123,14 @@ char *dpth_protocol2_mk(struct dpth *dpth)
 		}
 
 		dpth->need_data_lock=0; // Got it.
-		if(add_lock_to_list(dpth, lock, save_path)) goto error;
+		if(add_lock_to_list(dpth, lock, save_path))
+			goto error;
 		lock=NULL;
+		free_w(&p);
 		return save_path;
 	}
 error:
+	free_w(&p);
 	lock_free(&lock);
 	return NULL;
 }

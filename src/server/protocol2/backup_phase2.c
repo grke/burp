@@ -12,6 +12,7 @@
 #include "../../log.h"
 #include "../../server/manio.h"
 #include "../../protocol2/blist.h"
+#include "../../protocol2/rabin/rabin.h"
 #include "../../slist.h"
 #include "../manios.h"
 #include "../resume.h"
@@ -183,6 +184,13 @@ static int add_data_to_store(struct cntr *cntr,
 			logp("and slist->blist->head is null\n");
 		else
 			logp("head index: %" PRIu64 "\n", slist->blist->head->index);
+		return -1;
+	}
+
+	if(blk_verify(blk))
+	{
+		logp("ERROR: Block %"PRIu64" from client did not verify.\n",
+			blk->index);
 		return -1;
 	}
 
@@ -830,6 +838,8 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 		breakcount=breaking-2000;
 	}
 
+	blks_generate_init();
+
 	logp("Phase 2 begin (recv backup data)\n");
 
 	if(!(dpth=dpth_alloc())
@@ -943,6 +953,7 @@ end:
 	dpth_free(&dpth);
 	manios_close(&manios);
 	man_off_t_free(&p1pos);
+	blks_generate_free();
 	return ret;
 }
 

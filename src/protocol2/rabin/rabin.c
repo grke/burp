@@ -163,14 +163,8 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 	return 1;
 }
 
-// The server uses this for verification.
-int blk_read_verify(struct blk *blk_to_verify)
+int blk_verify_fingerprint(struct blk *blk_to_verify)
 {
-	if(!win)
-	{
-		rconf_init(&rconf);
-		if(!(win=win_alloc(&rconf))) return -1;
-	}
 	win_reset();
 
 	memcpy(gbuf, blk_to_verify->data, blk_to_verify->length);

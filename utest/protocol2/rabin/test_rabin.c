@@ -22,7 +22,7 @@ static struct bdata b[] = {
 	{   0, 0x000000000000000A, 0 },
 };
 
-START_TEST(test_rabin_blk_read_verify)
+START_TEST(test_rabin_blk_verify_fingerprint)
 {
 	struct blk *blk;
 	hexmap_init();
@@ -34,7 +34,7 @@ START_TEST(test_rabin_blk_read_verify)
 		blk->fingerprint=b[i].fingerprint;
 		blk->length=1;
 		memcpy(blk->data, &x, blk->length);
-		fail_unless(blk_read_verify(blk)==b[i].expected_result);
+		fail_unless(blk_verify_fingerprint(blk)==b[i].expected_result);
 	}
 	blk_free(&blk);
 	blks_generate_free();
@@ -51,7 +51,7 @@ Suite *suite_protocol2_rabin_rabin(void)
 
 	tc_core=tcase_create("Core");
 
-	tcase_add_test(tc_core, test_rabin_blk_read_verify);
+	tcase_add_test(tc_core, test_rabin_blk_verify_fingerprint);
 	suite_add_tcase(s, tc_core);
 
 	return s;

@@ -62,20 +62,22 @@ int blk_is_zero_length(struct blk *blk)
 	  && !memcmp(blk->md5sum, md5sum_of_empty_string, MD5_DIGEST_LENGTH);
 }
 
-int blk_verify(struct blk *blk)
+int blk_verify(struct blk *blk_to_verify)
 {
 	uint8_t md5sum[MD5_DIGEST_LENGTH];
-	// Check rabin fingerprint.
-	switch(blk_read_verify(blk))
+
+	switch(blk_verify_fingerprint(blk_to_verify))
 	{
 		case 1: break; // Match.
 		case 0: return 0; // Did not match.
 		default: return -1;
 	}
-	// Check md5sum.
-	if(md5_generation(md5sum, blk->data, blk->length))
+
+	if(md5_generation(md5sum, blk_to_verify->data, blk_to_verify->length))
 		return -1;
-	if(!memcmp(md5sum, blk->md5sum, MD5_DIGEST_LENGTH)) return 1;
+	if(!memcmp(md5sum, blk_to_verify->md5sum, MD5_DIGEST_LENGTH))
+		return 1;
+
 	return 0;
 }
 

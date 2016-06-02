@@ -34,7 +34,8 @@ START_TEST(test_rabin_blk_verify_fingerprint)
 		blk->fingerprint=b[i].fingerprint;
 		blk->length=1;
 		memcpy(blk->data, &x, blk->length);
-		fail_unless(blk_verify_fingerprint(blk)==b[i].expected_result);
+		fail_unless(blk_verify_fingerprint(blk->fingerprint,
+			blk->data, blk->length)==b[i].expected_result);
 	}
 	blk_free(&blk);
 	blks_generate_free();

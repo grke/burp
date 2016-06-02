@@ -30,7 +30,8 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 		case ACTION_VERIFY:
 			// Need to check that the block has the correct
 			// checksums.
-			switch(blk_verify(blk))
+			switch(blk_verify(blk->fingerprint, blk->md5sum,
+				blk->data, blk->length))
 			{
 				case 1:
 					iobuf_set(&wbuf, CMD_DATA, (char *)"0", 1);

@@ -49,7 +49,8 @@ extern void blk_free(struct blk **blk);
 extern int blk_md5_update(struct blk *blk);
 extern int blk_is_zero_length(struct blk *blk);
 
-extern int blk_verify(struct blk *blk_to_verify);
+extern int blk_verify(uint64_t fingerprint, uint8_t *md5sum,
+	char *data, size_t length);
 extern int blk_fingerprint_is_hook(struct blk *blk);
 
 extern int blk_set_from_iobuf_sig(struct blk *blk, struct iobuf *iobuf);

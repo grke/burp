@@ -54,7 +54,8 @@ static int blk_read(void)
 			blk->data[blk->length] = c;
 		blk->length++;
 
-		if(win->pos == rconf.win_size) win->pos=0;
+		if(win->pos == rconf.win_size)
+			win->pos=0;
 
 		if( blk->length >= rconf.blk_min
 		 && (blk->length == rconf.blk_max
@@ -163,12 +164,12 @@ int blks_generate(struct asfd *asfd, struct conf **confs,
 	return 1;
 }
 
-int blk_verify_fingerprint(struct blk *blk_to_verify)
+int blk_verify_fingerprint(uint64_t fingerprint, char *data, size_t length)
 {
 	win_reset();
 
-	memcpy(gbuf, blk_to_verify->data, blk_to_verify->length);
-	gbuf_end=gbuf+blk_to_verify->length;
+	memcpy(gbuf, data, length);
+	gbuf_end=gbuf+length;
 	gcp=gbuf;
 	blk_free(&blk);
 	if(!blk && !(blk=blk_alloc())) return -1;
@@ -182,11 +183,12 @@ int blk_verify_fingerprint(struct blk *blk_to_verify)
 	// So, here the return of blk_read is ignored and we look at the
 	// position of gcp instead.
 	blk_read();
+//printf("%d %d\n", blk->length, length);
 //printf("%016"PRIX64" %016"PRIX64" ",
-//	blk->fingerprint, blk_to_verify->fingerprint);
-//printf("%s\n", blk->fingerprint==blk_to_verify->fingerprint?"yes":"no");
+//	blk->fingerprint, fingerprint);
+//printf("%s\n", blk->fingerprint==fingerprint?"yes":"no");
 	if(gcp==gbuf_end
-	  && blk->fingerprint==blk_to_verify->fingerprint)
+	  && blk->fingerprint==fingerprint)
 		return 1;
 	return 0;
 }

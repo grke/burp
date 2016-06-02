@@ -32,7 +32,8 @@ START_TEST(test_protocol2_blk)
 		md5str_to_bytes(b[i].md5str, blk->md5sum);
 		blk->length=1;
 		memcpy(blk->data, &x, blk->length);
-		fail_unless(blk_verify(blk)==b[i].expected_result);
+		fail_unless(blk_verify(blk->fingerprint, blk->md5sum,
+			blk->data, blk->length)==b[i].expected_result);
 	}
 	blk_free(&blk);
 	blks_generate_free();

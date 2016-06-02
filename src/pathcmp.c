@@ -47,9 +47,11 @@ int pathcmp(const char *a, const char *b)
 			return -1;
 		if(*x!='/' && *y=='/')
 			return 1;
-		if(*x<*y)
+		// Need to make sure the comparisons are signed.
+		// Not doing this caused problems on raspberry pis.
+		if((int8_t)*x<(int8_t)*y)
 			return -1;
-		if(*x>*y)
+		if((int8_t)*x>(int8_t)*y)
 			return 1;
 	}
 	if(!*x && !*y)

@@ -316,6 +316,7 @@ runner_SOURCES = \
 	utest/server/monitor/test_cstat.c \
 	utest/server/monitor/test_json_output.c \
 	utest/server/protocol1/test_backup_phase2.c \
+	utest/server/protocol1/test_backup_phase4.c \
 	utest/server/protocol1/test_bedup.c \
 	utest/server/protocol1/test_blocklen.c \
 	utest/server/protocol1/test_dpth.c \

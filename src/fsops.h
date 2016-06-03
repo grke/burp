@@ -10,6 +10,7 @@ extern void close_fd(int *fd);
 
 extern int is_dir(const char *path, struct dirent *d);
 extern int is_dir_lstat(const char *path);
+extern int is_reg_lstat(const char *path);
 extern int mkpath(char **rpath, const char *limit);
 extern int build_path(const char *datadir, const char *fname,
         char **rpath, const char *limit);

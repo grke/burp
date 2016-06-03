@@ -547,7 +547,7 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 		{
 			sbuf_free_content(db);
 		}
-		else if(!mb->path.buf && !db->path.buf) 
+		else if(!mb->path.buf && !db->path.buf)
 		{
 			continue;
 		}
@@ -596,7 +596,7 @@ end:
 }
 
 /* Need to make all the stuff that this does atomic so that existing backups
-   never get broken, even if somebody turns the power off on the server. */ 
+   never get broken, even if somebody turns the power off on the server. */
 static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	int hardlinked_current, struct conf **cconfs)
 {

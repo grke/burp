@@ -30,6 +30,14 @@ int is_dir_lstat(const char *path)
         return S_ISDIR(buf.st_mode);
 }
 
+int is_reg_lstat(const char *path)
+{
+        struct stat buf;
+        if(lstat(path, &buf))
+		return -1;
+        return S_ISREG(buf.st_mode);
+}
+
 int is_dir(const char *path, struct dirent *d)
 {
 #ifdef _DIRENT_HAVE_D_TYPE

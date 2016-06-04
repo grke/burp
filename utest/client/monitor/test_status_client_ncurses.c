@@ -431,6 +431,27 @@ START_TEST(test_status_client_ncurses_with_clients_downx2)
 }
 END_TEST
 
+static void setup_ncurses_with_orig_client(struct asfd *csin,
+	struct asfd *csout,
+        struct asfd *nin, struct asfd *so_asfd)
+{
+	int w=0;
+	int nr=0;
+	int cr=0;
+	asfd_mock_read_no_op(nin, &nr, 5);
+	asfd_mock_read_int(nin, &nr, 0, CMD_GEN, (int)'q');
+	asfd_assert_write(csin, &w, 0, CMD_GEN, "c:cli2\n");
+	read_clients(csin, &cr);
+	asfd_mock_read_no_op(csin, &cr, 5);
+}
+
+START_TEST(test_status_client_ncurses_with_orig_client)
+{
+	do_status_test("cli2", 0,
+		setup_ncurses_with_orig_client, NULL);
+}
+END_TEST
+
 Suite *suite_client_monitor_status_client_ncurses(void)
 {
 	Suite *s;
@@ -454,6 +475,7 @@ Suite *suite_client_monitor_status_client_ncurses(void)
 	tcase_add_test(tc_core, test_status_client_ncurses_with_clients);
 	tcase_add_test(tc_core, test_status_client_ncurses_with_clients_down);
 	tcase_add_test(tc_core, test_status_client_ncurses_with_clients_downx2);
+	tcase_add_test(tc_core, test_status_client_ncurses_with_orig_client);
 
 	suite_add_tcase(s, tc_core);
 

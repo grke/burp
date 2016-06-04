@@ -436,7 +436,8 @@ static int need_status(struct sel *sel)
 	time_t now=0;
 	time_t diff=0;
 
-	if(sel->page==PAGE_VIEW_LOG && sel->llines) return 0;
+	if(sel->page==PAGE_VIEW_LOG && sel->llines)
+		return 0;
 
 	// Only ask for an update every second.
 	now=time(NULL);
@@ -1353,6 +1354,12 @@ int status_client_ncurses_main_loop(struct async *as,
 			}
 			if(request_status(sfd, req, sel))
 				goto error;
+
+			// We only want to start on the client the user gave to
+			// us. Freeing it will allow the user to browse other
+			// clients thereafter.
+			free_w(&client);
+
 			if(actg==ACTION_STATUS_SNAPSHOT)
 				reqdone=1;
 		}

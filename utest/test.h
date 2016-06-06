@@ -86,6 +86,7 @@ Suite *suite_server_ca(void);
 Suite *suite_server_backup_phase3(void);
 Suite *suite_server_bu_get(void);
 Suite *suite_server_delete(void);
+Suite *suite_server_extra_comms(void);
 Suite *suite_server_list(void);
 Suite *suite_server_manio(void);
 Suite *suite_server_monitor_browse(void);

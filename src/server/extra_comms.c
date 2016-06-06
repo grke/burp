@@ -45,7 +45,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 	int ret=-1;
 	char *feat=NULL;
 	struct stat statp;
-	const char *restorepath=NULL;
+	char *restorepath=NULL;
 	enum protocol protocol=get_protocol(cconfs);
 	struct strlist *startdir=get_strlist(cconfs[OPT_STARTDIR]);
 	struct strlist *incglob=get_strlist(cconfs[OPT_INCGLOB]);
@@ -121,6 +121,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 	ret=0;
 end:
 	free_w(&feat);
+	free_w(&restorepath);
 	return ret;
 }
 
@@ -347,7 +348,8 @@ int extra_comms(struct async *as,
 	//char *restorepath=NULL;
 	const char *peer_version=NULL;
 
-	if(vers_init(&vers, cconfs)) goto error;
+	if(vers_init(&vers, cconfs))
+		goto error;
 
 	if(vers.cli<vers.directory_tree)
 	{
@@ -357,7 +359,8 @@ int extra_comms(struct async *as,
 
 	// Clients before 1.2.7 did not know how to do extra comms, so skip
 	// this section for them.
-	if(vers.cli<vers.min) return 0;
+	if(vers.cli<vers.min)
+		return 0;
 
 	if(asfd_read_expect(asfd, CMD_GEN, "extra_comms_begin"))
 	{
@@ -378,7 +381,8 @@ int extra_comms(struct async *as,
 	}
 	else
 	{
-		if(send_features(asfd, cconfs)) goto error;
+		if(send_features(asfd, cconfs))
+			goto error;
 	}
 
 	if(extra_comms_read(as, &vers, srestore, incexc, confs, cconfs))

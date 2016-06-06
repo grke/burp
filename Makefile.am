@@ -335,6 +335,7 @@ runner_SOURCES = \
 	utest/server/test_backup_phase3.c \
 	utest/server/test_bu_get.c \
 	utest/server/test_delete.c \
+	utest/server/test_extra_comms.c \
 	utest/server/test_list.c \
 	utest/server/test_manio.c \
 	utest/server/test_resume.c \

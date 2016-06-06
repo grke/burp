@@ -56,6 +56,7 @@ int main(void)
 	srunner_add_suite(sr, suite_server_backup_phase3());
 	srunner_add_suite(sr, suite_server_bu_get());
 	srunner_add_suite(sr, suite_server_delete());
+	srunner_add_suite(sr, suite_server_extra_comms());
 	srunner_add_suite(sr, suite_server_list());
 	srunner_add_suite(sr, suite_server_manio());
 	srunner_add_suite(sr, suite_server_monitor_browse());

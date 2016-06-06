@@ -329,7 +329,7 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 	{
 		int a=0;
 		const char *args[12];
-		args[a++]=r_script_pre;
+		args[a++]=r_script_post;
 		if(get_int(confs[OPT_R_SCRIPT_RESERVED_ARGS]))
 		{
 			args[a++]="post";

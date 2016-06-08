@@ -13,6 +13,8 @@
 #include "../prepend.h"
 #include "autoupgrade.h"
 
+#include <librsync.h>
+
 static int append_to_feat(char **feat, const char *str)
 {
 	char *tmp=NULL;
@@ -275,26 +277,27 @@ static int extra_comms_read(struct async *as,
 			char msg[128]="";
 			// Client wants to set protocol.
 			enum protocol protocol=get_protocol(cconfs);
+			const char *cliproto=rbuf->buf+strlen("protocol=");
 			if(protocol!=PROTO_AUTO)
 			{
-				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s but server is set to protocol=%d\n", rbuf->buf, protocol);
-				log_and_send_oom(asfd, __func__);
+				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s but server is set to protocol=%d\n", cliproto, protocol);
+				log_and_send(asfd, msg);
 				goto end;
 			}
-			else if(!strcmp(rbuf->buf+strlen("protocol="), "1"))
+			else if(!strcmp(cliproto, "1"))
 			{
 				set_protocol(cconfs, PROTO_1);
 				set_protocol(globalcs, PROTO_1);
 			}
-			else if(!strcmp(rbuf->buf+strlen("protocol="), "2"))
+			else if(!strcmp(cliproto, "2"))
 			{
 				set_protocol(cconfs, PROTO_2);
 				set_protocol(globalcs, PROTO_2);
 			}
 			else
 			{
-				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s, which is unknown\n", rbuf->buf);
-				log_and_send_oom(asfd, __func__);
+				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s, which is unknown\n", cliproto);
+				log_and_send(asfd, msg);
 				goto end;
 			}
 			logp("Client has set protocol=%d\n",
@@ -420,7 +423,8 @@ int extra_comms(struct async *as,
 			// server to be forced to protocol1.
 			break;
 		case PROTO_2:
-			if(vers.cli>=vers.burp2) break;
+			if(vers.cli>=vers.burp2)
+				break;
 			logp("protocol=%d is set server side, "
 			  "but client is burp version %s\n",
 			  PROTO_2, peer_version);

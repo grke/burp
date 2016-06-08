@@ -120,6 +120,8 @@ end:
 	return ret;
 }
 
+#include <librsync.h>
+
 static int process_changed_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *cb, struct sbuf *p1b,

@@ -28,6 +28,8 @@ static const char *server_supports_autoupgrade(const char *feat)
 	return server_supports(feat, ":autoupgrade:");
 }
 
+#include <librsync.h>
+
 int extra_comms(struct async *as, struct conf **confs,
 	enum action *action, char **incexc)
 {

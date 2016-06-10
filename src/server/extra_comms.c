@@ -210,7 +210,8 @@ static int extra_comms_read(struct async *as,
 			// Client can accept incexc conf from the
 			// server.
 			iobuf_free_content(rbuf);
-			if(incexc_send_server(asfd, cconfs)) goto end;
+			if(incexc_send_server(asfd, cconfs))
+				goto end;
 		}
 		else if(!strcmp(rbuf->buf, "incexc"))
 		{
@@ -218,7 +219,8 @@ static int extra_comms_read(struct async *as,
 			// configuration so that it can better decide
 			// what to do on resume.
 			iobuf_free_content(rbuf);
-			if(incexc_recv_server(asfd, incexc, globalcs)) goto end;
+			if(incexc_recv_server(asfd, incexc, globalcs))
+				goto end;
 			if(*incexc)
 			{
 				char *tmp=NULL;

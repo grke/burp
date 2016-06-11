@@ -107,14 +107,17 @@ static int results_to_fd(struct asfd *asfd)
 static int deduplicate_maybe(struct asfd *asfd,
 	struct blk *blk, const char *directory, struct scores *scores)
 {
-	if(!asfd->in && !(asfd->in=incoming_alloc())) return -1;
+	if(!asfd->in && !(asfd->in=incoming_alloc()))
+		return -1;
 
 	if(blk_fingerprint_is_hook(blk))
 	{
-		if(incoming_grow_maybe(asfd->in)) return -1;
+		if(incoming_grow_maybe(asfd->in))
+			return -1;
 		asfd->in->fingerprints[asfd->in->size-1]=blk->fingerprint;
 	}
-	if(++(asfd->blkcnt)<MANIFEST_SIG_MAX) return 0;
+	if(++(asfd->blkcnt)<MANIFEST_SIG_MAX)
+		return 0;
 	asfd->blkcnt=0;
 
 	if(deduplicate(asfd, directory, scores)<0)
@@ -134,12 +137,14 @@ int champ_server_deal_with_rbuf_sig(struct asfd *asfd,
 
 	blist_add_blk(asfd->blist, blk);
 
-	if(!asfd->blist->blk_to_dedup) asfd->blist->blk_to_dedup=blk;
+	if(!asfd->blist->blk_to_dedup)
+		asfd->blist->blk_to_dedup=blk;
 
-	if(blk_set_from_iobuf_sig(blk, asfd->rbuf)) return -1;
+	if(blk_set_from_iobuf_sig(blk, asfd->rbuf))
+		return -1;
 
-	//printf("Got weak/strong from %d: %lu - %s %s\n",
-	//	asfd->fd, blk->index, blk->weak, blk->strong);
+	//logp("Got fingerprint from %d: %lu - %lu\n",
+	//	asfd->fd, blk->index, blk->fingerprint);
 
 	return deduplicate_maybe(asfd, blk, directory, scores);
 }

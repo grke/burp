@@ -38,7 +38,7 @@ int incoming_grow_maybe(struct incoming *in)
 
 void incoming_found_reset(struct incoming *in)
 {
+	in->got=0;
 	if(!in->found || !in->size) return;
 	memset(in->found, 0, sizeof(in->found[0])*in->size);
-	in->got=0;
 }

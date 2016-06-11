@@ -73,9 +73,10 @@ void hash_delete_all(void)
 		hash_strongs_free(hash_weak->strong);
 		free_v((void **)&hash_weak);
 	}
+	hash_table=NULL;
 }
 
-static int process_sig(struct blk *blk)
+int hash_load_blk(struct blk *blk)
 {
 	static struct hash_weak *hash_weak;
 
@@ -125,8 +126,10 @@ enum hash_ret hash_load(const char *champ, const char *directory)
 					__func__);
 				goto end;
 		}
-		if(!blk->got_save_path) continue;
-		if(process_sig(blk)) goto end;
+		if(!blk->got_save_path)
+			continue;
+		if(hash_load_blk(blk))
+			goto end;
 		blk->got_save_path=0;
 	}
 end:

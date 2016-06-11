@@ -37,4 +37,6 @@ extern struct hash_weak *hash_weak_add(uint64_t weakint);
 extern void hash_delete_all(void);
 extern enum hash_ret hash_load(const char *champ, const char *directory);
 
+extern int hash_load_blk(struct blk *blk);
+
 #endif

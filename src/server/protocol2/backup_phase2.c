@@ -18,6 +18,7 @@
 #include "../resume.h"
 #include "champ_chooser/champ_client.h"
 #include "champ_chooser/champ_server.h"
+#include "champ_chooser/hash.h"
 #include "dpth.h"
 
 #define END_SIGS		0x01
@@ -506,6 +507,14 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 					manios->changed->offset->ppath))
 						goto end;
 
+				// The champ chooser has the candidate. Now,
+				// empty our local hash table.
+				hash_delete_all();
+				// Add the most recent block, so identical
+				// adjacent blocks are deduplicated well.
+				if(hash_load_blk(blk))
+					goto end;
+
 				if(!blk->requested)
 				{
 					// Also let the client know, so that it
@@ -513,7 +522,8 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 					// consecutive number of unrequested
 					// blocks.
 					get_wbuf_from_index(&wbuf, blk->index);
-					if(asfd->write(asfd, &wbuf)) goto end;
+					if(asfd->write(asfd, &wbuf))
+						goto end;
 				}
 			}
 		}
@@ -681,7 +691,35 @@ static int mark_not_got(struct blk *blk, struct dpth *dpth)
 	// FIX THIS: make dpth give us the path in a uint8 array.
 	blk->savepath=savepathstr_with_sig_to_uint64(path);
 	blk->got_save_path=1;
-	if(dpth_protocol2_incr_sig(dpth)) return -1;
+	// Load it into our local hash table.
+	if(hash_load_blk(blk))
+		return -1;
+	if(dpth_protocol2_incr_sig(dpth))
+		return -1;
+	return 0;
+}
+
+static struct hash_strong *in_local_hash(struct blk *blk)
+{
+	static struct hash_weak *hash_weak;
+
+	if(!(hash_weak=hash_weak_find(blk->fingerprint)))
+		return NULL;
+	return hash_strong_find(hash_weak, blk->md5sum);
+}
+
+static int simple_deduplicate_blk(struct blk *blk)
+{
+	static struct hash_strong *hash_strong;
+	if(blk->got!=BLK_INCOMING)
+		return 0;
+	if((hash_strong=in_local_hash(blk)))
+	{
+		blk->savepath=hash_strong->savepath;
+		blk->got_save_path=1;
+		blk->got=BLK_GOT;
+		return 1;
+	}
 	return 0;
 }
 
@@ -693,13 +731,20 @@ static int mark_up_to_index(struct blist *blist,
 	// Mark everything that was not got, up to the given index.
 	for(blk=blist->blk_from_champ_chooser;
 	  blk && blk->index!=index; blk=blk->next)
+	{
+		if(simple_deduplicate_blk(blk))
+			continue;
 		if(mark_not_got(blk, dpth))
 			return -1;
+	}
 	if(!blk)
 	{
-		logp("Could not find index from champ chooser: %" PRIu64 "\n", index);
+		logp("Could not find index from champ chooser: %" PRIu64 "\n",
+			index);
 		return -1;
 	}
+//	simple_deduplicate_blk(blk);
+
 //logp("Found index from champ chooser: %lu\n", index);
 //printf("index from cc: %d\n", index);
 	blist->blk_from_champ_chooser=blk;
@@ -957,6 +1002,7 @@ end:
 	manios_close(&manios);
 	man_off_t_free(&p1pos);
 	blks_generate_free();
+	hash_delete_all();
 	return ret;
 }
 

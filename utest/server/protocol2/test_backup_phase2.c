@@ -319,8 +319,8 @@ static void setup_reads_from_slist(struct asfd *asfd,
 			attribs_encode(s);
 			asfd_mock_read(asfd,
 				ar, 0, CMD_ATTRIBS_SIGS, s->attr.buf);
-			blk.fingerprint=1;
-			memset(&blk.md5sum, 1, MD5_DIGEST_LENGTH);
+			blk.fingerprint=file_no;
+			memset(&blk.md5sum, file_no, MD5_DIGEST_LENGTH);
 			blk_to_iobuf_sig(&blk, &iobuf);
 			for(b=0; b<number_of_blks; b++)
 				asfd_mock_read_iobuf(asfd, ar, 0, &iobuf);
@@ -344,8 +344,8 @@ static void setup_chfd_writes_from_slist(struct asfd *chfd,
 			int b;
 			if(interrupt==file_no++)
 				continue;
-			blk.fingerprint=1;
-			memset(&blk.md5sum, 1, MD5_DIGEST_LENGTH);
+			blk.fingerprint=file_no;
+			memset(&blk.md5sum, file_no, MD5_DIGEST_LENGTH);
 			blk_to_iobuf_sig(&blk, &iobuf);
 			for(b=0; b<number_of_blks; b++)
 				asfd_assert_write_iobuf(chfd, cw, 0, &iobuf);
@@ -496,7 +496,7 @@ static void setup_asfds_happy_path_one_blk_per_file_full_dedup_big(
 	setup_reads_from_slist(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "BAA");
+	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "4Q");
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
@@ -543,7 +543,7 @@ static void setup_asfds_happy_path_three_blks_per_file_full_dedup_big(
 	setup_reads_from_slist(asfd, &ar, slist, 3, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "BAA");
+	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "4s");
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");

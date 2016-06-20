@@ -129,7 +129,7 @@ int protocol2_extra_restore_stream_bits(struct asfd *asfd, struct blk *blk,
 	else
 	{
 		logw(asfd, cntr,
-			"Unexpected signature in manifest: %016"PRIX64 "%s%s\n",
+			"Unexpected signature in manifest: %016" PRIX64 "%s%s\n",
 			blk->fingerprint,
 			bytes_to_md5str(blk->md5sum),
 			uint64_to_savepathstr_with_sig(blk->savepath));

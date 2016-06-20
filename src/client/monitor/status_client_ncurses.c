@@ -78,7 +78,7 @@ static char *get_bu_str(struct bu *bu)
 	static char ret[32];
 	if(!bu) snprintf(ret, sizeof(ret), "never");
 	else if(!bu->bno) snprintf(ret, sizeof(ret), "%s", bu->timestamp);
-	else snprintf(ret, sizeof(ret), "%07"PRIu64" %s",
+	else snprintf(ret, sizeof(ret), "%07" PRIu64 " %s",
 		bu->bno, bu->timestamp);
 	return ret;
 }
@@ -114,7 +114,10 @@ static void client_summary(struct cstat *cstat,
 				if(ent_gtotal->phase1)
 					p=(t*100)/ent_gtotal->phase1;
 				snprintf(f, sizeof(f),
-					" %"PRIu64"/%"PRIu64" %"PRIu64"%%",
+					" %" PRIu64
+					"/%" PRIu64
+					" %" PRIu64
+					"%%",
 					t, ent_gtotal->phase1, p);
 				if(cntr->byte)
 					snprintf(b, sizeof(b), "%s",
@@ -167,14 +170,14 @@ static void print_cntr_ent(const char *field,
 	  || phase==STATUS_VERIFYING)
 	{
 		to_msg(msg, sizeof(msg),
-			"% 15s % 9s % 9"PRIu64" % 9"PRIu64,
+			"% 15s % 9s % 9" PRIu64 " % 9" PRIu64,
 			field, "", t, e);
 	}
 	else
 	{
 */
 		to_msg(msg, sizeof(msg),
-			"% 15s % 9"PRIu64" % 9"PRIu64" % 9"PRIu64" % 9"PRIu64" % 9"PRIu64" % 9"PRIu64"",
+			"% 15s % 9" PRIu64 " % 9" PRIu64 " % 9" PRIu64 " % 9" PRIu64 " % 9" PRIu64 " % 9" PRIu64 "",
 			field, a, b, c, d, t, e);
 //	}
 	print_line(msg, (*x)++, col);
@@ -186,12 +189,12 @@ static void print_cntr_ent(const char *field,
 	  if(phase==STATUS_RESTORING
 	    || phase==STATUS_VERIFYING)
 	  {
-	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9"PRIu64"%% % 9s",
+	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9" PRIu64 "%% % 9s",
 		"", "", p, "");
 	  }
 	  else
 	  {
-	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9"PRIu64"%% % 9s",
+	    to_msg(msg, sizeof(msg), "% 15s % 9s % 9s % 9s % 9s % 9" PRIu64 "%% % 9s",
 		"", "", "", "", "", p, "");
 	  print_line(msg, (*x)++, col);
 	}
@@ -222,7 +225,7 @@ static void print_detail2(const char *field, uint64_t value1, const char *value2
 {
 	char msg[256]="";
 	if(!field || !value1 || !value2 || !*value2) return;
-	snprintf(msg, sizeof(msg), "%s: %"PRIu64"%s", field, value1, value2);
+	snprintf(msg, sizeof(msg), "%s: %" PRIu64 "%s", field, value1, value2);
 	print_line(msg, (*x)++, col);
 }
 
@@ -682,7 +685,7 @@ static void update_screen_live_counter_single(struct cntr_ent *e,
 		default:
 			break;
 	}
-	snprintf(msg, sizeof(msg), "%19s: %12"PRIu64" %s",
+	snprintf(msg, sizeof(msg), "%19s: %12" PRIu64 " %s",
 		e->label, e->count, bytes_human);
 	print_line(msg, (*x)++, col);
 }
@@ -707,7 +710,7 @@ static void update_screen_live_counters(struct cstat *client, int *x, int col)
 	for(e=client->cntr->list; e; e=e->next)
 		update_screen_live_counter_table(e, x, col);
 	print_line("", (*x)++, col);
-	snprintf(msg, sizeof(msg), "%19s: %"PRIu64"%%", "Percentage complete",
+	snprintf(msg, sizeof(msg), "%19s: %" PRIu64 "%%", "Percentage complete",
 	  ((gtotal->count+gtotal->same+gtotal->changed)*100)/gtotal->phase1);
 	print_line(msg, (*x)++, col);
 	print_line("", (*x)++, col);
@@ -903,7 +906,8 @@ static int request_status(struct asfd *asfd,
 			break;
 		case PAGE_BACKUP_LOGS:
 			if(sel->backup)
-				snprintf(buf, sizeof(buf), "c:%s:b:%"PRIu64"\n",
+				snprintf(buf, sizeof(buf),
+					"c:%s:b:%" PRIu64 "\n",
 					client, sel->backup->bno);
 			break;
 		case PAGE_VIEW_LOG:
@@ -932,7 +936,7 @@ static int request_status(struct asfd *asfd,
 					// Make sure a request is sent, so that
 					// the counters update.
 					snprintf(buf, sizeof(buf),
-						"c:%s:b:%"PRIu64"\n",
+						"c:%s:b:%" PRIu64 "\n",
 						client, sel->backup->bno);
 					break;
 				}
@@ -946,7 +950,7 @@ static int request_status(struct asfd *asfd,
 
 			if(sel->backup && lname)
 				snprintf(buf, sizeof(buf),
-					"c:%s:b:%"PRIu64":l:%s\n",
+					"c:%s:b:%" PRIu64 ":l:%s\n",
 					client, sel->backup->bno, lname);
 			break;
 		}

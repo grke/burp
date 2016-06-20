@@ -192,7 +192,7 @@ static int add_data_to_store(struct cntr *cntr,
 #ifndef UTEST
 	if(blk_verify(blk->fingerprint, blk->md5sum, rbuf->buf, rbuf->len)<=0)
 	{
-		logp("ERROR: Block %"PRIu64" from client did not verify.\n",
+		logp("ERROR: Block %" PRIu64 " from client did not verify.\n",
 			blk->index);
 		return -1;
 	}

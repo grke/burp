@@ -483,11 +483,11 @@ static int need_hardlinked_archive(struct conf **cconfs, uint64_t bno)
 	// periodically hardlink, based on the first 'keep' value.
 	kp=keep->flag;
 
-	logp("First keep value: %d, backup: %"PRIu64" (%"PRIu64"-1=%"PRIu64")\n",
+	logp("First keep value: %d, backup: %" PRIu64 " (%" PRIu64 "-1=%" PRIu64 ")\n",
 			kp, bno, bno, bno-1);
 
 	ret=(bno-1)%kp;
-	logp("New backup is %sa hardlinked_archive (%"PRIu64"%%%d=%d)\n",
+	logp("New backup is %sa hardlinked_archive (%" PRIu64 "%%%d=%d)\n",
 		ret?"not ":"", bno-1, kp, ret);
 
 	return !ret;

@@ -129,7 +129,7 @@ static void maybe_do_notification(struct asfd *asfd,
 	        && !get_int(cconfs[OPT_N_SUCCESS_CHANGES_ONLY])))
 	{
 		char warnings[32]="";
-		snprintf(warnings, sizeof(warnings), "%"PRIu64,
+		snprintf(warnings, sizeof(warnings), "%" PRIu64,
 			cntr->ent[CMD_WARNING]->count);
 		args[0]=get_string(cconfs[OPT_N_SUCCESS_SCRIPT]);
 		args[a++]=warnings;

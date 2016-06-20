@@ -456,9 +456,9 @@ int merge_files_in_dir(const char *final, const char *fmanifest,
 			free_w(&srca);
 			free_w(&srcb);
 			free_w(&dst);
-			snprintf(compa, sizeof(compa), "%08"PRIX64, i);
-			snprintf(compb, sizeof(compb), "%08"PRIX64, i+1);
-			snprintf(compd, sizeof(compd), "%08"PRIX64, i/2);
+			snprintf(compa, sizeof(compa), "%08" PRIX64, i);
+			snprintf(compb, sizeof(compb), "%08" PRIX64, i+1);
+			snprintf(compd, sizeof(compd), "%08" PRIX64, i/2);
 			if(!(srca=prepend_s(srcdir, compa))
 			  || !(dst=prepend_s(dstdir, compd)))
 				goto end;
@@ -544,7 +544,7 @@ int merge_files_in_dir_no_fcount(const char *final,
 	for(s=slist; s; s=s->next)
 	{
 		free_w(&dst);
-		snprintf(compd, sizeof(compd), "%08"PRIX64, (uint64_t)i++);
+		snprintf(compd, sizeof(compd), "%08" PRIX64, (uint64_t)i++);
 		if(!(dst=prepend_s(dstdir, compd)))
 			goto end;
 		if(merge(dst, s->path, s->next?s->next->path:NULL))
@@ -634,7 +634,7 @@ int regenerate_client_dindex(struct sdirs *sdirs)
 
 	for(bu=bu_list; bu; bu=bu->next)
 	{
-		snprintf(tmp, sizeof(tmp), "%08"PRIX64, bu->index-1);
+		snprintf(tmp, sizeof(tmp), "%08" PRIX64, bu->index-1);
 		if(!(newpath=prepend_s(sdirs->dindex, tmp))
 		  || !(oldpath=prepend_s(bu->path, "manifest/dfiles")))
 			goto end;

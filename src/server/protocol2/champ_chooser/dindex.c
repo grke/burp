@@ -323,7 +323,7 @@ int delete_unused_data_files(struct sdirs *sdirs, int resume)
 		goto end;
 	for(s=slist; s; s=s->next)
 	{
-		snprintf(hfile, sizeof(hfile), "%08"PRIX64, fcount++);
+		snprintf(hfile, sizeof(hfile), "%08" PRIX64, fcount++);
 		free_w(&fullpath);
 		if(!(fullpath=prepend_s(hlinks, hfile)))
 			goto end;

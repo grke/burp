@@ -26,7 +26,7 @@ static int parse_cmd(struct iobuf *rbuf, struct blk *blk, struct sbuf *sb)
 		case CMD_SIG:
 			if(blk_set_from_iobuf_sig_and_savepath(blk, rbuf))
 				goto end;
-			printf("%016"PRIX64"%s%s\n",
+			printf("%016" PRIX64 "%s%s\n",
 				blk->fingerprint,
 				bytes_to_md5str(blk->md5sum),
 				uint64_to_savepathstr_with_sig(blk->savepath));
@@ -34,7 +34,7 @@ static int parse_cmd(struct iobuf *rbuf, struct blk *blk, struct sbuf *sb)
 		case CMD_FINGERPRINT:
 			if(blk_set_from_iobuf_fingerprint(blk, rbuf))
 				goto end;
-			printf("%016"PRIX64"\n", blk->fingerprint);
+			printf("%016" PRIX64 "\n", blk->fingerprint);
 			break;
 		case CMD_SAVE_PATH:
 			if(blk_set_from_iobuf_savepath(blk, rbuf))

@@ -70,7 +70,7 @@ static size_t calc_max_str_len(struct cntr *cntr, const char *cname)
 
 	// Second section.
 	snprintf(ullmax, sizeof(ullmax),
-		" %"PRIu64 "\n", (uint64_t)ULLONG_MAX);
+		" %" PRIu64 "\n", (uint64_t)ULLONG_MAX);
 	for(e=cntr->list; e; e=e->next)
 	{
 		if(e->flags & CNTR_SINGLE_FIELD)
@@ -287,7 +287,7 @@ static void incr_phase1(struct cntr *cntr, char ch)
 
 static void print_end(uint64_t val)
 {
-	if(val) logc(" %"PRIu64 "\n", val);
+	if(val) logc(" %" PRIu64 "\n", val);
 }
 
 void cntr_add(struct cntr *c, char ch, int print)
@@ -643,10 +643,15 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 	{
 		if(e->flags & CNTR_SINGLE_FIELD)
 			snprintf(tmp, sizeof(tmp),
-				"%c%"PRIu64"\t", e->cmd, e->count);
+				"%c%" PRIu64"\t", e->cmd, e->count);
 		else
 			snprintf(tmp, sizeof(tmp),
-			"%c%"PRIu64"/%"PRIu64"/%"PRIu64"/%"PRIu64"/%"PRIu64"\t",
+			"%c%" PRIu64
+			"/%" PRIu64
+			"/%" PRIu64
+			"/%" PRIu64
+			"/%" PRIu64
+			"\t",
 				e->cmd, e->count, e->same,
 				e->changed, e->deleted, e->phase1);
 		strcat(str, tmp);

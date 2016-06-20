@@ -88,7 +88,7 @@ struct bsid {
 char *get_endfile_str(uint64_t bytes, uint8_t *checksum)
 {
 	static char endmsg[128]="";
-	snprintf(endmsg, sizeof(endmsg), "%"PRIu64 ":%s",
+	snprintf(endmsg, sizeof(endmsg), "%" PRIu64 ":%s",
 			(uint64_t)bytes,
 			checksum?bytes_to_md5str(checksum):"");
 	return endmsg;

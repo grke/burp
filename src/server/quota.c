@@ -9,8 +9,8 @@ static void quota_log_bytes(struct async *as,
 	const char *msg, uint64_t byte, uint64_t quota)
 {
 	as->asfd->write_str(as->asfd, CMD_WARNING, msg);
-	logp("Bytes estimated: %"PRIu64"%s\n", byte, bytes_to_human(byte));
-	logp("%s: %"PRIu64"%s\n", msg, quota, bytes_to_human(quota));
+	logp("Bytes estimated: %" PRIu64 "%s\n", byte, bytes_to_human(byte));
+	logp("%s: %" PRIu64 "%s\n", msg, quota, bytes_to_human(quota));
 }
 
 // Return O for OK, -1 if the estimated size is greater than hard_quota 

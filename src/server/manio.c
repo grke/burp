@@ -66,7 +66,7 @@ static char *get_next_fpath(struct manio *manio, man_off_t *offset)
 	static char tmp[32];
 	if(is_single_file(manio))
 		return strdup_w(manio->manifest, __func__);
-	snprintf(tmp, sizeof(tmp), "%08"PRIX64, offset->fcount++);
+	snprintf(tmp, sizeof(tmp), "%08" PRIX64, offset->fcount++);
 	return prepend_s(manio->manifest, tmp);
 }
 
@@ -249,7 +249,7 @@ static int manio_write_fcount(struct manio *manio)
 	if(!(path=get_fcount_path(manio))
 	  || !(fzp=fzp_open(path, "wb")))
 		goto end;
-	if(fzp_printf(fzp, "%08"PRIX64"\n", manio->offset->fcount)!=9)
+	if(fzp_printf(fzp, "%08" PRIX64 "\n", manio->offset->fcount)!=9)
 	{
 		logp("Short write when writing to %s\n", path);
 		goto end;
@@ -306,7 +306,7 @@ static int sort_and_write_hooks(struct manio *manio)
 	uint64_t *hook_sort=manio->hook_sort;
 	if(!hook_sort) return 0;
 
-	snprintf(msg, sizeof(msg), "%08"PRIX64, manio->offset->fcount-1);
+	snprintf(msg, sizeof(msg), "%08" PRIX64, manio->offset->fcount-1);
 	if(!(path=prepend_s(manio->hook_dir, msg))
 	  || build_path_w(path)
 	  || !(fzp=fzp_gzopen(path, MANIO_MODE_WRITE)))
@@ -352,7 +352,7 @@ static int sort_and_write_dindex(struct manio *manio)
 	uint64_t *dindex_sort=manio->dindex_sort;
 	if(!dindex_sort) return 0;
 
-	snprintf(msg, sizeof(msg), "%08"PRIX64, manio->offset->fcount-1);
+	snprintf(msg, sizeof(msg), "%08" PRIX64, manio->offset->fcount-1);
 	if(!(path=prepend_s(manio->dindex_dir, msg))
 	  || build_path_w(path)
 	  || !(fzp=fzp_gzopen(path, MANIO_MODE_WRITE)))

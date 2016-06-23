@@ -420,7 +420,7 @@ static void screen_header(int row, int col)
 	date="1977-10-02 00:10:20";
 #else
 	time_t t=time(NULL);
-	date=getdatestr(t);
+	date=getlocaldatestr(t);
 #endif
 	l=strlen(date);
 #ifdef HAVE_NCURSES

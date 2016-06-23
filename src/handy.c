@@ -425,17 +425,28 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 	return 0;
 }
 
-const char *getdatestr(const time_t t)
+static const char *format_datestr(const struct tm *ctm)
 {
 	static char buf[32]="";
+	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ctm);
+	return buf;
+}
+
+const char *getdatestr(const time_t t)
+{
 	const struct tm *ctm=NULL;
 
 	if(!t
 	  || !(ctm=gmtime(&t)))
 		return "never";
+	return format_datestr(ctm);
+}
 
-	strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", ctm);
-	return buf;
+const char *getlocaldatestr(const time_t t)
+{
+	const struct tm *ctm=NULL;
+	ctm=localtime(&t);
+	return format_datestr(ctm);
 }
 
 const char *time_taken(time_t d)

@@ -724,7 +724,7 @@ static void checks_orig_client_srestore(struct conf **confs,
 	fail_unless(!lstat(SRESTORE_FILE_CLI2, &statp));
 }
 
-START_TEST(test_extra_comms)
+START_TEST(test_server_extra_comms)
 {
 	run_test(0, setup_no_version, NULL);
 	run_test(0, setup_old_version, NULL);
@@ -810,7 +810,7 @@ Suite *suite_server_extra_comms(void)
 	tc_core=tcase_create("Core");
 	tcase_set_timeout(tc_core, 60);
 
-	tcase_add_test(tc_core, test_extra_comms);
+	tcase_add_test(tc_core, test_server_extra_comms);
 
 	suite_add_tcase(s, tc_core);
 

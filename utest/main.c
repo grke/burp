@@ -20,6 +20,7 @@ int main(void)
 #endif
 	srunner_add_suite(sr, suite_client_auth());
 #ifdef HAVE_ACL
+	srunner_add_suite(sr, suite_client_extra_comms());
 #ifdef HAVE_XATTR
 	srunner_add_suite(sr, suite_client_extrameta());
 #endif

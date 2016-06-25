@@ -54,6 +54,7 @@ int extra_comms(struct async *as, struct conf **confs,
 		goto end;
 	}
 	feat=rbuf->buf;
+	rbuf->buf=NULL;
 	if(rbuf->cmd!=CMD_GEN
 	  || strncmp_w(feat, "extra_comms_begin ok"))
 	{
@@ -70,6 +71,7 @@ int extra_comms(struct async *as, struct conf **confs,
 	  && get_string(confs[OPT_AUTOUPGRADE_OS])
 	  && autoupgrade_client(as, confs))
 		goto end;
+
 
 	// :srestore: means that the server wants to do a restore.
 	if(server_supports(feat, ":srestore:"))
@@ -250,5 +252,6 @@ int extra_comms(struct async *as, struct conf **confs,
 
 	ret=0;
 end:
+	free_w(&feat);
 	return ret;
 }

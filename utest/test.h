@@ -55,6 +55,7 @@ Suite *suite_base64(void);
 Suite *suite_client_acl(void);
 Suite *suite_client_auth(void);
 Suite *suite_client_delete(void);
+Suite *suite_client_extra_comms(void);
 Suite *suite_client_extrameta(void);
 Suite *suite_client_find(void);
 Suite *suite_client_monitor(void);

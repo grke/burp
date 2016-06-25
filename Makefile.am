@@ -307,6 +307,7 @@ runner_SOURCES = \
 	utest/client/test_acl.c \
 	utest/client/test_auth.c \
 	utest/client/test_delete.c \
+	utest/client/test_extra_comms.c \
 	utest/client/test_extrameta.c \
 	utest/client/test_find.c \
 	utest/client/test_monitor.c \

@@ -54,6 +54,14 @@ START_TEST(test_cmd)
 }
 END_TEST
 
+START_TEST(test_cmd_print_all)
+{
+	// Just for code coverage.
+	close(1); // Close stdout, to keep test output clean.
+	cmd_print_all();
+}
+END_TEST
+
 Suite *suite_cmd(void)
 {
 	Suite *s;
@@ -64,6 +72,7 @@ Suite *suite_cmd(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_cmd);
+	tcase_add_test(tc_core, test_cmd_print_all);
 	suite_add_tcase(s, tc_core);
 
 	return s;

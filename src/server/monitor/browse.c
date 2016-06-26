@@ -10,7 +10,7 @@
 #include "cache.h"
 #include "json_output.h"
 
-static int do_browse_manifest(struct asfd *srfd,
+static int do_browse_manifest(
 	struct manio *manio, struct sbuf *sb, const char *browse)
 {
 	int ret=-1;
@@ -55,7 +55,7 @@ end:
 	return ret;
 }
 
-static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
+static int browse_manifest_start(struct cstat *cstat,
 	struct bu *bu, const char *browse, int use_cache)
 {
 	int ret=-1;
@@ -69,9 +69,9 @@ static int browse_manifest_start(struct asfd *srfd, struct cstat *cstat,
 	  || !(sb=sbuf_alloc(cstat->protocol)))
 		goto end;
 	if(use_cache)
-		ret=cache_load(srfd, manio, sb, cstat, bu);
+		ret=cache_load(manio, sb, cstat->name, bu->bno);
 	else
-		ret=do_browse_manifest(srfd, manio, sb, browse);
+		ret=do_browse_manifest(manio, sb, browse);
 end:
 	free_w(&manifest);
 	manio_close(&manio);
@@ -79,15 +79,15 @@ end:
 	return ret;
 }
 
-int browse_manifest(struct asfd *srfd, struct cstat *cstat,
+int browse_manifest(struct cstat *cstat,
 	struct bu *bu, const char *browse, int use_cache)
 {
 	if(use_cache)
 	{
-		if(!cache_loaded(cstat, bu)
-		  && browse_manifest_start(srfd, cstat, bu, browse, use_cache))
+		if(!cache_loaded(cstat->name, bu->bno)
+		  && browse_manifest_start(cstat, bu, browse, use_cache))
 			return -1;
 		return cache_lookup(browse);
 	}
-	return browse_manifest_start(srfd, cstat, bu, browse, use_cache);
+	return browse_manifest_start(cstat, bu, browse, use_cache);
 }

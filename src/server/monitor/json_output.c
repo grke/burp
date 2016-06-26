@@ -49,7 +49,7 @@ static int write_all(struct asfd *asfd)
 	return ret;
 }
 
-static int json_start(struct asfd *asfd)
+static int json_start(void)
 {
 	if(!yajl)
 	{
@@ -314,7 +314,7 @@ static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
 			if(yajl_gen_str_pair_w("directory", browse)) return -1;
 			if(yajl_gen_str_w("entries")) return -1;
 			if(yajl_array_open_w()) return -1;
-			if(browse_manifest(asfd, cstat, bu, browse, use_cache))
+			if(browse_manifest(cstat, bu, browse, use_cache))
 				return -1;
 			if(yajl_array_close_w()) return -1;
 			if(yajl_map_close_w()) return -1;
@@ -416,7 +416,7 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	int ret=-1;
 	struct cstat *c;
 
-	if(json_start(asfd)
+	if(json_start()
 	  || json_clients())
 		goto end;
 
@@ -450,7 +450,7 @@ end:
 int json_cntr(struct asfd *asfd, struct cntr *cntr)
 {
 	int ret=-1;
-	if(json_start(asfd)
+	if(json_start()
 	  || do_counters(cntr))
 		goto end;
 	ret=0;
@@ -481,7 +481,7 @@ int json_from_statp(const char *path, struct stat *statp)
 
 int json_send_warn(struct asfd *asfd, const char *msg)
 {
-	if(json_start(asfd)
+	if(json_start()
 	  || yajl_gen_str_pair_w("warning", msg)
 	  || json_end(asfd)) return -1;
 	return 0;

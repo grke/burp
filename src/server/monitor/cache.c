@@ -1,8 +1,6 @@
 #include "../../burp.h"
 #include "../../alloc.h"
-#include "../../bu.h"
 #include "../../cmd.h"
-#include "../../cstat.h"
 #include "../../log.h"
 #include "../../sbuf.h"
 #include "../manio.h"
@@ -66,6 +64,7 @@ static int ent_add_to_list(struct ent *ent,
 static void ents_free(struct ent *ent)
 {
 	int i=0;
+	if(!ent) return;
 	for(i=0; i<ent->count; i++)
 		ents_free(ent->ents[i]);
 	ent_free(&ent);
@@ -73,7 +72,7 @@ static void ents_free(struct ent *ent)
 
 void cache_free(void)
 {
-	if(!root) return;
+	free_w(&cached_client);
 	ents_free(root);
 }
 
@@ -93,8 +92,8 @@ static void cache_dump(struct ent *e, int *depth)
 }
 */
 
-int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb,
-	struct cstat *cstat, struct bu *bu)
+int cache_load(struct manio *manio, struct sbuf *sb,
+	const char *cname, unsigned long bno)
 {
 	int ret=-1;
 	int ars=0;
@@ -165,20 +164,20 @@ int cache_load(struct asfd *srfd, struct manio *manio, struct sbuf *sb,
 		} while((tok=strtok(NULL, "/")));
 	}
 
-	if(!(cached_client=strdup_w(cstat->name, __func__)))
+	if(!(cached_client=strdup_w(cname, __func__)))
 		goto end;
-	cached_bno=bu->bno;
+	cached_bno=bno;
 	ret=0;
 //	cache_dump(root, &depth);
 end:
 	return ret;
 }
 
-int cache_loaded(struct cstat *cstat, struct bu *bu)
+int cache_loaded(const char *cname, unsigned long bno)
 {
 	if(cached_client
-	  && !strcmp(cstat->name, cached_client)
-	  && cached_bno==bu->bno)
+	  && !strcmp(cname, cached_client)
+	  && cached_bno==bno)
 		return 1;
 	return 0;
 }

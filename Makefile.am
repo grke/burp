@@ -314,6 +314,7 @@ runner_SOURCES = \
 	utest/client/test_restore.c \
 	utest/client/test_xattr.c \
 	utest/server/monitor/test_browse.c \
+	utest/server/monitor/test_cache.c \
 	utest/server/monitor/test_cstat.c \
 	utest/server/monitor/test_json_output.c \
 	utest/server/protocol1/test_backup_phase2.c \

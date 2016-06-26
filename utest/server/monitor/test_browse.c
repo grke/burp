@@ -66,7 +66,6 @@ static void run_test(enum protocol protocol, int use_cache)
 	cstat->permitted=1;
 	fail_unless(!cstat_set_backup_list(cstat));
 	fail_unless(!browse_manifest(
-		NULL, // srfd
 		cstat,
 		cstat->bu,
 		NULL, // browse

@@ -179,7 +179,6 @@ static int open_cfile_fzp(struct dpth *dpth,
 		goto end;
 	if(!(fullpath=prepend_s(cfiles, fname)))
 		goto end;
-	logp("cfile_fzp is %s\n", fullpath);
 	if(build_path_w(fullpath))
 		goto end;
 	if((fd=mkstemp(fullpath))<0)

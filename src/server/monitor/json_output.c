@@ -447,7 +447,7 @@ end:
 	return ret;
 }
 
-int json_cntr_to_file(struct asfd *asfd, struct cntr *cntr)
+int json_cntr(struct asfd *asfd, struct cntr *cntr)
 {
 	int ret=-1;
 	if(json_start(asfd)

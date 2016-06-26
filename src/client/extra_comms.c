@@ -144,9 +144,9 @@ int extra_comms(struct async *as, struct conf **confs,
 		}
 	}
 
-	if(server_supports(feat, ":counters:"))
+	if(server_supports(feat, ":counters_json:"))
 	{
-		if(asfd->write_str(asfd, CMD_GEN, "countersok"))
+		if(asfd->write_str(asfd, CMD_GEN, "counters_json ok"))
 			goto end;
 		set_int(confs[OPT_SEND_CLIENT_CNTR], 1);
 	}

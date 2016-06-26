@@ -269,8 +269,8 @@ static void check_counters(struct conf **confs,
 static void setup_counters(struct asfd *asfd, struct conf **confs)
 {
 	int r=0; int w=0;
-	setup_extra_comms_begin(asfd, &r, &w, "counters");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "countersok");
+	setup_extra_comms_begin(asfd, &r, &w, "counters_json");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "counters_json ok");
 	setup_extra_comms_end(asfd, &r, &w);
 }
 

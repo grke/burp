@@ -338,6 +338,11 @@ void cntr_add_val(struct cntr *c, char ch, uint64_t val, int print)
 	incr_count_val(c, ch, val);
 }
 
+void cntr_add_new(struct cntr *c, char ch)
+{
+	cntr_add(c, ch, 0);
+}
+
 void cntr_add_same(struct cntr *c, char ch)
 {
 	incr_same(c, ch);
@@ -513,7 +518,7 @@ void cntr_print(struct cntr *cntr, enum action act)
 	  || act==ACTION_BACKUP_TIMED)
 	{
 	  logc("%18s %9s %9s %9s %9s %9s |%9s\n",
-	    " ", "New", "Changed", "Unchanged", "Deleted", "Total", "Scanned");
+	    " ", "New", "Changed", "Duplicate", "Deleted", "Total", "Scanned");
 	}
 	if(act==ACTION_RESTORE
 	  || act==ACTION_VERIFY)
@@ -577,19 +582,8 @@ int cntr_stats_to_file(struct cntr *cntr,
 	  || !(wfd=setup_asfd_linebuf_write(as, "stats file", &fd)))
 			goto end;
 
-	if(json_cntr_to_file(wfd, cntr))
+	if(json_cntr(wfd, cntr))
 		goto end;
-
-// FIX THIS: make this use the json output stuff.
-// Need to add the following few fields to the cntrs somehow.
-/*
-	fprintf(fp, "client_version:%s\n",
-		conf->peer_version?conf->peer_version:"");
-	fprintf(fp, "server_version:%s\n", VERSION);
-	fprintf(fp, "client_is_windows:%d\n", conf->client_is_windows);
-	for(e=cntr->list; e; e=e->next)
-		quint_print_to_file(fp, e, act);
-*/
 
 	ret=0;
 end:

@@ -81,10 +81,11 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 		goto end;
 
 	/* Clients can be sent cntrs on resume/verify/restore. */
-/* FIX THIS: Disabled until I rewrite a better protocol.
-	if(append_to_feat(&feat, "counters:"))
+/*
+	if(append_to_feat(&feat, "counters_json:"))
 		goto end;
 */
+
 	// We support CMD_MESSAGE.
 	if(append_to_feat(&feat, "msg:"))
 		goto end;
@@ -234,11 +235,11 @@ static int extra_comms_read(struct async *as,
 				*incexc=tmp;
 			}
 		}
-		else if(!strcmp(rbuf->buf, "countersok"))
+		else if(!strcmp(rbuf->buf, "counters_json ok"))
 		{
 			// Client can accept counters on
 			// resume/verify/restore.
-			logp("Client supports being sent counters.\n");
+			logp("Client supports being sent json counters.\n");
 			set_int(cconfs[OPT_SEND_CLIENT_CNTR], 1);
 		}
 		else if(!strncmp_w(rbuf->buf, "uname=")

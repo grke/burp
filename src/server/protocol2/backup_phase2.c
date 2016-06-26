@@ -46,13 +46,13 @@ static int manio_component_to_chfd(struct asfd *chfd, char *path)
 }
 
 static int unchanged(struct sbuf *csb, struct sbuf *sb,
-	struct blk **blk, struct manios *manios, struct asfd *chfd)
+	struct manios *manios, struct asfd *chfd)
 {
 	int ret=-1;
 	char *fpath=NULL;
 	if(!(fpath=strdup_w(manios->changed->offset->fpath, __func__)))
 		goto end;
-	if(manio_copy_entry(csb, sb, blk,
+	if(manio_copy_entry(csb, sb,
 		manios->current, manios->unchanged)<0)
 			goto end;
 	if(strcmp(fpath, manios->changed->offset->fpath))
@@ -70,14 +70,15 @@ end:
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
 static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
-	struct manios *manios, struct blk **blk, struct asfd *chfd)
+	struct manios *manios, struct asfd *chfd,
+	struct cntr *cntr)
 {
 	// Located the entry in the current manifest.
 	// If the file type changed, I think it is time to back it up again
 	// (for example, EFS changing to normal file, or back again).
 	if(csb->path.cmd!=sb->path.cmd)
 	{
-		if(manio_forward_through_sigs(csb, blk, manios->current)<0)
+		if(manio_forward_through_sigs(csb, manios->current)<0)
 			return -1;
 		return 1;
 	}
@@ -88,7 +89,8 @@ static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
 	  && csb->statp.st_ctime==sb->statp.st_ctime)
 	{
 		// Got an unchanged file.
-		return unchanged(csb, sb, blk, manios, chfd);
+		cntr_add_same(cntr, sb->path.cmd);
+		return unchanged(csb, sb, manios, chfd);
 	}
 
 	if(csb->statp.st_mtime==sb->statp.st_mtime
@@ -98,24 +100,30 @@ static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
 		// File data stayed the same, but attributes or meta data
 		// changed. We already have the attributes, but may need to
 		// get extra meta data.
-		return unchanged(csb, sb, blk, manios, chfd);
+		cntr_add_same(cntr, sb->path.cmd);
+		return unchanged(csb, sb, manios, chfd);
 	}
 
 	// File data changed.
-	if(manio_forward_through_sigs(csb, blk, manios->current)<0)
+	cntr_add_changed(cntr, sb->path.cmd);
+	if(manio_forward_through_sigs(csb, manios->current)<0)
 		return -1;
 	return 1;
 }
 
 // Return -1 for error, 0 for entry not changed, 1 for entry changed (or new).
 static int entry_changed(struct sbuf *sb,
-	struct manios *manios, struct asfd *chfd, struct sbuf **csb)
+	struct manios *manios, struct asfd *chfd, struct sbuf **csb,
+	struct cntr *cntr)
 {
 	static int finished=0;
-	static struct blk *blk=NULL;
 	int pcmp;
 
-	if(finished) return 1;
+	if(finished)
+	{
+		cntr_add_new(cntr, sb->path.cmd);
+		return 1;
+	}
 
 	if((*csb)->path.buf)
 	{
@@ -124,14 +132,12 @@ static int entry_changed(struct sbuf *sb,
 	else
 	{
 		// Need to read another.
-		if(!blk && !(blk=blk_alloc())) return -1;
-		switch(manio_read_with_blk(manios->current,
-			*csb, blk, NULL))
+		switch(manio_read(manios->current, *csb))
 		{
 			case 1: // Reached the end.
 				sbuf_free(csb);
-				blk_free(&blk);
 				finished=1;
+				cntr_add_new(cntr, sb->path.cmd);
 				return 1;
 			case -1: return -1;
 		}
@@ -147,15 +153,19 @@ static int entry_changed(struct sbuf *sb,
 	{
 		if(!(pcmp=sbuf_pathcmp(*csb, sb)))
 			return found_in_current_manifest(*csb, sb,
-					manios, &blk, chfd);
+					manios, chfd, cntr);
 		else if(pcmp>0)
+		{
+			cntr_add_new(cntr, sb->path.cmd);
 			return 1;
+		}
+//		cntr_add_deleted(cntr, (*csb)->path.cmd);
 		// Behind - need to read more data from the old manifest.
-		switch(manio_read_with_blk(manios->current, *csb, blk, NULL))
+		switch(manio_read(manios->current, *csb))
 		{
 			case 1: // Reached the end.
 				sbuf_free(csb);
-				blk_free(&blk);
+				cntr_add_new(cntr, sb->path.cmd);
 				return 1;
 			case -1: return -1;
 		}
@@ -587,7 +597,8 @@ static int write_to_changed_file(struct asfd *asfd,
 }
 
 static int maybe_add_from_scan(struct manios *manios,
-	struct slist *slist, struct asfd *chfd, struct sbuf **csb)
+	struct slist *slist, struct asfd *chfd, struct sbuf **csb,
+	struct cntr *cntr)
 {
 	int ret=-1;
 	struct sbuf *snew=NULL;
@@ -613,7 +624,7 @@ static int maybe_add_from_scan(struct manios *manios,
 			default: goto end;
 		}
 
-		switch(entry_changed(snew, manios, chfd, csb))
+		switch(entry_changed(snew, manios, chfd, csb, cntr))
 		{
 			case 0: continue; // No change.
 			case 1: break;
@@ -910,7 +921,7 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 	memset(&wbuf, 0, sizeof(struct iobuf));
 	while(!(end_flags&END_BACKUP))
 	{
-		if(maybe_add_from_scan(manios, slist, chfd, &csb))
+		if(maybe_add_from_scan(manios, slist, chfd, &csb, cntr))
 			goto end;
 
 		if(!wbuf.len)

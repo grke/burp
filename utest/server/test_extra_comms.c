@@ -494,13 +494,13 @@ static void checks_msg(struct conf **confs, struct conf **cconfs,
 	fail_unless(get_int(cconfs[OPT_MESSAGE])==1);
 }
 
-static void setup_countersok(struct asfd *asfd,
+static void setup_counters_ok(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_simple(asfd, confs, cconfs, "countersok", /*srestore*/0);
+	setup_simple(asfd, confs, cconfs, "counters_json ok", /*srestore*/0);
 }
 
-static void checks_countersok(struct conf **confs, struct conf **cconfs,
+static void checks_counters_ok(struct conf **confs, struct conf **cconfs,
 	const char *incexc, int srestore)
 {
 	fail_unless(get_int(cconfs[OPT_SEND_CLIENT_CNTR])==1);
@@ -783,7 +783,7 @@ START_TEST(test_server_extra_comms)
 #else
 	run_test(0, setup_rshash_blake2, checks_rshash_blake2);
 #endif
-	run_test(0, setup_countersok, checks_countersok);
+	run_test(0, setup_counters_ok, checks_counters_ok);
 	run_test(0, setup_msg, checks_msg);
 	run_test(0, setup_uname, checks_uname);
 	run_test(0, setup_uname_is_windows, checks_uname_is_windows);

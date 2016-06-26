@@ -5,7 +5,6 @@
 #include "../fsops.h"
 #include "../handy.h"
 #include "../log.h"
-#include "../protocol2/blk.h"
 #include "../sbuf.h"
 #include "compress.h"
 #include "manio.h"
@@ -26,7 +25,6 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 {
 	int ret=-1;
 	int pcmp=0;
-	struct blk *blk=NULL;
 	struct sbuf *usb=NULL;
 	struct sbuf *csb=NULL;
 	char *manifesttmp=NULL;
@@ -54,8 +52,6 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 
 	while(chmanio || unmanio)
 	{
-		if(!blk && !(blk=blk_alloc())) goto end;
-
 		if(unmanio
 		  && !usb->path.buf)
 		{
@@ -80,8 +76,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				usb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(
-				usb, usb, &blk, unmanio, newmanio))
+			switch(manio_copy_entry(usb, usb, unmanio, newmanio))
 			{
 				case -1: goto end;
 				case 1: manio_close(&unmanio);
@@ -91,8 +86,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(
-				csb, csb, &blk, chmanio, newmanio))
+			switch(manio_copy_entry(csb, csb, chmanio, newmanio))
 			{
 				case -1: goto end;
 				case 1: manio_close(&chmanio);
@@ -107,8 +101,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 			// They were the same - write one.
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(
-				csb, csb, &blk, chmanio, newmanio))
+			switch(manio_copy_entry(csb, csb, chmanio, newmanio))
 			{
 				case -1: goto end;
 				case 1: manio_close(&chmanio);
@@ -118,8 +111,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				usb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(
-				usb, usb, &blk, unmanio, newmanio))
+			switch(manio_copy_entry(usb, usb, unmanio, newmanio))
 			{
 				case -1: goto end;
 				case 1: manio_close(&unmanio);
@@ -129,8 +121,7 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(
-				csb, csb, &blk, chmanio, newmanio))
+			switch(manio_copy_entry(csb, csb, chmanio, newmanio))
 			{
 				case -1: goto end;
 				case 1: manio_close(&chmanio);
@@ -164,7 +155,6 @@ end:
 	manio_close(&unmanio);
 	sbuf_free(&csb);
 	sbuf_free(&usb);
-	blk_free(&blk);
 	free_w(&manifesttmp);
 	return ret;
 }

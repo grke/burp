@@ -86,6 +86,7 @@ extern int cntr_stats_to_file(struct cntr *cntr,
 extern void cntr_print_end(struct cntr *c);
 extern void cntr_print_end_phase1(struct cntr *c);
 extern void cntr_add(struct cntr *c, char ch, int print);
+extern void cntr_add_new(struct cntr *c, char ch);
 extern void cntr_add_same(struct cntr *c, char ch);
 extern void cntr_add_changed(struct cntr *c, char ch);
 extern void cntr_add_deleted(struct cntr *c, char ch);

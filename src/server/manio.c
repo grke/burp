@@ -557,11 +557,13 @@ int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
 int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
-	struct blk **blk, struct manio *srcmanio,
-	struct manio *dstmanio)
+	struct manio *srcmanio, struct manio *dstmanio)
 {
 	int ars;
 	struct iobuf copy;
+	struct blk *blk;
+	if(!(blk=blk_alloc()))
+		goto error;
 
 	// Use the most recent stat for the new manifest.
 	if(dstmanio)
@@ -570,6 +572,7 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 		if(dstmanio->protocol==PROTO_1)
 		{
 			sbuf_free_content(csb);
+			blk_free(&blk);
 			return 0;
 		}
 	}
@@ -581,12 +584,12 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 	while(1)
 	{
 		if((ars=manio_read_with_blk(srcmanio, csb,
-			*blk, NULL))<0) goto error;
+			blk, NULL))<0) goto error;
 		else if(ars>0)
 		{
 			// Finished.
 			sbuf_free_content(csb);
-			blk_free(blk);
+			blk_free(&blk);
 			iobuf_free_content(&copy);
 			return 1;
 		}
@@ -596,12 +599,15 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 		{
 			// Found the next entry.
 			iobuf_free_content(&copy);
+			blk_free(&blk);
 			return 0;
 		}
 		if(dstmanio)
 		{
 			if(!dstmanio->fzp
-			  && manio_open_next_fpath(dstmanio)) return -1;
+			  && manio_open_next_fpath(dstmanio))
+				goto error;
+
 			if(csb->endfile.buf)
 			{
 				if(iobuf_send_msg_fzp(&csb->endfile,
@@ -611,23 +617,23 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 			{
 				// Should have the next signature.
 				// Write it to the destination manifest.
-				if(manio_write_sig_and_path(dstmanio, *blk))
+				if(manio_write_sig_and_path(dstmanio, blk))
 					goto error;
 			}
 		}
 	}
 
 error:
+	blk_free(&blk);
 	iobuf_free_content(&copy);
 	return -1;
 }
 
-int manio_forward_through_sigs(struct sbuf *csb, struct blk **blk,
-	struct manio *manio)
+int manio_forward_through_sigs(struct sbuf *csb, struct manio *manio)
 {
 	// Call manio_copy_entry with nothing to write to, so
 	// that we forward through the sigs in manio.
-	return manio_copy_entry(csb, NULL, blk, manio, NULL);
+	return manio_copy_entry(csb, NULL, manio, NULL);
 }
 
 man_off_t *manio_tell(struct manio *manio)

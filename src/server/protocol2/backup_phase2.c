@@ -754,7 +754,7 @@ static int mark_up_to_index(struct blist *blist,
 			index);
 		return -1;
 	}
-//	simple_deduplicate_blk(blk);
+	simple_deduplicate_blk(blk);
 
 //logp("Found index from champ chooser: %lu\n", index);
 //printf("index from cc: %d\n", index);

@@ -425,12 +425,12 @@ static void setup_writes_from_slist_blk_requests(struct asfd *asfd,
 			int b;
 			if(interrupt==file_no++)
 				continue;
-			for(b=0; b<number_of_blks; b++)
-			{
-				base64_from_uint64(blk_index++, req);
-				iobuf_from_str(&iobuf, CMD_DATA_REQ, req);
-				asfd_assert_write_iobuf(asfd, aw, 0, &iobuf);
-			}
+
+                        base64_from_uint64(blk_index, req);
+                        iobuf_from_str(&iobuf, CMD_DATA_REQ, req);
+                        asfd_assert_write_iobuf(asfd, aw, 0, &iobuf);
+                        for(b=0; b<number_of_blks; b++)
+                                blk_index++;
 		}
 	}
 }
@@ -448,16 +448,11 @@ static void setup_reads_from_slist_blks(struct asfd *asfd,
 		if(sbuf_is_filedata(s)
 		  && !sbuf_is_encrypted(s)) // Not working for proto2 yet.
 		{
-			int b;
 			if(interrupt==file_no++)
 				continue;
 			blk_to_iobuf_sig(&blk, &iobuf);
-			for(b=0; b<number_of_blks; b++)
-			{
-				iobuf_from_str(&iobuf, CMD_DATA,
-					(char *)"some data");
-				asfd_mock_read_iobuf(asfd, ar, 0, &iobuf);
-			}
+			iobuf_from_str(&iobuf, CMD_DATA, (char *)"some data");
+			asfd_mock_read_iobuf(asfd, ar, 0, &iobuf);
 		}
 	}
 }

@@ -41,7 +41,6 @@ static int champ_chooser_new_client(struct async *as, struct conf **confs)
 	  || !(newfd=setup_asfd(as, "(unknown)", &fd)))
 		goto error;
 	newfd->blist=blist;
-	newfd->set_timeout(newfd, get_int(confs[OPT_NETWORK_TIMEOUT]));
 
 	logp("Connected to fd %d\n", newfd->fd);
 

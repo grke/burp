@@ -1,3 +1,28 @@
+2016-05-30 Changes in burp-2.0.42:
+  * Remove network timeout from champ chooser main socket.
+  * Tests for monitor cache.
+  * Deduplicate the current manifest locally in backup_phase2.
+  * Some protocol 2 counter improvements.
+  * More coverage for cmd.c.
+  * Tests for src/server/extra_comms.c
+  * Tests for src/client/extra_comms.c
+  * Local time in the top corner of the monitor.
+  * Fix C++11 -Wliteral-suffix warnings.
+  * Make sure that places that are checking RS_DEFAULT_STRONG_LEN have
+    included librsync.h.
+  * Bug fix for restore_script_pre running instead of restore_script_post.
+  * Correct mistakes in the manpage about the status monitor.
+  * Bug fix for status client ncurses with -C showing last backup only.
+  * Fallback to /usr/sbin/burp for the forked 'burp -a m' process.
+  * A small tidy up in protocol1 phase4.
+  * Fix pathcmp on raspberry pis.
+  * Fix bug in rabin fingerprinting due to signedness on the window.
+  * Make the server verify checksums during a protocol2 backup.
+  * Fix bug that let clients overwrite existing protocol2 data files.
+  * Correct rabin.h include in src/server/restore.c.
+  * Rabin fingerprinting should be using unsigned char.
+  * Rabin fingerprinting should reset window after every block.
+
 2016-05-30 Changes in burp-2.0.40:
   * Tidy symlink/readlink functions.
   * Yopito's patches to help RHEL5 builds.

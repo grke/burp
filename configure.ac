@@ -421,7 +421,7 @@ if test "$have_xattr" = "no"; then
   )
 fi
 
-if test "$enable_xattr" = "yes"; then
+if test "$enable_xattr" = "yes" && test "$have_xattr" = "no"; then
   AC_MSG_ERROR([xattr support explicitly enabled but no supported xattr implementation found])
 fi
 

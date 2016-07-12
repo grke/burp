@@ -192,8 +192,8 @@ int win32_enable_backup_privileges()
 
 	if(enable_priv(hToken, SE_BACKUP_NAME)) ret=-1;
 	if(enable_priv(hToken, SE_RESTORE_NAME)) ret=-1;
+	if(enable_priv(hToken, SE_SECURITY_NAME)) ret=-1;
 /*
-	enable_priv(hToken, SE_SECURITY_NAME);
 	enable_priv(hToken, SE_TAKE_OWNERSHIP_NAME);
 	enable_priv(hToken, SE_ASSIGNPRIMARYTOKEN_NAME);
 	enable_priv(hToken, SE_SYSTEM_ENVIRONMENT_NAME);

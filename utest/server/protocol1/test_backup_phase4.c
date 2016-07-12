@@ -8,6 +8,7 @@
 #include "../../../src/hexmap.h"
 #include "../../../src/fsops.h"
 #include "../../../src/iobuf.h"
+#include "../../../src/log.h"
 #include "../../../src/server/protocol1/backup_phase4.h"
 #include "../../../src/server/protocol1/fdirs.h"
 #include "../../../src/server/protocol1/link.h"
@@ -193,6 +194,8 @@ start = clock();
 diff = clock() - start;
 int msec = diff * 1000 / CLOCKS_PER_SEC;
 printf("%d.%d\n", msec/1000, msec%1000);
+
+	log_fzp_set(NULL, confs);
 
 	assert_datadir(slist, fdirs);
 

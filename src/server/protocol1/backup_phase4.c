@@ -828,6 +828,5 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	ret=0;
 end:
 	fdirs_free(&fdirs);
-	log_fzp_set(NULL, cconfs);
 	return ret;
 }

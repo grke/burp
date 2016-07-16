@@ -300,7 +300,7 @@ static void setup_csetproto(struct asfd *asfd, struct conf **confs,
 
 static void setup_csetproto_auto(struct asfd *asfd, struct conf **confs)
 {
-	setup_csetproto(asfd, confs, PROTO_AUTO, PROTO_2);
+	setup_csetproto(asfd, confs, PROTO_AUTO, PROTO_1);
 }
 
 static void setup_csetproto_proto1(struct asfd *asfd, struct conf **confs)
@@ -409,7 +409,7 @@ START_TEST(test_client_extra_comms)
 	run_test(0,  ACTION_BACKUP, setup_sincexc, check_sincexc);
 	run_test(0,  ACTION_BACKUP, setup_counters, check_counters);
 	run_test(0,  ACTION_BACKUP, setup_uname, NULL);
-	run_test(0,  ACTION_BACKUP, setup_csetproto_auto, check_proto2);
+	run_test(0,  ACTION_BACKUP, setup_csetproto_auto, check_proto1);
 	run_test(0,  ACTION_BACKUP, setup_csetproto_proto1, check_proto1);
 	run_test(0,  ACTION_BACKUP, setup_csetproto_proto2, check_proto2);
 	run_test(0,  ACTION_BACKUP, setup_forceproto1, check_proto1);

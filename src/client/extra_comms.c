@@ -185,11 +185,11 @@ int extra_comms(struct async *as, struct conf **confs,
 	if(server_supports(feat, ":csetproto:"))
 	{
 		char msg[128]="";
-		// Use protocol2 if no choice has been made on client side.
+		// Use protocol1 if no choice has been made on client side.
 		if(get_protocol(confs)==PROTO_AUTO)
 		{
 			logp("Server has protocol=0 (auto)\n");
-			set_protocol(confs, PROTO_2);
+			set_protocol(confs, PROTO_1);
 		}
 		// Send choice to server.
 		snprintf(msg, sizeof(msg), "protocol=%d",

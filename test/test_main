@@ -430,16 +430,16 @@ add_strip_vss_on()
 	append_client "strip_vss = 1"
 }
 
-add_protocol1_off()
+add_protocol_off()
 {
 	sed_rep_client '/^protocol = .*/d' "$clientconf"
 }
 
-add_protocol1_on()
+maybe_add_protocol2_on()
 {
-	add_protocol1_off
-	[ "$protocol" = 1 ] && \
-		append_client 'protocol = 1'
+	add_protocol_off
+	[ "$protocol" = 2 ] && \
+		append_client 'protocol = 2'
 }
 
 add_server_status_address_off()
@@ -615,7 +615,7 @@ add_normal_settings()
 {
 	start_script_server
 	start_script_client
-	add_protocol1_on
+	maybe_add_protocol2_on
 	add_compression_on
 	add_encryption_off
 	add_include_on

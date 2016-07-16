@@ -415,10 +415,17 @@ int extra_comms(struct async *as,
 				// Client is burp-2.x.x, use protocol2.
 				// This will probably never be reached because
 				// the negotiation will take care of it.
+				/*
 				set_protocol(confs, PROTO_2);
 				set_protocol(cconfs, PROTO_2);
 				logp("Client is burp-%s - using protocol=%d\n",
 					peer_version, PROTO_2);
+				*/
+				// PROTO_1 is safer for now.
+				set_protocol(confs, PROTO_1);
+				set_protocol(cconfs, PROTO_1);
+				logp("Client is burp-%s - using protocol=%d\n",
+					peer_version, PROTO_1);
 			}
 			break;
 		case PROTO_1:

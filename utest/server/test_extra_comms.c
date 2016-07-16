@@ -350,7 +350,7 @@ static void checks_proto_auto_no_features_from_client(
 	int srestore)
 {
 	// Server is PROTO_AUTO, client said nothing.
-	fail_unless(get_protocol(confs)==PROTO_2);
+	fail_unless(get_protocol(confs)==PROTO_1);
 }
 
 static void checks_proto_auto_no_features_from_client_old_client(

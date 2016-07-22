@@ -476,8 +476,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "monitor_logfile");
 	case OPT_CNAME:
 	  return sc_str(c[o], 0, 0, "cname");
-	case OPT_FORCE_LOWERCASE:
-	  return sc_int(c[o], 0, CONF_FLAG_CC_OVERRIDE, "force_lowercase");
+	case OPT_CNAME_LOWERCASE:
+	  return sc_int(c[o], 0, 0, "cname_lowercase");
 	case OPT_PASSWORD:
 	  return sc_str(c[o], 0, 0, "password");
 	case OPT_PASSWD:

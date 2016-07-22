@@ -11,7 +11,7 @@
 #define BASE		"utest_server_auth"
 #define CONFFILE	BASE "/burp.conf"
 
-int FORCE_LOWERCASE=0;
+int CNAME_LOWERCASE=0;
 
 static void clean(void)
 {
@@ -76,7 +76,7 @@ static void do_test(
 
 	fail_unless(!set_string(globalcs[OPT_CLIENTCONFDIR], CLIENTCONFDIR));
 
-	fail_unless(!set_int(cconfs[OPT_FORCE_LOWERCASE], FORCE_LOWERCASE));
+	fail_unless(!set_int(cconfs[OPT_CNAME_LOWERCASE], CNAME_LOWERCASE));
 
 	asfd=asfd_mock_setup(&reads, &writes);
 
@@ -264,7 +264,7 @@ START_TEST(test_authorise_server)
 	do_test(-1, setup_passwd_failed);
 	do_test(-1, setup_no_keep_configured);
 	do_test(-1, setup_lower_failed);
-	FORCE_LOWERCASE=1;
+	CNAME_LOWERCASE=1;
 	do_test(0, setup_lower_ok);
 }
 END_TEST

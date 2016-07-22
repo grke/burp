@@ -154,11 +154,10 @@ int authorise_server(struct asfd *asfd,
 		logp("unable to get client name\n");
 		goto end;
 	}
+
 	cname=strdup(rbuf->buf);
-	if(get_int(cconfs[OPT_FORCE_LOWERCASE]))
-	{
-		strlwr(cname);
-	}
+	if(get_int(cconfs[OPT_CNAME_LOWERCASE])) strlwr(cname);
+
 	if(set_string(cconfs[OPT_CNAME], cname))
 		goto end;
 	iobuf_free_content(rbuf);

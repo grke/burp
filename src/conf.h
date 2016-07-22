@@ -127,6 +127,7 @@ enum conf_opt
 	OPT_MANUAL_DELETE,
 	OPT_MONITOR_LOGFILE, // An ncurses client option, from command line.
 	OPT_MONITOR_BROWSE_CACHE,
+	OPT_FORCE_LOWERCASE, // also a clientconfdir option, force lowercase cname
 
 	// Client options.
 	OPT_CNAME, // set on the server when client connects

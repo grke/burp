@@ -210,6 +210,9 @@ Defines the main TCP address that the server listens on for status requests. The
 \fBstatus_port=[port number]\fR
 Defines the TCP port that the server listens on for status requests. Comment this out to have no status server.
 .TP
+\fBforce_lowercase=[0|1]\fR
+Whether to force lowercase cname when looking-up in clientconfdir. The default is 0.
+.TP
 \fBdaemon=[0|1]\fR
 Whether to daemonise. The default is 1.
 .TP
@@ -689,6 +692,7 @@ The file needs to contain a line like \fBpassword=[password]\fR that matches the
 .TP
 Additionally, the following options can be overridden here for each client:
 \fBenabled\fR
+\fBforce_lowercase\fR
 \fBprotocol\fR
 \fBdirectory\fR
 \fBdirectory_tree\fR

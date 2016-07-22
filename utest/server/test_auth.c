@@ -11,6 +11,8 @@
 #define BASE		"utest_server_auth"
 #define CONFFILE	BASE "/burp.conf"
 
+int FORCE_LOWERCASE=0;
+
 static void clean(void)
 {
 	fail_unless(!recursive_delete(BASE));
@@ -73,6 +75,8 @@ static void do_test(
 	fail_unless(!conf_load_global_only(CONFFILE, globalcs));
 
 	fail_unless(!set_string(globalcs[OPT_CLIENTCONFDIR], CLIENTCONFDIR));
+
+	fail_unless(!set_int(cconfs[OPT_FORCE_LOWERCASE], FORCE_LOWERCASE));
 
 	asfd=asfd_mock_setup(&reads, &writes);
 
@@ -219,6 +223,33 @@ static void setup_no_keep_configured(struct asfd *asfd)
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
 }
 
+static void setup_lower_failed(struct asfd *asfd)
+{
+	int r=0;
+	int w=0;
+	const char *cnames[] = {"testclient", NULL};
+	build_clientconfdir_files(cnames, "password=mypass\nkeep=4\n");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "TESTCLIENT");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okpassword");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
+}
+
+static void setup_lower_ok(struct asfd *asfd)
+{
+	int r=0;
+	int w=0;
+	const char *cnames[] = {"testclient", NULL};
+	build_clientconfdir_files(cnames, "password=mypass\nkeep=4\n");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "TESTCLIENT");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okpassword");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
+}
+
 START_TEST(test_authorise_server)
 {
 	do_test(-1, setup_initial_error);
@@ -232,6 +263,9 @@ START_TEST(test_authorise_server)
 	do_test(-1, setup_no_password_configured);
 	do_test(-1, setup_passwd_failed);
 	do_test(-1, setup_no_keep_configured);
+	do_test(-1, setup_lower_failed);
+	FORCE_LOWERCASE=1;
+	do_test(0, setup_lower_ok);
 }
 END_TEST
 

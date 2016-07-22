@@ -91,6 +91,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_S_SCRIPT_POST_NOTIFY:
 		case OPT_S_SCRIPT_NOTIFY:
 		case OPT_HARDLINKED_ARCHIVE:
+			// wrong indent?
         	case OPT_N_SUCCESS_WARNINGS_ONLY:
         	case OPT_N_SUCCESS_CHANGES_ONLY:
 		case OPT_CROSS_ALL_FILESYSTEMS:
@@ -101,6 +102,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_ATIME:
 		case OPT_SCAN_PROBLEM_RAISES_ERROR:
 		case OPT_OVERWRITE:
+		case OPT_FORCE_LOWERCASE:
 		case OPT_STRIP:
 		case OPT_MESSAGE:
 		case OPT_CA_CRL_CHECK:

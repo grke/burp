@@ -636,3 +636,10 @@ char *encode_time(time_t utime, char *buf)
 			tm->tm_hour, tm->tm_min, tm->tm_sec);
 	return buf+n;
 }
+
+char *strlwr(char *s)
+{
+	char *tmp=s;
+	for(;*tmp;++tmp) *tmp=tolower((unsigned char)*tmp);
+	return s;
+}

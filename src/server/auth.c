@@ -156,7 +156,10 @@ int authorise_server(struct asfd *asfd,
 	}
 
 	cname=strdup(rbuf->buf);
-	if(get_int(cconfs[OPT_CNAME_LOWERCASE])) strlwr(cname);
+	if(!(cname=strdup_w(rbuf->buf, __func__)))
+		goto end;
+	if(get_int(cconfs[OPT_CNAME_LOWERCASE]))
+		strlwr(cname);
 
 	if(set_string(cconfs[OPT_CNAME], cname))
 		goto end;
@@ -189,6 +192,6 @@ int authorise_server(struct asfd *asfd,
 end:
 	iobuf_free_content(rbuf);
 	free_w(&password);
-	if(cname) free(cname);
+	free_w(&cname);
 	return ret;
 }

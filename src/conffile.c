@@ -622,8 +622,10 @@ static int get_fqdn(struct conf **c)
 		goto end;
 	}
 
-	fqdn=strdup(info->ai_canonname);
-	if(get_int(c[OPT_CNAME_LOWERCASE])) strlwr(fqdn);
+	if(!(fqdn=strdup_w(info->ai_canonname, __func__)))
+		goto end;
+	if(get_int(c[OPT_CNAME_LOWERCASE]))
+		strlwr(fqdn);
 
 	if(set_string(c[OPT_CNAME], fqdn))
 		goto end;
@@ -632,7 +634,7 @@ static int get_fqdn(struct conf **c)
 	ret=0;
 end:
 	if(info) freeaddrinfo(info);
-	if(fqdn) free(fqdn);
+	free_w(&fqdn);
 	return ret;
 }
 

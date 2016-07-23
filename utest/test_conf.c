@@ -18,7 +18,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_PORT:
 		case OPT_STATUS_ADDRESS:
 		case OPT_STATUS_PORT:
-        	case OPT_SSL_CERT_CA:
+		case OPT_SSL_CERT_CA:
 		case OPT_SSL_CERT:
 		case OPT_SSL_KEY:
 		case OPT_SSL_KEY_PASSWORD:
@@ -91,9 +91,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_S_SCRIPT_POST_NOTIFY:
 		case OPT_S_SCRIPT_NOTIFY:
 		case OPT_HARDLINKED_ARCHIVE:
-			// wrong indent?
-        	case OPT_N_SUCCESS_WARNINGS_ONLY:
-        	case OPT_N_SUCCESS_CHANGES_ONLY:
+		case OPT_N_SUCCESS_WARNINGS_ONLY:
+		case OPT_N_SUCCESS_CHANGES_ONLY:
 		case OPT_CROSS_ALL_FILESYSTEMS:
 		case OPT_READ_ALL_FIFOS:
 		case OPT_READ_ALL_BLOCKDEVS:
@@ -179,8 +178,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_EXCFS:
 		case OPT_EXCOM:
 		case OPT_INCGLOB:
-        	case OPT_FIFOS:
-        	case OPT_BLOCKDEVS:
+		case OPT_FIFOS:
+		case OPT_BLOCKDEVS:
 		case OPT_LABEL:
 			fail_unless(get_strlist(c[o])==NULL);
 			break;
@@ -193,17 +192,17 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_MAX_FILE_SIZE:
 			fail_unless(get_uint64_t(c[o])==0);
 			break;
-        	case OPT_WORKING_DIR_RECOVERY_METHOD:
+		case OPT_WORKING_DIR_RECOVERY_METHOD:
 			fail_unless(get_e_recovery_method(c[o])==
 				RECOVERY_METHOD_DELETE);
 			break;
-        	case OPT_RSHASH:
+		case OPT_RSHASH:
 			fail_unless(get_e_rshash(c[o])==RSHASH_UNSET);
 			break;
 		case OPT_CNTR:
 			fail_unless(get_cntr(c)==NULL);
 			break;
-        	case OPT_MAX:
+		case OPT_MAX:
 			break;
 		// No default, so we get compiler warnings if something was
 		// missed.

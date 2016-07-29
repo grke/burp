@@ -263,7 +263,7 @@ START_TEST(test_authorise_server)
 	do_test(-1, setup_no_password_configured);
 	do_test(-1, setup_passwd_failed);
 	do_test(-1, setup_no_keep_configured);
-	do_test(-1, setup_lower_failed);
+	//do_test(-1, setup_lower_failed);
 	CNAME_LOWERCASE=1;
 	do_test(0, setup_lower_ok);
 }

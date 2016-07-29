@@ -1,4 +1,13 @@
-2016-05-30 Changes in burp-2.0.42:
+2016-07-30 Changes in burp-2.0.44:
+  * Default to protocol 1.
+  * Another attempt to remove network timeout from champ chooser main socket.
+  * Fix building with explicitly added --enable-xattr.
+  * Enable SE_SECURITY_NAME privilege on Windows. Should fix permission
+    problems on attempting to back up:
+	C:\Program Files\WindowsApps
+	C:\Windows\InfusedApps
+
+2016-06-30 Changes in burp-2.0.42:
   * Remove network timeout from champ chooser main socket.
   * Tests for monitor cache.
   * Deduplicate the current manifest locally in backup_phase2.

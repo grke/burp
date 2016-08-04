@@ -153,7 +153,7 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	)
 		return -1;
 
-	cntr->ent[(uint8_t)CMD_TIMESTAMP]->count=(uint64_t)time(NULL);
+	cntr->ent[(uint8_t)CMD_TIMESTAMP]->count=((uint64_t)time(NULL) - timezone);
 
 	cntr->str_max_len=calc_max_str_len(cntr, cname);
 	if(!(cntr->str=(char *)calloc_w(1, cntr->str_max_len, __func__))
@@ -504,7 +504,7 @@ void cntr_print(struct cntr *cntr, enum action act)
 	char time_start_str[32];
 	char time_end_str[32];
 	if(!cntr) return;
-	now=time(NULL);
+	now=time(NULL) - timezone;
 	start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)now;
 
@@ -556,7 +556,7 @@ int cntr_stats_to_file(struct cntr *cntr,
 	if(!cntr)
 		return 0;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count
-		=(uint64_t)time(NULL);
+		=((uint64_t)time(NULL) - timezone);
 
 	if(act==ACTION_BACKUP
 	  ||  act==ACTION_BACKUP_TIMED)
@@ -628,7 +628,7 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 	struct cntr_ent *e=NULL;
 	char *str=cntr->str;
 
-	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=time(NULL);
+	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(time(NULL) - timezone);
 
 	snprintf(str, cntr->str_max_len-1, "%s\t%d\t%d\t",
 		cntr->cname, CNTR_VERSION, cntr->cntr_status);

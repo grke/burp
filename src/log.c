@@ -268,7 +268,7 @@ void log_set_json(int value)
 
 void log_oom_w(const char *func, const char *orig_func)
 {
-	logp("out of memory in %s, called from %s\n", __func__, func);
+	logp("out of memory in %s, called from %s\n", func, orig_func);
 }
 
 int log_incexcs_buf(const char *incexc)

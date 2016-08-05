@@ -368,6 +368,7 @@ Suite *suite_client_restore(void)
 	s=suite_create("client_restore");
 
 	tc_core=tcase_create("Core");
+	tcase_set_timeout(tc_core, 60);
 
 	tcase_add_test(tc_core, test_restore_proto1_bad_read);
 	tcase_add_test(tc_core, test_restore_proto1_no_files);

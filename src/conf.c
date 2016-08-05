@@ -476,6 +476,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "monitor_logfile");
 	case OPT_CNAME:
 	  return sc_str(c[o], 0, 0, "cname");
+	case OPT_CNAME_LOWERCASE:
+	  return sc_int(c[o], 0, 0, "cname_lowercase");
 	case OPT_PASSWORD:
 	  return sc_str(c[o], 0, 0, "password");
 	case OPT_PASSWD:
@@ -493,7 +495,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_RANDOMISE:
 	  return sc_int(c[o], 0, 0, "randomise");
 	case OPT_ENABLED:
-	  return sc_int(c[o], 1, 0, "enabled");
+	  return sc_int(c[o], 1, CONF_FLAG_CC_OVERRIDE, "enabled");
 	case OPT_SERVER_CAN_OVERRIDE_INCLUDES:
 	  return sc_int(c[o], 1, 0, "server_can_override_includes");
 	case OPT_BACKUP:

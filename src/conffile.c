@@ -594,6 +594,7 @@ static int get_fqdn(struct conf **c)
 	struct addrinfo hints;
 	struct addrinfo *info=NULL;
 	char hostname[1024]="";
+	char *fqdn=NULL;
 	hostname[1023] = '\0';
 	if(gethostname(hostname, 1023))
 	{
@@ -621,13 +622,19 @@ static int get_fqdn(struct conf **c)
 		goto end;
 	}
 
-	if(set_string(c[OPT_CNAME], info->ai_canonname))
+	if(!(fqdn=strdup_w(info->ai_canonname, __func__)))
+		goto end;
+	if(get_int(c[OPT_CNAME_LOWERCASE]))
+		strlwr(fqdn);
+
+	if(set_string(c[OPT_CNAME], fqdn))
 		goto end;
 	logp("cname from hostname: %s\n", get_string(c[OPT_CNAME]));
 
 	ret=0;
 end:
 	if(info) freeaddrinfo(info);
+	free_w(&fqdn);
 	return ret;
 }
 

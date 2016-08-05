@@ -98,6 +98,7 @@ enum conf_opt
 	OPT_PROTOCOL,
 	OPT_RSHASH,
 	OPT_MESSAGE,
+	OPT_CNAME_LOWERCASE, // force lowercase cname, client or server option
 
 	// Server options.
 	OPT_ADDRESS,

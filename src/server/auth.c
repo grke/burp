@@ -106,6 +106,7 @@ int authorise_server(struct asfd *asfd,
 	int ret=-1;
 	char *cp=NULL;
 	char *password=NULL;
+	char *cname=NULL;
 	char whoareyou[256]="";
 	struct iobuf *rbuf=asfd->rbuf;
 	const char *peer_version=NULL;
@@ -153,7 +154,14 @@ int authorise_server(struct asfd *asfd,
 		logp("unable to get client name\n");
 		goto end;
 	}
-	if(set_string(cconfs[OPT_CNAME], rbuf->buf))
+
+	cname=strdup(rbuf->buf);
+	if(!(cname=strdup_w(rbuf->buf, __func__)))
+		goto end;
+	if(get_int(cconfs[OPT_CNAME_LOWERCASE]))
+		strlwr(cname);
+
+	if(set_string(cconfs[OPT_CNAME], cname))
 		goto end;
 	iobuf_free_content(rbuf);
 
@@ -184,5 +192,6 @@ int authorise_server(struct asfd *asfd,
 end:
 	iobuf_free_content(rbuf);
 	free_w(&password);
+	free_w(&cname);
 	return ret;
 }

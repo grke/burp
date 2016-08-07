@@ -1451,12 +1451,17 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 {
 	int a=0;
 	char *args[12];
+	char procpath[32];
+	char buf[PATH_MAX];
 
-	// FIX THIS: get all args from configuration.
-	if(is_reg_lstat(prog_long)>0)
+	snprintf(procpath, sizeof(procpath), "/proc/%d/exe", getpid());
+	if(!readlink_w(procpath, buf, sizeof(buf)))
+		args[a++]=(char *)buf;
+	else if(is_reg_lstat(prog_long)>0)
 		args[a++]=(char *)prog_long;
 	else
 		args[a++]=(char *)"/usr/sbin/burp";
+
 	args[a++]=(char *)"-c";
 	args[a++]=get_string(confs[OPT_CONFFILE]);
 	args[a++]=(char *)"-a";

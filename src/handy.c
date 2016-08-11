@@ -349,7 +349,7 @@ void setup_signal(int sig, void handler(int sig))
 /* Function based on src/lib/priv.c from bacula. */
 int chuser_and_or_chgrp(const char *user, const char *group)
 {
-#if defined(HAVE_PWD_H) && defined(HAVE_GRP_H)
+#ifndef HAVE_WIN32
 	struct passwd *passw = NULL;
 	struct group *grp = NULL;
 	gid_t gid;

@@ -18,6 +18,8 @@
 
 static int map_depth=0;
 
+// FIX THIS: should pass around a ctx instead of keeping track of a bunch
+// of globals.
 static unsigned long number=0;
 static char *timestamp=NULL;
 static uint16_t flags=0;
@@ -32,8 +34,11 @@ static int in_counters=0;
 static int in_logslist=0;
 static int in_log_content=0;
 static struct bu **sselbu=NULL;
+// For server side log files.
 static struct lline *ll_list=NULL;
 static struct lline **sllines=NULL;
+// For recording 'loglines' in json input.
+static struct lline *jsll_list=NULL;
 
 static int is_wrap(const char *val, const char *key, uint16_t bit)
 {
@@ -195,6 +200,8 @@ static int input_string(void *ctx, const unsigned char *val, size_t len)
 	}
 	else if(!strcmp(lastkey, "logline"))
 	{
+		if(lline_add(&jsll_list, str))
+			goto error;
 		goto end;
 	}
 	else if(!strcmp(lastkey, "backup")
@@ -482,6 +489,11 @@ void json_input_free(void)
 	if(!yajl) return;
 	yajl_free(yajl);
 	yajl=NULL;
+}
+
+struct lline *json_input_get_loglines(void)
+{
+	return jsll_list;
 }
 
 // Client records will be coming through in alphabetical order.

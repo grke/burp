@@ -1342,8 +1342,6 @@ int status_client_ncurses_main_loop(struct async *as,
 		sel->page=PAGE_BACKUP_LIST;
 	}
 
-	if(json_input_init()) goto end;
-
 	while(1)
 	{
 		if(need_status(sel) && !reqdone)
@@ -1428,7 +1426,6 @@ int status_client_ncurses_main_loop(struct async *as,
 end:
 	ret=0;
 error:
-	json_input_free();
 	return ret;
 }
 
@@ -1484,6 +1481,13 @@ int status_client_ncurses_init(enum action act)
 	return 0;
 }
 
+static void show_loglines(struct lline *llines)
+{
+	struct lline *l;
+	for(l=llines; l; l=l->next)
+		logp("%s\n", l->line);
+}
+
 int status_client_ncurses(struct conf **confs)
 {
         int ret=-1;
@@ -1494,6 +1498,10 @@ int status_client_ncurses(struct conf **confs)
 	const char *monitor_logfile=get_string(confs[OPT_MONITOR_LOGFILE]);
 	struct asfd *so_asfd=NULL;
 	struct sel *sel=NULL;
+	struct lline *llines=NULL;
+
+	if(json_input_init())
+		goto end;
 
 	if(!(sel=sel_alloc()))
 		goto end;
@@ -1535,7 +1543,14 @@ end:
 	if(actg==ACTION_STATUS)
 		ncurses_free();
 #endif
-	if(ret) logp("%s exiting with error: %d\n", __func__, ret);
+	llines=json_input_get_loglines();
+	if(ret)
+	{
+		show_loglines(llines);
+		logp("%s exiting with error: %d\n", __func__, ret);
+	}
+	llines_free(&llines);
+	json_input_free();
 	fzp_close(&lfzp);
 	async_asfd_free_all(&as);
 	close_fd(&csin);

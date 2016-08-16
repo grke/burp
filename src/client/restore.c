@@ -483,7 +483,7 @@ static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
 }
 
 #define RESTORE_STREAM	"restore_stream"
-#define RESTORE_SPOOL	"restore_spool"
+// Used to have "restore_spool". Removed for simplicity.
 
 static char *restore_style=NULL;
 
@@ -492,8 +492,7 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 {
 	char msg[32]="";
 	restore_style=NULL;
-	if(strcmp(asfd->rbuf->buf, RESTORE_STREAM)
-	   && strcmp(asfd->rbuf->buf, RESTORE_SPOOL))
+	if(strcmp(asfd->rbuf->buf, RESTORE_STREAM))
 	{
 		iobuf_log_unexpected(asfd->rbuf, __func__);
 		return ASL_END_ERROR;
@@ -515,43 +514,6 @@ static char *get_restore_style(struct asfd *asfd, struct conf **confs)
 	return restore_style;
 }
 
-static enum asl_ret restore_spool_func(struct asfd *asfd,
-	struct conf **confs, void *param)
-{
-	static char **datpath;
-	static struct iobuf *rbuf;
-	datpath=(char **)param;
-	rbuf=asfd->rbuf;
-	if(!strncmp_w(rbuf->buf, "dat="))
-	{
-		char *fpath=NULL;
-		if(!(fpath=prepend_s(*datpath, rbuf->buf+4))
-		  || build_path_w(fpath)
-		  || receive_a_file(asfd, fpath, get_cntr(confs)))
-			return ASL_END_ERROR;
-		iobuf_free_content(rbuf);
-	}
-	else if(!strcmp(rbuf->buf, "datfilesend"))
-	{
-		if(asfd->write_str(asfd, CMD_GEN, "datfilesend_ok"))
-			return ASL_END_ERROR;
-		return ASL_END_OK;
-	}
-	return ASL_CONTINUE;
-}
-
-static int restore_spool(struct asfd *asfd, struct conf **confs, char **datpath)
-{
-	const char *restore_spool=get_string(confs[OPT_RESTORE_SPOOL]);
-	logp("Spooling restore to: %s\n", restore_spool);
-
-	if(!(*datpath=prepend_s(restore_spool, "incoming-data")))
-		return -1;
-
-	return asfd->simple_loop(asfd, confs, datpath,
-		__func__, restore_spool_func);
-}
-
 int do_restore_client(struct asfd *asfd,
 	struct conf **confs, enum action act, int vss_restore)
 {
@@ -562,7 +524,6 @@ int do_restore_client(struct asfd *asfd,
 	BFILE *bfd=NULL;
 	char *fullpath=NULL;
 	char *style=NULL;
-	char *datpath=NULL;
 	struct cntr *cntr=get_cntr(confs);
 	enum protocol protocol=get_protocol(confs);
 	int strip=get_int(confs[OPT_STRIP]);
@@ -590,13 +551,6 @@ int do_restore_client(struct asfd *asfd,
 
 	if(!(style=get_restore_style(asfd, confs)))
 		goto error;
-	if(!strcmp(style, RESTORE_SPOOL))
-	{
-		if(restore_spool(asfd, confs, &datpath))
-			goto error;
-	}
-	else
-		logp("Streaming restore direct\n");
 
 	logf("\n");
 
@@ -616,7 +570,7 @@ int do_restore_client(struct asfd *asfd,
 		if(protocol==PROTO_1)
 			sb->flags |= SBUF_CLIENT_RESTORE_HACK;
 
-		switch(sbuf_fill_from_net(sb, asfd, blk, datpath, cntr))
+		switch(sbuf_fill_from_net(sb, asfd, blk, cntr))
 		{
 			case 0: break;
 			case 1: if(asfd->write_str(asfd, CMD_GEN,
@@ -635,7 +589,7 @@ int do_restore_client(struct asfd *asfd,
 					cntr_add(cntr, CMD_DATA, 1);
 				else
 					wret=write_data(asfd, bfd, blk);
-				if(!datpath) blk_free_content(blk);
+				blk_free_content(blk);
 				blk->data=NULL;
 				if(wret) goto error;
 				continue;
@@ -763,11 +717,6 @@ error:
 
 	sbuf_free(&sb);
 	free_w(&style);
-	if(datpath)
-	{
-		recursive_delete(datpath);
-		free_w(&datpath);
-	}
 	free_w(&fullpath);
 	blk_free(&blk);
 

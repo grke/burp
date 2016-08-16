@@ -269,11 +269,7 @@ static int extra_comms_read(struct async *as,
 		}
 		else if(!strncmp_w(rbuf->buf, "restore_spool="))
 		{
-			// Client supports temporary spool directory
-			// for restores.
-			if(set_string(cconfs[OPT_RESTORE_SPOOL],
-				rbuf->buf+strlen("restore_spool=")))
-					goto end;
+			// Removed.
 		}
 		else if(!strncmp_w(rbuf->buf, "protocol="))
 		{

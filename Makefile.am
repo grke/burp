@@ -254,7 +254,6 @@ burp_SOURCES = \
 	src/server/protocol2/dpth.c src/server/protocol2/dpth.h \
 	src/server/protocol2/rblk.c src/server/protocol2/rblk.h \
 	src/server/protocol2/restore.c src/server/protocol2/restore.h \
-	src/server/protocol2/restore_spool.c src/server/protocol2/restore_spool.h \
 	src/yajl/yajl.c \
 	src/yajl/yajl_alloc.c src/yajl/yajl_alloc.h \
 	src/yajl/yajl_buf.c src/yajl/yajl_buf.h \

@@ -72,6 +72,6 @@ extern void sbuf_print_alloc_stats(void);
 extern int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp,
 	struct blk *blk, const char *datpath);
 extern int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, const char *datpath, struct cntr *cntr);
+	struct blk *blk, struct cntr *cntr);
 
 #endif

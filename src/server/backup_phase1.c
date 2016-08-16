@@ -37,7 +37,7 @@ int backup_phase1_server_all(struct async *as,
 	while(1)
 	{
 		sbuf_free_content(sb);
-		switch(sbuf_fill_from_net(sb, asfd, NULL, NULL, cntr))
+		switch(sbuf_fill_from_net(sb, asfd, NULL, cntr))
 		{
 			case 0: break;
 			case 1: // Last thing the client sends is

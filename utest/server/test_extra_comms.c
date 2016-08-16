@@ -444,18 +444,6 @@ static void setup_autoupgrade(struct asfd *asfd,
 	setup_send_features_proto_end(asfd, &r, &w);
 }
 
-static void setup_restore_spool(struct asfd *asfd,
-	struct conf **confs, struct conf **cconfs)
-{
-	setup_simple(asfd, confs, cconfs, "restore_spool=blah", /*srestore*/0);
-}
-
-static void checks_restore_spool(struct conf **confs, struct conf **cconfs,
-	const char *incexc, int srestore)
-{
-	fail_unless(!strcmp(get_string(cconfs[OPT_RESTORE_SPOOL]), "blah"));
-}
-
 static void setup_rshash_blake2(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
@@ -777,7 +765,6 @@ START_TEST(test_server_extra_comms)
 	run_test(0, setup_autoupgrade,
 		NULL);
 
-	run_test(0, setup_restore_spool, checks_restore_spool);
 #ifdef RS_DEFAULT_STRONG_LEN
 	run_test(-1, setup_rshash_blake2, checks_rshash_blake2);
 #else

@@ -359,9 +359,9 @@ end:
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, const char *datpath, struct cntr *cntr)
+	struct blk *blk, struct cntr *cntr)
 {
-	return sbuf_fill(sb, asfd, NULL, blk, datpath, cntr);
+	return sbuf_fill(sb, asfd, NULL, blk, NULL, cntr);
 }
 
 int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp,

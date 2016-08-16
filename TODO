@@ -10,8 +10,6 @@ roughly in order of most important to least.
 * Need to improve restore speed - come up with a way to efficiently read the
   blocks into memory by looking ahead in the manifests.
 
-* restore_spool is probably broken.
-
 * Make the status monitor work.
 
 * Make the status monitor and counters use JSON.

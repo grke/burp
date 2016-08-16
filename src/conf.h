@@ -177,7 +177,6 @@ enum conf_opt
 	OPT_BACKUP2, // For diffs.
 	OPT_RESTOREPREFIX,
 	OPT_REGEX,
-	OPT_RESTORE_SPOOL,
 	// To do with listing.
 	OPT_BROWSEFILE,
 	OPT_BROWSEDIR,

@@ -504,8 +504,6 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "backup2");
 	case OPT_RESTOREPREFIX:
 	  return sc_str(c[o], 0, CONF_FLAG_INCEXC_RESTORE, "restoreprefix");
-	case OPT_RESTORE_SPOOL:
-	  return sc_str(c[o], 0, 0, "restore_spool");
 	case OPT_BROWSEFILE:
 	  return sc_str(c[o], 0, 0, "browsefile");
 	case OPT_BROWSEDIR:

@@ -22,7 +22,6 @@
 #include "protocol2/dpth.h"
 #include "protocol2/rblk.h"
 #include "protocol2/restore.h"
-#include "protocol2/restore_spool.h"
 #include "../protocol2/rabin/rabin.h"
 #include "sdirs.h"
 
@@ -513,7 +512,6 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 	struct sdirs *sdirs, enum cntr_status cntr_status, struct conf **cconfs)
 {
         int ret=-1;
-	int do_restore_stream=1;
         // For out-of-sequence directory restoring so that the
         // timestamps come out right:
         struct slist *slist=NULL;
@@ -523,19 +521,11 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
           || !(slist=slist_alloc()))
                 goto end;
 
-	if(get_protocol(cconfs)==PROTO_2)
-	{
-		if(rblk_init())
-			goto end;
-		switch(maybe_restore_spool(asfd, manifest, sdirs, bu,
-			srestore, regex, cconfs, slist, act, cntr_status))
-		{
-			case 1: do_restore_stream=0; break;
-			case 0: do_restore_stream=1; break;
-			default: goto end; // Error;
-		}
-	}
-	if(do_restore_stream && restore_stream(asfd, sdirs, slist,
+	if(get_protocol(cconfs)==PROTO_2
+	  && rblk_init())
+		goto end;
+
+	if(restore_stream(asfd, sdirs, slist,
 		bu, manifest, regex,
 		srestore, cconfs, act, cntr_status))
 			goto end;

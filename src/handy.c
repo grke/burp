@@ -643,3 +643,31 @@ char *strlwr(char *s)
 	for(;*tmp;++tmp) *tmp=tolower((unsigned char)*tmp);
 	return s;
 }
+
+char *strip_fqdn(char **fqdn_p)
+{
+	char *fqdn=*fqdn_p;
+	char *non_fqdn=NULL;
+	char *tmp=NULL;
+	tmp=strchr(fqdn,'.');
+	if(tmp)
+	{
+		size_t s = strlen(fqdn)-strlen(tmp)+1;
+		int r;
+		non_fqdn=(char *)malloc_w(s*sizeof(char), __func__);
+		if(!non_fqdn)
+			return fqdn;
+		r = snprintf(non_fqdn, s, fqdn);
+		if(r<0)
+		{
+			free_w(&non_fqdn);
+			logp("Failed to strip FQDN (%s)\n", fqdn);
+			return fqdn;
+		}
+		free_w(fqdn_p);
+		*fqdn_p=non_fqdn;
+		return non_fqdn;
+	}
+	return fqdn;
+}
+

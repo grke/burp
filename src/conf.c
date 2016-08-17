@@ -478,6 +478,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "cname");
 	case OPT_CNAME_LOWERCASE:
 	  return sc_int(c[o], 0, 0, "cname_lowercase");
+	case OPT_CNAME_FQDN:
+	  return sc_int(c[o], 1, 0, "cname_fqdn");
 	case OPT_PASSWORD:
 	  return sc_str(c[o], 0, 0, "password");
 	case OPT_PASSWD:

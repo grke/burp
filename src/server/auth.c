@@ -155,9 +155,10 @@ int authorise_server(struct asfd *asfd,
 		goto end;
 	}
 
-	cname=strdup(rbuf->buf);
 	if(!(cname=strdup_w(rbuf->buf, __func__)))
 		goto end;
+	if(!get_int(cconfs[OPT_CNAME_FQDN]))
+		strip_fqdn(&cname);
 	if(get_int(cconfs[OPT_CNAME_LOWERCASE]))
 		strlwr(cname);
 

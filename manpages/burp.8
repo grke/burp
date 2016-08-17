@@ -211,7 +211,9 @@ Defines the main TCP address that the server listens on for status requests. The
 Defines the TCP port that the server listens on for status requests. Comment this out to have no status server.
 .TP
 \fBcname_lowercase=[0|1]\fR
-Whether to force lowercase cname when looking-up in clientconfdir. The default is 0.
+Whether to force lowercase cname when looking-up in clientconfdir. This also affects the fqdn lookup on the client. The default is 0.
+\fBcname_fqdn=[0|1]\fR
+Whether to keep fqdn cname (like 'testclient.example.com') when looking-up in clientconfdir. This also affects the fqdn lookup on the client. The default is 1.
 .TP
 \fBdaemon=[0|1]\fR
 Whether to daemonise. The default is 1.

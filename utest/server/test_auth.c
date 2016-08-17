@@ -12,6 +12,7 @@
 #define CONFFILE	BASE "/burp.conf"
 
 int CNAME_LOWERCASE=0;
+int CNAME_FQDN=1;
 
 static void clean(void)
 {
@@ -77,6 +78,7 @@ static void do_test(
 	fail_unless(!set_string(globalcs[OPT_CLIENTCONFDIR], CLIENTCONFDIR));
 
 	fail_unless(!set_int(cconfs[OPT_CNAME_LOWERCASE], CNAME_LOWERCASE));
+	fail_unless(!set_int(cconfs[OPT_CNAME_FQDN], CNAME_FQDN));
 
 	asfd=asfd_mock_setup(&reads, &writes);
 
@@ -250,6 +252,33 @@ static void setup_lower_ok(struct asfd *asfd)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
 }
 
+static void setup_fqdn_failed(struct asfd *asfd)
+{
+	int r=0;
+	int w=0;
+	const char *cnames[] = {"testclient", NULL};
+	build_clientconfdir_files(cnames, "password=mypass\nkeep=4\n");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "testclient.f.q.d.n");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okpassword");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
+}
+
+static void setup_fqdn_ok(struct asfd *asfd)
+{
+	int r=0;
+	int w=0;
+	const char *cnames[] = {"testclient", NULL};
+	build_clientconfdir_files(cnames, "password=mypass\nkeep=4\n");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "testclient.f.q.d.n");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okpassword");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
+}
+
 START_TEST(test_authorise_server)
 {
 	do_test(-1, setup_initial_error);
@@ -269,6 +298,9 @@ START_TEST(test_authorise_server)
 #endif
 	CNAME_LOWERCASE=1;
 	do_test(0, setup_lower_ok);
+	do_test(-1, setup_fqdn_failed);
+	CNAME_FQDN=0;
+	do_test(0, setup_fqdn_ok);
 }
 END_TEST
 

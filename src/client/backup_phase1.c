@@ -61,11 +61,15 @@ static int usual_stuff(struct asfd *asfd,
 	struct cntr *cntr, const char *path, const char *link,
 	struct sbuf *sb, enum cmd cmd)
 {
-	if(asfd->write_str(asfd, CMD_ATTRIBS, sb->attr.buf)
-	  || asfd->write_str(asfd, cmd, path)
-	  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
-		&& asfd->write_str(asfd, cmd, link)))
-			return -1;
+	// When run with ACTION_ESTIMATE, asfd is NULL.
+	if(asfd)
+	{
+		if(asfd->write_str(asfd, CMD_ATTRIBS, sb->attr.buf)
+		  || asfd->write_str(asfd, cmd, path)
+		  || ((cmd==CMD_HARD_LINK || cmd==CMD_SOFT_LINK)
+			&& asfd->write_str(asfd, cmd, link)))
+				return -1;
+	}
 	cntr_add_phase1(cntr, cmd, 1);
 	return 0;
 }

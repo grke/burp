@@ -1,3 +1,4 @@
+#include "server/protocol1/backup_phase4.h"
 #include "burp.h"
 #include "alloc.h"
 #include "asfd.h"

@@ -1,3 +1,4 @@
+#include "client/extra_comms.h"
 #include "client/autoupgrade.h"
 #include "burp.h"
 #include "asfd.h"

@@ -1,5 +1,6 @@
 #include "utest/test.h"
 #include "utest/prng.h"
+#include "utest/builders/build.h"
 #include "alloc.h"
 #include "attribs.h"
 #include "base64.h"

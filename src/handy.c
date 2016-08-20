@@ -57,7 +57,7 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct cntr *cntr)
 	return r;
 }
 
-int send_whole_file_gz(struct asfd *asfd,
+static int send_whole_file_gz(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	uint64_t *bytes, struct cntr *cntr,
 	int compression, struct fzp *fzp)
@@ -206,16 +206,17 @@ void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set
 static int get_address_and_port(struct sockaddr_storage *addr,
 	char *addrstr, size_t len, uint16_t *port)
 {
+	struct sockaddr_in *s4;
+	struct sockaddr_in6 *s6;
+
 	switch(addr->ss_family)
 	{
 		case AF_INET:
-			struct sockaddr_in *s4;
 			s4=(struct sockaddr_in *)addr;
 			inet_ntop(AF_INET, &s4->sin_addr, addrstr, len);
 			*port=ntohs(s4->sin_port);
 			break;
 		case AF_INET6:
-			struct sockaddr_in6 *s6;
 			s6=(struct sockaddr_in6 *)addr;
 			inet_ntop(AF_INET6, &s6->sin6_addr, addrstr, len);
 			*port=ntohs(s6->sin6_port);

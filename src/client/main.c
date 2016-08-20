@@ -14,7 +14,7 @@
 #include "backup.h"
 #include "ca.h"
 #include "delete.h"
-#include "extra_comms.h"
+#include "client/extra_comms.h"
 #include "list.h"
 #include "monitor.h"
 #include "monitor/status_client_ncurses.h"
@@ -277,7 +277,7 @@ static enum cliret initial_comms(struct async *as,
 		goto error;
 	}
 
-	if(extra_comms(as, confs, action, incexc))
+	if(extra_client_comms(as, confs, action, incexc))
 	{
 		logp("extra comms failed\n");
 		goto error;

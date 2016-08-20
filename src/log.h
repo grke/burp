@@ -1,6 +1,9 @@
 #ifndef _LOG_ROUTINES
 #define _LOG_ROUTINES
 
+#include "asfd.h"
+#include "fzp.h"
+
 extern const char *prog;
 extern const char *prog_long;
 

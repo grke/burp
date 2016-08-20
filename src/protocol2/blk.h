@@ -1,7 +1,8 @@
 #ifndef __RABIN_BLK_H
 #define __RABIN_BLK_H
 
-#include "../burp.h"
+#include "burp.h"
+#include "iobuf.h"
 
 #include <openssl/md5.h>
 

@@ -5,8 +5,10 @@
 #define CNTR_SINGLE_FIELD	0x00000002
 
 #include "burp.h"
-#include "cmd.h"
 #include "action.h"
+#include "cmd.h"
+#include "asfd.h"
+#include "cstat.h"
 
 #define CNTR_ENT_SIZE	256
 
@@ -20,7 +22,7 @@
 #define CNTR_STATUS_STR_DELETING	"deleting"
 #define CNTR_STATUS_STR_DIFFING		"diffing"
 
-enum cntr_status
+typedef enum cntr_status
 {
 	CNTR_STATUS_UNSET=0,
 
@@ -34,7 +36,7 @@ enum cntr_status
 	CNTR_STATUS_VERIFYING,
 	CNTR_STATUS_DELETING,
 	CNTR_STATUS_DIFFING
-};
+} cntr_status;
 
 typedef struct cntr_ent cntr_ent_t;
 

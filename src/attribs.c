@@ -131,20 +131,7 @@ int attribs_encode(struct sbuf *sb)
 }
 
 // Do casting according to unknown type to keep compiler happy.
-#ifdef HAVE_TYPEOF
-	#define plug(st, val) st = (typeof st)val
-#else
-	#if !HAVE_GCC & HAVE_SUN_OS
-		// Sun compiler does not handle templates correctly.
-		#define plug(st, val) st = val
-	#elif __sgi
-		#define plug(st, val) st = val
-	#else
-		// Use templates to do the casting.
-		template <class T> void plug(T &st, uint64_t val)
-		{ st = static_cast<T>(val); }
-	#endif
-#endif
+#define plug(st, val) st = (__typeof__(st)) (val)
 
 // Decode a stat packet from base64 characters.
 void attribs_decode(struct sbuf *sb)

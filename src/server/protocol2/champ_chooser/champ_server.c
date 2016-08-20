@@ -280,6 +280,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 
 	while(1)
 	{
+		int removed;
+
 		for(asfd=as->asfd->next; asfd; asfd=asfd->next)
 		{
 			if(!asfd->blist->head
@@ -315,7 +317,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 				}
 				break;
 			default:
-				int removed=0;
+				removed=0;
 				// Maybe one of the fds had a problem.
 				// Find and remove it and carry on if possible.
 				for(asfd=as->asfd->next; asfd; )

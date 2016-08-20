@@ -9,7 +9,7 @@
 #define RUN_STATUS_STR_SERVER_CRASHED	"s crashed"
 #define RUN_STATUS_STR_RUNNING		"running"
 
-enum run_status
+typedef enum run_status
 {
 	RUN_STATUS_UNSET=0,
 
@@ -17,7 +17,7 @@ enum run_status
 	RUN_STATUS_RUNNING,
 	RUN_STATUS_CLIENT_CRASHED,
 	RUN_STATUS_SERVER_CRASHED
-};
+} run_status;
 
 struct cstat
 {

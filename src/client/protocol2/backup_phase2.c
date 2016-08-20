@@ -136,6 +136,8 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 {
 	int just_opened=0;
 	struct sbuf *sb=slist->last_requested;
+        char buf[32];
+
 	if(!sb) return 0;
 
 	if(sb->protocol2->bfd.mode==BF_CLOSED)
@@ -147,7 +149,6 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 			case 1: // All OK.
 				break;
 			case 0: // Could not open file. Tell the server.
-				char buf[32];
 				base64_from_uint64(sb->protocol2->index, buf);
 				if(asfd->write_str(asfd, CMD_INTERRUPT, buf))
 					return -1;

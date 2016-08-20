@@ -286,6 +286,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 	struct cntr *cntr, uint8_t *end_flags, struct dpth *dpth)
 {
 	int ret=0;
+        static struct iobuf attr;
+        static uint64_t index;
 
 	switch(rbuf->cmd)
 	{
@@ -297,9 +299,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 
 		/* Incoming block signatures. */
 		case CMD_ATTRIBS_SIGS:
-			static struct iobuf attr;
-			static uint64_t index;
-
 			iobuf_init(&attr);
 			iobuf_move(&attr, rbuf);
 			index=decode_file_no(&attr);

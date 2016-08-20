@@ -9,7 +9,7 @@ enum fzp_type
 	FZP_COMPRESSED
 };
 
-struct fzp
+typedef struct fzp
 {
 	enum fzp_type type;
 	union
@@ -17,7 +17,7 @@ struct fzp
 		FILE *fp;
 		gzFile zp;
 	};
-};
+} fzp;
 
 extern struct fzp *fzp_open(const char *path, const char *mode);
 extern struct fzp *fzp_gzopen(const char *path, const char *mode);

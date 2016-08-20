@@ -21,6 +21,8 @@
 #include "link.h"
 #include "zlibio.h"
 
+#include <stdbool.h>
+
 #include <librsync.h>
 
 // Also used by restore.c.

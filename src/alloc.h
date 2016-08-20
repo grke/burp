@@ -2,6 +2,7 @@
 #define _ALLOC_H
 
 #include "burp.h"
+#include "conf.h"
 
 #ifdef UTEST
 extern int alloc_errors;

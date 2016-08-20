@@ -60,6 +60,8 @@
 #include <sys/statfs.h>
 #endif
 
+#include <stdbool.h>
+
 static int (*send_file)(struct asfd *, FF_PKT *, struct conf **);
 
 // Initialize the find files "global" variables

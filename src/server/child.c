@@ -10,7 +10,7 @@
 #include "../log.h"
 #include "../prepend.h"
 #include "../run_script.h"
-#include "extra_comms.h"
+#include "server/extra_comms.h"
 #include "monitor/status_server.h"
 #include "run_action.h"
 

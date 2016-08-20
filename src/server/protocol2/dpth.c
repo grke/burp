@@ -79,6 +79,8 @@ char *dpth_protocol2_mk(struct dpth *dpth)
 	char *p=NULL;
 	static char *save_path=NULL;
 	static struct lock *lock=NULL;
+	struct stat statp;
+
 	while(1)
 	{
 		free_w(&p);
@@ -99,7 +101,6 @@ char *dpth_protocol2_mk(struct dpth *dpth)
 		switch(lock->status)
 		{
 			case GET_LOCK_GOT:
-				struct stat statp;
 				if(lstat(p, &statp))
 				{
 					// File does not exist yet, and we

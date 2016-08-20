@@ -17,6 +17,7 @@
 static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs,
 	int resume)
 {
+	int cret;
 	pid_t childpid=-1;
 
 	if(!get_int(confs[OPT_FORK]))
@@ -34,7 +35,6 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs,
 			return -1;
 		case 0:
 			// Child.
-			int cret;
 			log_fzp_set(NULL, confs);
 			switch(champ_chooser_server(sdirs, confs, resume))
 			{

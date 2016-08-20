@@ -137,7 +137,7 @@ enum parse_ret
 	PARSE_RET_FINISHED=2,
 };
 
-static parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
+static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 	struct iobuf *rbuf, struct blk *blk,
 	const char *datpath, struct cntr *cntr)
 {

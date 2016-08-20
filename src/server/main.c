@@ -618,6 +618,8 @@ static int run_server(struct conf **confs, const char *conffile,
 
 	while(!hupreload)
 	{
+                int removed;
+
 		switch(mainas->read_write(mainas))
 		{
 			case 0:
@@ -641,7 +643,7 @@ static int run_server(struct conf **confs, const char *conffile,
 				}
 				break;
 			default:
-				int removed=0;
+				removed=0;
 				// Maybe one of the fds had a problem.
 				// Find and remove it and carry on if possible.
 				for(asfd=mainas->asfd; asfd; )

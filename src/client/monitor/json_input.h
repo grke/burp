@@ -1,6 +1,8 @@
 #ifndef _JSON_INPUT
 #define _JSON_INPUT
 
+#include "client/monitor/sel.h"
+
 extern int json_input_init(void);
 void json_input_free(void);
 

@@ -1,6 +1,9 @@
 #ifndef _CHAMP_CHOOSER_CANDIDATE_H
 #define _CHAMP_CHOOSER_CANDIDATE_H
 
+#include "server/protocol2/champ_chooser/incoming.h"
+#include "server/protocol2/champ_chooser/scores.h"
+
 enum cand_ret
 {
 	CAND_RET_TEMP=-2,

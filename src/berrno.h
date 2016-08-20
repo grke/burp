@@ -58,11 +58,11 @@
  * If bit 29 in m_berrno is not set, then it is a Unix errno.
  *
  */
-struct berrno
+typedef struct berrno
 {
 	char m_buf[256];
 	int m_berrno;
-};
+} berrno;
 
 extern void berrno_init(struct berrno *b);
 extern const char *berrno_bstrerror(struct berrno *b, int errnum);

@@ -1,3 +1,4 @@
+#include "server/delete.h"
 #include "cntr.h"
 #include "server/bu_get.h"
 #include "server/child.h"

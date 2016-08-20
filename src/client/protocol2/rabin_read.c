@@ -1,3 +1,4 @@
+#include "client/protocol2/rabin_read.h"
 #include "burp.h"
 #include "alloc.h"
 #include "attribs.h"

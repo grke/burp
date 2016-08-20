@@ -1,6 +1,9 @@
-#include <check.h>
+#include "utest/test.h"
+#include "cmd.h"
+
 #include <stdlib.h>
-#include "../src/cmd.h"
+
+#include <check.h>
 
 START_TEST(test_cmd)
 {

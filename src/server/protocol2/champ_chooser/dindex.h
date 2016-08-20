@@ -1,6 +1,8 @@
 #ifndef _DINDEX_H
 #define _DINDEX_H
 
+#include "server/sdirs.h"
+
 extern int delete_unused_data_files(struct sdirs *sdirs, int resume);
 
 #ifdef UTEST

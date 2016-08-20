@@ -1,3 +1,4 @@
+#include "server/protocol2/champ_chooser/dindex.h"
 #include "burp.h"
 #include "alloc.h"
 #include "fsops.h"

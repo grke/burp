@@ -306,7 +306,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	}
 
 	logp("Phase 2 begin (send backup data)\n");
-	logf("\n");
+	logfatal("\n");
 
 	if(!(slist=slist_alloc())
 	  || !(wbuf=iobuf_alloc())

@@ -552,7 +552,7 @@ int do_restore_client(struct asfd *asfd,
 	if(!(style=get_restore_style(asfd, confs)))
 		goto error;
 
-	logf("\n");
+	logfatal("\n");
 
 	if(get_int(confs[OPT_SEND_CLIENT_CNTR]) && cntr_recv(asfd, confs))
 		goto error;
@@ -659,7 +659,7 @@ int do_restore_client(struct asfd *asfd,
 			case CMD_MESSAGE:
 			case CMD_WARNING:
 				log_recvd(&sb->path, cntr, 1);
-				logf("\n");
+				logfatal("\n");
 				continue;
 			default:
 				break;

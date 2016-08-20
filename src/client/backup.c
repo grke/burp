@@ -1,3 +1,4 @@
+#include "client/backup.h"
 #include "client/backup_phase1.h"
 #include "client/cvss.h"
 #include "burp.h"

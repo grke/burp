@@ -1,3 +1,4 @@
+#include "server/compress.h"
 #include "burp.h"
 #include "alloc.h"
 #include "asfd.h"

@@ -1,3 +1,4 @@
+#include "client/ca.h"
 #include "client/cvss.h"
 #include "burp.h"
 #include "asfd.h"

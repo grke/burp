@@ -1,3 +1,4 @@
+#include "server/backup_phase3.h"
 #include "cntr.h"
 #include "server/compress.h"
 #include "server/manio.h"

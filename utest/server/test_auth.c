@@ -223,6 +223,7 @@ static void setup_no_keep_configured(struct asfd *asfd)
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
 }
 
+#ifndef HAVE_DARWIN_OS
 static void setup_lower_failed(struct asfd *asfd)
 {
 	int r=0;
@@ -235,6 +236,7 @@ static void setup_lower_failed(struct asfd *asfd)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okpassword");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
 }
+#endif
 
 static void setup_lower_ok(struct asfd *asfd)
 {

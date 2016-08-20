@@ -1,3 +1,4 @@
+#include "client/list.h"
 #include "burp.h"
 #include "action.h"
 #include "asfd.h"

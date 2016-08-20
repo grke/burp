@@ -1,3 +1,4 @@
+#include "server/bu_get.h"
 #include "server/sdirs.h"
 #include "server/timestamp.h"
 #include "burp.h"

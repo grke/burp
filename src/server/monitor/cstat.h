@@ -1,6 +1,8 @@
 #ifndef _CSTAT_SERVER_H
 #define _CSTAT_SERVER_H
 
+#include "conf.h"
+#include "cntr.h"
 #include "cstat.h"
 
 extern int cstat_load_data_from_disk(struct cstat **clist,

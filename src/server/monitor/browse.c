@@ -1,3 +1,4 @@
+#include "server/monitor/browse.h"
 #include "burp.h"
 #include "alloc.h"
 #include "bu.h"

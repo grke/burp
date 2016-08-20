@@ -3,7 +3,7 @@
 
 #include "async.h"
 #include "conf.h"
-#include "cstat.h"
+#include "cntr.h"
 
 extern int write_status(enum cntr_status cntr_status,
 	const char *path, struct cntr *cntr);

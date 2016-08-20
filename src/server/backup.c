@@ -1,3 +1,4 @@
+#include "server/backup.h"
 #include "server/auth.h"
 #include "server/backup_phase1.h"
 #include "server/backup_phase3.h"

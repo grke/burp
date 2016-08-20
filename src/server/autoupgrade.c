@@ -1,3 +1,4 @@
+#include "server/autoupgrade.h"
 #include "burp.h"
 #include "asfd.h"
 #include "async.h"

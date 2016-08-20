@@ -1,3 +1,4 @@
+#include "client/protocol1/backup_phase2.h"
 #include "burp.h"
 #include "action.h"
 #include "alloc.h"

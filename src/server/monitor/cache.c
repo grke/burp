@@ -1,3 +1,4 @@
+#include "server/monitor/cache.h"
 #include "burp.h"
 #include "alloc.h"
 #include "cmd.h"

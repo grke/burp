@@ -167,7 +167,7 @@ int in_include_regex(struct strlist *increg, const char *fname)
 }
 */
 
-int in_exclude_regex(struct strlist *excreg, const char *fname)
+static int in_exclude_regex(struct strlist *excreg, const char *fname)
 {
 	// If not doing exclude_regex, let the file get backed up.
 	for(; excreg; excreg=excreg->next)

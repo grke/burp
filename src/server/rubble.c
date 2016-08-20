@@ -1,3 +1,4 @@
+#include "server/rubble.h"
 #include "burp.h"
 #include "alloc.h"
 #include "asfd.h"

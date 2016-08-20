@@ -1,3 +1,4 @@
+#include "server/backup_phase1.h"
 #include "cntr.h"
 #include "server/child.h"
 #include "server/compress.h"

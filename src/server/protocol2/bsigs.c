@@ -1,3 +1,4 @@
+#include "server/protocol2/bsigs.h"
 #include "burp.h"
 #include "attribs.h"
 #include "base64.h"

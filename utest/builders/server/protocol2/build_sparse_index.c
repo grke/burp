@@ -1,3 +1,4 @@
+#include "utest/builders/server/protocol2/build_sparse_index.h"
 #include "utest/test.h"
 #include "utest/prng.h"
 #include "utest/builders/build.h"

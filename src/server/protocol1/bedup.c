@@ -51,7 +51,7 @@ struct mystruct
 
 struct mystruct *myfiles=NULL;
 
-struct mystruct *find_key(off_t st_size)
+static struct mystruct *find_key(off_t st_size)
 {
 	struct mystruct *s;
 

@@ -74,7 +74,7 @@ static void run_test(int expected_ret,
 
 	setup_callback(asfd, confs);
 
-	fail_unless(extra_comms(
+	fail_unless(extra_client_comms(
 		as,
 		confs,
 		&action,

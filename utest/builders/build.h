@@ -1,8 +1,10 @@
 #ifndef _BUILDERS_H
 #define _BUILDERS_H
 
-#include "../../src/conf.h"
-#include "../../src/cmd.h"
+#include "conf.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "cstat.h"
 #include "server/build_storage_dirs.h"
 #include "server/protocol2/champ_chooser/build_dindex.h"
 

@@ -1,6 +1,7 @@
 #ifndef _BU_GET_H
 #define _BU_GET_H
 
+#include "cntr.h"
 #include "cstat.h"
 #include "server/sdirs.h"
 

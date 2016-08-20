@@ -376,6 +376,7 @@ runner_LDFLAGS = \
 	$(OPENSSL_LDFLAGS)
 
 runner_LDADD = \
+	-lm \
 	$(ACL_LIBS) \
 	$(CHECK_LIBS) \
 	$(CRYPT_LIBS) \

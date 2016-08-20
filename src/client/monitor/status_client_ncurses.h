@@ -2,7 +2,9 @@
 #define STATUS_CLIENT_NCURSES_H
 
 #include "action.h"
+#include "asfd.h"
 #include "conf.h"
+#include "client/monitor/sel.h"
 
 extern int status_client_ncurses_init(enum action act);
 extern int status_client_ncurses(struct conf **confs);

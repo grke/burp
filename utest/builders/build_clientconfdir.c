@@ -1,5 +1,6 @@
 #include "../test.h"
 #include "../../src/alloc.h"
+#include "../../src/cntr.h"
 #include "../../src/cstat.h"
 #include "../../src/fsops.h"
 

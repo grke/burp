@@ -1,3 +1,4 @@
+#include "server/extra_comms.h"
 #include "server/autoupgrade.h"
 #include "burp.h"
 #include "alloc.h"

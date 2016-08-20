@@ -1,3 +1,4 @@
+#include "server/monitor/status_server.h"
 #include "burp.h"
 #include "alloc.h"
 #include "asfd.h"

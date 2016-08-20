@@ -1,3 +1,4 @@
+#include "utest/builders/build.h"
 #include "utest/prng.h"
 #include <check.h>
 #include <stdlib.h>

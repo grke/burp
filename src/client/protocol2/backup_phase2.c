@@ -1,17 +1,17 @@
-#include "../../burp.h"
-#include "../../action.h"
-#include "../../asfd.h"
-#include "../../async.h"
-#include "../../base64.h"
-#include "../../cmd.h"
-#include "../../cntr.h"
-#include "../../iobuf.h"
-#include "../../log.h"
-#include "../../protocol2/blk.h"
-#include "../../protocol2/blist.h"
-#include "../../protocol2/rabin/rabin.h"
-#include "../../slist.h"
-#include "rabin_read.h"
+#include "burp.h"
+#include "action.h"
+#include "asfd.h"
+#include "async.h"
+#include "base64.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "iobuf.h"
+#include "log.h"
+#include "protocol2/blk.h"
+#include "protocol2/blist.h"
+#include "protocol2/rabin/rabin.h"
+#include "slist.h"
+#include "client/protocol2/rabin_read.h"
 
 #define END_SIGS                0x01
 #define END_BACKUP              0x02
@@ -136,6 +136,8 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 {
 	int just_opened=0;
 	struct sbuf *sb=slist->last_requested;
+        char buf[32];
+
 	if(!sb) return 0;
 
 	if(sb->protocol2->bfd.mode==BF_CLOSED)
@@ -147,7 +149,6 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 			case 1: // All OK.
 				break;
 			case 0: // Could not open file. Tell the server.
-				char buf[32];
 				base64_from_uint64(sb->protocol2->index, buf);
 				if(asfd->write_str(asfd, CMD_INTERRUPT, buf))
 					return -1;
@@ -305,7 +306,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	}
 
 	logp("Phase 2 begin (send backup data)\n");
-	logf("\n");
+	logfatal("\n");
 
 	if(!(slist=slist_alloc())
 	  || !(wbuf=iobuf_alloc())

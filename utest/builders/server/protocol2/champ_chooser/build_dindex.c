@@ -1,7 +1,7 @@
-#include "../../../../test.h"
-#include "../../../../../src/fzp.h"
-#include "../../../../../src/server/protocol2/backup_phase4.h"
-#include "build_dindex.h"
+#include "utest/builders/server/protocol2/champ_chooser/build_dindex.h"
+#include "utest/test.h"
+#include "fzp.h"
+#include "server/protocol2/backup_phase4.h"
 
 static void dindex_to_fzp(struct fzp *fzp, uint64_t *di, size_t len)
 {

@@ -1,17 +1,17 @@
-#include "../../burp.h"
-#include "../../action.h"
-#include "../../alloc.h"
-#include "../../asfd.h"
-#include "../../async.h"
-#include "../../attribs.h"
-#include "../../cmd.h"
-#include "../../cntr.h"
-#include "../../conf.h"
-#include "../../log.h"
-#include "../../protocol1/handy.h"
-#include "../../protocol1/msg.h"
-#include "../extrameta.h"
-#include "../find.h"
+#include "burp.h"
+#include "action.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "attribs.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "conf.h"
+#include "log.h"
+#include "client/extrameta.h"
+#include "client/find.h"
+#include "protocol1/handy.h"
+#include "protocol1/msg.h"
 
 static int rs_loadsig_network_run(struct asfd *asfd,
 	rs_job_t *job, struct cntr *cntr)
@@ -453,7 +453,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	if(confs) cntr=get_cntr(confs);
 
 	logp("Phase 2 begin (send backup data)\n");
-	logf("\n");
+	logfatal("\n");
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 

@@ -4,7 +4,7 @@
 #define TREE_DIR	"t"
 #define DATA_DIR	"data"
 
-#include "../conf.h"
+#include "conf.h"
 
 // Server directories.
 struct sdirs

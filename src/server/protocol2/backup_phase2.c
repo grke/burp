@@ -1,25 +1,25 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../asfd.h"
-#include "../../async.h"
-#include "../../attribs.h"
-#include "../../base64.h"
-#include "../../cmd.h"
-#include "../../cntr.h"
-#include "../../handy.h"
-#include "../../hexmap.h"
-#include "../../iobuf.h"
-#include "../../log.h"
-#include "../../server/manio.h"
-#include "../../protocol2/blist.h"
-#include "../../protocol2/rabin/rabin.h"
-#include "../../slist.h"
-#include "../manios.h"
-#include "../resume.h"
-#include "champ_chooser/champ_client.h"
-#include "champ_chooser/champ_server.h"
-#include "champ_chooser/hash.h"
-#include "dpth.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "attribs.h"
+#include "base64.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "handy.h"
+#include "hexmap.h"
+#include "iobuf.h"
+#include "log.h"
+#include "server/manio.h"
+#include "server/manios.h"
+#include "server/resume.h"
+#include "server/protocol2/dpth.h"
+#include "protocol2/blist.h"
+#include "protocol2/rabin/rabin.h"
+#include "slist.h"
+#include "server/protocol2/champ_chooser/champ_client.h"
+#include "server/protocol2/champ_chooser/champ_server.h"
+#include "server/protocol2/champ_chooser/hash.h"
 
 #define END_SIGS		0x01
 #define END_BACKUP		0x02
@@ -286,6 +286,8 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 	struct cntr *cntr, uint8_t *end_flags, struct dpth *dpth)
 {
 	int ret=0;
+        static struct iobuf attr;
+        static uint64_t index;
 
 	switch(rbuf->cmd)
 	{
@@ -297,9 +299,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 
 		/* Incoming block signatures. */
 		case CMD_ATTRIBS_SIGS:
-			static struct iobuf attr;
-			static uint64_t index;
-
 			iobuf_init(&attr);
 			iobuf_move(&attr, rbuf);
 			index=decode_file_no(&attr);

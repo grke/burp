@@ -1,10 +1,11 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../bu.h"
-#include "../../cstat.h"
-#include "lline.h"
-#include "sel.h"
-#include "status_client_ncurses.h"
+#include "client/monitor/sel.h"
+#include "client/monitor/lline.h"
+#include "client/monitor/status_client_ncurses.h"
+#include "burp.h"
+#include "alloc.h"
+#include "bu.h"
+#include "cntr.h"
+#include "cstat.h"
 
 struct sel *sel_alloc(void)
 {

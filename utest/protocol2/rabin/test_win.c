@@ -1,7 +1,7 @@
-#include "../../test.h"
-#include "../../../src/alloc.h"
-#include "../../../src/protocol2/rabin/rconf.h"
-#include "../../../src/protocol2/rabin/win.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "protocol2/rabin/rconf.h"
+#include "protocol2/rabin/win.h"
 
 static void tear_down(void)
 {

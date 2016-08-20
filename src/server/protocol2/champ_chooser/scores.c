@@ -1,6 +1,6 @@
-#include "../../../burp.h"
-#include "../../../alloc.h"
-#include "scores.h"
+#include "server/protocol2/champ_chooser/scores.h"
+#include "burp.h"
+#include "alloc.h"
 
 struct scores *scores_alloc(void)
 {

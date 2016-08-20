@@ -1,8 +1,8 @@
-#include "../../test.h"
-#include "../../../src/alloc.h"
-#include "../../../src/fsops.h"
-#include "../../../src/server/protocol1/bedup.h"
-#include "../../builders/build_file.h"
+#include "utest/test.h"
+#include "utest/builders/build_file.h"
+#include "alloc.h"
+#include "fsops.h"
+#include "server/protocol1/bedup.h"
 
 #define BASE	"utest_bedup"
 

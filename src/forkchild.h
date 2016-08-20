@@ -1,6 +1,8 @@
 #ifndef _FORKCHILD_H
 #define _FORKCHILD_H
 
+#include "fzp.h"
+
 extern pid_t forkchild(struct fzp **sin,
 	struct fzp **sout, struct fzp **serr,
 	const char *path, char * const argv[]);

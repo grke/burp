@@ -12,9 +12,9 @@ AC_CONFIG_SRCDIR([src/prog.c])
 AM_INIT_AUTOMAKE([foreign -Wall dist-bzip2 no-dist-gzip tar-ustar subdir-objects 1.11])
 AM_SILENT_RULES([yes])
 
-AC_LANG([C++])
+AC_LANG([C])
 
-: ${CPPFLAGS="-Wall -g -O2"}
+: ${CFLAGS="-Wall -Wno-deprecated-declarations -g -O2"}
 
 AC_CANONICAL_HOST
 AC_USE_SYSTEM_EXTENSIONS
@@ -23,7 +23,7 @@ dnl -------------------------------------------------------
 dnl Check for compiler.
 dnl ------------------------------------------------------
 
-AC_PROG_CXX
+AC_PROG_CC_C99
 AM_PROG_CC_C_O
 
 dnl -------------------------------------------------------
@@ -93,24 +93,6 @@ dnl --------------------------------------------------------------------------
 AC_CHECK_HEADERS([endian.h sys/endian.h sys/byteorder.h libkern/OSByteOrder.h],
   [break]
 )
-dnl --------------------------------------------------------------------------
-dnl Check for typeof()
-dnl --------------------------------------------------------------------------
-AC_CACHE_CHECK([for typeof], [ba_cv_have_typeof], [
-  AC_COMPILE_IFELSE(
-    [AC_LANG_PROGRAM(
-        [[char *a = 0;]],
-        [[a = (typeof a)a;]]
-    )],
-    [ba_cv_have_typeof=yes],
-    [ba_cv_have_typeof=no],
-    [ba_cv_have_typeof=no]
-  )
-])
-
-if test "$ba_cv_have_typeof" = "yes"; then
-  AC_DEFINE([HAVE_TYPEOF], [1], [Define to 1 if compiler has typeof])
-fi
 
 dnl --------------------------------------------------------------------------
 dnl Check for required functions
@@ -482,9 +464,6 @@ if test "x$scriptdir" = x; then
   AC_SUBST([scriptdir], ['${pkgdatadir}/scripts'])
 fi
 
-# we only build with a c++ compiler at the moment
-CC=$CXX
-
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
@@ -496,9 +475,9 @@ AC_MSG_NOTICE([                  Host: ${host}])
 AC_MSG_NOTICE([          Burp version: ${PACKAGE_VERSION}])
 AC_MSG_NOTICE([      Install binaries: ${sbindir}])
 AC_MSG_NOTICE([  Install config files: ${sysconfdir}])
-AC_MSG_NOTICE([          C++ Compiler: ${CXX}])
+AC_MSG_NOTICE([            C Compiler: ${CC}])
 AC_MSG_NOTICE([    Preprocessor flags: ${CPPFLAGS}])
-AC_MSG_NOTICE([        Compiler flags: ${CXXFLAGS}])
+AC_MSG_NOTICE([        Compiler flags: ${CFLAGS}])
 AC_MSG_NOTICE([          Linker flags: ${LDFLAGS}])
 AC_MSG_NOTICE([])
 AC_MSG_NOTICE([                   acl: ${have_acl}])

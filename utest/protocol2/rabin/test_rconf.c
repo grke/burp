@@ -1,8 +1,9 @@
+#include "utest/test.h"
+#include "burp.h"
+#include "alloc.h"
+#include "protocol2/rabin/rconf.h"
+
 #include <check.h>
-#include "../../../src/burp.h"
-#include "../../test.h"
-#include "../../../src/alloc.h"
-#include "../../../src/protocol2/rabin/rconf.h"
 
 static void tear_down(void)
 {

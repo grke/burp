@@ -1,7 +1,7 @@
-#include "../burp.h"
-#include "blist.h"
-#include "blk.h"
-#include "../alloc.h"
+#include "protocol2/blist.h"
+#include "protocol2/blk.h"
+#include "burp.h"
+#include "alloc.h"
 
 struct blist *blist_alloc(void)
 {

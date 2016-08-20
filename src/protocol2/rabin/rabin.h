@@ -1,6 +1,8 @@
 #ifndef __RABIN_H
 #define __RABIN_H
 
+#include "sbuf.h"
+
 extern int blks_generate_init(void);
 extern void blks_generate_free(void);
 extern int blks_generate(struct asfd *asfd, struct conf **confs,

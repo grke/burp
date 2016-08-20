@@ -1,22 +1,23 @@
-#include "../../../burp.h"
-#include "../../../alloc.h"
-#include "../../../asfd.h"
-#include "../../../async.h"
-#include "../../../cmd.h"
-#include "../../../conf.h"
-#include "../../../fsops.h"
-#include "../../../lock.h"
-#include "../../../log.h"
-#include "../../../prepend.h"
-#include "champ_client.h"
-#include "champ_chooser.h"
-#include "champ_server.h"
+#include "server/protocol2/champ_chooser/champ_client.h"
+#include "server/protocol2/champ_chooser/champ_chooser.h"
+#include "server/protocol2/champ_chooser/champ_server.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "cmd.h"
+#include "conf.h"
+#include "fsops.h"
+#include "lock.h"
+#include "log.h"
+#include "prepend.h"
 
 #include <sys/un.h>
 
 static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs,
 	int resume)
 {
+	int cret;
 	pid_t childpid=-1;
 
 	if(!get_int(confs[OPT_FORK]))
@@ -34,7 +35,6 @@ static int champ_chooser_fork(struct sdirs *sdirs, struct conf **confs,
 			return -1;
 		case 0:
 			// Child.
-			int cret;
 			log_fzp_set(NULL, confs);
 			switch(champ_chooser_server(sdirs, confs, resume))
 			{

@@ -1,17 +1,18 @@
+#include "utest/test.h"
+#include "utest/builders/build_file.h"
+#include "alloc.h"
+#include "fsops.h"
+#include "hexmap.h"
+#include "iobuf.h"
+#include "lock.h"
+#include "prepend.h"
+#include "server/protocol2/dpth.h"
+#include "protocol2/blk.h"
+
 #include <check.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "../../test.h"
-#include "../../../src/alloc.h"
-#include "../../../src/fsops.h"
-#include "../../../src/hexmap.h"
-#include "../../../src/iobuf.h"
-#include "../../../src/lock.h"
-#include "../../../src/prepend.h"
-#include "../../../src/server/protocol2/dpth.h"
-#include "../../../src/protocol2/blk.h"
-#include "../../builders/build_file.h"
 
 #define LOCKPATH	"utest_dpth"
 #define CFILES		LOCKPATH "/cfiles"

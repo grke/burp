@@ -1,6 +1,6 @@
 ACLOCAL_AMFLAGS = -I m4
 
-AM_CPPFLAGS = -fno-strict-aliasing -fno-exceptions -fno-rtti -x c++
+AM_CPPFLAGS = -I$(srcdir)/src -fno-strict-aliasing
 
 CLEANFILES =
 
@@ -107,6 +107,7 @@ vss_strip_CPPFLAGS = \
 	$(OPENSSL_INC)
 
 burp_LDADD = \
+	-lm \
 	$(ACL_LIBS) \
 	$(CRYPT_LIBS) \
 	$(NCURSES_LIBS) \
@@ -375,6 +376,7 @@ runner_LDFLAGS = \
 	$(OPENSSL_LDFLAGS)
 
 runner_LDADD = \
+	-lm \
 	$(ACL_LIBS) \
 	$(CHECK_LIBS) \
 	$(CRYPT_LIBS) \

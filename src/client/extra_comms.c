@@ -1,15 +1,15 @@
-#include "../burp.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../cmd.h"
-#include "../conf.h"
-#include "../conffile.h"
-#include "../handy.h"
-#include "../incexc_recv.h"
-#include "../incexc_send.h"
-#include "../iobuf.h"
-#include "../log.h"
-#include "autoupgrade.h"
+#include "client/autoupgrade.h"
+#include "burp.h"
+#include "asfd.h"
+#include "async.h"
+#include "cmd.h"
+#include "conf.h"
+#include "conffile.h"
+#include "handy.h"
+#include "incexc_recv.h"
+#include "incexc_send.h"
+#include "iobuf.h"
+#include "log.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>
@@ -30,7 +30,7 @@ static const char *server_supports_autoupgrade(const char *feat)
 
 #include <librsync.h>
 
-int extra_comms(struct async *as, struct conf **confs,
+int extra_client_comms(struct async *as, struct conf **confs,
 	enum action *action, char **incexc)
 {
 	int ret=-1;

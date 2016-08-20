@@ -1,11 +1,11 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../cmd.h"
-#include "../log.h"
-#include "../prepend.h"
-#include "../sbuf.h"
-#include "acl.h"
-#include "extrameta.h"
+#include "client/acl.h"
+#include "client/extrameta.h"
+#include "burp.h"
+#include "alloc.h"
+#include "cmd.h"
+#include "log.h"
+#include "prepend.h"
+#include "sbuf.h"
 
 #ifdef HAVE_ACL
 #if defined(HAVE_LINUX_OS) || \

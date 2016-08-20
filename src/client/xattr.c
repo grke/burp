@@ -1,12 +1,12 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../cntr.h"
-#include "../log.h"
-#include "../prepend.h"
-#include "extrameta.h"
-#include "xattr.h"
+#include "client/xattr.h"
+#include "client/extrameta.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "cntr.h"
+#include "log.h"
+#include "prepend.h"
 
 #ifdef HAVE_XATTR
 

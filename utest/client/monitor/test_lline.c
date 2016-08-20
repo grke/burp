@@ -1,5 +1,5 @@
-#include "../../test.h"
-#include "../../../src/client/monitor/lline.h"
+#include "utest/test.h"
+#include "client/monitor/lline.h"
 
 static void check_list(struct lline *list, const char *data[])
 {

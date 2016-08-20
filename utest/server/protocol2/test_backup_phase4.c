@@ -1,14 +1,15 @@
+#include "utest/test.h"
+#include "utest/builders/build.h"
+#include "alloc.h"
+#include "fsops.h"
+#include "fzp.h"
+#include "iobuf.h"
+#include "protocol2/blist.h"
+#include "protocol2/blk.h"
+#include "server/manio.h"
+#include "server/protocol2/backup_phase4.h"
+
 #include <check.h>
-#include "../../test.h"
-#include "../../builders/build.h"
-#include "../../../src/alloc.h"
-#include "../../../src/fsops.h"
-#include "../../../src/fzp.h"
-#include "../../../src/iobuf.h"
-#include "../../../src/protocol2/blist.h"
-#include "../../../src/protocol2/blk.h"
-#include "../../../src/server/manio.h"
-#include "../../../src/server/protocol2/backup_phase4.h"
 
 #define PATH	"utest_merge"
 

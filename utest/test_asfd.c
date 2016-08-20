@@ -1,8 +1,8 @@
-#include "test.h"
-#include "../src/alloc.h"
-#include "../src/asfd.h"
-#include "../src/async.h"
-#include "../src/ssl.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "ssl.h"
 
 static struct async *setup(void)
 {

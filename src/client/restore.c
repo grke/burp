@@ -1,20 +1,20 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../attribs.h"
-#include "../berrno.h"
-#include "../cmd.h"
-#include "../cntr.h"
-#include "../fsops.h"
-#include "../handy.h"
-#include "../log.h"
-#include "../prepend.h"
-#include "../protocol2/blk.h"
-#include "cvss.h"
-#include "protocol1/restore.h"
-#include "protocol2/restore.h"
-#include "restore.h"
+#include "client/restore.h"
+#include "client/cvss.h"
+#include "client/protocol1/restore.h"
+#include "client/protocol2/restore.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "attribs.h"
+#include "berrno.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "fsops.h"
+#include "handy.h"
+#include "log.h"
+#include "prepend.h"
+#include "protocol2/blk.h"
 
 int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct cntr *cntr,
@@ -552,7 +552,7 @@ int do_restore_client(struct asfd *asfd,
 	if(!(style=get_restore_style(asfd, confs)))
 		goto error;
 
-	logf("\n");
+	logfatal("\n");
 
 	if(get_int(confs[OPT_SEND_CLIENT_CNTR]) && cntr_recv(asfd, confs))
 		goto error;
@@ -659,7 +659,7 @@ int do_restore_client(struct asfd *asfd,
 			case CMD_MESSAGE:
 			case CMD_WARNING:
 				log_recvd(&sb->path, cntr, 1);
-				logf("\n");
+				logfatal("\n");
 				continue;
 			default:
 				break;

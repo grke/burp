@@ -1,8 +1,8 @@
-#include "../test.h"
-#include "../src/action.h"
-#include "../src/alloc.h"
-#include "../src/conf.h"
-#include "../src/server/run_action.h"
+#include "utest/test.h"
+#include "action.h"
+#include "alloc.h"
+#include "conf.h"
+#include "server/run_action.h"
 
 struct parsedata
 {

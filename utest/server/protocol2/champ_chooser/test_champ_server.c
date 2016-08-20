@@ -1,11 +1,11 @@
-#include "../../../test.h"
-#include "../../../../src/alloc.h"
-#include "../../../../src/asfd.h"
-#include "../../../../src/iobuf.h"
-#include "../../../../src/protocol2/blist.h"
-#include "../../../../src/server/protocol2/champ_chooser/champ_server.h"
-#include "../../../../src/server/protocol2/champ_chooser/incoming.h"
-#include "../../../builders/build_asfd_mock.h"
+#include "utest/test.h"
+#include "utest/builders/build_asfd_mock.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "iobuf.h"
+#include "protocol2/blist.h"
+#include "server/protocol2/champ_chooser/champ_server.h"
+#include "server/protocol2/champ_chooser/incoming.h"
 
 static struct ioevent_list reads;
 static struct ioevent_list writes;

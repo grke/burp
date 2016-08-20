@@ -44,21 +44,23 @@
       Graham Keeling, 2014.
 */
 
-#include "../burp.h"
-#include "../alloc.h"
-#include "../conf.h"
-#include "../fsops.h"
-#include "../linkhash.h"
-#include "../log.h"
-#include "../pathcmp.h"
-#include "../prepend.h"
-#include "../regexp.h"
-#include "../strlist.h"
-#include "find.h"
+#include "client/find.h"
+#include "burp.h"
+#include "alloc.h"
+#include "conf.h"
+#include "fsops.h"
+#include "linkhash.h"
+#include "log.h"
+#include "pathcmp.h"
+#include "prepend.h"
+#include "regexp.h"
+#include "strlist.h"
 
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>
 #endif
+
+#include <stdbool.h>
 
 static int (*send_file)(struct asfd *, FF_PKT *, struct conf **);
 

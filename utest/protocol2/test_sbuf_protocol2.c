@@ -1,6 +1,6 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/protocol2/sbuf_protocol2.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "protocol2/sbuf_protocol2.h"
 
 START_TEST(test_sbuf_protocol2_alloc_error)
 {

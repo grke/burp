@@ -1,19 +1,19 @@
-#include "../burp.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../cntr.h"
-#include "../conf.h"
-#include "../conffile.h"
-#include "../fsops.h"
-#include "../handy.h"
-#include "../iobuf.h"
-#include "../lock.h"
-#include "../log.h"
-#include "auth.h"
-#include "ca.h"
-#include "child.h"
-#include "main.h"
-#include "monitor/status_server.h"
+#include "cntr.h"
+#include "server/main.h"
+#include "server/auth.h"
+#include "server/ca.h"
+#include "server/child.h"
+#include "server/monitor/status_server.h"
+#include "burp.h"
+#include "asfd.h"
+#include "async.h"
+#include "conf.h"
+#include "conffile.h"
+#include "fsops.h"
+#include "handy.h"
+#include "iobuf.h"
+#include "lock.h"
+#include "log.h"
 
 // FIX THIS: Should be able to configure multiple addresses and ports.
 #define LISTEN_SOCKETS	32
@@ -618,6 +618,8 @@ static int run_server(struct conf **confs, const char *conffile,
 
 	while(!hupreload)
 	{
+                int removed;
+
 		switch(mainas->read_write(mainas))
 		{
 			case 0:
@@ -641,7 +643,7 @@ static int run_server(struct conf **confs, const char *conffile,
 				}
 				break;
 			default:
-				int removed=0;
+				removed=0;
 				// Maybe one of the fds had a problem.
 				// Find and remove it and carry on if possible.
 				for(asfd=mainas->asfd; asfd; )

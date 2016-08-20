@@ -4,6 +4,8 @@
 #define ASYNC_BUF_LEN	16000
 #define ZCHUNK		ASYNC_BUF_LEN
 
+#include <time.h>
+
 struct async
 {
 	struct asfd *asfd;

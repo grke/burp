@@ -17,10 +17,10 @@
 #ifndef __YAJL_PARSER_H__
 #define __YAJL_PARSER_H__
 
-#include "api/yajl_parse.h"
-#include "yajl_bytestack.h"
-#include "yajl_buf.h"
-#include "yajl_lex.h"
+#include "yajl/api/yajl_parse.h"
+#include "yajl/yajl_bytestack.h"
+#include "yajl/yajl_buf.h"
+#include "yajl/yajl_lex.h"
 
 
 typedef enum {

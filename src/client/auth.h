@@ -1,6 +1,8 @@
 #ifndef _AUTH_CLIENT_H
 #define _AUTH_CLIENT_H
 
+#include "cntr.h"
+
 extern int authorise_client(struct asfd *asfd,
 	char **server_version,
 	const char *cname,

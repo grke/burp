@@ -1,7 +1,7 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../log.h"
-#include "lline.h"
+#include "client/monitor/lline.h"
+#include "burp.h"
+#include "alloc.h"
+#include "log.h"
 
 static void lline_free_content(struct lline *lline)
 {

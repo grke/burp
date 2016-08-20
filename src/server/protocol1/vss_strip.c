@@ -1,4 +1,4 @@
-#include "../../burp.h"
+#include "burp.h"
 
 static const char *prog=NULL;
 

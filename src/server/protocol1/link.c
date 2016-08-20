@@ -1,13 +1,13 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../cntr.h"
-#include "../../conf.h"
-#include "../../fsops.h"
-#include "../../fzp.h"
-#include "../../log.h"
-#include "../../prepend.h"
-#include "../child.h"
-#include "link.h"
+#include "server/protocol1/link.h"
+#include "burp.h"
+#include "alloc.h"
+#include "cntr.h"
+#include "conf.h"
+#include "fsops.h"
+#include "fzp.h"
+#include "log.h"
+#include "prepend.h"
+#include "server/child.h"
 
 int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 {

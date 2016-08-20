@@ -1,10 +1,11 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/cstat.h"
-#include "../../src/fsops.h"
+#include "utest/test.h"
+#include "utest/builders/build.h"
+#include "utest/builders/build_file.h"
+#include "alloc.h"
+#include "cntr.h"
+#include "cstat.h"
+#include "fsops.h"
 
-#include "build.h"
-#include "build_file.h"
 
 char *get_clientconfdir_path(const char *file)
 {

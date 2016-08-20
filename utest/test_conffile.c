@@ -1,13 +1,15 @@
-#include <check.h>
+#include "utest/test.h"
+#include "utest/builders/build_file.h"
+#include "alloc.h"
+#include "conf.h"
+#include "conffile.h"
+#include "fsops.h"
+#include "pathcmp.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "test.h"
-#include "builders/build_file.h"
-#include "../src/alloc.h"
-#include "../src/conf.h"
-#include "../src/conffile.h"
-#include "../src/fsops.h"
-#include "../src/pathcmp.h"
+
+#include <check.h>
 
 #define BASE		"utest_conffile"
 #define CONFFILE	BASE "/burp.conf"

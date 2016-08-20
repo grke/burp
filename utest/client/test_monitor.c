@@ -1,10 +1,10 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/asfd.h"
-#include "../../src/async.h"
-#include "../../src/iobuf.h"
-#include "../../src/client/monitor.h"
-#include "../builders/build_asfd_mock.h"
+#include "utest/test.h"
+#include "utest/builders/build_asfd_mock.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "iobuf.h"
+#include "client/monitor.h"
 
 static struct ioevent_list areads;
 static struct ioevent_list awrites;

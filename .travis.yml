@@ -1,6 +1,6 @@
 sudo: required
 dist: trusty
-language: cpp
+language: c
 git:
   depth: 3
 compiler:

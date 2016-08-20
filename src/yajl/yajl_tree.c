@@ -14,17 +14,17 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "../burp.h"
+#include "burp.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
 
-#include "api/yajl_tree.h"
-#include "api/yajl_parse.h"
+#include "yajl/api/yajl_tree.h"
+#include "yajl/api/yajl_parse.h"
 
-#include "yajl_parser.h"
+#include "yajl/yajl_parser.h"
 
 #if ( (defined(_WIN32) || defined(WIN32) || defined(HAVE_WIN32) ) && ( defined(_MSC_VER) ) )
 #define snprintf sprintf_s

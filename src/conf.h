@@ -1,6 +1,8 @@
 #ifndef _CONF_H
 #define _CONF_H
 
+#include "burp.h"
+
 #define CONF_FLAG_CC_OVERRIDE		0x01
 #define CONF_FLAG_INCEXC		0x02
 #define CONF_FLAG_INCEXC_RESTORE	0x04

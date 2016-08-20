@@ -1,6 +1,6 @@
-#include "../../../test.h"
-#include "../../../../src/alloc.h"
-#include "../../../../src/server/protocol2/champ_chooser/scores.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "server/protocol2/champ_chooser/scores.h"
 
 static void tear_down(void)
 {

@@ -1,6 +1,7 @@
+#include "utest/test.h"
+
 #include <check.h>
 #include <stdlib.h>
-#include "test.h"
 
 int main(void)
 {

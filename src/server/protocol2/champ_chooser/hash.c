@@ -1,10 +1,10 @@
-#include "../../../burp.h"
-#include "../../../alloc.h"
-#include "../../../log.h"
-#include "../../../prepend.h"
-#include "../../../protocol2/blk.h"
-#include "../../../sbuf.h"
-#include "hash.h"
+#include "server/protocol2/champ_chooser/hash.h"
+#include "burp.h"
+#include "alloc.h"
+#include "log.h"
+#include "prepend.h"
+#include "protocol2/blk.h"
+#include "sbuf.h"
 
 struct hash_weak *hash_table=NULL;
 

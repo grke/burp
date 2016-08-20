@@ -1,7 +1,9 @@
 #ifndef _FZP_H
 #define _FZP_H
 
+#include <stdio.h>
 #include <zlib.h>
+#include <openssl/ssl.h>
 
 enum fzp_type
 {
@@ -9,7 +11,7 @@ enum fzp_type
 	FZP_COMPRESSED
 };
 
-struct fzp
+typedef struct fzp
 {
 	enum fzp_type type;
 	union
@@ -17,7 +19,7 @@ struct fzp
 		FILE *fp;
 		gzFile zp;
 	};
-};
+} fzp;
 
 extern struct fzp *fzp_open(const char *path, const char *mode);
 extern struct fzp *fzp_gzopen(const char *path, const char *mode);

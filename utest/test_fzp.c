@@ -1,7 +1,7 @@
-#include "test.h"
-#include "../src/alloc.h"
-#include "../src/fzp.h"
-#include "../src/handy.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "fzp.h"
+#include "handy.h"
 
 static const char *file="utest_fzp";
 static const char *content="0123456789abcdefg";

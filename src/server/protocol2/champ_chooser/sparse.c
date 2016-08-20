@@ -1,7 +1,7 @@
-#include "../../../burp.h"
-#include "../../../alloc.h"
-#include "candidate.h"
-#include "sparse.h"
+#include "server/protocol2/champ_chooser/sparse.h"
+#include "server/protocol2/champ_chooser/candidate.h"
+#include "burp.h"
+#include "alloc.h"
 
 static struct sparse *sparse_table=NULL;
 

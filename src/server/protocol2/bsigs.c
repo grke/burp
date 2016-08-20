@@ -1,12 +1,12 @@
-#include "../../burp.h"
-#include "../../attribs.h"
-#include "../../base64.h"
-#include "../../fzp.h"
-#include "../../handy.h"
-#include "../../hexmap.h"
-#include "../../iobuf.h"
-#include "../../log.h"
-#include "../../protocol2/blk.h"
+#include "burp.h"
+#include "attribs.h"
+#include "base64.h"
+#include "fzp.h"
+#include "handy.h"
+#include "hexmap.h"
+#include "iobuf.h"
+#include "log.h"
+#include "protocol2/blk.h"
 
 static const char *path=NULL;
 

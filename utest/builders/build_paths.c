@@ -1,14 +1,14 @@
+#include "utest/test.h"
+#include "utest/prng.h"
 #include <check.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "../test.h"
-#include "../prng.h"
-#include "../../src/alloc.h"
-#include "../../src/attribs.h"
-#include "../../src/handy.h"
-#include "../../src/pathcmp.h"
-#include "../../src/sbuf.h"
+#include "alloc.h"
+#include "attribs.h"
+#include "handy.h"
+#include "pathcmp.h"
+#include "sbuf.h"
 
 static char char_gen(void)
 {

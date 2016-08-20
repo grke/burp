@@ -1,3 +1,4 @@
+#include "client/monitor.h"
 #include "burp.h"
 #include "asfd.h"
 #include "async.h"

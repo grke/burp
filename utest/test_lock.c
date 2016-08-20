@@ -1,6 +1,6 @@
-#include "test.h"
-#include "../src/alloc.h"
-#include "../src/lock.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "lock.h"
 
 static const char *lockfile="utest_lockfile";
 

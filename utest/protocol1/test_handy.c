@@ -1,6 +1,6 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/protocol1/handy.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "protocol1/handy.h"
 
 static void tear_down(void)
 {

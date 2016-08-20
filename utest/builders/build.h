@@ -5,8 +5,8 @@
 #include "cmd.h"
 #include "cntr.h"
 #include "cstat.h"
-#include "server/build_storage_dirs.h"
-#include "server/protocol2/champ_chooser/build_dindex.h"
+#include "utest/builders/server/build_storage_dirs.h"
+#include "utest/builders/server/protocol2/champ_chooser/build_dindex.h"
 
 #define RMANIFEST_RELATIVE	"rmanifest_relative"
 #define CLIENTCONFDIR		"clientconfdir"

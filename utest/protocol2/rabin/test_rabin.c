@@ -1,8 +1,8 @@
-#include "../../test.h"
-#include "../../../src/alloc.h"
-#include "../../../src/hexmap.h"
-#include "../../../src/protocol2/blk.h"
-#include "../../../src/protocol2/rabin/rabin.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "hexmap.h"
+#include "protocol2/blk.h"
+#include "protocol2/rabin/rabin.h"
 
 struct bdata
 {

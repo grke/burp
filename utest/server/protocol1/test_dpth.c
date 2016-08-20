@@ -2,16 +2,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "../../test.h"
-#include "../../../src/alloc.h"
-#include "../../../src/conf.h"
-#include "../../../src/conffile.h"
-#include "../../../src/fsops.h"
-#include "../../../src/hexmap.h"
-#include "../../../src/iobuf.h"
-#include "../../../src/lock.h"
-#include "../../../src/prepend.h"
-#include "../../../src/server/protocol1/dpth.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "conf.h"
+#include "conffile.h"
+#include "fsops.h"
+#include "hexmap.h"
+#include "iobuf.h"
+#include "lock.h"
+#include "prepend.h"
+#include "server/protocol1/dpth.h"
 
 static const char *basepath="utest_dpth";
 

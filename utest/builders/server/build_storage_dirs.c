@@ -1,10 +1,10 @@
-#include "../../test.h"
-#include "../../../src/bu.h"
-#include "../../../src/fsops.h"
-#include "../../../src/server/sdirs.h"
-#include "../../../src/server/timestamp.h"
-#include "../build_file.h"
-#include "build_storage_dirs.h"
+#include "utest/builders/server/build_storage_dirs.h"
+#include "utest/test.h"
+#include "utest/builders/build_file.h"
+#include "bu.h"
+#include "fsops.h"
+#include "server/sdirs.h"
+#include "server/timestamp.h"
 
 static void create_file(const char *backup,
 	const char *file, int compressed_logs)

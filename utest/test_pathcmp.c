@@ -1,7 +1,9 @@
-#include <check.h>
+#include "utest/test.h"
+#include "pathcmp.h"
+
 #include <stdlib.h>
-#include "test.h"
-#include "../src/pathcmp.h"
+
+#include <check.h>
 
 #define SAME	0
 #define APRIOR	-1

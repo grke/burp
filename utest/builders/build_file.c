@@ -1,8 +1,8 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/fsops.h"
+#include "utest/test.h"
+#include "utest/builders/build.h"
+#include "alloc.h"
+#include "fsops.h"
 
-#include "build.h"
 
 void build_file(const char *path, const char *content)
 {

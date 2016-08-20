@@ -1,8 +1,8 @@
-#include "test.h"
-#include "../src/alloc.h"
-#include "../src/protocol2/blk.h"
-#include "../src/sbuf.h"
-#include "../src/slist.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "protocol2/blk.h"
+#include "sbuf.h"
+#include "slist.h"
 
 static void tear_down(struct slist **slist)
 {

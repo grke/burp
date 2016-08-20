@@ -1,6 +1,11 @@
 #ifndef _BUILD_MOCK_ASFD_H
 #define _BUILD_MOCK_ASFD_H
 
+#include "cmd.h"
+#include "iobuf.h"
+
+#include <inttypes.h>
+
 struct ioevent
 {
         struct iobuf iobuf;

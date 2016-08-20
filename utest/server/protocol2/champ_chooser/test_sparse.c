@@ -1,7 +1,7 @@
-#include "../../../test.h"
-#include "../../../../src/alloc.h"
-#include "../../../../src/server/protocol2/champ_chooser/candidate.h"
-#include "../../../../src/server/protocol2/champ_chooser/sparse.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "server/protocol2/champ_chooser/candidate.h"
+#include "server/protocol2/champ_chooser/sparse.h"
 
 static void tear_down(void)
 {

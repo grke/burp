@@ -1,6 +1,6 @@
-#include <stdio.h>
+#include "utest/prng.h"
 
-#include "prng.h"
+#include <stdio.h>
 
 static uint32_t current=0;
 static uint32_t seed=0;

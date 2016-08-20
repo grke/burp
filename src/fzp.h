@@ -1,7 +1,9 @@
 #ifndef _FZP_H
 #define _FZP_H
 
+#include <stdio.h>
 #include <zlib.h>
+#include <openssl/ssl.h>
 
 enum fzp_type
 {

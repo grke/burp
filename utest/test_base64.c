@@ -1,9 +1,11 @@
-#include <check.h>
+#include "utest/test.h"
+#include "base64.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "test.h"
-#include "../src/base64.h"
+
+#include <check.h>
 
 struct data
 {

@@ -32,6 +32,7 @@
  *     Graham Keeling, 2014.
  */
 
+#include "client/backup_phase1.h"
 #include "client/extrameta.h"
 #include "client/find.h"
 #include "burp.h"

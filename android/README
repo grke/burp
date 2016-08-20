@@ -4,7 +4,7 @@ Skeleton notes for building burp for an ARM-based android device:
 2. Download the android SDK and NDK.
 3. Toolchain setup:
 
-   $(pwd)/make-standalone-toolchain.sh --system=linux-x86_64 --platform=android-9 --install-dir=/path/to/burp-cross-tools/android
+   $(pwd)/make-standalone-toolchain.sh --platform=android-9 --install-dir=/path/to/burp-cross-tools/android
 
 4. Build dependency packages:
 

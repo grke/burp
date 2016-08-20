@@ -1,3 +1,4 @@
+#include "server/child.h"
 #include "server/extra_comms.h"
 #include "server/monitor/status_server.h"
 #include "server/run_action.h"

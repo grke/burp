@@ -1,3 +1,4 @@
+#include "client/protocol2/restore.h"
 #include "burp.h"
 #include "alloc.h"
 #include "asfd.h"

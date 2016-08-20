@@ -1,3 +1,4 @@
+#include "conffile.h"
 #include "burp.h"
 #include "alloc.h"
 #include "conf.h"

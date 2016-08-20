@@ -1,6 +1,9 @@
 #ifndef RUN_SCRIPT_H
 #define RUN_SCRIPT_H
 
+#include "asfd.h"
+#include "conf.h"
+
 extern int run_script(struct asfd *asfd,
 	const char **args, struct strlist *userargs,
 	struct conf **confs, int do_wait, int do_logp, int log_remote);

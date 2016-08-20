@@ -1,3 +1,4 @@
+#include "client/auth.h"
 #include "burp.h"
 #include "alloc.h"
 #include "asfd.h"

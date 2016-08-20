@@ -282,7 +282,7 @@ static int file_size_match(FF_PKT *ff_pkt, struct conf **confs)
 }
 
 // Last checks before actually processing the file system entry.
-int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
+static int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	if(!file_is_included(confs, ff->fname, top_level)) return 0;
 

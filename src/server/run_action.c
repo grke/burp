@@ -1,3 +1,4 @@
+#include "server/run_action.h"
 #include "server/backup.h"
 #include "server/delete.h"
 #include "server/diff.h"

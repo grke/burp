@@ -1,3 +1,4 @@
+#include "server/protocol1/deleteme.h"
 #include "burp.h"
 #include "alloc.h"
 #include "conf.h"

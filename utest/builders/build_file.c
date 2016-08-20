@@ -1,3 +1,4 @@
+#include "utest/builders/build_file.h"
 #include "utest/test.h"
 #include "utest/builders/build.h"
 #include "alloc.h"

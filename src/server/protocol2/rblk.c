@@ -1,3 +1,4 @@
+#include "server/protocol2/rblk.h"
 #include "burp.h"
 #include "alloc.h"
 #include "cmd.h"

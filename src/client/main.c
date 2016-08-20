@@ -1,3 +1,4 @@
+#include "client/main.h"
 #include "client/auth.h"
 #include "client/backup.h"
 #include "client/ca.h"

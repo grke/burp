@@ -1,7 +1,8 @@
 #ifndef STATUS_CLIENT_NCURSES_H
 #define STATUS_CLIENT_NCURSES_H
 
-#include "../../action.h"
+#include "action.h"
+#include "conf.h"
 
 extern int status_client_ncurses_init(enum action act);
 extern int status_client_ncurses(struct conf **confs);

@@ -2,7 +2,7 @@
 #define _BACKUP_RESUME3_H
 
 #include "fzp.h"
-#include "manio.h"
+#include "server/manio.h"
 #include "server/dpth.h"
 
 extern man_off_t *do_resume(struct sdirs *sdirs,

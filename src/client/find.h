@@ -40,6 +40,10 @@
 #ifndef _FIND_H
 #define _FIND_H
 
+#include "asfd.h"
+#include "conf.h"
+
+#include <dirent.h>
 #include <sys/file.h>
 #include <sys/param.h>
 

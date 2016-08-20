@@ -1,6 +1,9 @@
 #ifndef _SERVER_MAIN_H
 #define _SERVER_MAIN_H
 
+#include "conf.h"
+#include "lock.h"
+
 #include <stdbool.h>
 
 extern int server(struct conf **confs, const char *conffile,

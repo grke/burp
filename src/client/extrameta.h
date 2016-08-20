@@ -1,8 +1,8 @@
 #ifndef _EXTRAMETA_H
 #define _EXTRAMETA_H
 
-#include "../bfile.h"
-#include "../sbuf.h"
+#include "bfile.h"
+#include "sbuf.h"
 
 #define META_ACCESS_ACL		'A'
 #define META_DEFAULT_ACL	'D'

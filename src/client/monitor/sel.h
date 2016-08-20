@@ -1,6 +1,8 @@
 #ifndef _SEL_H
 #define _SEL_H
 
+#include <inttypes.h>
+
 enum page
 {
 	PAGE_CLIENT_LIST=0,

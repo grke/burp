@@ -2,11 +2,11 @@
 
 // Windows glob stuff originally by ziirish.
 
-#include "../burp.h"
-#include "../alloc.h"
-#include "../handy.h"
-#include "../log.h"
-#include "../strlist.h"
+#include "burp.h"
+#include "alloc.h"
+#include "handy.h"
+#include "log.h"
+#include "strlist.h"
 
 static void xfree_list(char **list, int size)
 {

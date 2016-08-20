@@ -1,6 +1,9 @@
 #ifndef _CHAMP_CHOOSER_SCORES_H
 #define _CHAMP_CHOOSER_SCORES_H
 
+#include <inttypes.h>
+#include <stdlib.h>
+
 // Array to keep the scores. Candidates point at a unique entry in the
 // array for their scores. Keeping them in an array like this means
 // that all the scores can be reset quickly.

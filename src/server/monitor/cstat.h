@@ -1,6 +1,8 @@
 #ifndef _CSTAT_SERVER_H
 #define _CSTAT_SERVER_H
 
+#include "cstat.h"
+
 extern int cstat_load_data_from_disk(struct cstat **clist,
 	struct conf **globalcs, struct conf **cconfs);
 extern void cstat_set_run_status(struct cstat *cstat);

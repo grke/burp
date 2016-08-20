@@ -1,6 +1,12 @@
 #ifndef _RESTORE_SERVER_H
 #define _RESTORE_SERVER_H
 
+#include "server/sdirs.h"
+#include "sbuf.h"
+#include "slist.h"
+
+#include <regex.h>
+
 extern int want_to_restore(int srestore, struct sbuf *sb,
 	regex_t *regex, struct conf **cconfs);
 

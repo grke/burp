@@ -1,7 +1,7 @@
 #ifndef _MANIOS_H
 #define _MANIOS_H
 
-#include "manio.h"
+#include "server/manio.h"
 
 typedef struct manios
 {

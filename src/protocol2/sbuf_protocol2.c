@@ -1,6 +1,6 @@
-#include "../burp.h"
-#include "sbuf_protocol2.h"
-#include "../alloc.h"
+#include "protocol2/sbuf_protocol2.h"
+#include "burp.h"
+#include "alloc.h"
 
 struct protocol2 *sbuf_protocol2_alloc(void)
 {

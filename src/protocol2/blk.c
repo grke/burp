@@ -1,11 +1,11 @@
-#include "../burp.h"
-#include "blk.h"
-#include "../alloc.h"
-#include "../hexmap.h"
-#include "../iobuf.h"
-#include "../log.h"
-#include "../protocol2/rabin/rabin.h"
-#include "rabin/rconf.h"
+#include "protocol2/blk.h"
+#include "protocol2/rabin/rabin.h"
+#include "protocol2/rabin/rconf.h"
+#include "burp.h"
+#include "alloc.h"
+#include "hexmap.h"
+#include "iobuf.h"
+#include "log.h"
 
 struct blk *blk_alloc(void)
 {

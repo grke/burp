@@ -1,6 +1,10 @@
 #ifndef _BURP_ACL_H
 #define _BURP_ACL_H
 
+#include "cmd.h"
+#include "cntr.h"
+#include "config.h"
+
 #ifdef HAVE_ACL
 #if defined(HAVE_LINUX_OS) || \
     defined(HAVE_FREEBSD_OS) || \

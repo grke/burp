@@ -14,11 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "../burp.h"
-#include "api/yajl_parse.h"
-#include "yajl_lex.h"
-#include "yajl_parser.h"
-#include "yajl_alloc.h"
+#include "burp.h"
+#include "yajl/api/yajl_parse.h"
+#include "yajl/yajl_lex.h"
+#include "yajl/yajl_parser.h"
+#include "yajl/yajl_alloc.h"
 
 #include <stdlib.h>
 #include <string.h>

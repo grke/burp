@@ -1,11 +1,11 @@
-#include "../burp.h"
-#include "../action.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../attribs.h"
-#include "../cmd.h"
-#include "../handy.h"
-#include "../log.h"
+#include "burp.h"
+#include "action.h"
+#include "asfd.h"
+#include "async.h"
+#include "attribs.h"
+#include "cmd.h"
+#include "handy.h"
+#include "log.h"
 
 /* Note: The chars in this function are not the same as in the CMD_ set.
    These are for printing to the screen only. */

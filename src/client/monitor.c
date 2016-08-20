@@ -1,10 +1,10 @@
-#include "../burp.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../conf.h"
-#include "../cmd.h"
-#include "../iobuf.h"
-#include "../log.h"
+#include "burp.h"
+#include "asfd.h"
+#include "async.h"
+#include "conf.h"
+#include "cmd.h"
+#include "iobuf.h"
+#include "log.h"
 
 static int copy_input_to_output(struct asfd *in, struct asfd *out)
 {

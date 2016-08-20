@@ -3,7 +3,7 @@
 
 #define DEFAULT_TIMESTAMP_FORMAT	"%Y-%m-%d %H:%M:%S"
 
-#include "sdirs.h"
+#include "server/sdirs.h"
 
 extern int timestamp_read(const char *path, char buf[], size_t len);
 extern int timestamp_write(const char *path, const char *tstmp);

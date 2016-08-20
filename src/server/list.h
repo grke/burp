@@ -1,6 +1,8 @@
 #ifndef _LIST_SERVER_H
 #define _LIST_SERVER_H
 
+#include "sbuf.h"
+
 extern int list_server_init(
 	struct asfd *a,
 	struct sdirs *s,

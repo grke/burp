@@ -4,6 +4,8 @@
 #include "server/protocol2/champ_chooser/incoming.h"
 #include "server/protocol2/champ_chooser/scores.h"
 
+#include <inttypes.h>
+
 enum cand_ret
 {
 	CAND_RET_TEMP=-2,

@@ -1,7 +1,7 @@
-#include "../../burp.h"
-#include "fdirs.h"
-#include "../../alloc.h"
-#include "../../prepend.h"
+#include "server/protocol1/fdirs.h"
+#include "burp.h"
+#include "alloc.h"
+#include "prepend.h"
 
 struct fdirs *fdirs_alloc(void)
 {

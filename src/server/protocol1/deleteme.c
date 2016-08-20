@@ -1,9 +1,9 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../conf.h"
-#include "../../fsops.h"
-#include "../../prepend.h"
-#include "../sdirs.h"
+#include "burp.h"
+#include "alloc.h"
+#include "conf.h"
+#include "fsops.h"
+#include "prepend.h"
+#include "server/sdirs.h"
 
 int deleteme_move(struct sdirs *sdirs, const char *fullpath, const char *path,
 	struct conf **cconfs)

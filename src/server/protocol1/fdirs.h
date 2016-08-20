@@ -1,7 +1,7 @@
 #ifndef _FDIRS_H
 #define _FDIRS_H
 
-#include "../sdirs.h"
+#include "server/sdirs.h"
 
 struct fdirs // Finishing directories.
 {

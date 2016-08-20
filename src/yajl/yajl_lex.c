@@ -14,9 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "../burp.h"
-#include "yajl_lex.h"
-#include "yajl_buf.h"
+#include "burp.h"
+#include "yajl/yajl_lex.h"
+#include "yajl/yajl_buf.h"
 
 #include <stdlib.h>
 #include <stdio.h>

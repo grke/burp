@@ -1,6 +1,8 @@
 #ifndef _CHAMP_CHOOSER_INCOMING_H
 #define _CHAMP_CHOOSER_INCOMING_H
 
+#include <inttypes.h>
+
 struct incoming
 {
 	uint64_t *fingerprints;

@@ -3,8 +3,9 @@
 
 #include "burp.h"
 #include "conf.h"
-#include "sdirs.h"
-#include "src/protocol2/blk.h"
+#include "sbuf.h"
+#include "server/sdirs.h"
+#include "protocol2/blk.h"
 
 struct man_off
 {

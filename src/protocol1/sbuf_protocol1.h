@@ -1,9 +1,9 @@
 #ifndef _SBUF_PROTOCOL1_H
 #define _SBUF_PROTOCOL1_H
 
-#include "rs_buf.h"
-#include "../fzp.h"
-#include "../iobuf.h"
+#include "protocol1/rs_buf.h"
+#include "fzp.h"
+#include "iobuf.h"
 
 // Structure used only by protocol1 style functionality.
 struct protocol1

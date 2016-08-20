@@ -1,3 +1,4 @@
+#include "server/protocol1/zlibio.h"
 #include "burp.h"
 #include "asfd.h"
 #include "async.h"

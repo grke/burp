@@ -27,7 +27,7 @@ static char *encode_mode(mode_t mode, char *buf)
 	return cp;
 }
 
-void ls_to_buf(char *lsbuf, struct sbuf *sb)
+static void ls_to_buf(char *lsbuf, struct sbuf *sb)
 {
 	int n;
 	char *p;

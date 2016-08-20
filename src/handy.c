@@ -25,7 +25,7 @@
 
 // return -1 for error, 0 for OK, 1 if the client wants to interrupt the
 // transfer.
-int do_quick_read(struct asfd *asfd, const char *datapth, struct cntr *cntr)
+static int do_quick_read(struct asfd *asfd, const char *datapth, struct cntr *cntr)
 {
 	int r=0;
 	struct iobuf *rbuf;

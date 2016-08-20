@@ -42,9 +42,6 @@ extern int receive_a_file(struct asfd *asfd,
 extern int send_a_file(struct asfd *asfd,
 	const char *path, struct cntr *cntr);
 
-extern int do_quick_read(struct asfd *asfd,
-	const char *datapth, struct cntr *cntr);
-
 extern int strncmp_w(const char *s1, const char *s2);
 extern char *strdup_w(const char *s, const char *func);
 extern void *realloc_w(void *ptr, size_t size, const char *func);

@@ -290,6 +290,7 @@ error:
 }
 #endif
 
+__attribute__ ((format(printf, 2, 3)))
 int fzp_printf(struct fzp *fzp, const char *format, ...)
 {
 	static char buf[4096];

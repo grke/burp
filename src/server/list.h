@@ -14,7 +14,7 @@ extern int list_server_init(
 extern int do_list_server(void);
 extern void list_server_free(void);
 
-extern int check_browsedir(const char *browsedir,
+extern int check_browsedir(const char *browsedir_str,
 	struct sbuf *mb,
 	size_t bdlen,
 	char **last_bd_match);

@@ -979,6 +979,7 @@ static void ncurses_free(void)
 }
 #endif
 
+__attribute__ ((noreturn))
 static void sighandler(int sig)
 {
 #ifdef HAVE_NCURSES

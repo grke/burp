@@ -425,6 +425,7 @@ int merge_files_in_dir(const char *final, const char *fmanifest,
 	char compb[32]="";
 	char compd[32]="";
 	char *fullsrcdir=NULL;
+	const char *dstdir;
 
 	if(!(m1dir=prepend_s(fmanifest, "m1"))
 	  || !(m2dir=prepend_s(fmanifest, "m2"))
@@ -435,8 +436,8 @@ int merge_files_in_dir(const char *final, const char *fmanifest,
 		goto end;
 	while(1)
 	{
-		const char *srcdir=NULL;
-		const char *dstdir=NULL;
+		srcdir=NULL;
+		dstdir=NULL;
 		if(!pass)
 		{
 			srcdir=fullsrcdir;

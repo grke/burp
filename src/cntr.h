@@ -22,7 +22,7 @@
 #define CNTR_STATUS_STR_DELETING	"deleting"
 #define CNTR_STATUS_STR_DIFFING		"diffing"
 
-typedef enum cntr_status
+enum cntr_status
 {
 	CNTR_STATUS_UNSET=0,
 
@@ -36,7 +36,7 @@ typedef enum cntr_status
 	CNTR_STATUS_VERIFYING,
 	CNTR_STATUS_DELETING,
 	CNTR_STATUS_DIFFING
-} cntr_status;
+};
 
 typedef struct cntr_ent cntr_ent_t;
 
@@ -114,6 +114,6 @@ extern int str_to_cntr(const char *str, struct cstat *cstat, char **path);
 extern int cntr_recv(struct asfd *asfd, struct conf **conf);
 
 extern const char *cntr_status_to_str(struct cntr *cntr);
-extern cntr_status cntr_str_to_status(const char *str);
+extern enum cntr_status cntr_str_to_status(const char *str);
 
 #endif

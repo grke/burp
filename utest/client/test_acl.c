@@ -1,10 +1,10 @@
-#include "../test.h"
-#include "../builders/build_file.h"
-#include "../../src/alloc.h"
-#include "../../src/cmd.h"
-#include "../../src/fsops.h"
-#include "../../src/client/extrameta.h"
-#include "../../src/client/acl.h"
+#include "utest/test.h"
+#include "utest/builders/build_file.h"
+#include "alloc.h"
+#include "cmd.h"
+#include "fsops.h"
+#include "client/extrameta.h"
+#include "client/acl.h"
 
 #ifdef HAVE_ACL
 #ifndef HAVE_DARWIN_OS

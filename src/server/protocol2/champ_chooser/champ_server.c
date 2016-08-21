@@ -1,24 +1,24 @@
-#include "../../../burp.h"
-#include "../../../alloc.h"
-#include "../../../asfd.h"
-#include "../../../async.h"
-#include "../../../cmd.h"
-#include "../../../conf.h"
-#include "../../../conffile.h"
-#include "../../../fsops.h"
-#include "../../../handy.h"
-#include "../../../iobuf.h"
-#include "../../../lock.h"
-#include "../../../log.h"
-#include "../../../protocol2/blist.h"
-#include "../../../protocol2/blk.h"
-#include "../../sdirs.h"
-#include "candidate.h"
-#include "champ_chooser.h"
-#include "champ_server.h"
-#include "dindex.h"
-#include "incoming.h"
-#include "scores.h"
+#include "server/protocol2/champ_chooser/champ_server.h"
+#include "server/protocol2/champ_chooser/candidate.h"
+#include "server/protocol2/champ_chooser/champ_chooser.h"
+#include "server/protocol2/champ_chooser/dindex.h"
+#include "server/protocol2/champ_chooser/incoming.h"
+#include "server/protocol2/champ_chooser/scores.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "cmd.h"
+#include "conf.h"
+#include "conffile.h"
+#include "fsops.h"
+#include "handy.h"
+#include "iobuf.h"
+#include "lock.h"
+#include "log.h"
+#include "protocol2/blist.h"
+#include "protocol2/blk.h"
+#include "server/sdirs.h"
 
 #include <sys/un.h>
 
@@ -280,6 +280,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 
 	while(1)
 	{
+		int removed;
+
 		for(asfd=as->asfd->next; asfd; asfd=asfd->next)
 		{
 			if(!asfd->blist->head
@@ -315,7 +317,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 				}
 				break;
 			default:
-				int removed=0;
+				removed=0;
 				// Maybe one of the fds had a problem.
 				// Find and remove it and carry on if possible.
 				for(asfd=as->asfd->next; asfd; )

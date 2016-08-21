@@ -1,12 +1,12 @@
-#include "../burp.h"
-#include "sdirs.h"
-#include "../alloc.h"
-#include "../conf.h"
-#include "../fsops.h"
-#include "../lock.h"
-#include "../log.h"
-#include "../prepend.h"
-#include "timestamp.h"
+#include "server/sdirs.h"
+#include "server/timestamp.h"
+#include "burp.h"
+#include "alloc.h"
+#include "conf.h"
+#include "fsops.h"
+#include "lock.h"
+#include "log.h"
+#include "prepend.h"
 
 struct sdirs *sdirs_alloc(void)
 {

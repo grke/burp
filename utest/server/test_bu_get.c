@@ -1,17 +1,17 @@
-#include "../test.h"
-#include "../builders/build.h"
-#include "../../src/alloc.h"
-#include "../../src/bu.h"
-#include "../../src/conf.h"
-#include "../../src/conffile.h"
-#include "../../src/cstat.h"
-#include "../../src/fsops.h"
-#include "../../src/lock.h"
-#include "../../src/prepend.h"
-#include "../../src/server/bu_get.h"
-#include "../../src/server/protocol1/fdirs.h"
-#include "../../src/server/sdirs.h"
-#include "../../src/server/timestamp.h"
+#include "utest/test.h"
+#include "utest/builders/build.h"
+#include "alloc.h"
+#include "bu.h"
+#include "conf.h"
+#include "conffile.h"
+#include "cstat.h"
+#include "fsops.h"
+#include "lock.h"
+#include "prepend.h"
+#include "server/bu_get.h"
+#include "server/protocol1/fdirs.h"
+#include "server/sdirs.h"
+#include "server/timestamp.h"
 
 #define BASE		"utest_bu_get"
 
@@ -233,8 +233,8 @@ START_TEST(test_bu_get_proto_2)
 }
 END_TEST
 
-static enum run_status run_status=RUN_STATUS_IDLE;
-static enum cntr_status cntr_status=CNTR_STATUS_UNSET;
+static enum run_status rs=RUN_STATUS_IDLE;
+static enum cntr_status cs=CNTR_STATUS_UNSET;
 
 static void assert_bu_list_with_working(struct sdirs *sdirs,
 	struct sd *s, unsigned int len)
@@ -246,9 +246,9 @@ static void assert_bu_list_with_working(struct sdirs *sdirs,
 		proto2_hack(s, len);
 	memset(&cstat, 0, sizeof(cstat));
 	memset(&cntr, 0, sizeof(cntr));
-	cstat.run_status=run_status;
+	cstat.run_status=rs;
 	cstat.cntr=&cntr;
-	cntr.cntr_status=cntr_status;
+	cntr.cntr_status=cs;
 	fail_unless(!bu_get_list_with_working(sdirs, &bu_list, &cstat));
 	do_assert_bu_list(bu_list, s, len);
 	bu_list_free(&bu_list);
@@ -293,8 +293,8 @@ static void do_tests_with_working(enum protocol p)
 
 START_TEST(test_bu_get_with_working_proto_1)
 {
-	run_status=RUN_STATUS_IDLE;
-	cntr_status=CNTR_STATUS_UNSET;
+	rs=RUN_STATUS_IDLE;
+	cs=CNTR_STATUS_UNSET;
 	compressed_logs=0;
 	do_tests_with_working(PROTO_1);
 	compressed_logs=1;
@@ -304,8 +304,8 @@ END_TEST
 
 START_TEST(test_bu_get_with_working_proto_2)
 {
-	run_status=RUN_STATUS_IDLE;
-	cntr_status=CNTR_STATUS_UNSET;
+	rs=RUN_STATUS_IDLE;
+	cs=CNTR_STATUS_UNSET;
 	compressed_logs=0;
 	do_tests_with_working(PROTO_2);
 	compressed_logs=1;
@@ -331,14 +331,14 @@ static struct sd rn3[] = {
 
 static void do_tests_with_running(enum protocol p)
 {
-	run_status=RUN_STATUS_RUNNING;
-	cntr_status=CNTR_STATUS_UNSET;
+	rs=RUN_STATUS_RUNNING;
+	cs=CNTR_STATUS_UNSET;
 	build_and_check_working_same(sd3, ARR_LEN(sd3), p);
-	cntr_status=CNTR_STATUS_SCANNING;
+	cs=CNTR_STATUS_SCANNING;
 	build_and_check_working_same(rn1, ARR_LEN(rn1), p);
-	cntr_status=CNTR_STATUS_RESTORING;
+	cs=CNTR_STATUS_RESTORING;
 	build_and_check_working_same(rn2, ARR_LEN(rn2), p);
-	cntr_status=CNTR_STATUS_VERIFYING;
+	cs=CNTR_STATUS_VERIFYING;
 	build_and_check_working_same(rn3, ARR_LEN(rn3), p);
 }
 

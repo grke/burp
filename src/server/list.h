@@ -1,6 +1,8 @@
 #ifndef _LIST_SERVER_H
 #define _LIST_SERVER_H
 
+#include "sbuf.h"
+
 extern int list_server_init(
 	struct asfd *a,
 	struct sdirs *s,
@@ -12,7 +14,7 @@ extern int list_server_init(
 extern int do_list_server(void);
 extern void list_server_free(void);
 
-extern int check_browsedir(const char *browsedir,
+extern int check_browsedir(const char *browsedir_str,
 	struct sbuf *mb,
 	size_t bdlen,
 	char **last_bd_match);

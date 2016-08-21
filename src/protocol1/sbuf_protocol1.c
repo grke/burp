@@ -1,7 +1,7 @@
-#include "../burp.h"
-#include "sbuf_protocol1.h"
-#include "../alloc.h"
-#include "../cmd.h"
+#include "protocol1/sbuf_protocol1.h"
+#include "burp.h"
+#include "alloc.h"
+#include "cmd.h"
 
 static void sbuf_protocol1_init(struct protocol1 *protocol1)
 {

@@ -1,11 +1,12 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../asfd.h"
-#include "../cmd.h"
-#include "../cntr.h"
-#include "../handy.h"
-#include "../iobuf.h"
-#include "../log.h"
+#include "client/auth.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "handy.h"
+#include "iobuf.h"
+#include "log.h"
 
 int authorise_client(struct asfd *asfd,
 	char **server_version, const char *cname, const char *password,

@@ -1,3 +1,4 @@
+#include "run_script.h"
 #include "burp.h"
 #include "alloc.h"
 #include "asfd.h"

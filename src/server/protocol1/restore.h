@@ -1,8 +1,10 @@
 #ifndef _RESTORE_SERVER_PROTOCOL1_H
 #define _RESTORE_SERVER_PROTOCOL1_H
 
-#include "../../action.h"
-#include "../restore.h"
+#include "action.h"
+#include "bu.h"
+#include "cntr.h"
+#include "server/restore.h"
 
 extern int restore_sbuf_protocol1(struct asfd *asfd, struct sbuf *sb,
 	struct bu *bu, enum action act, struct sdirs *sdirs,

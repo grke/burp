@@ -2,6 +2,7 @@
 #define __BFILE_H
 
 #include "burp.h"
+#include "asfd.h"
 #include "conf.h"
 
 enum bf_mode
@@ -11,7 +12,7 @@ enum bf_mode
 	BF_WRITE /* BackupWrite */
 };
 
-struct BFILE
+typedef struct BFILE
 {
 	enum bf_mode mode;   /* set if file is open */
 	uint64_t winattr;    /* needed for deciding to open with
@@ -35,18 +36,18 @@ struct BFILE
 #endif
 
 	// Let us try using function pointers.
-	int (*open)(BFILE *bfd, struct asfd *asfd,
+	int (*open)(struct BFILE *bfd, struct asfd *asfd,
 		const char *fname, int flags, mode_t mode);
-	int (*close)(BFILE *bfd, struct asfd *asfd);
-	ssize_t (*read)(BFILE *bfd, void *buf, size_t count);
-	ssize_t (*write)(BFILE *bfd, void *buf, size_t count);
-	int (*open_for_send)(BFILE *bfd, struct asfd *asfd,
+	int (*close)(struct BFILE *bfd, struct asfd *asfd);
+	ssize_t (*read)(struct BFILE *bfd, void *buf, size_t count);
+	ssize_t (*write)(struct BFILE *bfd, void *buf, size_t count);
+	int (*open_for_send)(struct BFILE *bfd, struct asfd *asfd,
 		const char *fname, int64_t winattr,
 		int atime, struct cntr *cntr, enum protocol protocol);
 #ifdef HAVE_WIN32
-	void (*set_win32_api)(BFILE *bfd, int on);
+	void (*set_win32_api)(struct BFILE *bfd, int on);
 #endif
-};
+} BFILE;
 
 extern BFILE *bfile_alloc(void);
 extern void bfile_free(BFILE **bfd);

@@ -1,5 +1,6 @@
-#include "../../burp.h"
-#include "../backup_phase1.h"
+#include "server/protocol1/blocklen.h"
+#include "server/backup_phase1.h"
+#include "burp.h"
 
 #include <math.h>
 

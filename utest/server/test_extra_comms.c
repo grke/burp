@@ -1,15 +1,15 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/asfd.h"
-#include "../../src/async.h"
-#include "../../src/conf.h"
-#include "../../src/fsops.h"
-#include "../../src/iobuf.h"
-#include "../../src/sbuf.h"
-#include "../../src/server/extra_comms.h"
-#include "../builders/build.h"
-#include "../builders/build_file.h"
-#include "../builders/build_asfd_mock.h"
+#include "utest/test.h"
+#include "utest/builders/build.h"
+#include "utest/builders/build_file.h"
+#include "utest/builders/build_asfd_mock.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "conf.h"
+#include "fsops.h"
+#include "iobuf.h"
+#include "sbuf.h"
+#include "server/extra_comms.h"
 
 #define BASE			"utest_server_extra_comms"
 #define TESTCLIENT		"testclient"
@@ -36,7 +36,7 @@ static struct async *setup_async(void)
 	return as;
 }
 
-static void clean()
+static void clean(void)
 {
 	fail_unless(!recursive_delete(BASE));
 	fail_unless(!recursive_delete(CLIENTCONFDIR));
@@ -154,7 +154,7 @@ static const char *get_features(enum protocol protocol, int srestore)
 		snprintf(proto, sizeof(proto), "csetproto:");
 	else
 		snprintf(proto, sizeof(proto), "forceproto=%d:",
-			int(protocol));
+			(int)protocol);
 
 	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:%smsg:%s%s", srestore?"srestore:":"", proto, rshash);
 	return features;

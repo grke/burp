@@ -1,9 +1,10 @@
-#include "../../../test.h"
-#include "../../build.h"
-#include "../../../prng.h"
-#include "../../../../src/fsops.h"
-#include "../../../../src/fzp.h"
-#include "../../../../src/protocol2/blk.h"
+#include "utest/builders/server/protocol2/build_sparse_index.h"
+#include "utest/test.h"
+#include "utest/prng.h"
+#include "utest/builders/build.h"
+#include "fsops.h"
+#include "fzp.h"
+#include "protocol2/blk.h"
 
 void build_sparse_index(const char *path, int manifests, int fingerprints)
 {

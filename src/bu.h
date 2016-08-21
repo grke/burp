@@ -1,6 +1,8 @@
 #ifndef _BU_H
 #define _BU_H
 
+#include <inttypes.h>
+
 #define BU_HARDLINKED	0x0001
 #define BU_DELETABLE	0x0002
 #define BU_WORKING	0x0004

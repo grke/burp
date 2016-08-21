@@ -1,9 +1,10 @@
-#include "../test.h"
-#include "../prng.h"
-#include "../../src/alloc.h"
-#include "../../src/attribs.h"
-#include "../../src/base64.h"
-#include "../../src/sbuf.h"
+#include "utest/test.h"
+#include "utest/prng.h"
+#include "utest/builders/build.h"
+#include "alloc.h"
+#include "attribs.h"
+#include "base64.h"
+#include "sbuf.h"
 
 static int reduce=1;
 

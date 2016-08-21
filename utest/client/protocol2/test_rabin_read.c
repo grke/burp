@@ -1,11 +1,11 @@
-#include "../../test.h"
-#include "../../builders/build_file.h"
-#include "../../../src/alloc.h"
-#include "../../../src/cmd.h"
-#include "../../../src/fsops.h"
-#include "../../../src/client/extrameta.h"
-#include "../../../src/client/protocol2/rabin_read.h"
-#include "../../../src/client/xattr.h"
+#include "utest/test.h"
+#include "utest/builders/build_file.h"
+#include "alloc.h"
+#include "cmd.h"
+#include "fsops.h"
+#include "client/extrameta.h"
+#include "client/protocol2/rabin_read.h"
+#include "client/xattr.h"
 
 #define BASE		"utest_client_protocol2_rabin_read"
 
@@ -24,7 +24,7 @@ struct xattrdata
         const char *expected_read;
 };
 
-static struct xattrdata x[] = {
+static struct xattrdata xd[] = {
 	{
 		// Directory - Multiple xattrs
 		1,
@@ -122,9 +122,9 @@ static void do_test_rabin_read(struct xattrdata x)
 
 START_TEST(test_rabin_read)
 {
-	FOREACH(x)
+	FOREACH(xd)
 	{
-		do_test_rabin_read(x[i]);
+		do_test_rabin_read(xd[i]);
 	}
 }
 END_TEST

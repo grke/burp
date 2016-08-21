@@ -1,16 +1,17 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../cmd.h"
-#include "../conf.h"
-#include "../conffile.h"
-#include "../fsops.h"
-#include "../handy.h"
-#include "../iobuf.h"
-#include "../log.h"
-#include "../run_script.h"
-#include "auth.h"
+#include "server/ca.h"
+#include "server/auth.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "cmd.h"
+#include "conf.h"
+#include "conffile.h"
+#include "fsops.h"
+#include "handy.h"
+#include "iobuf.h"
+#include "log.h"
+#include "run_script.h"
 
 static int setup_stuff_done=0;
 
@@ -370,7 +371,6 @@ static int sign_client_cert(struct asfd *asfd,
 
 	if(!strcmp(client, ca_name))
 	{
-		char msg[512]="";
 		snprintf(msg, sizeof(msg), "Will not accept a client certificate request with the same name as the CA (%s)!", ca_name);
 		log_and_send(asfd, msg);
 		goto error;

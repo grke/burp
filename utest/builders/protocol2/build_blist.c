@@ -1,9 +1,10 @@
+#include "utest/builders/build.h"
+#include "utest/prng.h"
 #include <check.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "../../prng.h"
-#include "../../../src/hexmap.h"
-#include "../../../src/protocol2/blist.h"
+#include "hexmap.h"
+#include "protocol2/blist.h"
 
 static void add_blk(struct blist *blist)
 {

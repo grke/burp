@@ -1,19 +1,19 @@
-#include "../test.h"
-#include "../builders/build.h"
-#include "../prng.h"
-#include "../../src/alloc.h"
-#include "../../src/attribs.h"
-#include "../../src/base64.h"
-#include "../../src/cmd.h"
-#include "../../src/conffile.h"
-#include "../../src/fsops.h"
-#include "../../src/hexmap.h"
-#include "../../src/log.h"
-#include "../../src/pathcmp.h"
-#include "../../src/sbuf.h"
-#include "../../src/slist.h"
-#include "../../src/protocol2/blk.h"
-#include "../../src/server/manio.h"
+#include "utest/test.h"
+#include "utest/builders/build.h"
+#include "utest/prng.h"
+#include "alloc.h"
+#include "attribs.h"
+#include "base64.h"
+#include "cmd.h"
+#include "conffile.h"
+#include "fsops.h"
+#include "hexmap.h"
+#include "log.h"
+#include "pathcmp.h"
+#include "sbuf.h"
+#include "slist.h"
+#include "protocol2/blk.h"
+#include "server/manio.h"
 
 static const char *path="utest_manio";
 
@@ -281,7 +281,7 @@ static void check_paths(int i, int exists)
 static void check_hooks(int i, int fcount)
 {
 	int ret;
-	fzp *fzp;
+	struct fzp *fzp;
 	const char *p;
 	struct iobuf rbuf;
 	struct blk blk;
@@ -326,7 +326,7 @@ static void check_hooks(int i, int fcount)
 static void check_dindex(int i)
 {
 	int ret;
-	fzp *fzp;
+	struct fzp *fzp;
 	const char *p;
 	struct iobuf rbuf;
 	int lines=0;

@@ -1,19 +1,20 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../asfd.h"
-#include "../../async.h"
-#include "../../bu.h"
-#include "../../cstat.h"
-#include "../../handy.h"
-#include "../../iobuf.h"
-#include "../../log.h"
-#include "json_input.h"
-#include "lline.h"
-#include "sel.h"
+#include "client/monitor/json_input.h"
+#include "client/monitor/lline.h"
+#include "client/monitor/sel.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "bu.h"
+#include "cntr.h"
+#include "cstat.h"
+#include "handy.h"
+#include "iobuf.h"
+#include "log.h"
 #ifdef HAVE_WIN32
 #include <yajl/yajl_parse.h>
 #else
-#include "../../yajl/api/yajl_parse.h"
+#include "yajl/api/yajl_parse.h"
 #endif
 
 static int map_depth=0;

@@ -1,12 +1,14 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../bu.h"
-#include "../cstat.h"
-#include "../fsops.h"
-#include "../log.h"
-#include "../prepend.h"
-#include "sdirs.h"
-#include "timestamp.h"
+#include "server/bu_get.h"
+#include "server/sdirs.h"
+#include "server/timestamp.h"
+#include "burp.h"
+#include "alloc.h"
+#include "bu.h"
+#include "cntr.h"
+#include "cstat.h"
+#include "fsops.h"
+#include "log.h"
+#include "prepend.h"
 
 static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 {

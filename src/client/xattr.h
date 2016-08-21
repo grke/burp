@@ -1,6 +1,11 @@
 #ifndef _BURP_XATTR_H
 #define _BURP_XATTR_H
 
+#include "asfd.h"
+#include "config.h"
+
+#include <stdlib.h>
+
 #ifdef HAVE_XATTR
 #if defined(HAVE_LINUX_OS) \
  || defined(HAVE_FREEBSD_OS) \

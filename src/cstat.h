@@ -2,7 +2,6 @@
 #define _CSTAT_H
 
 #include "conf.h"
-#include "cntr.h"
 
 #define RUN_STATUS_STR_IDLE		"idle"
 #define RUN_STATUS_STR_CLIENT_CRASHED	"c crashed"
@@ -55,7 +54,7 @@ extern void cstat_list_free(struct cstat **clist);
 extern void cstat_add_to_list(struct cstat **clist, struct cstat *cnew);
 
 extern const char *run_status_to_str(struct cstat *cstat);
-extern run_status run_str_to_status(const char *str);
+extern enum run_status run_str_to_status(const char *str);
 
 extern struct cstat *cstat_get_by_name(struct cstat *clist, const char *name);
 

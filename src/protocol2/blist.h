@@ -1,8 +1,8 @@
 #ifndef __RABIN_BLK_LIST_H
 #define __RABIN_BLK_LIST_H
 
-#include "../burp.h"
-#include "blk.h"
+#include "burp.h"
+#include "protocol2/blk.h"
 
 struct blist
 {

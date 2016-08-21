@@ -1,12 +1,13 @@
+#include "utest/test.h"
+#include "utest/prng.h"
+#include "utest/builders/build.h"
+#include "burp.h"
+#include "alloc.h"
+#include "base64.h"
+#include "hexmap.h"
+#include "protocol2/blist.h"
+
 #include <check.h>
-#include "../../src/burp.h"
-#include "../test.h"
-#include "../prng.h"
-#include "../../src/alloc.h"
-#include "../../src/base64.h"
-#include "../../src/hexmap.h"
-#include "../../src/protocol2/blist.h"
-#include "../builders/build.h"
 
 static void tear_down(void)
 {

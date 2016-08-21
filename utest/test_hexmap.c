@@ -1,11 +1,13 @@
-#include <check.h>
+#include "utest/test.h"
+#include "hexmap.h"
+#include "protocol2/blk.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+
 #include <openssl/md5.h>
-#include "test.h"
-#include "../src/hexmap.h"
-#include "../src/protocol2/blk.h"
+#include <check.h>
 
 START_TEST(test_md5sum_of_empty_string)
 {

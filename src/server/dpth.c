@@ -1,10 +1,10 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../fsops.h"
-#include "../fzp.h"
-#include "../lock.h"
-#include "../log.h"
-#include "dpth.h"
+#include "server/dpth.h"
+#include "burp.h"
+#include "alloc.h"
+#include "fsops.h"
+#include "fzp.h"
+#include "lock.h"
+#include "log.h"
 
 struct dpth *dpth_alloc(void)
 {

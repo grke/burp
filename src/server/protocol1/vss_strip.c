@@ -1,4 +1,4 @@
-#include "../../burp.h"
+#include "burp.h"
 
 static const char *prog=NULL;
 
@@ -139,7 +139,7 @@ static int main_work(FILE *inp, FILE *outp)
 	return 0;
 }
 
-static void usage()
+static void usage(void)
 {
 	fprintf(stderr, "\n");
 	fprintf(stderr, "usage: %s [options]\n", prog);

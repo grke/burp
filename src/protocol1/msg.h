@@ -1,8 +1,9 @@
 #ifndef _MSG_PROTOCOL1_H
 #define _MSG_PROTOCOL1_H
 
+#include "bfile.h"
+
 #include <zlib.h>
-#include "../bfile.h"
 
 extern int transfer_gzfile_inl(struct asfd *asfd,
 	struct sbuf *sb, const char *path, BFILE *bfd,

@@ -44,21 +44,23 @@
       Graham Keeling, 2014.
 */
 
-#include "../burp.h"
-#include "../alloc.h"
-#include "../conf.h"
-#include "../fsops.h"
-#include "../linkhash.h"
-#include "../log.h"
-#include "../pathcmp.h"
-#include "../prepend.h"
-#include "../regexp.h"
-#include "../strlist.h"
-#include "find.h"
+#include "client/find.h"
+#include "burp.h"
+#include "alloc.h"
+#include "conf.h"
+#include "fsops.h"
+#include "linkhash.h"
+#include "log.h"
+#include "pathcmp.h"
+#include "prepend.h"
+#include "regexp.h"
+#include "strlist.h"
 
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>
 #endif
+
+#include <stdbool.h>
 
 static int (*send_file)(struct asfd *, FF_PKT *, struct conf **);
 
@@ -165,7 +167,7 @@ int in_include_regex(struct strlist *increg, const char *fname)
 }
 */
 
-int in_exclude_regex(struct strlist *excreg, const char *fname)
+static int in_exclude_regex(struct strlist *excreg, const char *fname)
 {
 	// If not doing exclude_regex, let the file get backed up.
 	for(; excreg; excreg=excreg->next)
@@ -280,7 +282,7 @@ static int file_size_match(FF_PKT *ff_pkt, struct conf **confs)
 }
 
 // Last checks before actually processing the file system entry.
-int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
+static int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	if(!file_is_included(confs, ff->fname, top_level)) return 0;
 

@@ -1,11 +1,12 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../attribs.h"
-#include "../../bfile.h"
-#include "../../cntr.h"
-#include "../../log.h"
-#include "../../sbuf.h"
-#include "../extrameta.h"
+#include "client/protocol2/rabin_read.h"
+#include "burp.h"
+#include "alloc.h"
+#include "attribs.h"
+#include "bfile.h"
+#include "cntr.h"
+#include "log.h"
+#include "sbuf.h"
+#include "client/extrameta.h"
 
 static char *meta_buffer=NULL;
 static size_t meta_buffer_len=0;

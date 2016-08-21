@@ -1,12 +1,12 @@
-#include "../../../burp.h"
-#include "../../../alloc.h"
-#include "../../../log.h"
-#include "../../../sbuf.h"
-#include "../../../protocol2/blk.h"
-#include "candidate.h"
-#include "incoming.h"
-#include "scores.h"
-#include "sparse.h"
+#include "server/protocol2/champ_chooser/candidate.h"
+#include "server/protocol2/champ_chooser/incoming.h"
+#include "server/protocol2/champ_chooser/scores.h"
+#include "server/protocol2/champ_chooser/sparse.h"
+#include "burp.h"
+#include "alloc.h"
+#include "log.h"
+#include "sbuf.h"
+#include "protocol2/blk.h"
 
 #include <assert.h>
 

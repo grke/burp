@@ -1,5 +1,5 @@
-#include "../../test.h"
-#include "../../../src/server/protocol1/blocklen.h"
+#include "utest/test.h"
+#include "server/protocol1/blocklen.h"
 
 struct end_data
 {

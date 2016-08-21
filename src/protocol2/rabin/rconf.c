@@ -1,6 +1,6 @@
-#include "../../burp.h"
-#include "rconf.h"
-#include "../../log.h"
+#include "protocol2/rabin/rconf.h"
+#include "burp.h"
+#include "log.h"
 
 static uint64_t get_multiplier(uint32_t win, uint64_t prime)
 {

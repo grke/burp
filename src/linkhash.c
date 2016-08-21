@@ -45,8 +45,7 @@ struct f_link **linkhash=NULL;
 
 int linkhash_init(void)
 {
-	if(!(linkhash=(f_link **)
-		calloc_w(1, LINK_HASHTABLE_SIZE*sizeof(f_link *), __func__)))
+	if(!(linkhash = calloc_w(1, LINK_HASHTABLE_SIZE*sizeof(*linkhash), __func__)))
 			return -1;
 	return 0;
 }

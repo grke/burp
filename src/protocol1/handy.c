@@ -1,14 +1,47 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../bfile.h"
-#include "../cmd.h"
-#include "../handy.h"
-#include "../hexmap.h"
-#include "../iobuf.h"
-#include "../log.h"
-#include "handy.h"
+#include "protocol1/handy.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "bfile.h"
+#include "cmd.h"
+#include "hexmap.h"
+#include "iobuf.h"
+#include "log.h"
+
+// return -1 for error, 0 for OK, 1 if the client wants to interrupt the
+// transfer.
+static int do_quick_read(struct asfd *asfd, const char *datapth, struct cntr *cntr)
+{
+	int r=0;
+	struct iobuf *rbuf;
+	if(asfd->as->read_quick(asfd->as)) return -1;
+	rbuf=asfd->rbuf;
+
+	if(rbuf->buf)
+	{
+		if(rbuf->cmd==CMD_MESSAGE
+		  || rbuf->cmd==CMD_WARNING)
+		{
+			log_recvd(rbuf, cntr, 0);
+		}
+		else if(rbuf->cmd==CMD_INTERRUPT)
+		{
+			// Client wants to interrupt - double check that
+			// it is still talking about the file that we are
+			// sending.
+			if(datapth && !strcmp(rbuf->buf, datapth))
+				r=1;
+		}
+		else
+		{
+			iobuf_log_unexpected(rbuf, __func__);
+			r=-1;
+		}
+		iobuf_free_content(rbuf);
+	}
+	return r;
+}
 
 static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	uint8_t *inbuf, int inlen, uint8_t *outbuf, int *outlen,

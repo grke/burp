@@ -1,3 +1,4 @@
+#include "prepend.h"
 #include "burp.h"
 #include "alloc.h"
 #include "log.h"

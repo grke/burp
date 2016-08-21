@@ -1,7 +1,8 @@
 #ifndef DPTH_PROTOCOL1_H
 #define DPTH_PROTOCOL1_H
 
-#include "../dpth.h"
+#include "cmd.h"
+#include "server/dpth.h"
 
 extern int dpth_protocol1_init(struct dpth *dpth, const char *basepath,
 	int max_storage_subdirs);

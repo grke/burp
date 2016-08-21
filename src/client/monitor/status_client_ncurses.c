@@ -1,21 +1,22 @@
-#include "../../burp.h"
-#include "../../action.h"
-#include "../../alloc.h"
-#include "../../asfd.h"
-#include "../../async.h"
-#include "../../bu.h"
-#include "../../cmd.h"
-#include "../../cstat.h"
-#include "../../forkchild.h"
-#include "../../fsops.h"
-#include "../../fzp.h"
-#include "../../handy.h"
-#include "../../iobuf.h"
-#include "../../log.h"
-#include "json_input.h"
-#include "lline.h"
-#include "sel.h"
-#include "status_client_ncurses.h"
+#include "client/monitor/status_client_ncurses.h"
+#include "client/monitor/json_input.h"
+#include "client/monitor/lline.h"
+#include "client/monitor/sel.h"
+#include "burp.h"
+#include "action.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "bu.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "cstat.h"
+#include "forkchild.h"
+#include "fsops.h"
+#include "fzp.h"
+#include "handy.h"
+#include "iobuf.h"
+#include "log.h"
 
 #ifdef HAVE_NCURSES_H
 #include <ncurses.h>
@@ -972,12 +973,13 @@ static int request_status(struct asfd *asfd,
 }
 
 #ifdef HAVE_NCURSES
-static void ncurses_free()
+static void ncurses_free(void)
 {
 	endwin();
 }
 #endif
 
+__attribute__ ((noreturn))
 static void sighandler(int sig)
 {
 #ifdef HAVE_NCURSES
@@ -1198,9 +1200,7 @@ static void page_down_backup(struct sel *sel, int row)
 
 static void page_up(struct sel *sel)
 {
-	int row=0;
-	int col=0;
-	getmaxyx(stdscr, row, col);
+	int row=getmaxy(stdscr);
 	switch(sel->page)
 	{
 		case PAGE_CLIENT_LIST:
@@ -1218,9 +1218,7 @@ static void page_up(struct sel *sel)
 
 static void page_down(struct sel *sel)
 {
-	int row=0;
-	int col=0;
-	getmaxyx(stdscr, row, col);
+	int row=getmaxy(stdscr);
 	switch(sel->page)
 	{
 		case PAGE_CLIENT_LIST:

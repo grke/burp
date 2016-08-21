@@ -13,6 +13,7 @@
 #include "server/protocol2/bsigs.h"
 #include "server/protocol2/champ_chooser/champ_server.h"
 
+#ifndef UTEST
 static char *get_conf_path(void)
 {
 	static char path[256]="";
@@ -110,6 +111,7 @@ static void usage_client(void)
 	printf(" options.\n\n");
 #endif
 }
+#endif /* #ifndef UTEST */
 
 int reload(struct conf **confs, const char *conffile, bool firsttime,
 	int oldmax_children, int oldmax_status_children)
@@ -139,6 +141,7 @@ int reload(struct conf **confs, const char *conffile, bool firsttime,
 	return 0;
 }
 
+#ifndef UTEST
 static int replace_conf_str(struct conf *conf, const char *newval)
 {
 	if(!newval) return 0;
@@ -192,8 +195,10 @@ static int parse_action(enum action *act, const char *optarg)
 	}
 	return 0;
 }
+#endif
 
 #ifndef HAVE_WIN32
+#ifndef UTEST
 static int run_champ_chooser(struct conf **confs)
 {
 	const char *orig_client=get_string(confs[OPT_ORIG_CLIENT]);
@@ -219,7 +224,9 @@ static int server_modes(enum action act,
 	}
 }
 #endif
+#endif
 
+#ifndef UTEST
 static void random_delay(struct conf **confs)
 {
 	int delay;
@@ -255,11 +262,13 @@ end:
 	confs_free(&cconfs);
 	return ret;
 }
+#endif
 
 #if defined(HAVE_WIN32)
 #define main BurpMain
 #endif
-int real_main(int argc, char *argv[])
+#ifndef UTEST
+static int real_main(int argc, char *argv[])
 {
 	int ret=1;
 	int option=0;
@@ -522,6 +531,7 @@ end:
 	confs_free(&confs);
 	return ret;
 }
+#endif /* #ifndef UTEST */
 
 #ifndef UTEST
 int main(int argc, char *argv[])

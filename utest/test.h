@@ -1,8 +1,13 @@
 #ifndef __UTEST_H
 #define __UTEST_H
 
-#include "../src/burp.h"
-#include "../src/conf.h"
+#include "burp.h"
+#include "conf.h"
+#include "iobuf.h"
+#include "sbuf.h"
+
+#include "utest/builders/server/build_storage_dirs.h"
+
 #include <check.h>
 
 #define ARR_LEN(array) (sizeof((array))/sizeof((array)[0]))

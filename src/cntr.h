@@ -5,8 +5,10 @@
 #define CNTR_SINGLE_FIELD	0x00000002
 
 #include "burp.h"
-#include "cmd.h"
 #include "action.h"
+#include "cmd.h"
+#include "asfd.h"
+#include "cstat.h"
 
 #define CNTR_ENT_SIZE	256
 
@@ -36,8 +38,6 @@ enum cntr_status
 	CNTR_STATUS_DIFFING
 };
 
-typedef struct cntr_ent cntr_ent_t;
-
 struct cntr_ent
 {
 	enum cmd cmd;
@@ -49,7 +49,7 @@ struct cntr_ent
 	uint64_t same;
 	uint64_t deleted;
 	uint64_t phase1;
-	cntr_ent_t *next;
+	struct cntr_ent *next;
 };
 
 struct cntr
@@ -112,6 +112,6 @@ extern int str_to_cntr(const char *str, struct cstat *cstat, char **path);
 extern int cntr_recv(struct asfd *asfd, struct conf **conf);
 
 extern const char *cntr_status_to_str(struct cntr *cntr);
-extern cntr_status cntr_str_to_status(const char *str);
+extern enum cntr_status cntr_str_to_status(const char *str);
 
 #endif

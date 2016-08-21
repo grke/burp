@@ -1,9 +1,11 @@
-#include "../../src/burp.h"
-#include "../../src/alloc.h"
-#include "../../src/asfd.h"
-#include "../../src/cmd.h"
-#include "../../src/iobuf.h"
-#include "build_asfd_mock.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "cmd.h"
+#include "iobuf.h"
+
+#include "utest/builders/build_asfd_mock.h"
+
 #include <check.h>
 
 static void ioevent_list_init(struct ioevent_list *list)

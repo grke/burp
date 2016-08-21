@@ -1,18 +1,18 @@
-#include "../burp.h"
-#include "../alloc.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../attribs.h"
-#include "../bu.h"
-#include "../cmd.h"
-#include "../cntr.h"
-#include "../log.h"
-#include "../prepend.h"
-#include "../regexp.h"
-#include "bu_get.h"
-#include "child.h"
-#include "list.h"
-#include "manio.h"
+#include "cntr.h"
+#include "server/bu_get.h"
+#include "server/child.h"
+#include "server/list.h"
+#include "server/manio.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "attribs.h"
+#include "bu.h"
+#include "cmd.h"
+#include "log.h"
+#include "prepend.h"
+#include "regexp.h"
 
 enum list_mode
 {
@@ -94,17 +94,17 @@ static void maybe_fake_directory(struct sbuf *mb)
 	attribs_encode(mb);
 }
 
-int check_browsedir(const char *browsedir,
+int check_browsedir(const char *browsedir_str,
 	struct sbuf *mb, size_t bdlen, char **last_bd_match)
 {
 	char *cp=mb->path.buf;
 	char *copy=NULL;
 	if(bdlen>0)
 	{
-		if(strncmp(browsedir, cp, bdlen))
+		if(strncmp(browsedir_str, cp, bdlen))
 			return 0;
 		cp+=bdlen;
-		if(browsedir[bdlen-1]!='/')
+		if(browsedir_str[bdlen-1]!='/')
 		{
 			if(*cp!='\0')
 			{
@@ -126,7 +126,7 @@ int check_browsedir(const char *browsedir,
 		maybe_fake_directory(mb);
 	}
 	else if(!strcmp(mb->path.buf, "/")
-	  && !strcmp(browsedir, "/"))
+	  && !strcmp(browsedir_str, "/"))
 		maybe_fake_directory(mb);
 	else if(mb->path.cmd==CMD_DIRECTORY)
 		maybe_fake_directory(mb);

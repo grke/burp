@@ -1,10 +1,10 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/asfd.h"
-#include "../../src/cmd.h"
-#include "../../src/client/delete.h"
-#include "../../src/iobuf.h"
-#include "../builders/build_asfd_mock.h"
+#include "utest/test.h"
+#include "utest/builders/build_asfd_mock.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "cmd.h"
+#include "client/delete.h"
+#include "iobuf.h"
 
 static struct ioevent_list reads;
 static struct ioevent_list writes;

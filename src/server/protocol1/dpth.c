@@ -1,10 +1,10 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../cmd.h"
-#include "../../conf.h"
-#include "../../log.h"
-#include "../../prepend.h"
-#include "dpth.h"
+#include "server/protocol1/dpth.h"
+#include "burp.h"
+#include "alloc.h"
+#include "cmd.h"
+#include "conf.h"
+#include "log.h"
+#include "prepend.h"
 
 char *dpth_protocol1_mk(struct dpth *dpth, int compression, enum cmd cmd)
 {

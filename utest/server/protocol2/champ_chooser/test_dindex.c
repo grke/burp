@@ -2,14 +2,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "../../../test.h"
-#include "../../../builders/server/protocol2/champ_chooser/build_dindex.h"
-#include "../../../../src/alloc.h"
-#include "../../../../src/fsops.h"
-#include "../../../../src/hexmap.h"
-#include "../../../../src/prepend.h"
-#include "../../../../src/server/protocol2/champ_chooser/dindex.h"
-#include "../../../../src/server/sdirs.h"
+#include "utest/test.h"
+#include "utest/builders/server/protocol2/champ_chooser/build_dindex.h"
+#include "alloc.h"
+#include "fsops.h"
+#include "hexmap.h"
+#include "prepend.h"
+#include "server/protocol2/champ_chooser/dindex.h"
+#include "server/sdirs.h"
 
 #define CNAME	"utestclient"
 #define BASE	"utest_dindex"

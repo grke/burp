@@ -21,7 +21,7 @@ static void fzp_free(struct fzp **fzp)
 	free_v((void **)fzp);
 }
 
-FILE *open_fp(const char *fname, const char *mode)
+static FILE *open_fp(const char *fname, const char *mode)
 {
 	FILE *fp=NULL;
 	if(!(fp=fopen(fname, mode)))
@@ -29,7 +29,7 @@ FILE *open_fp(const char *fname, const char *mode)
 	return fp;
 }
 
-gzFile open_zp(const char *fname, const char *mode)
+static gzFile open_zp(const char *fname, const char *mode)
 {
 	gzFile zp=NULL;
 
@@ -290,6 +290,7 @@ error:
 }
 #endif
 
+__attribute__ ((format(printf, 2, 3)))
 int fzp_printf(struct fzp *fzp, const char *format, ...)
 {
 	static char buf[4096];

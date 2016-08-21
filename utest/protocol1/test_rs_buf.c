@@ -1,6 +1,6 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/protocol1/rs_buf.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "protocol1/rs_buf.h"
 
 static rs_filebuf_t *setup(rs_buffers_t *rsbuf, int data_len)
 {

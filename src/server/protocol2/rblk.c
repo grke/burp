@@ -1,11 +1,12 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../cmd.h"
-#include "../../fzp.h"
-#include "../../hexmap.h"
-#include "../../iobuf.h"
-#include "../../log.h"
-#include "../../protocol2/blk.h"
+#include "server/protocol2/rblk.h"
+#include "burp.h"
+#include "alloc.h"
+#include "cmd.h"
+#include "fzp.h"
+#include "hexmap.h"
+#include "iobuf.h"
+#include "log.h"
+#include "protocol2/blk.h"
 
 #define RBLK_MAX	10
 

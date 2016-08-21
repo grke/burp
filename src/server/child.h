@@ -1,7 +1,9 @@
 #ifndef _CHILD_H
 #define _CHILD_H
 
-#include "monitor/cstat.h"
+#include "async.h"
+#include "conf.h"
+#include "cntr.h"
 
 extern int write_status(enum cntr_status cntr_status,
 	const char *path, struct cntr *cntr);

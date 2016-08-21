@@ -32,18 +32,19 @@
  *     Graham Keeling, 2014.
  */
 
-#include "../burp.h"
-#include "../alloc.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../attribs.h"
-#include "../cmd.h"
-#include "../cntr.h"
-#include "../linkhash.h"
-#include "../log.h"
-#include "../strlist.h"
-#include "extrameta.h"
-#include "find.h"
+#include "client/backup_phase1.h"
+#include "client/extrameta.h"
+#include "client/find.h"
+#include "burp.h"
+#include "alloc.h"
+#include "asfd.h"
+#include "async.h"
+#include "attribs.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "linkhash.h"
+#include "log.h"
+#include "strlist.h"
 
 static enum cmd filesymbol=CMD_FILE;
 static enum cmd dirsymbol=CMD_DIRECTORY;

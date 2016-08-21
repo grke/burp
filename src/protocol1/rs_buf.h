@@ -24,15 +24,14 @@
 #ifndef RS_BUF_H
 #define RS_BUF_H
 
-#include "../burp.h"
-#include "../conf.h"
-#include "../bfile.h"
+#include "burp.h"
+#include "conf.h"
+#include "bfile.h"
 
 #include <librsync.h>
 #include <openssl/md5.h>
 
 extern size_t block_len;
-extern size_t strong_len;
 
 typedef struct rs_filebuf rs_filebuf_t;
 struct rs_filebuf

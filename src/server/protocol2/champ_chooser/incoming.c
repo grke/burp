@@ -1,6 +1,6 @@
-#include "../../../burp.h"
-#include "../../../alloc.h"
-#include "incoming.h"
+#include "server/protocol2/champ_chooser/incoming.h"
+#include "burp.h"
+#include "alloc.h"
 
 struct incoming *incoming_alloc(void)
 {

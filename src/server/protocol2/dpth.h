@@ -1,7 +1,8 @@
 #ifndef __DPTH_PROTOCOL2_H
 #define __DPTH_PROTOCOL2_H
 
-#include "../dpth.h"
+#include "server/dpth.h"
+#include "protocol2/blk.h"
 
 extern int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	const char *cname, const char *cfiles, int max_storage_subdirs);

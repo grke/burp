@@ -126,7 +126,7 @@ void logc(const char *fmt, ...)
 	va_end(ap);
 }
 
-void logf(const char *fmt, ...)
+void logfatal(const char *fmt, ...)
 {
 #ifndef UTEST
 	char buf[512]="";

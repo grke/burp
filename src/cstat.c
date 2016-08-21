@@ -1,6 +1,7 @@
 #include "burp.h"
 #include "alloc.h"
 #include "bu.h"
+#include "cntr.h"
 #include "cstat.h"
 #include "log.h"
 #include "prepend.h"

@@ -1,9 +1,11 @@
 #ifndef _MANIO_H
 #define _MANIO_H
 
-#include "../burp.h"
-#include "../conf.h"
-#include "sdirs.h"
+#include "burp.h"
+#include "conf.h"
+#include "sbuf.h"
+#include "server/sdirs.h"
+#include "protocol2/blk.h"
 
 struct man_off
 {

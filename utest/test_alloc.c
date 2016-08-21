@@ -1,6 +1,9 @@
-#include <check.h>
+#include "utest/test.h"
+#include "alloc.h"
+
 #include <stdlib.h>
-#include "../src/alloc.h"
+
+#include <check.h>
 
 void alloc_check(void)
 {

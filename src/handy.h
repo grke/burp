@@ -14,11 +14,6 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-extern int send_whole_file_gz(struct asfd *asfd,
-	const char *fname, const char *datapth,
-	int quick_read, uint64_t *bytes, const char *encpassword,
-	struct cntr *cntr, int compression, BFILE *bfd, FILE *fp,
-	const char *extrameta, size_t elen, size_t datalen);
 extern int set_non_blocking(int fd);
 extern int set_blocking(int fd);
 extern char *get_tmp_filename(const char *basis);
@@ -46,9 +41,6 @@ extern int receive_a_file(struct asfd *asfd,
 	const char *path, struct cntr *cntr);
 extern int send_a_file(struct asfd *asfd,
 	const char *path, struct cntr *cntr);
-
-extern int do_quick_read(struct asfd *asfd,
-	const char *datapth, struct cntr *cntr);
 
 extern int strncmp_w(const char *s1, const char *s2);
 extern char *strdup_w(const char *s, const char *func);

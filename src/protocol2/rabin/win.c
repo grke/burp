@@ -1,7 +1,7 @@
-#include "../../burp.h"
-#include "win.h"
-#include "rconf.h"
-#include "../../alloc.h"
+#include "protocol2/rabin/win.h"
+#include "protocol2/rabin/rconf.h"
+#include "burp.h"
+#include "alloc.h"
 
 struct win *win_alloc(struct rconf *rconf)
 {

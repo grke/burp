@@ -1,14 +1,14 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../cmd.h"
-#include "../../fsops.h"
-#include "../../hexmap.h"
-#include "../../iobuf.h"
-#include "../../lock.h"
-#include "../../log.h"
-#include "../../prepend.h"
-#include "../../protocol2/blk.h"
-#include "dpth.h"
+#include "server/protocol2/dpth.h"
+#include "burp.h"
+#include "alloc.h"
+#include "cmd.h"
+#include "fsops.h"
+#include "hexmap.h"
+#include "iobuf.h"
+#include "lock.h"
+#include "log.h"
+#include "prepend.h"
+#include "protocol2/blk.h"
 
 static int get_data_lock(struct lock *lock, const char *path)
 {
@@ -79,6 +79,8 @@ char *dpth_protocol2_mk(struct dpth *dpth)
 	char *p=NULL;
 	static char *save_path=NULL;
 	static struct lock *lock=NULL;
+	struct stat statp;
+
 	while(1)
 	{
 		free_w(&p);
@@ -99,7 +101,6 @@ char *dpth_protocol2_mk(struct dpth *dpth)
 		switch(lock->status)
 		{
 			case GET_LOCK_GOT:
-				struct stat statp;
 				if(lstat(p, &statp))
 				{
 					// File does not exist yet, and we

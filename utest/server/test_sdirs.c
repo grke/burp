@@ -1,17 +1,17 @@
-#include "../test.h"
-#include "../../src/alloc.h"
-#include "../../src/conf.h"
-#include "../../src/conffile.h"
-#include "../../src/fsops.h"
-#include "../../src/lock.h"
-#include "../../src/prepend.h"
-#include "../../src/server/protocol1/fdirs.h"
-#include "../../src/server/sdirs.h"
-#include "../../src/server/timestamp.h"
+#include "utest/test.h"
+#include "alloc.h"
+#include "conf.h"
+#include "conffile.h"
+#include "fsops.h"
+#include "lock.h"
+#include "prepend.h"
+#include "server/protocol1/fdirs.h"
+#include "server/sdirs.h"
+#include "server/timestamp.h"
 
 #define BASE		"utest_sdirs"
 
-static struct sdirs *setup()
+static struct sdirs *setup(void)
 {
 	struct sdirs *sdirs;
 	fail_unless(recursive_delete(BASE)==0);

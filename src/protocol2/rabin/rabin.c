@@ -1,12 +1,12 @@
-#include "../../burp.h"
-#include "rabin.h"
-#include "rconf.h"
-#include "win.h"
-#include "../../alloc.h"
-#include "../blk.h"
-#include "../blist.h"
-#include "../../sbuf.h"
-#include "../../client/protocol2/rabin_read.h"
+#include "protocol2/rabin/rabin.h"
+#include "protocol2/rabin/rconf.h"
+#include "protocol2/rabin/win.h"
+#include "protocol2/blist.h"
+#include "protocol2/blk.h"
+#include "burp.h"
+#include "alloc.h"
+#include "sbuf.h"
+#include "client/protocol2/rabin_read.h"
 
 static struct blk *blk=NULL;
 static char *gcp=NULL;

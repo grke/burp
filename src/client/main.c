@@ -1,25 +1,26 @@
-#include "../burp.h"
-#include "../conffile.h"
-#include "../action.h"
-#include "../asfd.h"
-#include "../async.h"
-#include "../cmd.h"
-#include "../cntr.h"
-#include "../fsops.h"
-#include "../handy.h"
-#include "../iobuf.h"
-#include "../log.h"
-#include "../run_script.h"
-#include "auth.h"
-#include "backup.h"
-#include "ca.h"
-#include "delete.h"
-#include "extra_comms.h"
-#include "list.h"
-#include "monitor.h"
-#include "monitor/status_client_ncurses.h"
-#include "protocol2/restore.h"
-#include "restore.h"
+#include "client/main.h"
+#include "client/auth.h"
+#include "client/backup.h"
+#include "client/ca.h"
+#include "client/delete.h"
+#include "client/extra_comms.h"
+#include "client/list.h"
+#include "client/monitor.h"
+#include "client/restore.h"
+#include "client/monitor/status_client_ncurses.h"
+#include "client/protocol2/restore.h"
+#include "burp.h"
+#include "conffile.h"
+#include "action.h"
+#include "asfd.h"
+#include "async.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "fsops.h"
+#include "handy.h"
+#include "iobuf.h"
+#include "log.h"
+#include "run_script.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>
@@ -277,7 +278,7 @@ static enum cliret initial_comms(struct async *as,
 		goto error;
 	}
 
-	if(extra_comms(as, confs, action, incexc))
+	if(extra_client_comms(as, confs, action, incexc))
 	{
 		logp("extra comms failed\n");
 		goto error;

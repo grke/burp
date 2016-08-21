@@ -1,12 +1,12 @@
-#include "../test.h"
-#include "../../src/asfd.h"
-#include "../../src/conffile.h"
-#include "../../src/fsops.h"
-#include "../../src/iobuf.h"
-#include "../../src/server/auth.h"
-#include "../builders/build.h"
-#include "../builders/build_asfd_mock.h"
-#include "../builders/build_file.h"
+#include "utest/test.h"
+#include "utest/builders/build.h"
+#include "utest/builders/build_asfd_mock.h"
+#include "utest/builders/build_file.h"
+#include "asfd.h"
+#include "conffile.h"
+#include "fsops.h"
+#include "iobuf.h"
+#include "server/auth.h"
 
 #define BASE		"utest_server_auth"
 #define CONFFILE	BASE "/burp.conf"
@@ -223,6 +223,7 @@ static void setup_no_keep_configured(struct asfd *asfd)
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
 }
 
+#ifndef HAVE_DARWIN_OS
 static void setup_lower_failed(struct asfd *asfd)
 {
 	int r=0;
@@ -235,6 +236,7 @@ static void setup_lower_failed(struct asfd *asfd)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okpassword");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
 }
+#endif
 
 static void setup_lower_ok(struct asfd *asfd)
 {

@@ -40,6 +40,10 @@
 #ifndef _FIND_H
 #define _FIND_H
 
+#include "asfd.h"
+#include "conf.h"
+
+#include <dirent.h>
 #include <sys/file.h>
 #include <sys/param.h>
 
@@ -71,7 +75,7 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
  * Definition of the find_files packet passed as the
  * first argument to the find_files callback subroutine.
  */
-struct FF_PKT
+typedef struct FF_PKT
 {
 	char *fname;		/* full filename */
 	long flen;		/* length of name component */
@@ -79,7 +83,7 @@ struct FF_PKT
 	struct stat statp;	/* stat packet */
 	uint64_t winattr;	/* windows attributes */
 	int type;		/* FT_ type from above */
-};
+} FF_PKT;
 
 extern FF_PKT *find_files_init(
 	int callback(struct asfd *asfd, FF_PKT *ff, struct conf **confs));

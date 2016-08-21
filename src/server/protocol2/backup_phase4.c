@@ -1,19 +1,21 @@
-#include "../../burp.h"
-#include "../../alloc.h"
-#include "../../bu.h"
-#include "../../cmd.h"
-#include "../../fsops.h"
-#include "../../fzp.h"
-#include "../../lock.h"
-#include "../../log.h"
-#include "../../prepend.h"
-#include "../../protocol2/blk.h"
-#include "../../sbuf.h"
-#include "../../strlist.h"
-#include "../../server/bu_get.h"
-#include "../../server/manio.h"
-#include "../../server/sdirs.h"
-#include "champ_chooser/champ_chooser.h"
+#include "server/protocol2/backup_phase4.h"
+#include "burp.h"
+#include "alloc.h"
+#include "bu.h"
+#include "cmd.h"
+#include "cntr.h"
+#include "fsops.h"
+#include "fzp.h"
+#include "lock.h"
+#include "log.h"
+#include "prepend.h"
+#include "protocol2/blk.h"
+#include "sbuf.h"
+#include "strlist.h"
+#include "server/bu_get.h"
+#include "server/manio.h"
+#include "server/sdirs.h"
+#include "server/protocol2/champ_chooser/champ_chooser.h"
 
 struct hooks
 {
@@ -423,6 +425,7 @@ int merge_files_in_dir(const char *final, const char *fmanifest,
 	char compb[32]="";
 	char compd[32]="";
 	char *fullsrcdir=NULL;
+	const char *dstdir;
 
 	if(!(m1dir=prepend_s(fmanifest, "m1"))
 	  || !(m2dir=prepend_s(fmanifest, "m2"))
@@ -433,8 +436,8 @@ int merge_files_in_dir(const char *final, const char *fmanifest,
 		goto end;
 	while(1)
 	{
-		const char *srcdir=NULL;
-		const char *dstdir=NULL;
+		srcdir=NULL;
+		dstdir=NULL;
 		if(!pass)
 		{
 			srcdir=fullsrcdir;

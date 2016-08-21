@@ -1,6 +1,10 @@
 #ifndef _RESTORE_CLIENT_H
 #define _RESTORE_CLIENT_H
 
+#include "action.h"
+#include "bfile.h"
+#include "sbuf.h"
+
 enum ofr_e
 {
 	OFR_ERROR=-1,

@@ -1,6 +1,10 @@
 #ifndef _BUILDER_STORAGE_DIRS
 #define _BUILDER_STORAGE_DIRS
 
+#include <inttypes.h>
+
+#include "server/sdirs.h"
+
 struct sd
 {
         const char *timestamp;

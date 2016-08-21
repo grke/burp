@@ -3,7 +3,7 @@
 #include "burp.h"
 #include "alloc.h"
 
-static manios *manios_alloc(void)
+static struct manios *manios_alloc(void)
 {
 	return (struct manios *)calloc_w(1, sizeof(struct manios), __func__);
 }

@@ -118,8 +118,7 @@ int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
 			case CMD_MESSAGE:
 			case CMD_WARNING:
 			{
-				struct cntr *cntr=NULL;
-				log_recvd(rbuf, cntr, 0);
+				log_recvd(rbuf, NULL, 0);
 				break;
 			}
 			default:

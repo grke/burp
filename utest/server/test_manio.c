@@ -281,7 +281,7 @@ static void check_paths(int i, int exists)
 static void check_hooks(int i, int fcount)
 {
 	int ret;
-	fzp *fzp;
+	struct fzp *fzp;
 	const char *p;
 	struct iobuf rbuf;
 	struct blk blk;
@@ -326,7 +326,7 @@ static void check_hooks(int i, int fcount)
 static void check_dindex(int i)
 {
 	int ret;
-	fzp *fzp;
+	struct fzp *fzp;
 	const char *p;
 	struct iobuf rbuf;
 	int lines=0;

@@ -169,7 +169,7 @@ enum ofr_e open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 
 	if(bfd->open(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
 	{
-		berrno be;
+		struct berrno be;
 		berrno_init(&be);
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",

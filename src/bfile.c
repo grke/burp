@@ -493,7 +493,7 @@ static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
 #endif
 		, 0))
 	{
-		berrno be;
+		struct berrno be;
 		berrno_init(&be);
 		logw(asfd, cntr,
 			"Could not open %s: %s\n",

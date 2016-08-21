@@ -536,7 +536,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR))
 	{
-		berrno be;
+		struct berrno be;
 		berrno_init(&be);
 		logp("Could not open for writing %s: %s\n",
 			path, berrno_bstrerror(&be, errno));

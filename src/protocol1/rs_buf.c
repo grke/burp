@@ -48,7 +48,7 @@
 #define fseek fseeko
 #endif
 
-rs_filebuf_t *rs_filebuf_new(BFILE *bfd,
+rs_filebuf_t *rs_filebuf_new(struct BFILE *bfd,
 	struct fzp *fzp,
 	struct asfd *asfd,
 	size_t buf_len,

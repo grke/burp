@@ -60,6 +60,7 @@
 #endif
 
 #ifndef HAVE_WIN32
+	#include <stdbool.h>
 	#include <sys/stat.h>
 	#include <glob.h>
 #endif

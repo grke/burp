@@ -12,7 +12,7 @@
 #include "msg.h"
 
 static int do_write(struct asfd *asfd,
-	BFILE *bfd, uint8_t *out, size_t outlen,
+	struct BFILE *bfd, uint8_t *out, size_t outlen,
 	char **metadata, uint64_t *sent)
 {
 	int ret=0;
@@ -46,7 +46,7 @@ static int do_write(struct asfd *asfd,
 }
 
 static int do_inflate(struct asfd *asfd,
-	z_stream *zstrm, BFILE *bfd,
+	z_stream *zstrm, struct BFILE *bfd,
 	uint8_t *out, uint8_t *buftouse, size_t lentouse,
 	char **metadata, const char *encpassword, int enccompressed,
 	uint64_t *sent)
@@ -150,7 +150,7 @@ static DWORD WINAPI read_efs(PBYTE pbData, PVOID pvCallbackContext, PULONG ulLen
 }
 
 static int transfer_efs_in(struct asfd *asfd,
-	BFILE *bfd, uint64_t *rcvd,
+	struct BFILE *bfd, uint64_t *rcvd,
 	uint64_t *sent, struct cntr *cntr)
 {
 	int ret=0;
@@ -168,7 +168,7 @@ static int transfer_efs_in(struct asfd *asfd,
 #endif
 
 int transfer_gzfile_inl(struct asfd *asfd,
-	struct sbuf *sb, const char *path, BFILE *bfd,
+	struct sbuf *sb, const char *path, struct BFILE *bfd,
 	uint64_t *rcvd, uint64_t *sent,
 	const char *encpassword, int enccompressed,
 	struct cntr *cntr, char **metadata)

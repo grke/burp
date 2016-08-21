@@ -140,6 +140,7 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 
 	if(sb->protocol2->bfd.mode==BF_CLOSED)
 	{
+		char buf[32];
 		struct cntr *cntr=NULL;
 		if(confs) cntr=get_cntr(confs);
 		switch(rabin_open_file(sb, asfd, cntr, confs))
@@ -147,7 +148,6 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 			case 1: // All OK.
 				break;
 			case 0: // Could not open file. Tell the server.
-				char buf[32];
 				base64_from_uint64(sb->protocol2->index, buf);
 				if(asfd->write_str(asfd, CMD_INTERRUPT, buf))
 					return -1;
@@ -305,7 +305,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	}
 
 	logp("Phase 2 begin (send backup data)\n");
-	logf("\n");
+	logfatal("\n");
 
 	if(!(slist=slist_alloc())
 	  || !(wbuf=iobuf_alloc())

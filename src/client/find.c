@@ -60,15 +60,15 @@
 #include <sys/statfs.h>
 #endif
 
-static int (*send_file)(struct asfd *, FF_PKT *, struct conf **);
+static int (*send_file)(struct asfd *, struct FF_PKT *, struct conf **);
 
 // Initialize the find files "global" variables
-FF_PKT *find_files_init(
-	int callback(struct asfd *asfd, FF_PKT *ff, struct conf **confs))
+struct FF_PKT *find_files_init(
+	int callback(struct asfd *asfd, struct FF_PKT *ff, struct conf **confs))
 {
-	FF_PKT *ff;
+	struct FF_PKT *ff;
 
-	if(!(ff=(FF_PKT *)calloc_w(1, sizeof(FF_PKT), __func__))
+	if(!(ff=(struct FF_PKT *)calloc_w(1, sizeof(struct FF_PKT), __func__))
 	  || linkhash_init())
 		return NULL;
 	send_file=callback;
@@ -76,7 +76,7 @@ FF_PKT *find_files_init(
 	return ff;
 }
 
-void find_files_free(FF_PKT **ff)
+void find_files_free(struct FF_PKT **ff)
 {
 	linkhash_free();
 	free_v((void **)ff);
@@ -265,7 +265,7 @@ static int nobackup_directory(struct strlist *nobackup, const char *path)
 	return 0;
 }
 
-static int file_size_match(FF_PKT *ff_pkt, struct conf **confs)
+static int file_size_match(struct FF_PKT *ff_pkt, struct conf **confs)
 {
 	uint64_t sizeleft;
 	uint64_t min_file_size=get_uint64_t(confs[OPT_MIN_FILE_SIZE]);
@@ -280,7 +280,7 @@ static int file_size_match(FF_PKT *ff_pkt, struct conf **confs)
 }
 
 // Last checks before actually processing the file system entry.
-int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **confs)
+int send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	if(!file_is_included(confs, ff->fname, top_level)) return 0;
 
@@ -323,14 +323,14 @@ int send_file_w(struct asfd *asfd, FF_PKT *ff, bool top_level, struct conf **con
 }
 
 static int found_regular_file(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf **confs,
+	struct FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, bool top_level)
 {
 	ff_pkt->type=FT_REG;
 	return send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
-static int found_soft_link(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
+static int found_soft_link(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, bool top_level)
 {
 	ssize_t size;
@@ -370,7 +370,7 @@ static int fstype_excluded(struct asfd *asfd,
 }
 
 #if defined(HAVE_WIN32)
-static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
+static void windows_reparse_point_fiddling(struct FF_PKT *ff_pkt)
 {
 	/*
 	* We have set st_rdev to 1 if it is a reparse point, otherwise 0,
@@ -402,12 +402,12 @@ static void windows_reparse_point_fiddling(FF_PKT *ff_pkt)
 #endif
 
 // Prototype because process_entries_in_directory() recurses using find_files().
-static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
+static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level);
 
 static int process_entries_in_directory(struct asfd *asfd, struct dirent **nl,
 	int count, char **link, size_t len, size_t *link_len,
-	struct conf **confs, FF_PKT *ff_pkt, dev_t our_device)
+	struct conf **confs, struct FF_PKT *ff_pkt, dev_t our_device)
 {
 	int m=0;
 	int ret=0;
@@ -470,7 +470,7 @@ static int process_entries_in_directory(struct asfd *asfd, struct dirent **nl,
 }
 
 static int found_directory(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf **confs,
+	struct FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level)
 {
 	int ret=-1;
@@ -569,7 +569,7 @@ end:
 	return ret;
 }
 
-static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
+static int found_other(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, bool top_level)
 {
 #ifdef HAVE_FREEBSD_OS
@@ -604,7 +604,7 @@ static int found_other(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 	return send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
-static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
+static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level)
 {
 	ff_pkt->fname=fname;
@@ -651,7 +651,7 @@ static int find_files(struct asfd *asfd, FF_PKT *ff_pkt, struct conf **confs,
 }
 
 int find_files_begin(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf **confs, char *fname)
+	struct FF_PKT *ff_pkt, struct conf **confs, char *fname)
 {
 	return find_files(asfd, ff_pkt,
 		confs, fname, (dev_t)-1, 1 /* top_level */);

@@ -277,7 +277,7 @@ static enum cliret initial_comms(struct async *as,
 		goto error;
 	}
 
-	if(extra_comms(as, confs, action, incexc))
+	if(extra_comms_client(as, confs, action, incexc))
 	{
 		logp("extra comms failed\n");
 		goto error;

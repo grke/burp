@@ -115,7 +115,7 @@ static int make_link(struct asfd *asfd,
 }
 
 // FIX THIS: Maybe should be in bfile.c.
-enum ofr_e open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
+enum ofr_e open_for_restore(struct asfd *asfd, struct BFILE *bfd, const char *path,
 	struct sbuf *sb, int vss_restore, struct cntr *cntr,
 	enum protocol protocol)
 {
@@ -169,7 +169,7 @@ enum ofr_e open_for_restore(struct asfd *asfd, BFILE *bfd, const char *path,
 
 	if(bfd->open(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
 	{
-		berrno be;
+		struct berrno be;
 		berrno_init(&be);
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
@@ -418,7 +418,7 @@ static int strip_path_components(struct asfd *asfd,
 static int overwrite_ok(struct sbuf *sb,
 	int overwrite,
 #ifdef HAVE_WIN32
-	BFILE *bfd,
+	struct BFILE *bfd,
 #endif
 	const char *fullpath)
 {
@@ -464,7 +464,7 @@ static int overwrite_ok(struct sbuf *sb,
 	return 1;
 }
 
-static int write_data(struct asfd *asfd, BFILE *bfd, struct blk *blk)
+static int write_data(struct asfd *asfd, struct BFILE *bfd, struct blk *blk)
 {
 	if(bfd->mode==BF_CLOSED)
 		logp("Got data without an open file\n");
@@ -521,7 +521,7 @@ int do_restore_client(struct asfd *asfd,
 	char msg[512]="";
 	struct sbuf *sb=NULL;
 	struct blk *blk=NULL;
-	BFILE *bfd=NULL;
+	struct BFILE *bfd=NULL;
 	char *fullpath=NULL;
 	char *style=NULL;
 	struct cntr *cntr=get_cntr(confs);
@@ -552,7 +552,7 @@ int do_restore_client(struct asfd *asfd,
 	if(!(style=get_restore_style(asfd, confs)))
 		goto error;
 
-	logf("\n");
+	logfatal("\n");
 
 	if(get_int(confs[OPT_SEND_CLIENT_CNTR]) && cntr_recv(asfd, confs))
 		goto error;
@@ -659,7 +659,7 @@ int do_restore_client(struct asfd *asfd,
 			case CMD_MESSAGE:
 			case CMD_WARNING:
 				log_recvd(&sb->path, cntr, 1);
-				logf("\n");
+				logfatal("\n");
 				continue;
 			default:
 				break;

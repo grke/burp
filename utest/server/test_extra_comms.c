@@ -154,7 +154,7 @@ static const char *get_features(enum protocol protocol, int srestore)
 		snprintf(proto, sizeof(proto), "csetproto:");
 	else
 		snprintf(proto, sizeof(proto), "forceproto=%d:",
-			int(protocol));
+			(int)protocol);
 
 	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:%smsg:%s%s", srestore?"srestore:":"", proto, rshash);
 	return features;

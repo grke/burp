@@ -14,7 +14,7 @@ char *comp_level(int compression)
 	return comp;
 }
 
-static int compress(const char *src, const char *dst, int compression)
+static int bcompress(const char *src, const char *dst, int compression)
 {
 	int res;
 	int got;
@@ -56,7 +56,7 @@ int compress_file(const char *src, const char *dst, int compression)
 
 	// Need to compress the log.
 	logp("Compressing %s to %s...\n", src, dst);
-	if(compress(src, dsttmp, compression)
+	if(bcompress(src, dsttmp, compression)
 	// Possible rename race condition is of little consequence here.
 	// You will still have the uncompressed log file.
 	  || do_rename(dsttmp, dst))

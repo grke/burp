@@ -17,6 +17,9 @@
 #define MANIFEST_SIG_MIN	0x0e0c
 #define MANIFEST_SIG_MAX	0x1000
 
+struct fzp;
+struct iobuf;
+
 enum blk_got
 {
 	BLK_INCOMING=0,

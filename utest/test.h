@@ -33,6 +33,11 @@
 	"ca_csr_dir=/csr/dir\n"			\
 	"ssl_key=/ssl/key/path\n"		\
 
+struct iobuf;
+struct sbuf;
+struct sd;
+struct sdirs;
+
 extern int sub_ntests;
 
 extern void alloc_check(void);

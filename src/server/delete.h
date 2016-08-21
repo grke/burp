@@ -1,6 +1,8 @@
 #ifndef _DELETE_SERVER_H
 #define _DELETE_SERVER_H
 
+struct sdirs;
+
 extern int delete_backups(struct sdirs *sdirs, const char *cname,
 	struct strlist *keep, const char *manual_delete);
 

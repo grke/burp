@@ -1,6 +1,11 @@
 #ifndef _RESTORE_SERVER_H
 #define _RESTORE_SERVER_H
 
+struct bu;
+struct sbuf;
+struct sdirs;
+struct slist;
+
 extern int want_to_restore(int srestore, struct sbuf *sb,
 	regex_t *regex, struct conf **cconfs);
 

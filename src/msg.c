@@ -19,7 +19,7 @@ int send_msg_fzp(struct fzp *fzp, enum cmd cmd, const char *buf, size_t s)
 	return 0;
 }
 
-static int do_write(struct asfd *asfd, BFILE *bfd,
+static int do_write(struct asfd *asfd, struct BFILE *bfd,
 	uint8_t *out, size_t outlen, uint64_t *sent)
 {
 	int ret=0;
@@ -34,7 +34,7 @@ static int do_write(struct asfd *asfd, BFILE *bfd,
 	return 0;
 }
 
-static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd,
+static int do_inflate(struct asfd *asfd, z_stream *zstrm, struct BFILE *bfd,
 	uint8_t *out, uint64_t *sent)
 {
 	int zret=Z_OK;
@@ -67,7 +67,7 @@ static int do_inflate(struct asfd *asfd, z_stream *zstrm, BFILE *bfd,
 	return 0;
 }
 
-int transfer_gzfile_in(struct asfd *asfd, const char *path, BFILE *bfd,
+int transfer_gzfile_in(struct asfd *asfd, const char *path, struct BFILE *bfd,
 	uint64_t *rcvd, uint64_t *sent, struct cntr *cntr)
 {
 	int quit=0;

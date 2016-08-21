@@ -30,7 +30,7 @@ static const char *server_supports_autoupgrade(const char *feat)
 
 #include <librsync.h>
 
-int extra_comms(struct async *as, struct conf **confs,
+int extra_comms_client(struct async *as, struct conf **confs,
 	enum action *action, char **incexc)
 {
 	int ret=-1;

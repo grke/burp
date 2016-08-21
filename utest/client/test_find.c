@@ -25,7 +25,7 @@ static void create_file(const char *path, size_t s)
 }
 
 static int send_file_callback(
-	struct asfd *asfd, FF_PKT *ff, struct conf **confs)
+	struct asfd *asfd, struct FF_PKT *ff, struct conf **confs)
 {
 	fail_unless(e!=NULL);
 	fail_unless(!strcmp(e->path, ff->fname));
@@ -49,9 +49,9 @@ static struct conf **setup_conf(void)
 	return confs;
 }
 
-static FF_PKT *setup(struct conf ***confs)
+static struct FF_PKT *setup(struct conf ***confs)
 {
-	FF_PKT *ff;
+	struct FF_PKT *ff;
 	fail_unless(!recursive_delete(BASE));
 
 	// Create the root directory, so that we can figure out the absolute
@@ -66,7 +66,7 @@ static FF_PKT *setup(struct conf ***confs)
 	return ff;
 }
 
-static void tear_down(FF_PKT **ff, struct conf ***confs)
+static void tear_down(struct FF_PKT **ff, struct conf ***confs)
 {
 	fail_unless(e==NULL);
 	find_files_free(ff);
@@ -180,7 +180,7 @@ static void add_fifo_special(int find, const char *path)
 	do_add_fifo(find, path, S_IFIFO, (long)FT_SPEC);
 }
 
-static void run_find(const char *buf, FF_PKT *ff, struct conf **confs)
+static void run_find(const char *buf, struct FF_PKT *ff, struct conf **confs)
 {
 	struct strlist *l;
 	const char *conffile=CONFBASE "/burp.conf";
@@ -196,7 +196,7 @@ static char extra_config[1024]="";
 
 static void do_test(void setup_entries(void))
 {
-	FF_PKT *ff;
+	struct FF_PKT *ff;
 	char buf[4096];
 	struct conf **confs=NULL;
 	ff=setup(&confs);

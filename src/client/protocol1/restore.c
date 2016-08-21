@@ -14,7 +14,7 @@
 #include "../extrameta.h"
 #include "../restore.h"
 
-static int do_restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
+static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	struct sbuf *sb, const char *fname,
 	char **metadata, size_t *metalen,
 	struct cntr *cntr, const char *rpath,
@@ -82,7 +82,7 @@ end:
 	return ret;
 }
 
-static int restore_file_or_get_meta(struct asfd *asfd, BFILE *bfd,
+static int restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	struct sbuf *sb, const char *fname, enum action act,
 	char **metadata, size_t *metalen, int vss_restore,
 	struct cntr *cntr, const char *encyption_password)
@@ -132,7 +132,7 @@ end:
 	return ret;
 }
 
-static int restore_metadata(struct asfd *asfd, BFILE *bfd, struct sbuf *sb,
+static int restore_metadata(struct asfd *asfd, struct BFILE *bfd, struct sbuf *sb,
 	const char *fname, enum action act,
 	int vss_restore, struct cntr *cntr, const char *encryption_password)
 {
@@ -185,7 +185,7 @@ end:
 
 int restore_switch_protocol1(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct cntr *cntr,
+	struct BFILE *bfd, int vss_restore, struct cntr *cntr,
 	const char *encryption_password)
 {
 	switch(sb->path.cmd)

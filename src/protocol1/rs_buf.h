@@ -37,7 +37,7 @@ extern size_t strong_len;
 typedef struct rs_filebuf rs_filebuf_t;
 struct rs_filebuf
 {
-	BFILE *bfd;
+	struct BFILE *bfd;
 	struct fzp *fzp;
 	char *buf;
 	size_t buf_len;
@@ -48,7 +48,7 @@ struct rs_filebuf
 	struct asfd *asfd;
 };
 
-rs_filebuf_t *rs_filebuf_new(BFILE *bfd,
+rs_filebuf_t *rs_filebuf_new(struct BFILE *bfd,
 	struct fzp *fzp,
 	struct asfd *asfd,
 	size_t buf_len,

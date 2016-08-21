@@ -76,7 +76,7 @@ static int load_signature(struct asfd *asfd,
 }
 
 static int load_signature_and_send_delta(struct asfd *asfd,
-	BFILE *bfd, uint64_t *bytes, uint64_t *sentbytes,
+	struct BFILE *bfd, uint64_t *bytes, uint64_t *sentbytes,
 	struct cntr *cntr)
 {
 	int ret=-1;
@@ -147,7 +147,7 @@ end:
 static int send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, uint64_t *bytes, const char *encpassword,
-	struct cntr *cntr, int compression, BFILE *bfd,
+	struct cntr *cntr, int compression, struct BFILE *bfd,
 	const char *extrameta, size_t elen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
@@ -201,7 +201,7 @@ static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 }
 
 static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
-	BFILE *bfd, struct conf **confs)
+	struct BFILE *bfd, struct conf **confs)
 {
 	int ret=-1;
 	int forget=0;
@@ -343,7 +343,7 @@ error:
 }
 
 static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
-	BFILE *bfd, struct conf **confs)
+	struct BFILE *bfd, struct conf **confs)
 {
 	static struct iobuf *rbuf;
 	rbuf=asfd->rbuf;
@@ -387,7 +387,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	// For efficiency, open Windows files for the VSS data, and do not
 	// close them until another time around the loop, when the actual
 	// data is read.
-	BFILE *bfd=NULL;
+	struct BFILE *bfd=NULL;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=NULL;
 	struct cntr *cntr=NULL;
@@ -453,7 +453,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	if(confs) cntr=get_cntr(confs);
 
 	logp("Phase 2 begin (send backup data)\n");
-	logf("\n");
+	logfatal("\n");
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 

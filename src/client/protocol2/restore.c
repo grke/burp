@@ -13,7 +13,7 @@
 #include "../restore.h"
 
 static int start_restore_file(struct asfd *asfd,
-	BFILE *bfd,
+	struct BFILE *bfd,
 	struct sbuf *sb,
 	const char *fname,
 	enum action act,
@@ -154,7 +154,7 @@ static int restore_metadata(
 
 int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	BFILE *bfd, int vss_restore, struct cntr *cntr)
+	struct BFILE *bfd, int vss_restore, struct cntr *cntr)
 {
 	switch(sb->path.cmd)
 	{

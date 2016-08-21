@@ -1,6 +1,9 @@
 #ifndef _CHAMP_CHOOSER_CANDIDATE_H
 #define _CHAMP_CHOOSER_CANDIDATE_H
 
+struct incoming;
+struct scores;
+
 enum cand_ret
 {
 	CAND_RET_TEMP=-2,

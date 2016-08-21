@@ -3,6 +3,8 @@
 
 #include "monitor/cstat.h"
 
+struct async;
+
 extern int write_status(enum cntr_status cntr_status,
 	const char *path, struct cntr *cntr);
 

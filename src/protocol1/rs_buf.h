@@ -32,7 +32,6 @@
 #include <openssl/md5.h>
 
 extern size_t block_len;
-extern size_t strong_len;
 
 typedef struct rs_filebuf rs_filebuf_t;
 struct rs_filebuf

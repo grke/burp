@@ -38,8 +38,6 @@ enum cntr_status
 	CNTR_STATUS_DIFFING
 };
 
-typedef struct cntr_ent cntr_ent_t;
-
 struct cntr_ent
 {
 	enum cmd cmd;
@@ -51,7 +49,7 @@ struct cntr_ent
 	uint64_t same;
 	uint64_t deleted;
 	uint64_t phase1;
-	cntr_ent_t *next;
+	struct cntr_ent *next;
 };
 
 struct cntr

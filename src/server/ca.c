@@ -371,7 +371,6 @@ static int sign_client_cert(struct asfd *asfd,
 
 	if(!strcmp(client, ca_name))
 	{
-		char msg[512]="";
 		snprintf(msg, sizeof(msg), "Will not accept a client certificate request with the same name as the CA (%s)!", ca_name);
 		log_and_send(asfd, msg);
 		goto error;

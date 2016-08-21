@@ -102,17 +102,17 @@ END_TEST
 
 Suite *suite_pathcmp(void)
 {
-	Suite *s;
+	Suite *st;
 	TCase *tc_core;
 
-	s=suite_create("pathcmp");
+	st=suite_create("pathcmp");
 
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_pathcmp);
 	tcase_add_test(tc_core, test_pathcmp_s);
 	tcase_add_test(tc_core, test_is_subdir);
-	suite_add_tcase(s, tc_core);
+	suite_add_tcase(st, tc_core);
 
-	return s;
+	return st;
 }

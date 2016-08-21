@@ -1,12 +1,12 @@
 #ifndef __UTEST_H
 #define __UTEST_H
 
-#include "utest/builders/server/build_storage_dirs.h"
-
 #include "burp.h"
 #include "conf.h"
 #include "iobuf.h"
 #include "sbuf.h"
+
+#include "utest/builders/server/build_storage_dirs.h"
 
 #include <check.h>
 

@@ -390,25 +390,24 @@ static enum cliret do_client(struct conf **confs,
 	  || cntr_init(cntr, get_string(confs[OPT_CNAME]))) goto error;
 	set_cntr(confs[OPT_CNTR], cntr);
 
-	if(act!=ACTION_ESTIMATE
-	  && ssl_setup(&rfd, &ssl, &ctx, action, confs))
-		goto could_not_connect;
-
-	if(!(as=async_alloc())
-	  || as->init(as, act==ACTION_ESTIMATE)
-	  || !(asfd=setup_asfd_ssl(as, "main socket", &rfd, ssl)))
-		goto end;
-	asfd->set_timeout(asfd, get_int(confs[OPT_NETWORK_TIMEOUT]));
-	asfd->ratelimit=get_float(confs[OPT_RATELIMIT]);
-
-	// Set quality of service bits on backup packets.
-	if(act==ACTION_BACKUP
-	  || act==ACTION_BACKUP_TIMED
-	  || act==ACTION_TIMER_CHECK)
-		as->asfd->set_bulk_packets(as->asfd);
-
 	if(act!=ACTION_ESTIMATE)
 	{
+		if(ssl_setup(&rfd, &ssl, &ctx, action, confs))
+			goto could_not_connect;
+
+		if(!(as=async_alloc())
+		  || as->init(as, act==ACTION_ESTIMATE)
+		  || !(asfd=setup_asfd_ssl(as, "main socket", &rfd, ssl)))
+			goto end;
+		asfd->set_timeout(asfd, get_int(confs[OPT_NETWORK_TIMEOUT]));
+		asfd->ratelimit=get_float(confs[OPT_RATELIMIT]);
+
+		// Set quality of service bits on backup packets.
+		if(act==ACTION_BACKUP
+				|| act==ACTION_BACKUP_TIMED
+				|| act==ACTION_TIMER_CHECK)
+			as->asfd->set_bulk_packets(as->asfd);
+
 		if((ret=initial_comms(as, &act, &incexc, confs)))
 			goto end;
 	}

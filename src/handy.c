@@ -649,7 +649,6 @@ void strip_fqdn(char **fqdn)
 	char *tmp;
 	if(!fqdn || !*fqdn)
 		return;
-	tmp=strchr(*fqdn,'.');
 	if((tmp=strchr(*fqdn, '.')))
 		*tmp='\0';
 }

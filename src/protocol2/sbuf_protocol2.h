@@ -12,7 +12,7 @@ struct protocol2
 	uint64_t index;
 	uint32_t encryption;
 
-	BFILE bfd;
+	struct BFILE bfd;
 
 	struct blk *bstart;
 	struct blk *bend;

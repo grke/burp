@@ -73,7 +73,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 	uint64_t *bytes, struct cntr *cntr)
 {
 	int ret=-1;
-	BFILE bfd;
+	struct BFILE bfd;
 
 	bfile_init(&bfd, 0, cntr);
 	if(bfd.open_for_send(&bfd, asfd, best, sb->winattr,

@@ -287,6 +287,8 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 			if(results_to_fd(asfd)) goto end;
 		}
 
+		int removed;
+
 		switch(as->read_write(as))
 		{
 			case 0:
@@ -315,7 +317,7 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 				}
 				break;
 			default:
-				int removed=0;
+				removed=0;
 				// Maybe one of the fds had a problem.
 				// Find and remove it and carry on if possible.
 				for(asfd=as->asfd->next; asfd; )

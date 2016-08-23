@@ -1,6 +1,12 @@
 #ifndef _LOG_ROUTINES
 #define _LOG_ROUTINES
 
+struct asfd;
+struct conf;
+struct cntr;
+struct fzp;
+struct iobuf;
+
 extern const char *prog;
 extern const char *prog_long;
 
@@ -23,7 +29,7 @@ extern void log_recvd(struct iobuf *iobuf, struct cntr *cntr, int print);
 extern void logp(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 extern void logp_ssl_err(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 extern void logc(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
-extern void logf(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
+extern void logfatal(const char *fmt, ...) __attribute__((format (printf, 1, 2)));
 extern int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...) __attribute__((format (printf, 3, 4)));
 extern int logw(struct asfd *asfd, struct cntr *cntr, const char *fmt, ...) __attribute__((format (printf, 3, 4)));
 

@@ -8,7 +8,7 @@
 #include <sys/paths.h>
 #endif
 
-void bfile_free(BFILE **bfd)
+void bfile_free(struct BFILE **bfd)
 {
 	free_v((void **)bfd);
 }
@@ -18,7 +18,7 @@ void bfile_free(BFILE **bfd)
 char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
 
-static void bfile_set_win32_api(BFILE *bfd, int on)
+static void bfile_set_win32_api(struct BFILE *bfd, int on)
 {
 	if(have_win32_api() && on)
 		bfd->use_backup_api=1;
@@ -39,7 +39,7 @@ int have_win32_api(void)
 //#define OVERWRITE_HIDDEN	4
 
 // Return 0 for success, non zero for error.
-static int bfile_open_encrypted(BFILE *bfd,
+static int bfile_open_encrypted(struct BFILE *bfd,
 	const char *fname, int flags, mode_t mode)
 {
 	ULONG ulFlags=0;
@@ -103,7 +103,7 @@ end:
 	return bfd->mode==BF_CLOSED;
 }
 
-static int bfile_error(BFILE *bfd)
+static int bfile_error(struct BFILE *bfd)
 {
 	if(bfd)
 	{
@@ -115,7 +115,7 @@ static int bfile_error(BFILE *bfd)
 }
 
 // Return 0 for success, non zero for error.
-static int bfile_open(BFILE *bfd, struct asfd *asfd,
+static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 	const char *fname, int flags, mode_t mode)
 {
 	DWORD dwaccess;
@@ -277,7 +277,7 @@ static int bfile_open(BFILE *bfd, struct asfd *asfd,
 	return bfd->mode==BF_CLOSED;
 }
 
-static int bfile_close_encrypted(BFILE *bfd, struct asfd *asfd)
+static int bfile_close_encrypted(struct BFILE *bfd, struct asfd *asfd)
 {
 	CloseEncryptedFileRaw(bfd->pvContext);
 	if(bfd->mode==BF_WRITE)
@@ -290,7 +290,7 @@ static int bfile_close_encrypted(BFILE *bfd, struct asfd *asfd)
 }
 
 // Return 0 on success, -1 on error.
-static int bfile_close(BFILE *bfd, struct asfd *asfd)
+static int bfile_close(struct BFILE *bfd, struct asfd *asfd)
 {
 	int ret=-1;
 
@@ -357,7 +357,7 @@ end:
 }
 
 // Returns: bytes read on success, or 0 on EOF, -1 on error.
-static ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
+static ssize_t bfile_read(struct BFILE *bfd, void *buf, size_t count)
 {
 	bfd->rw_bytes=0;
 
@@ -385,7 +385,7 @@ static ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
 	return (ssize_t)bfd->rw_bytes;
 }
 
-static ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
+static ssize_t bfile_write(struct BFILE *bfd, void *buf, size_t count)
 {
 	bfd->rw_bytes = 0;
 
@@ -414,7 +414,7 @@ static ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
 
 #else
 
-static int bfile_close(BFILE *bfd, struct asfd *asfd)
+static int bfile_close(struct BFILE *bfd, struct asfd *asfd)
 {
 	if(!bfd || bfd->mode==BF_CLOSED) return 0;
 
@@ -432,7 +432,7 @@ static int bfile_close(BFILE *bfd, struct asfd *asfd)
 	return -1;
 }
 
-static int bfile_open(BFILE *bfd,
+static int bfile_open(struct BFILE *bfd,
 	struct asfd *asfd, const char *fname, int flags, mode_t mode)
 {
 	if(!bfd) return 0;
@@ -449,19 +449,19 @@ static int bfile_open(BFILE *bfd,
 	return 0;
 }
 
-static ssize_t bfile_read(BFILE *bfd, void *buf, size_t count)
+static ssize_t bfile_read(struct BFILE *bfd, void *buf, size_t count)
 {
 	return read(bfd->fd, buf, count);
 }
 
-static ssize_t bfile_write(BFILE *bfd, void *buf, size_t count)
+static ssize_t bfile_write(struct BFILE *bfd, void *buf, size_t count)
 {
 	return write(bfd->fd, buf, count);
 }
 
 #endif
 
-static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
+static int bfile_open_for_send(struct BFILE *bfd, struct asfd *asfd,
 	const char *fname, int64_t winattr, int atime,
 	struct cntr *cntr, enum protocol protocol)
 {
@@ -493,7 +493,7 @@ static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
 #endif
 		, 0))
 	{
-		berrno be;
+		struct berrno be;
 		berrno_init(&be);
 		logw(asfd, cntr,
 			"Could not open %s: %s\n",
@@ -503,7 +503,7 @@ static int bfile_open_for_send(BFILE *bfd, struct asfd *asfd,
 	return 0;
 }
 
-void bfile_setup_funcs(BFILE *bfd)
+void bfile_setup_funcs(struct BFILE *bfd)
 {
 	bfd->open=bfile_open;
 	bfd->close=bfile_close;
@@ -515,9 +515,9 @@ void bfile_setup_funcs(BFILE *bfd)
 #endif
 }
 
-void bfile_init(BFILE *bfd, int64_t winattr, struct cntr *cntr)
+void bfile_init(struct BFILE *bfd, int64_t winattr, struct cntr *cntr)
 {
-	memset(bfd, 0, sizeof(BFILE));
+	memset(bfd, 0, sizeof(struct BFILE));
 	bfd->mode=BF_CLOSED;
 	bfd->winattr=winattr;
 	bfd->cntr=cntr;
@@ -529,7 +529,7 @@ void bfile_init(BFILE *bfd, int64_t winattr, struct cntr *cntr)
 #endif
 }
 
-BFILE *bfile_alloc(void)
+struct BFILE *bfile_alloc(void)
 {
-	return (BFILE *)calloc_w(1, sizeof(BFILE), __func__);
+	return (struct BFILE *)calloc_w(1, sizeof(struct BFILE), __func__);
 }

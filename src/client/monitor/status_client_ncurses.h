@@ -3,6 +3,9 @@
 
 #include "../../action.h"
 
+struct async;
+struct sel;
+
 extern int status_client_ncurses_init(enum action act);
 extern int status_client_ncurses(struct conf **confs);
 

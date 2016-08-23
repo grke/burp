@@ -54,7 +54,7 @@ static ssize_t rabin_read_extrameta(struct sbuf *sb, char *buf, size_t bufsize)
 int rabin_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
         struct conf **confs)
 {
-	BFILE *bfd=&sb->protocol2->bfd;
+	struct BFILE *bfd=&sb->protocol2->bfd;
 #ifdef HAVE_WIN32
 	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
 #else
@@ -85,7 +85,7 @@ int rabin_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
 
 int rabin_close_file(struct sbuf *sb, struct asfd *asfd)
 {
-	BFILE *bfd;
+	struct BFILE *bfd;
 	if(sbuf_is_metadata(sb))
 		return rabin_close_file_extrameta(sb);
 	bfd=&sb->protocol2->bfd;
@@ -94,7 +94,7 @@ int rabin_close_file(struct sbuf *sb, struct asfd *asfd)
 
 ssize_t rabin_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
-	BFILE *bfd;
+	struct BFILE *bfd;
 	if(sbuf_is_metadata(sb))
 		return rabin_read_extrameta(sb, buf, bufsize);
 	bfd=&sb->protocol2->bfd;

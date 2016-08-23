@@ -3,6 +3,8 @@
 
 #include "../dpth.h"
 
+struct blk;
+
 extern int dpth_protocol2_init(struct dpth *dpth, const char *base_path,
 	const char *cname, const char *cfiles, int max_storage_subdirs);
 

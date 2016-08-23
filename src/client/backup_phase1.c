@@ -88,7 +88,7 @@ static int maybe_send_extrameta(struct asfd *asfd,
 }
 
 static int ft_err(struct asfd *asfd,
-	struct conf **confs, FF_PKT *ff, const char *msg)
+	struct conf **confs, struct FF_PKT *ff, const char *msg)
 {
 	int raise_error;
 	const char *prefix="";
@@ -101,7 +101,7 @@ static int ft_err(struct asfd *asfd,
 }
 
 static int do_to_server(struct asfd *asfd,
-	struct conf **confs, FF_PKT *ff, struct sbuf *sb,
+	struct conf **confs, struct FF_PKT *ff, struct sbuf *sb,
 	enum cmd cmd, int compression)
 {
 #ifdef HAVE_WIN32
@@ -148,14 +148,14 @@ static int do_to_server(struct asfd *asfd,
 #endif
 }
 
-static int to_server(struct asfd *asfd, struct conf **confs, FF_PKT *ff,
+static int to_server(struct asfd *asfd, struct conf **confs, struct FF_PKT *ff,
 	struct sbuf *sb, enum cmd cmd)
 {
 	return do_to_server(asfd, confs,
 		ff, sb, cmd, get_int(confs[OPT_COMPRESSION]));
 }
 
-static int send_file(struct asfd *asfd, FF_PKT *ff, struct conf **confs)
+static int send_file(struct asfd *asfd, struct FF_PKT *ff, struct conf **confs)
 {
 	static struct sbuf *sb=NULL;
 	struct cntr *cntr=get_cntr(confs);
@@ -211,7 +211,7 @@ static int send_file(struct asfd *asfd, FF_PKT *ff, struct conf **confs)
 int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
 {
 	int ret=-1;
-	FF_PKT *ff=NULL;
+	struct FF_PKT *ff=NULL;
 	struct strlist *l=NULL;
 	enable_acl=get_int(confs[OPT_ACL]);
 	enable_xattr=get_int(confs[OPT_XATTR]);

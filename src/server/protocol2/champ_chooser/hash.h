@@ -4,6 +4,8 @@
 #include <uthash.h>
 #include <openssl/md5.h>
 
+struct blk;
+
 typedef struct hash_strong hash_strong_t;
 
 enum hash_ret

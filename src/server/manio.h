@@ -5,6 +5,9 @@
 #include "../conf.h"
 #include "sdirs.h"
 
+struct blk;
+struct sbuf;
+
 struct man_off
 {
 	uint64_t fcount;	// File name incrementer.

@@ -81,11 +81,13 @@ struct FF_PKT
 	int type;		/* FT_ type from above */
 };
 
-extern FF_PKT *find_files_init(
-	int callback(struct asfd *asfd, FF_PKT *ff, struct conf **confs));
-extern void find_files_free(FF_PKT **ff);
+struct asfd;
+
+extern struct FF_PKT *find_files_init(
+	int callback(struct asfd *asfd, struct FF_PKT *ff, struct conf **confs));
+extern void find_files_free(struct FF_PKT **ff);
 extern int find_files_begin(struct asfd *asfd,
-	FF_PKT *ff_pkt, struct conf **confs, char *fname);
+	struct FF_PKT *ff_pkt, struct conf **confs, char *fname);
 // Returns the level of compression.
 extern int in_exclude_comp(struct strlist *excom, const char *fname,
 	int compression);

@@ -9,6 +9,8 @@
 #define RMANIFEST_RELATIVE	"rmanifest_relative"
 #define CLIENTCONFDIR		"clientconfdir"
 
+struct cstat;
+
 extern char **build_paths(const char *prefix, int wanted);
 extern struct sbuf *build_attribs(enum protocol protocol);
 extern struct sbuf *build_attribs_reduce(enum protocol protocol);

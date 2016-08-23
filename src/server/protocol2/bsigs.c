@@ -64,7 +64,7 @@ end:
 int run_bsigs(int argc, char *argv[])
 {
 	int ret=1;
-	fzp *fzp=NULL;
+	struct fzp *fzp=NULL;
 	struct iobuf rbuf;
 	struct blk blk;
 	struct sbuf *sb=sbuf_alloc(PROTO_1);

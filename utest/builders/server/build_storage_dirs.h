@@ -1,6 +1,8 @@
 #ifndef _BUILDER_STORAGE_DIRS
 #define _BUILDER_STORAGE_DIRS
 
+struct sdirs;
+
 struct sd
 {
         const char *timestamp;

@@ -3,6 +3,8 @@
 
 #include "../../burp.h"
 
+struct rconf;
+
 // The sliding window.
 struct win
 {

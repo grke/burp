@@ -8,7 +8,7 @@ enum ofr_e
 	OFR_CONTINUE
 };
 
-extern enum ofr_e open_for_restore(struct asfd *asfd, BFILE *bfd,
+extern enum ofr_e open_for_restore(struct asfd *asfd, struct BFILE *bfd,
 	const char *path, struct sbuf *sb, int vss_restore,
 	struct cntr *cntr, enum protocol protocol);
 

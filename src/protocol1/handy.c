@@ -112,7 +112,7 @@ int write_endfile(struct asfd *asfd, uint64_t bytes, uint8_t *checksum)
 int send_whole_file_gzl(struct asfd *asfd,
 	const char *fname, const char *datapth, int quick_read,
 	uint64_t *bytes, const char *encpassword, struct cntr *cntr,
-	int compression, BFILE *bfd, const char *extrameta,
+	int compression, struct BFILE *bfd, const char *extrameta,
 	size_t elen)
 {
 	int ret=0;
@@ -384,7 +384,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 int send_whole_filel(struct asfd *asfd,
 	enum cmd cmd, const char *datapth,
 	int quick_read, uint64_t *bytes, struct cntr *cntr,
-	BFILE *bfd, const char *extrameta, size_t elen)
+	struct BFILE *bfd, const char *extrameta, size_t elen)
 {
 	int ret=0;
 	size_t s=0;

@@ -1,6 +1,8 @@
 #ifndef _CHAMP_CHOOSER_H
 #define _CHAMP_CHOOSER_H
 
+struct asfd;
+
 extern struct scores *champ_chooser_init(const char *datadir);
 extern void champ_chooser_free(struct scores **scores);
 

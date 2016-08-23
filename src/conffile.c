@@ -624,6 +624,8 @@ static int get_fqdn(struct conf **c)
 
 	if(!(fqdn=strdup_w(info->ai_canonname, __func__)))
 		goto end;
+	if(!get_int(c[OPT_CNAME_FQDN]))
+		strip_fqdn(&fqdn);
 	if(get_int(c[OPT_CNAME_LOWERCASE]))
 		strlwr(fqdn);
 

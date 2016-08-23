@@ -53,6 +53,7 @@ extern void *calloc_w(size_t nmem, size_t size, const char *func);
 extern void free_v(void **ptr);
 extern void free_w(char **str);
 extern char *strlwr(char *s);
+extern void strip_fqdn(char **fqdn);
 
 extern int astrcat(char **buf, const char *append, const char *func);
 

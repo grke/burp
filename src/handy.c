@@ -644,3 +644,13 @@ char *strlwr(char *s)
 	for(;*tmp;++tmp) *tmp=tolower((unsigned char)*tmp);
 	return s;
 }
+
+void strip_fqdn(char **fqdn)
+{
+	char *tmp;
+	if(!fqdn || !*fqdn)
+		return;
+	if((tmp=strchr(*fqdn, '.')))
+		*tmp='\0';
+}
+

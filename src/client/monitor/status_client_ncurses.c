@@ -1198,9 +1198,7 @@ static void page_down_backup(struct sel *sel, int row)
 
 static void page_up(struct sel *sel)
 {
-	int row=0;
-	int col=0;
-	getmaxyx(stdscr, row, col);
+	int row=getmaxy(stdscr);
 	switch(sel->page)
 	{
 		case PAGE_CLIENT_LIST:
@@ -1218,9 +1216,7 @@ static void page_up(struct sel *sel)
 
 static void page_down(struct sel *sel)
 {
-	int row=0;
-	int col=0;
-	getmaxyx(stdscr, row, col);
+	int row=getmaxy(stdscr);
 	switch(sel->page)
 	{
 		case PAGE_CLIENT_LIST:

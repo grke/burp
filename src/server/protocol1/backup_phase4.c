@@ -106,7 +106,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 //logp("make rev delta: %s %s %s\n", src, sig, del);
 	if(!(sigp=fzp_open(sig, "rb"))) goto end;
 
-	if(rs_loadsig_fzp(sigp, &sumset, NULL)!=RS_DONE
+	if(rs_loadsig_fzp(sigp, &sumset)!=RS_DONE
 	  || rs_build_hash_table(sumset)!=RS_DONE)
 		goto end;
 

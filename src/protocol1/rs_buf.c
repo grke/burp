@@ -437,8 +437,14 @@ rs_magic_number rshash_to_magic_number(enum rshash r)
 }
 #endif
 
-rs_result rs_loadsig_fzp(struct fzp *fzp,
-	rs_signature_t **sig, rs_stats_t *stats)
+rs_result rs_loadsig_fzp(struct fzp *fzp, rs_signature_t **sig)
 {
-	return rs_loadsig_file(fzp->fp, sig, stats);
+	rs_result r;
+	rs_job_t *job;
+
+	job=rs_loadsig_begin(sig);
+	r=rs_whole_gzrun(job, fzp, NULL);
+	rs_job_free(job);
+
+	return r;
 }

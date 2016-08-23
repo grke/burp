@@ -79,8 +79,7 @@ rs_result rs_delta_gzfile(rs_signature_t *sig,
 	struct fzp *delta_file);
 
 rs_result rs_loadsig_fzp(struct fzp *fzp,
-	rs_signature_t **sig,
-	rs_stats_t *stats);
+	rs_signature_t **sig);
 
 #ifndef RS_DEFAULT_STRONG_LEN
 extern rs_magic_number rshash_to_magic_number(enum rshash r);

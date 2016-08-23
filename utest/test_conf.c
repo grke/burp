@@ -115,6 +115,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_LIBRSYNC:
 		case OPT_VERSION_WARN:
 		case OPT_PATH_LENGTH_WARN:
+		case OPT_CNAME_FQDN:
 		case OPT_CLIENT_CAN_DELETE:
 		case OPT_CLIENT_CAN_DIFF:
 		case OPT_CLIENT_CAN_FORCE_BACKUP:

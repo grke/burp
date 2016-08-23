@@ -99,6 +99,7 @@ enum conf_opt
 	OPT_RSHASH,
 	OPT_MESSAGE,
 	OPT_CNAME_LOWERCASE, // force lowercase cname, client or server option
+	OPT_CNAME_FQDN, // use fqdn cname, client or server option
 
 	// Server options.
 	OPT_ADDRESS,

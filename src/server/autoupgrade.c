@@ -5,6 +5,7 @@
 #include "../handy.h"
 #include "../log.h"
 #include "../prepend.h"
+#include "autoupgrade.h"
 
 // Return -1 on error or success, 0 to continue normally.
 int autoupgrade_server(struct async *as,

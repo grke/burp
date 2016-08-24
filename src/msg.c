@@ -6,6 +6,7 @@
 #include "fzp.h"
 #include "iobuf.h"
 #include "log.h"
+#include "msg.h"
 
 int send_msg_fzp(struct fzp *fzp, enum cmd cmd, const char *buf, size_t s)
 {

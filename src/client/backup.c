@@ -10,6 +10,7 @@
 #include "cvss.h"
 #include "protocol1/backup_phase2.h"
 #include "protocol2/backup_phase2.h"
+#include "backup.h"
 
 #ifdef HAVE_WIN32
 static void set_priority(int priority, const char *str)

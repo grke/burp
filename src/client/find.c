@@ -165,7 +165,7 @@ int in_include_regex(struct strlist *increg, const char *fname)
 }
 */
 
-int in_exclude_regex(struct strlist *excreg, const char *fname)
+static int in_exclude_regex(struct strlist *excreg, const char *fname)
 {
 	// If not doing exclude_regex, let the file get backed up.
 	for(; excreg; excreg=excreg->next)
@@ -280,7 +280,7 @@ static int file_size_match(struct FF_PKT *ff_pkt, struct conf **confs)
 }
 
 // Last checks before actually processing the file system entry.
-int send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
+static int send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	if(!file_is_included(confs, ff->fname, top_level)) return 0;
 

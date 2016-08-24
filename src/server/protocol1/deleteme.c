@@ -4,6 +4,7 @@
 #include "../../fsops.h"
 #include "../../prepend.h"
 #include "../sdirs.h"
+#include "deleteme.h"
 
 int deleteme_move(struct sdirs *sdirs, const char *fullpath, const char *path,
 	struct conf **cconfs)

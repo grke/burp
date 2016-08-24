@@ -21,6 +21,7 @@
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase2.h"
 #include "protocol2/backup_phase4.h"
+#include "backup.h"
 
 static int open_log(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs)

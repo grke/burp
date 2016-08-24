@@ -17,6 +17,7 @@
 #include "../resume.h"
 #include "blocklen.h"
 #include "dpth.h"
+#include "backup_phase2.h"
 
 static size_t treepathlen=0;
 

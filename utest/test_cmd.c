@@ -1,6 +1,7 @@
 #include <check.h>
 #include <stdlib.h>
 #include "../src/cmd.h"
+#include "test.h"
 
 START_TEST(test_cmd)
 {

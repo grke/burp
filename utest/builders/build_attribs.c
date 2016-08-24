@@ -4,6 +4,7 @@
 #include "../../src/attribs.h"
 #include "../../src/base64.h"
 #include "../../src/sbuf.h"
+#include "build.h"
 
 static int reduce=1;
 

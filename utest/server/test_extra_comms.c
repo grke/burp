@@ -36,7 +36,7 @@ static struct async *setup_async(void)
 	return as;
 }
 
-static void clean()
+static void clean(void)
 {
 	fail_unless(!recursive_delete(BASE));
 	fail_unless(!recursive_delete(CLIENTCONFDIR));

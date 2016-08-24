@@ -14,7 +14,7 @@ AM_SILENT_RULES([yes])
 
 AC_LANG([C])
 
-: ${CPPFLAGS="-Wall -g -O2"}
+: ${CFLAGS="-Wall -g -O2"}
 
 AC_CANONICAL_HOST
 AC_USE_SYSTEM_EXTENSIONS

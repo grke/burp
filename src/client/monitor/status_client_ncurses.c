@@ -972,7 +972,7 @@ static int request_status(struct asfd *asfd,
 }
 
 #ifdef HAVE_NCURSES
-static void ncurses_free()
+static void ncurses_free(void)
 {
 	endwin();
 }

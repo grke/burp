@@ -11,7 +11,7 @@
 
 #define BASE		"utest_sdirs"
 
-static struct sdirs *setup()
+static struct sdirs *setup(void)
 {
 	struct sdirs *sdirs;
 	fail_unless(recursive_delete(BASE)==0);

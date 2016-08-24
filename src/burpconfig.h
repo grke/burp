@@ -32,7 +32,7 @@
 	#define O_BINARY 0
 #endif
 
-inline uint8_t IsPathSeparator(int ch)
+static inline uint8_t IsPathSeparator(int ch)
 {
 	return
 #ifdef HAVE_WIN32

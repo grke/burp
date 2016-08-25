@@ -121,6 +121,11 @@ int iobuf_is_metadata(struct iobuf *iobuf)
 	return cmd_is_metadata(iobuf->cmd);
 }
 
+int iobuf_is_estimatable(struct iobuf *iobuf)
+{
+	return cmd_is_estimatable(iobuf->cmd);
+}
+
 static int do_iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp,
 	int extra_bytes)
 {

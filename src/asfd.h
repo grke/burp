@@ -85,6 +85,10 @@ struct asfd
 	pid_t pid;
 	enum asfd_fdtype fdtype;
 
+	// Counters
+	uint64_t sent;
+	uint64_t rcvd;
+
 	// Function pointers.
 	int (*parse_readbuf)(struct asfd *);
 	int (*parse_readbuf_specific)(struct asfd *);

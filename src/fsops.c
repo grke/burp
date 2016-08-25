@@ -182,7 +182,8 @@ static void get_max(int32_t *max, int32_t default_max)
 }
 
 static int do_recursive_delete(const char *d, const char *file,
-	uint8_t delfiles, int32_t name_max)
+	uint8_t delfiles, int32_t name_max,
+	uint8_t ignore_not_empty_errors)
 {
 	int ret=RECDEL_ERROR;
 	DIR *dirp=NULL;
@@ -240,7 +241,8 @@ static int do_recursive_delete(const char *d, const char *file,
 		{
 			int r;
 			if((r=do_recursive_delete(directory, entry->d_name,
-				delfiles, name_max))==RECDEL_ERROR)
+				delfiles, name_max,
+				ignore_not_empty_errors))==RECDEL_ERROR)
 					goto end;
 			// do not overwrite ret with OK if it previously
 			// had ENTRIES_REMAINING
@@ -263,8 +265,11 @@ static int do_recursive_delete(const char *d, const char *file,
 
 	if(ret==RECDEL_OK && rmdir(directory))
 	{
-		logp("rmdir %s: %s\n", directory, strerror(errno));
-		ret=RECDEL_ERROR;
+		if(errno!=ENOTEMPTY || !ignore_not_empty_errors)
+		{
+			logp("rmdir %s: %s\n", directory, strerror(errno));
+			ret=RECDEL_ERROR;
+		}
 	}
 end:
 	if(dirp) closedir(dirp);
@@ -274,11 +279,13 @@ end:
 	return ret;
 }
 
-static int do_recursive_delete_w(const char *path, uint8_t delfiles)
+static int do_recursive_delete_w(const char *path, uint8_t delfiles,
+	uint8_t ignore_not_empty_errors)
 {
 	int32_t name_max;
 	get_max(&name_max, _PC_NAME_MAX);
-	return do_recursive_delete(path, NULL, delfiles, name_max);
+	return do_recursive_delete(path,
+		NULL, delfiles, name_max, ignore_not_empty_errors);
 }
 
 int recursive_delete(const char *path)
@@ -293,12 +300,17 @@ int recursive_delete(const char *path)
 			return RECDEL_ENTRIES_REMAINING;
 		}
 	}
-	return do_recursive_delete_w(path, 1);
+	return do_recursive_delete_w(path, 1, 0/*ignore_not_empty_errors*/);
 }
 
 int recursive_delete_dirs_only(const char *path)
 {
-	return do_recursive_delete_w(path, 0);
+	return do_recursive_delete_w(path, 0, 0/*ignore_not_empty_errors*/);
+}
+
+int recursive_delete_dirs_only_no_warnings(const char *path)
+{
+	return do_recursive_delete_w(path, 0, 1/*ignore_not_empty_errors*/);
 }
 
 int unlink_w(const char *path, const char *func)

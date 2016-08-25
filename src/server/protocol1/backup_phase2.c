@@ -550,7 +550,6 @@ static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,
 	rbuf=asfd->rbuf;
 	//logp("rbuf->len: %d\n", rbuf->len);
 
-	cntr_add_recvbytes(get_cntr(cconfs), rbuf->len);
 	if(rb->protocol1->fzp)
 		app=fzp_write(rb->protocol1->fzp, rbuf->buf, rbuf->len);
 

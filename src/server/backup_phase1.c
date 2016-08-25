@@ -55,7 +55,7 @@ int backup_phase1_server_all(struct async *as,
 			goto error;
 		cntr_add_phase1(cntr, sb->path.cmd, 0);
 
-		if(sbuf_is_filedata(sb))
+		if(sbuf_is_estimatable(sb))
 		{
 			cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
 				(uint64_t)sb->statp.st_size, 0);

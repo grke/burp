@@ -29,7 +29,7 @@ static int read_phase1(struct manio *p1manio, struct conf **cconfs)
 		}
 		cntr_add_phase1(cntr, p1b->path.cmd, 0);
 
-		if(sbuf_is_filedata(p1b))
+		if(sbuf_is_estimatable(p1b))
 			cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
 				(uint64_t)p1b->statp.st_size, 0);
 	}
@@ -175,7 +175,6 @@ int forward_before_entry(struct manio *manio, struct iobuf *target,
 			{
 				uint64_t e=strtoull(sb->endfile.buf, NULL, 10);
 				cntr_add_bytes(cntr, e);
-				cntr_add_recvbytes(cntr, e);
 			}
 		}
 	}
@@ -294,7 +293,6 @@ int get_last_good_entry(struct manio *manio, struct iobuf *result,
 			{
 				uint64_t e=strtoull(sb->endfile.buf, NULL, 10);
 				cntr_add_bytes(cntr, e);
-				cntr_add_recvbytes(cntr, e);
 			}
 		}
 	}

@@ -18,6 +18,7 @@ extern int do_rename(const char *oldpath, const char *newpath);
 extern int build_path_w(const char *path);
 extern int recursive_delete(const char *path);
 extern int recursive_delete_dirs_only(const char *path);
+extern int recursive_delete_dirs_only_no_warnings(const char *path);
 
 extern int unlink_w(const char *path, const char *func);
 

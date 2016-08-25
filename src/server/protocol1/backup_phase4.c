@@ -807,7 +807,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	// with the option that makes it not delete files.
 	// This will have the effect of getting rid of unnecessary
 	// directories.
-	recursive_delete_dirs_only(fdirs->currentdupdata);
+	recursive_delete_dirs_only_no_warnings(fdirs->currentdupdata);
 
 	// Rename the old current to something that we know to delete.
 	if(previous_backup && !hardlinked_current)

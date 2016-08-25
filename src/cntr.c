@@ -230,6 +230,12 @@ static void table_border(enum action act)
 	}
 }
 
+static void set_count_val(struct cntr *cntr, char ch, uint64_t val)
+{
+	if(!cntr) return;
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->count=val;
+}
+
 static void incr_count_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(!cntr) return;
@@ -383,14 +389,14 @@ void cntr_add_bytes(struct cntr *c, uint64_t bytes)
 	incr_count_val(c, CMD_BYTES, bytes);
 }
 
-void cntr_add_sentbytes(struct cntr *c, uint64_t bytes)
+static void cntr_set_sentbytes(struct cntr *c, uint64_t bytes)
 {
-	incr_count_val(c, CMD_BYTES_SENT, bytes);
+	set_count_val(c, CMD_BYTES_SENT, bytes);
 }
 
-void cntr_add_recvbytes(struct cntr *c, uint64_t bytes)
+static void cntr_set_recvbytes(struct cntr *c, uint64_t bytes)
 {
-	incr_count_val(c, CMD_BYTES_RECV, bytes);
+	set_count_val(c, CMD_BYTES_RECV, bytes);
 }
 
 static void quint_print(struct cntr_ent *ent, enum action act)
@@ -479,24 +485,16 @@ static void bottom_part(struct cntr *c, enum action act)
 		logc("%s\n", bytes_to_human(l));
 	}
 
-	if(act==ACTION_BACKUP
-	  || act==ACTION_BACKUP_TIMED)
-	{
-		l=get_count(e, CMD_BYTES_RECV);
-		logc("       Bytes received:   %11" PRIu64, l);
-		logc("%s\n", bytes_to_human(l));
-	}
-	if(act==ACTION_BACKUP 
-	  || act==ACTION_BACKUP_TIMED
-	  || act==ACTION_RESTORE)
-	{
-		l=get_count(e, CMD_BYTES_SENT);
-		logc("           Bytes sent:   %11" PRIu64, l);
-		logc("%s\n", bytes_to_human(l));
-	}
+	l=get_count(e, CMD_BYTES_RECV);
+	logc("       Bytes received:   %11" PRIu64, l);
+	logc("%s\n", bytes_to_human(l));
+
+	l=get_count(e, CMD_BYTES_SENT);
+	logc("           Bytes sent:   %11" PRIu64, l);
+	logc("%s\n", bytes_to_human(l));
 }
 
-void cntr_print(struct cntr *cntr, enum action act)
+void cntr_print(struct cntr *cntr, enum action act, struct asfd *asfd)
 {
 	struct cntr_ent *e;
 	time_t now;
@@ -504,6 +502,12 @@ void cntr_print(struct cntr *cntr, enum action act)
 	char time_start_str[32];
 	char time_end_str[32];
 	if(!cntr) return;
+
+	if(asfd)
+	{
+		cntr_set_sentbytes(cntr, asfd->sent);
+		cntr_set_recvbytes(cntr, asfd->rcvd);
+	}
 	now=time(NULL);
 	start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)now;

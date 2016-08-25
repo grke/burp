@@ -81,6 +81,11 @@ int sbuf_is_metadata(struct sbuf *sb)
 	return iobuf_is_metadata(&sb->path);
 }
 
+int sbuf_is_estimatable(struct sbuf *sb)
+{
+	return iobuf_is_estimatable(&sb->path);
+}
+
 int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp)
 {
 	if(!sb->path.buf) return 0;

@@ -298,12 +298,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 				sb->path.buf, sb->protocol1->datapth.buf);
 			goto end;
 		}
-		else
-		{
-			cntr_add(get_cntr(confs), CMD_FILE_CHANGED, 1);
-			cntr_add_bytes(get_cntr(confs), bytes);
-			cntr_add_sentbytes(get_cntr(confs), sentbytes);
-		}
+		cntr_add(cntr, CMD_FILE_CHANGED, 1);
 	}
 	else
 	{
@@ -317,13 +312,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 			cntr, sb->compression,
 			bfd, extrameta, elen))
 				goto end;
-		else
-		{
-			cntr_add(get_cntr(confs), sb->path.cmd, 1);
-			cntr_add_bytes(get_cntr(confs), bytes);
-			cntr_add_sentbytes(get_cntr(confs), bytes);
-		}
+		cntr_add(cntr, sb->path.cmd, 1);
 	}
+	cntr_add_bytes(cntr, bytes);
 
 end:
 	ret=0;
@@ -458,7 +449,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	ret=do_backup_phase2_client(asfd, confs, resume);
 
 	cntr_print_end(cntr);
-	cntr_print(cntr, ACTION_BACKUP);
+	cntr_print(cntr, ACTION_BACKUP, asfd);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

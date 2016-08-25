@@ -62,6 +62,7 @@ extern int sbuf_is_vssdata(struct sbuf *sb);
 extern int sbuf_is_link(struct sbuf *sb);
 extern int sbuf_is_encrypted(struct sbuf *sb);
 extern int sbuf_is_metadata(struct sbuf *sb);
+extern int sbuf_is_estimatable(struct sbuf *sb);
 
 extern int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp);
 

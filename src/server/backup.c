@@ -141,6 +141,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	int do_phase2=1;
 	struct asfd *asfd=as->asfd;
 	enum protocol protocol=get_protocol(cconfs);
+	struct cntr *cntr=get_cntr(cconfs);
 
 	logp("in do_backup_server\n");
 
@@ -221,9 +222,8 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	cntr_print(get_cntr(cconfs), ACTION_BACKUP);
-	cntr_stats_to_file(get_cntr(cconfs),
-		sdirs->rworking, ACTION_BACKUP, cconfs);
+	cntr_print(cntr, ACTION_BACKUP, asfd);
+	cntr_stats_to_file(cntr, sdirs->rworking, ACTION_BACKUP, cconfs);
 
 	// Move the symlink to indicate that we are now in the end phase. The
 	// rename() race condition is automatically recoverable here.

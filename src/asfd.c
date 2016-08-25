@@ -170,6 +170,7 @@ static int asfd_do_read(struct asfd *asfd)
 		goto error;
 	}
 	asfd->readbuflen+=r;
+	asfd->rcvd+=r;
 	return 0;
 error:
 	truncate_readbuf(asfd);
@@ -192,6 +193,7 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 		case SSL_ERROR_NONE:
 			asfd->readbuflen+=r;
 			asfd->readbuf[asfd->readbuflen]='\0';
+			asfd->rcvd+=r;
 			break;
 		case SSL_ERROR_ZERO_RETURN:
 			// End of data.
@@ -278,6 +280,7 @@ static int asfd_do_write(struct asfd *asfd)
 		return -1;
 	}
 	if(asfd->ratelimit) asfd->rlbytes+=w;
+	asfd->sent+=w;
 /*
 {
 char buf[100000]="";
@@ -316,6 +319,7 @@ printf("wrote %d: %s\n", w, buf);
 			memmove(asfd->writebuf,
 				asfd->writebuf+w, asfd->writebuflen-w);
 			asfd->writebuflen-=w;
+			asfd->sent+=w;
 			break;
 		case SSL_ERROR_WANT_WRITE:
 			break;

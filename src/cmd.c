@@ -151,3 +151,10 @@ int cmd_is_metadata(enum cmd cmd)
 		|| cmd==CMD_METADATA
 		|| cmd==CMD_ENC_METADATA;
 }
+
+int cmd_is_estimatable(enum cmd cmd)
+{
+	return     cmd==CMD_FILE
+		|| cmd==CMD_ENC_FILE
+		|| cmd==CMD_EFS_FILE;
+}

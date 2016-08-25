@@ -69,11 +69,11 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 }
 
 static int send_file(struct asfd *asfd, struct sbuf *sb,
-	int patches, const char *best,
-	uint64_t *bytes, struct cntr *cntr)
+	int patches, const char *best, struct cntr *cntr)
 {
 	int ret=-1;
 	struct BFILE bfd;
+	uint64_t bytes=0; // Unused.
 
 	bfile_init(&bfd, 0, cntr);
 	if(bfd.open_for_send(&bfd, asfd, best, sb->winattr,
@@ -86,7 +86,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
 		ret=send_whole_file_gzl(asfd, best, sb->protocol1->datapth.buf,
-			1, bytes, NULL, cntr, 9, &bfd, NULL, 0);
+			1, &bytes, NULL, cntr, 9, &bfd, NULL, 0);
 	}
 	else
 	{
@@ -96,7 +96,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		if(sbuf_is_encrypted(sb))
 		{
 			ret=send_whole_filel(asfd, sb->path.cmd,
-				sb->protocol1->datapth.buf, 1, bytes,
+				sb->protocol1->datapth.buf, 1, &bytes,
 				cntr, &bfd, NULL, 0);
 		}
 		// It might have been stored uncompressed. Gzip it during
@@ -106,7 +106,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 			sb->protocol1->datapth.buf))
 		{
 			ret=send_whole_file_gzl(asfd,
-				best, sb->protocol1->datapth.buf, 1, bytes,
+				best, sb->protocol1->datapth.buf, 1, &bytes,
 				NULL, cntr, 9, &bfd, NULL, 0);
 		}
 		else
@@ -114,7 +114,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
 			ret=send_whole_filel(asfd, sb->path.cmd,
-				sb->protocol1->datapth.buf, 1, bytes,
+				sb->protocol1->datapth.buf, 1, &bytes,
 				cntr, &bfd, NULL, 0);
 		}
 	}
@@ -123,8 +123,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 }
 
 static int verify_file(struct asfd *asfd, struct sbuf *sb,
-	int patches, const char *best,
-	uint64_t *bytes, struct cntr *cntr)
+	int patches, const char *best, struct cntr *cntr)
 {
 	MD5_CTX md5;
 	size_t b=0;
@@ -195,7 +194,6 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 			sb->path.buf, sb->protocol1->datapth.buf);
 		return 0;
 	}
-	*bytes+=cbytes;
 
 	// Just send the file name to the client, so that it can show cntr.
 	if(asfd->write(asfd, &sb->path)) return -1;
@@ -213,7 +211,6 @@ static int process_data_dir_file(struct asfd *asfd,
 	struct stat dstatp;
 	const char *tmp=NULL;
 	const char *best=NULL;
-	uint64_t bytes=0;
 	static char *tmppath1=NULL;
 	static char *tmppath2=NULL;
 	struct cntr *cntr=NULL;
@@ -270,11 +267,11 @@ static int process_data_dir_file(struct asfd *asfd,
 	switch(act)
 	{
 		case ACTION_RESTORE:
-			if(send_file(asfd, sb, patches, best, &bytes, cntr))
+			if(send_file(asfd, sb, patches, best, cntr))
 				goto end;
 			break;
 		case ACTION_VERIFY:
-			if(verify_file(asfd, sb, patches, best, &bytes, cntr))
+			if(verify_file(asfd, sb, patches, best, cntr))
 				goto end;
 			break;
 		default:
@@ -283,7 +280,6 @@ static int process_data_dir_file(struct asfd *asfd,
 	}
 	cntr_add(cntr, sb->path.cmd, 0);
 	cntr_add_bytes(cntr, strtoull(sb->endfile.buf, NULL, 10));
-	cntr_add_sentbytes(cntr, bytes);
 
 	ret=0;
 end:

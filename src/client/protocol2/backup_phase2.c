@@ -220,7 +220,6 @@ static void get_wbuf_from_data(struct conf **confs,
 			blk->requested=0;
 			blist->last_sent=blk;
 			cntr_add(get_cntr(confs), CMD_DATA, 1);
-			cntr_add_sentbytes(get_cntr(confs), blk->length);
 			break;
 		}
 		else
@@ -400,7 +399,7 @@ end:
 		iobuf_free(&wbuf);
 	}
 	cntr_print_end(cntr);
-	cntr_print(cntr, ACTION_BACKUP);
+	cntr_print(cntr, ACTION_BACKUP, asfd);
 	if(ret) logp("Error in backup\n");
 	logp("End backup\n");
 

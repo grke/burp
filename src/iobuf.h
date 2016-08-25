@@ -32,6 +32,7 @@ extern int iobuf_is_vssdata(struct iobuf *iobuf);
 extern int iobuf_is_link(struct iobuf *iobuf);
 extern int iobuf_is_encrypted(struct iobuf *iobuf);
 extern int iobuf_is_metadata(struct iobuf *iobuf);
+extern int iobuf_is_estimatable(struct iobuf *iobuf);
 
 extern int iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp);
 extern int iobuf_fill_from_fzp_data(struct iobuf *iobuf, struct fzp *fzp);

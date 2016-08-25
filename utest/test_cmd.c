@@ -13,6 +13,7 @@ START_TEST(test_cmd)
 		int expected_is_encrypted=0;
 		int expected_is_vssdata=0;
 		int expected_is_metadata=0;
+		int expected_is_estimatable=0;
 		cmd=(enum cmd)i;
 		if(cmd==CMD_SOFT_LINK
 		  || cmd==CMD_HARD_LINK)
@@ -43,6 +44,10 @@ START_TEST(test_cmd)
 		  || cmd==CMD_ENC_VSS
 		  || cmd==CMD_ENC_VSS_T)
 			expected_is_metadata=1;
+		if(cmd==CMD_FILE
+		  || cmd==CMD_ENC_FILE
+		  || cmd==CMD_EFS_FILE)
+			expected_is_estimatable=1;
 
 		fail_unless(cmd_is_link(cmd)==expected_is_link);
 		fail_unless(cmd_is_endfile(cmd)==expected_is_endfile);
@@ -50,6 +55,7 @@ START_TEST(test_cmd)
 		fail_unless(cmd_is_vssdata(cmd)==expected_is_vssdata);
 		fail_unless(cmd_is_encrypted(cmd)==expected_is_encrypted);
 		fail_unless(cmd_is_metadata(cmd)==expected_is_metadata);
+		fail_unless(cmd_is_estimatable(cmd)==expected_is_estimatable);
 	}
 }
 END_TEST

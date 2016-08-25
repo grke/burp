@@ -710,7 +710,7 @@ error:
 	bfile_free(&bfd);
 
 	cntr_print_end(cntr);
-	cntr_print(cntr, act);
+	cntr_print(cntr, act, asfd);
 
 	if(!ret) logp("%s finished\n", act_str(act));
 	else logp("ret: %d\n", ret);

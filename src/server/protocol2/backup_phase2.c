@@ -212,7 +212,6 @@ static int add_data_to_store(struct cntr *cntr,
 	if(dpth_protocol2_fwrite(dpth, rbuf, blk)) return -1;
 
 	cntr_add(cntr, CMD_DATA, 0);
-	cntr_add_recvbytes(cntr, blk->length);
 
 	blk->got=BLK_GOT;
 	blk=blk->next;

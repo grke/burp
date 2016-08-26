@@ -194,7 +194,8 @@ static int do_recursive_delete(const char *d, const char *file,
 
 	if(!file)
 	{
-		if(!(directory=prepend_s(d, ""))) goto end;
+		if(!(directory=prepend_s(d, "")))
+			goto end;
 	}
 	else if(!(directory=prepend_s(d, file)))
 	{
@@ -211,7 +212,8 @@ static int do_recursive_delete(const char *d, const char *file,
 
 	if(!(dirp=opendir(directory)))
 	{
-		logp("opendir %s: %s\n", directory, strerror(errno));
+		logp("opendir %s in %s: %s\n",
+			directory, __func__, strerror(errno));
 		goto end;
 	}
 
@@ -222,8 +224,8 @@ static int do_recursive_delete(const char *d, const char *file,
 		{
 			if(errno)
 			{
-				logp("error in readdir: %s\n",
-					strerror(errno));
+				logp("error in readdir in %s: %s\n",
+					__func__, strerror(errno));
 				goto end;
 			}
 			// Got to the end of the directory.
@@ -231,9 +233,7 @@ static int do_recursive_delete(const char *d, const char *file,
 			break;
 		}
 
-		if(!entry->d_ino
-		  || !strcmp(entry->d_name, ".")
-		  || !strcmp(entry->d_name, ".."))
+		if(!filter_dot(entry))
 			continue;
 		free_w(&fullpath);
 		if(!(fullpath=prepend_s(directory, entry->d_name)))
@@ -357,18 +357,14 @@ int looks_like_tmp_or_hidden_file(const char *filename)
 	return 0;
 }
 
-static int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
+static int do_get_entries_in_directory(DIR *directory, char ***nl,
 	int *count, int (*compar)(const void *, const void *))
 {
-	char *p;
 	int allocated=0;
-	struct dirent **ntmp=NULL;
-	struct dirent *entry=NULL;
+	char **ntmp=NULL;
 	struct dirent *result=NULL;
-	size_t elen;
 
 	*count=0;
-	elen=sizeof(struct dirent)+fs_name_max+100;
 
 	// This here is doing a funky kind of scandir/alphasort
 	// that can also run on Windows.
@@ -386,12 +382,7 @@ static int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
 			break;
 		}
 
-		p=result->d_name;
-		ASSERT(fs_name_max+1 > (int)sizeof(struct dirent)+strlen(p));
-
-		if(!p
-		  || !strcmp(p, ".")
-		  || !strcmp(p, ".."))
+		if(!filter_dot(result))
 			continue;
 
 		if(*count==allocated)
@@ -399,32 +390,31 @@ static int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
 			if(!allocated) allocated=10;
 			else allocated*=2;
 
-			if(!(ntmp=(struct dirent **)
+			if(!(ntmp=(char **)
 			  realloc_w(*nl, allocated*sizeof(**nl), __func__)))
 				goto error;
 			*nl=ntmp;
 		}
-		if(!(entry=(struct dirent *)malloc_w(elen, __func__)))
+		if(!((*nl)[(*count)++]=strdup_w(result->d_name, __func__)))
 			goto error;
-		memcpy(entry, result, elen);
-		(*nl)[(*count)++]=entry;
 	}
-	if(*nl && compar) qsort(*nl, *count, sizeof(**nl), compar);
+	if(*nl && compar)
+		qsort(*nl, *count, sizeof(**nl), compar);
 	return 0;
 error:
 	if(*nl)
 	{
 		int i;
 		for(i=0; i<*count; i++)
-			free_v((void **)&((*nl)[i]));
+			free_w(&((*nl)[i]));
 		free_v((void **)nl);
 	}
 	return -1;
 }
 
-static int entries_in_directory(const char *path, struct dirent ***nl,
+static int entries_in_directory(const char *path, char ***nl,
 	int *count, int atime,
-	int (*compar)(const struct dirent **, const struct dirent **))
+	int (*compar)(const char **, const char **))
 {
 	int ret=0;
 	DIR *directory=NULL;
@@ -461,32 +451,24 @@ static int entries_in_directory(const char *path, struct dirent ***nl,
 	return ret;
 }
 
-static int my_alphasort(const struct dirent **a, const struct dirent **b)
+int filter_dot(const struct dirent *d)
 {
-	return pathcmp((*a)->d_name, (*b)->d_name);
+	if(!d->d_name
+	  || !strcmp(d->d_name, ".")
+	  || !strcmp(d->d_name, ".."))
+		return 0;
+	return 1;
 }
 
-static int rev_alphasort(const struct dirent **a, const struct dirent **b)
+static int my_alphasort(const char **a, const char **b)
 {
-	return pathcmp((*a)->d_name, (*b)->d_name)*-1;
+	return pathcmp(*a, *b);
 }
 
-int entries_in_directory_alphasort(const char *path, struct dirent ***nl,
+int entries_in_directory_alphasort(const char *path, char ***nl,
 	int *count, int atime)
 {
 	return entries_in_directory(path, nl, count, atime, my_alphasort);
-}
-
-int entries_in_directory_alphasort_rev(const char *path, struct dirent ***nl,
-	int *count, int atime)
-{
-	return entries_in_directory(path, nl, count, atime, rev_alphasort);
-}
-
-int entries_in_directory_no_sort(const char *path, struct dirent ***nl,
-	int *count, int atime)
-{
-	return entries_in_directory(path, nl, count, atime, NULL);
 }
 
 #ifndef HAVE_WIN32

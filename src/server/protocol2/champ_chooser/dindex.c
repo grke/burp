@@ -49,7 +49,7 @@ static int get_dfiles_to_merge(struct sdirs *sdirs, struct strlist **s)
 	char *dfiles=NULL;
 	struct dirent **dir=NULL;
 
-	if(entries_in_directory_no_sort(sdirs->clients, &dir, &n, 1 /*atime*/))
+	if((n=scandir(sdirs->clients, &dir, filter_dot, NULL))<0)
 	{
 		logp("scandir failed for %s in %s: %s\n",
 			sdirs->clients, __func__, strerror(errno));
@@ -95,8 +95,9 @@ end:
 	free_w(&dfiles);
 	if(dir)
 	{
-		for(i=0; i<n; i++) free_v((void **)&dir[i]);
-		free_v((void **)&dir);
+		for(i=0; i<n; i++)
+			free(dir[i]);
+		free(dir);
 	}
 	return ret;
 }

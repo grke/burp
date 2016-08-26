@@ -1147,32 +1147,39 @@ typedef struct _dir
 	WIN32_FIND_DATAW data_w; // Window's file info (wchar version).
 	const char *spec;        // The directory we're traversing.
 	HANDLE dirh;             // The search handle.
-	BOOL valid_a;            // The info in data_a field is valid.
-	BOOL valid_w;            // The info in data_w field is valid.
 	UINT32 offset;           // Pseudo offset for d_off.
+	struct dirent entry;
 } _dir;
 
-DIR * opendir(const char *path)
+static void _dir_free(_dir *d)
+{
+	if(!d) return;
+	if(d->spec) free((void *)d->spec);
+	free((void *)d);
+}
+
+DIR *opendir(const char *path)
 {
 	ssize_t len=0;
 	char *tspec=NULL;
-
-	// Enough space for VSS!
-	int max_len=strlen(path)+MAX_PATH;
 	_dir *rval=NULL;
+	int max_len;
+
+	max_len=strlen(path)+MAX_PATH; // Enough space for VSS!
+
 	if(!path)
 	{
 		errno=ENOENT;
-		return NULL;
+		goto err;
 	}
 
-	if(!(rval=(_dir *)malloc(sizeof(_dir)))) return NULL;
-	memset(rval, 0, sizeof (_dir));
-	if(!(tspec=(char *)malloc(max_len)))
+	if(!(rval=(_dir *)calloc(1, sizeof(_dir)))
+	  || !(tspec=(char *)malloc(max_len)))
 	{
-		free(rval);
-		return NULL;
+		errno=b_errno_win32;
+		goto err;
 	}
+	rval->dirh=INVALID_HANDLE_VALUE;
 
 	conv_unix_to_win32_path(path, tspec, max_len);
 
@@ -1191,40 +1198,9 @@ DIR * opendir(const char *path)
 
 	rval->spec=tspec;
 
-	// Convert to wchar_t.
-	if(p_FindFirstFileW)
-	{
-		char *pwcBuf=sm_get_pool_memory(PM_FNAME);
-		make_win32_path_UTF8_2_wchar(&pwcBuf, rval->spec);
-
-		rval->dirh=p_FindFirstFileW((LPCWSTR)pwcBuf, &rval->data_w);
-
-		sm_free_pool_memory(pwcBuf);
-
-		if(rval->dirh!=INVALID_HANDLE_VALUE) rval->valid_w=1;
-	}
-	else if (p_FindFirstFileA)
-	{
-		rval->dirh=p_FindFirstFileA(rval->spec, &rval->data_a);
-
-		if (rval->dirh!=INVALID_HANDLE_VALUE) rval->valid_a = 1;
-	}
-	else
-		goto err;
-
-	rval->offset=0;
-	if(rval->dirh==INVALID_HANDLE_VALUE) goto err;
-
-	if(rval->valid_w) { }
-
-	if(rval->valid_a) { }
-
 	return (DIR *)rval;
-
 err:
-	free((void *)rval->spec);
-	free(rval);
-	errno=b_errno_win32;
+	_dir_free(rval);
 	return NULL;
 }
 
@@ -1232,60 +1208,97 @@ int closedir(DIR *dirp)
 {
 	_dir *dp=(_dir *)dirp;
 	FindClose(dp->dirh);
-	free((void *)dp->spec);
-	free((void *)dp);
+	_dir_free(dp);
 	return 0;
+}
+
+static void copyin(struct dirent *entry, const char *fname)
+{
+	char *cp=entry->d_name;
+	while(*fname)
+	{
+		*cp++=*fname++;
+		entry->d_reclen++;
+	}
+	*cp=0;
 }
 
 struct dirent *readdir(DIR *dirp)
 {
-	static struct dirent drnt;
-	_dir *dp;
-	char *fn;
+	_dir *dp=(_dir *)dirp;
+	BOOL valid_a=FALSE;
+	BOOL valid_w=FALSE;
 
-	dp=(_dir *)dirp;
-	fn=dp->data_a.cFileName;
+	if(dp->dirh==INVALID_HANDLE_VALUE)
+	{
+		// First time through.
 
-	drnt.d_ino=0;
-	drnt.d_reclen=0;
-	drnt.d_off=dp->offset;
+		// Convert to wchar_t.
+		if(p_FindFirstFileW)
+		{
+			char *pwcBuf=sm_get_pool_memory(PM_FNAME);
+			make_win32_path_UTF8_2_wchar(&pwcBuf, dp->spec);
 
-	if(dp->valid_w)
+			dp->dirh=p_FindFirstFileW((LPCWSTR)pwcBuf,
+				&dp->data_w);
+
+			sm_free_pool_memory(pwcBuf);
+
+			if(dp->dirh==INVALID_HANDLE_VALUE)
+				goto err;
+			valid_w=TRUE;
+		}
+		else if(p_FindFirstFileA)
+		{
+			dp->dirh=p_FindFirstFileA(dp->spec, &dp->data_a);
+
+			if(dp->dirh==INVALID_HANDLE_VALUE)
+				goto err;
+			valid_a=TRUE;
+		}
+		else
+			goto err;
+
+		dp->offset=0;
+	}
+	else
+	{
+		// Get next file, try unicode first.
+		if(p_FindNextFileW)
+			valid_w=p_FindNextFileW(dp->dirh, &dp->data_w);
+		else if(p_FindNextFileA)
+			valid_a=p_FindNextFileA(dp->dirh, &dp->data_a);
+	}
+
+	dp->entry.d_ino=0;
+	dp->entry.d_reclen=0;
+	dp->entry.d_off=dp->offset;
+
+	if(valid_w)
 	{
 		// Copy unicode.
-		wchar_2_UTF8(drnt.d_name, fn);
-		drnt->d_reclen=strlen(drnt.d_name);
+		char szBuf[MAX_PATH_UTF8+1];
+		wchar_2_UTF8(szBuf, dp->data_w.cFileName);
+		copyin(&dp->entry, szBuf);
 	}
-	else if(dp->valid_a)
+	else if(valid_a)
 	{
 		// Copy ansi.
-		char *cp=drnt->d_name;
-		while(*fn)
-		{
-			*cp++=*fn++;
-			drnt->d_reclen++;
-		}
-		*cp=0;
+		copyin(&dp->entry, dp->data_a.cFileName);
 	}
 	else
 	{
-		errno=b_errno_win32;
+		if(GetLastError()!=ERROR_NO_MORE_FILES)
+			goto err;
 		return NULL;
 	}
-	dp->offset+=drnt->d_reclen;
 
-	// Get next file, try unicode first.
-	if(p_FindNextFileW)
-		dp->valid_w=p_FindNextFileW(dp->dirh, &dp->data_w);
-	else if(p_FindNextFileA)
-		dp->valid_a=p_FindNextFileA(dp->dirh, &dp->data_a);
-	else
-	{
-		dp->valid_a=FALSE;
-		dp->valid_w=FALSE;
-	}
+	dp->offset=dp->entry.d_reclen;
 
-	return &drnt;
+	return &dp->entry;
+err:
+	errno=b_errno_win32;
+	return NULL;
 }
 
 void init_stack_dump(void)

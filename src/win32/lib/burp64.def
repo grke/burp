@@ -51,6 +51,7 @@ _Z8getgrgidj
 _Z8getpwuidj
 _Z8pathconfPKci
 _Z8readlinkPKcPci
+_Z7readdirPv
 _Z9ErrorExitPKc
 _ZN6winverC1Ev
 _ZN6winverC2Ev

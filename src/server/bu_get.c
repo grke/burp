@@ -196,12 +196,13 @@ static int do_bu_get_list(struct sdirs *sdirs,
 		goto end;
 
 	if(!stat(dir, &statp)
-	  && entries_in_directory_alphasort_rev(dir, &dp, &n, 1 /* atime */))
+	  && (n=scandir(dir, &dp, filter_dot, alphasort))<0)
 	{
 		logp("scandir failed in %s: %s\n", __func__, strerror(errno));
 		goto end;
 	}
-	for(i=0; i<n; i++)
+	i=n;
+	while(i--)
 	{
 		// Each storage directory starts with a digit. The 'deleteme'
 		// directory does not. This check avoids loading 'deleteme'
@@ -233,8 +234,9 @@ static int do_bu_get_list(struct sdirs *sdirs,
 end:
 	if(dp)
 	{
-		for(i=0; i<n; i++) free_v((void **)&dp[i]);
-		free_v((void **)&dp);
+		for(i=0; i<n; i++)
+			free(dp[i]);
+		free(dp);
 	}
 	return ret;
 }

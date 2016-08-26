@@ -11,47 +11,60 @@
 
 int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 {
-	int n=-1;
-	int ret=0;
-	struct dirent **dir;
+	int ret=-1;
+	DIR *dirp=NULL;
 	char *tmp=NULL;
 	char *fullpatha=NULL;
 	char *fullpathb=NULL;
-	//logp("in rec hl: %s %s\n", src, dst);
-	if(!(tmp=prepend_s(dst, "dummy"))) return -1;
+	struct dirent *entry=NULL;
+	struct cntr *cntr=get_cntr(confs);
+
+	if(!(tmp=prepend_s(dst, "dummy")))
+		goto end;
 	if(mkpath(&tmp, dst))
 	{
 		logp("could not mkpath for %s\n", tmp);
-		free_w(&tmp);
-		return -1;
+		goto end;
 	}
-	free_w(&tmp);
 
-	if((n=scandir(src, &dir, 0, 0))<0)
+	if(!(dirp=opendir(src)))
 	{
-		logp("recursive_hardlink scandir %s: %s\n",
-			src, strerror(errno));
-		return -1;
+		logp("opendir %s in %s: %s\n",
+			src, __func__, strerror(errno));
+		goto end;
 	}
-	while(n--)
+
+	while(1)
 	{
 		struct stat statp;
-		if(dir[n]->d_ino==0
-		  || !strcmp(dir[n]->d_name, ".")
-		  || !strcmp(dir[n]->d_name, ".."))
-			{ free(dir[n]); continue; }
+
+		errno=0;
+		if(!(entry=readdir(dirp)))
+		{
+			if(errno)
+			{
+				logp("error in readdir in %s: %s\n",
+					__func__, strerror(errno));
+				goto end;
+			}
+			break;
+		}
+
+		if(!filter_dot(entry))
+			continue;
+
 		free_w(&fullpatha);
 		free_w(&fullpathb);
-		if(!(fullpatha=prepend_s(src, dir[n]->d_name))
-		  || !(fullpathb=prepend_s(dst, dir[n]->d_name)))
-			break;
+		if(!(fullpatha=prepend_s(src, entry->d_name))
+		  || !(fullpathb=prepend_s(dst, entry->d_name)))
+			goto end;
 
 #ifdef _DIRENT_HAVE_D_TYPE
 // Faster evaluation on most systems.
-		if(dir[n]->d_type==DT_DIR)
+		if(entry->d_type==DT_DIR)
 		{
 			if(recursive_hardlink(fullpatha, fullpathb, confs))
-				break;
+				goto end;
 		}
 		else
 #endif
@@ -64,28 +77,25 @@ int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 		else if(S_ISDIR(statp.st_mode))
 		{
 			if(recursive_hardlink(fullpatha, fullpathb, confs))
-				break;
+				goto end;
 		}
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			if(write_status(CNTR_STATUS_SHUFFLING, fullpathb,
-				get_cntr(confs))
+			if(write_status(CNTR_STATUS_SHUFFLING,
+				fullpathb, cntr)
 			  || do_link(fullpatha, fullpathb, &statp, confs,
 				0 /* do not overwrite target */))
-				break;
+					goto end;
 		}
-		free(dir[n]);
 	}
-	if(n>0)
-	{
-		ret=-1;
-		for(; n>0; n--) free(dir[n]);
-	}
-	free(dir);
 
+	ret=0;
+end:
+	if(dirp) closedir(dirp);
 	free_w(&fullpatha);
 	free_w(&fullpathb);
+	free_w(&tmp);
 
 	return ret;
 }

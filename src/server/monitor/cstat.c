@@ -69,7 +69,7 @@ int cstat_get_client_names(struct cstat **clist, const char *clientconfdir)
 	struct cstat *cnew;
 	struct dirent **dir=NULL;
 
-	if(entries_in_directory_no_sort(clientconfdir, &dir, &n, 1 /*atime*/))
+	if((n=scandir(clientconfdir, &dir, filter_dot, NULL))<0)
 	{
 		logp("scandir failed for %s in %s: %s\n",
 			clientconfdir, __func__, strerror(errno));
@@ -99,8 +99,9 @@ int cstat_get_client_names(struct cstat **clist, const char *clientconfdir)
 end:
 	if(dir)
 	{
-		for(i=0; i<n; i++) free_v((void **)&dir[i]);
-		free_v((void **)&dir);
+		for(i=0; i<n; i++)
+			free(dir[i]);
+		free(dir);
 	}
 	return ret;
 }

@@ -406,7 +406,7 @@ static int find_files(struct asfd *asfd,
 	struct FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level);
 
-static int process_entries_in_directory(struct asfd *asfd, struct dirent **nl,
+static int process_entries_in_directory(struct asfd *asfd, char **nl,
 	int count, char **link, size_t len, size_t *link_len,
 	struct conf **confs, struct FF_PKT *ff_pkt, dev_t our_device)
 {
@@ -417,8 +417,9 @@ static int process_entries_in_directory(struct asfd *asfd, struct dirent **nl,
 		size_t i;
 		char *p=NULL;
 		char *q=NULL;
+		size_t plen;
 
-		p=nl[m]->d_name;
+		p=nl[m];
 
 		if(strlen(p)+len>=*link_len)
 		{
@@ -428,7 +429,8 @@ static int process_entries_in_directory(struct asfd *asfd, struct dirent **nl,
 				return -1;
 		}
 		q=(*link)+len;
-		for(i=0; i<strlen(nl[m]->d_name); i++)
+		plen=strlen(p);
+		for(i=0; i<plen; i++)
 			*q++=*p++;
 		*q=0;
 		ff_pkt->flen=i;
@@ -464,7 +466,7 @@ static int process_entries_in_directory(struct asfd *asfd, struct dirent **nl,
 				}
 			}
 		}
-		free_v((void **)&(nl[m]));
+		free_w(&(nl[m]));
 		if(ret) break;
 	}
 	return ret;
@@ -481,7 +483,7 @@ static int found_directory(struct asfd *asfd,
 	int nbret=0;
 	int count=0;
 	dev_t our_device;
-	struct dirent **nl=NULL;
+	char **nl=NULL;
 
 	our_device=ff_pkt->statp.st_dev;
 

@@ -27,11 +27,8 @@ extern int init_fs_max(const char *path);
 extern int looks_like_tmp_or_hidden_file(const char *filename);
 
 extern int entries_in_directory_alphasort(const char *path,
-	struct dirent ***nl, int *count, int atime);
-extern int entries_in_directory_alphasort_rev(const char *path,
-	struct dirent ***nl, int *count, int atime);
-extern int entries_in_directory_no_sort(const char *path,
-	struct dirent ***nl, int *count, int atime);
+	char ***nl, int *count, int atime);
+extern int filter_dot(const struct dirent *d);
 
 #ifndef HAVE_WIN32
 extern int mksock(const char *path);

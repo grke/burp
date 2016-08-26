@@ -280,8 +280,7 @@ START_TEST(test_json_matching_output)
 	int i=0;
 	int n=0;
 	struct dirent **dir=NULL;
-	fail_unless(!entries_in_directory_no_sort(BASE,
-		&dir, &n, 1 /*atime*/));
+	fail_unless((n=scandir(BASE, &dir, filter_dot, NULL))>0);
 	for(i=0; i<n; i++)
 	{
 		char *bpath;
@@ -296,13 +295,13 @@ START_TEST(test_json_matching_output)
 		free_w(&bpath);
 		free_w(&epath);
 	}
-	for(i=0; i<n; i++) free_v((void **)&dir[i]);
-	free_v((void **)&dir);
+	for(i=0; i<n; i++) free(dir[i]);
+	free(dir);
+	dir=NULL;
 
 	// Check that all the files in the expected directory also exist
 	// in the directory that we generated.
-	fail_unless(!entries_in_directory_no_sort(EXPECTED,
-		&dir, &n, 1 /*atime*/));
+	fail_unless((n=scandir(EXPECTED, &dir, filter_dot, NULL))>0);
 	for(i=0; i<n; i++)
 	{
 		char *bpath;
@@ -313,8 +312,9 @@ START_TEST(test_json_matching_output)
 		fail_unless(S_ISREG(statp.st_mode));
 		free_w(&bpath);
 	}
-	for(i=0; i<n; i++) free_v((void **)&dir[i]);
-	free_v((void **)&dir);
+	for(i=0; i<n; i++) free(dir[i]);
+	free(dir);
+	dir=NULL;
 	alloc_check();
 }
 END_TEST

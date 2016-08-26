@@ -514,7 +514,7 @@ int merge_files_in_dir_no_fcount(const char *final,
 		goto end;
 
 	// Files are unsorted, and not named sequentially.
-	if(entries_in_directory_no_sort(fmanifest, &dir, &n, 1 /*atime*/))
+	if((n=scandir(fmanifest, &dir, filter_dot, NULL))<0)
 	{
 		logp("scandir failed for %s in %s: %s\n",
 			fmanifest, __func__, strerror(errno));
@@ -565,8 +565,9 @@ end:
 	free_w(&fullpath);
 	if(dir)
 	{
-		for(i=0; i<n; i++) free_v((void **)&dir[i]);
-		free_v((void **)&dir);
+		for(i=0; i<n; i++)
+			free(dir[i]);
+		free(dir);
 	}
 	return ret;
 }

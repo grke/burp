@@ -282,7 +282,7 @@ static int fwrite_buf(enum cmd cmd,
 	return 0;
 }
 
-static struct fzp *file_open_w(const char *path, const char *mode)
+static struct fzp *file_open_w(const char *path)
 {
 	if(build_path_w(path)) return NULL;
 	return fzp_open(path, "wb");
@@ -331,7 +331,7 @@ static struct fzp *open_data_file_for_write(struct dpth *dpth, struct blk *blk)
 		goto end;
 	if(write_to_cfile(dpth, blk))
 		goto end;
-	fzp=file_open_w(path, "wb");
+	fzp=file_open_w(path);
 end:
 	free_w(&path);
 	return fzp;

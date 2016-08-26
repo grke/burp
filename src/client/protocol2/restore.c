@@ -11,15 +11,13 @@
 #include "../../sbuf.h"
 #include "../extrameta.h"
 #include "../restore.h"
+#include "restore.h"
 
 static int start_restore_file(struct asfd *asfd,
 	struct BFILE *bfd,
 	struct sbuf *sb,
 	const char *fname,
 	enum action act,
-	const char *encpassword,
-	char **metadata,
-	size_t *metalen,
 	int vss_restore,
 	struct cntr *cntr)
 {
@@ -107,8 +105,6 @@ static int restore_metadata(
 	struct sbuf *sb,
 	const char *fname,
 	enum action act,
-	const char *encpassword,
-	int vss_restore,
 	struct cntr *cntr)
 {
 	// If it is directory metadata, try to make sure the directory
@@ -130,7 +126,7 @@ static int restore_metadata(
 			return -1;
 		if(metadata)
 		{
-			if(set_extrameta(asfd, NULL, fname,
+			if(set_extrameta(asfd, fname,
 				metadata, metalen, cntr))
 			{
 				free_w(&metadata);
@@ -165,7 +161,6 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 			// same time.
 			if(start_restore_file(asfd,
 				bfd, sb, fullpath, act,
-				NULL, NULL, NULL,
 				vss_restore, cntr))
 			{
 				logp("restore_file error\n");
@@ -176,8 +171,7 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 		case CMD_ENC_FILE:
 			if(start_restore_file(asfd,
 				bfd, sb, fullpath, act,
-				get_string(confs[OPT_ENCRYPTION_PASSWORD]),
-				NULL, NULL, vss_restore, confs))
+				vss_restore, confs))
 			{
 				logp("restore_file error\n");
 				goto error;
@@ -186,24 +180,20 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 */
 		case CMD_METADATA:
 			if(restore_metadata(asfd,
-				sb, fullpath, act,
-				NULL, vss_restore, cntr))
+				sb, fullpath, act, cntr))
 					goto error;
 			break;
 /* FIX THIS: Encryption and EFS not supported yet.
 		case CMD_ENC_METADATA:
 			if(restore_metadata(
-				bfd, sb, fullpath, act,
-				get_string(confs[OPT_ENCRYPTION_PASSWORD]),
-				vss_restore, confs))
+				bfd, sb, fullpath, act, confs))
 					goto error;
 			break;
 		case CMD_EFS_FILE:
 			if(start_restore_file(asfd,
 				bfd, sb,
 				fullpath, act,
-				NULL,
-				NULL, NULL, vss_restore, confs))
+				vss_restore, confs))
 			{
 				logp("restore_file error\n");
 				goto error;

@@ -12,6 +12,7 @@
 #include "../log.h"
 #include "../prepend.h"
 #include "autoupgrade.h"
+#include "extra_comms.h"
 
 #include <librsync.h>
 

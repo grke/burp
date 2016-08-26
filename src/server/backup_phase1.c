@@ -14,6 +14,7 @@
 #include "manio.h"
 #include "quota.h"
 #include "sdirs.h"
+#include "backup_phase1.h"
 
 int backup_phase1_server_all(struct async *as,
 	struct sdirs *sdirs, struct conf **confs)
@@ -58,7 +59,7 @@ int backup_phase1_server_all(struct async *as,
 		if(sbuf_is_estimatable(sb))
 		{
 			cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
-				(uint64_t)sb->statp.st_size, 0);
+				(uint64_t)sb->statp.st_size);
 		}
 	}
 

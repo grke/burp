@@ -32,14 +32,14 @@ enum serret
 	SERVER_ERROR=1
 };
 
-static void huphandler(int sig)
+static void huphandler(__attribute__ ((unused)) int sig)
 {
 	hupreload=1;
 	// Be careful about not logging inside a signal handler.
 	hupreload_logged=0;
 }
 
-static void usr2handler(int sig)
+static void usr2handler(__attribute__ ((unused)) int sig)
 {
 	gentleshutdown=1;
 	// Be careful about not logging inside a signal handler.
@@ -765,9 +765,8 @@ int server(struct conf **confs, const char *conffile,
 		if(hupreload && !gentleshutdown)
 		{
 			if(reload(confs, conffile,
-				0, // Not first time.
-				get_int(confs[OPT_MAX_CHILDREN]),
-				get_int(confs[OPT_MAX_STATUS_CHILDREN])))
+				0 // Not first time.
+				))
 					goto error;
 		}
 		hupreload=0;

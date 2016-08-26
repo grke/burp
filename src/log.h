@@ -17,7 +17,7 @@ extern void log_fzp_set_direct(struct fzp *fzp);
 extern void log_out_of_memory(const char *function);
 extern void log_restore_settings(struct conf **cconfs, int srestore);
 extern void log_and_send(struct asfd *asfd, const char *msg);
-extern void log_and_send_oom(struct asfd *asfd, const char *function);
+extern void log_and_send_oom(struct asfd *asfd);
 extern void log_set_json(int value);
 extern void log_oom_w(const char *func, const char *orig_func);
 extern int log_incexcs_buf(const char *incexc);

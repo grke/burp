@@ -6,6 +6,7 @@
 #include "../../iobuf.h"
 #include "../../log.h"
 #include "../../protocol2/blk.h"
+#include "rblk.h"
 
 #define RBLK_MAX	10
 

@@ -31,7 +31,7 @@ static int read_phase1(struct manio *p1manio, struct conf **cconfs)
 
 		if(sbuf_is_estimatable(p1b))
 			cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
-				(uint64_t)p1b->statp.st_size, 0);
+				(uint64_t)p1b->statp.st_size);
 	}
 end:
 	sbuf_free(&p1b);
@@ -363,7 +363,7 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	// Now should have all file pointers in the right places to resume.
 
 	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
-	  && cntr_send(cntr)) goto error;
+	  && cntr_send()) goto error;
 
 	goto end;
 error:

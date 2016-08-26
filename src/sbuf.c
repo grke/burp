@@ -44,7 +44,7 @@ void sbuf_free_content(struct sbuf *sb)
 	sb->winattr=0;
 	sb->flags=0;
 	sbuf_protocol1_free_content(sb->protocol1);
-	sbuf_protocol2_free_content(sb->protocol2);
+	sbuf_protocol2_free_content();
 }
 
 void sbuf_free(struct sbuf **sb)

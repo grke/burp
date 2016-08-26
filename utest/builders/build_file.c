@@ -3,6 +3,7 @@
 #include "../../src/fsops.h"
 
 #include "build.h"
+#include "build_file.h"
 
 void build_file(const char *path, const char *content)
 {

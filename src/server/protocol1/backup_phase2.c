@@ -17,6 +17,7 @@
 #include "../resume.h"
 #include "blocklen.h"
 #include "dpth.h"
+#include "backup_phase2.h"
 
 static size_t treepathlen=0;
 
@@ -75,7 +76,7 @@ static char *set_new_datapth(struct asfd *asfd,
 		// the directory structure on the original client.
 		if(!(tmp=prepend_s(TREE_DIR, sb->path.buf)))
 		{
-			log_and_send_oom(asfd, __func__);
+			log_and_send_oom(asfd);
 			return NULL;
 		}
 	}
@@ -122,8 +123,7 @@ end:
 
 #include <librsync.h>
 
-static int process_changed_file(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf **cconfs,
+static int process_changed_file(struct asfd *asfd, struct conf **cconfs,
 	struct sbuf *cb, struct sbuf *p1b,
 	const char *adir)
 {
@@ -221,7 +221,7 @@ static int changed_non_file(struct sbuf *p1b,
 	return 0;
 }
 
-static int process_new(struct sdirs *sdirs, struct conf **cconfs,
+static int process_new(struct conf **cconfs,
 	struct sbuf *p1b, struct manio *ucmanio)
 {
 	if(!p1b->path.buf) return 0;
@@ -257,10 +257,10 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	return 1;
 }
 
-static int process_new_file(struct sdirs *sdirs, struct conf **cconfs,
+static int process_new_file(struct conf **cconfs,
 	struct sbuf *cb, struct sbuf *p1b, struct manio *ucmanio)
 {
-	if(process_new(sdirs, cconfs, p1b, ucmanio))
+	if(process_new(cconfs, p1b, ucmanio))
 		return -1;
 	sbuf_free_content(cb);
 	return 1;
@@ -276,7 +276,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	// If the file type changed, I think it is time to back it up again
 	// (for example, EFS changing to normal file, or back again).
 	if(cb->path.cmd!=p1b->path.cmd)
-		return process_new_file(sdirs, cconfs, cb, p1b, ucmanio);
+		return process_new_file(cconfs, cb, p1b, ucmanio);
 
 	// mtime is the actual file data.
 	// ctime is the attributes or meta data.
@@ -305,8 +305,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		  || p1b->path.cmd==CMD_METADATA
 		  || sbuf_is_vssdata(cb)
 		  || sbuf_is_vssdata(p1b))
-			return process_new_file(sdirs,
-				cconfs, cb, p1b, ucmanio);
+			return process_new_file(cconfs, cb, p1b, ucmanio);
 		// On Windows, we have to back up the whole file if ctime
 		// changed, otherwise things like permission changes do not get
 		// noticed. So, in that case, fall through to the changed stuff
@@ -331,7 +330,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	  || sbuf_is_encrypted(p1b)
 	  || sbuf_is_vssdata(cb)
 	  || sbuf_is_vssdata(p1b))
-		return process_new_file(sdirs, cconfs, cb, p1b, ucmanio);
+		return process_new_file(cconfs, cb, p1b, ucmanio);
 
 	// Get new files if they have switched between compression on or off.
 	if(cb->protocol1->datapth.buf
@@ -340,13 +339,13 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		oldcompressed=1;
 	if( ( oldcompressed && !compression)
 	 || (!oldcompressed &&  compression))
-		return process_new_file(sdirs, cconfs, cb, p1b, ucmanio);
+		return process_new_file(cconfs, cb, p1b, ucmanio);
 
 	// Otherwise, do the delta stuff (if possible).
 	if(sbuf_is_filedata(p1b)
 	  || sbuf_is_vssdata(p1b))
 	{
-		if(process_changed_file(asfd, sdirs, cconfs, cb, p1b,
+		if(process_changed_file(asfd, cconfs, cb, p1b,
 			sdirs->currentdata)) return -1;
 	}
 	else
@@ -371,7 +370,7 @@ static int maybe_process_file(struct asfd *asfd,
 	{
 		//logp("ahead: %s\n", p1b->path);
 		// ahead - need to get the whole file
-		if(process_new(sdirs, cconfs, p1b, ucmanio))
+		if(process_new(cconfs, p1b, ucmanio))
 			return -1;
 		// Do not free.
 		return 1;
@@ -460,8 +459,7 @@ static int do_stuff_to_send(struct asfd *asfd,
 	return 0;
 }
 
-static int start_to_receive_delta(struct sdirs *sdirs, struct conf **cconfs,
-	struct sbuf *rb)
+static int start_to_receive_delta(struct sdirs *sdirs, struct sbuf *rb)
 {
 	if(rb->compression)
 	{
@@ -542,8 +540,7 @@ end:
 	return ret;
 }
 
-static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb,
-	struct conf **cconfs)
+static int deal_with_receive_append(struct asfd *asfd, struct sbuf *rb)
 {
 	int app=0;
 	static struct iobuf *rbuf;
@@ -568,7 +565,7 @@ static int deal_with_filedata(struct asfd *asfd,
 	if(rb->protocol1->datapth.buf)
 	{
 		// Receiving a delta.
-		if(start_to_receive_delta(sdirs, cconfs, rb))
+		if(start_to_receive_delta(sdirs, rb))
 		{
 			logp("error in start_to_receive_delta\n");
 			return -1;
@@ -618,7 +615,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 		switch(rbuf->cmd)
 		{
 			case CMD_APPEND:
-				if(deal_with_receive_append(asfd, rb, cconfs))
+				if(deal_with_receive_append(asfd, rb))
 					goto error;
 				return 0;
 			case CMD_END_FILE:
@@ -889,7 +886,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		if(!cmanio)
 		{
 			// No old manifest, need to ask for a new file.
-			if(process_new(sdirs, cconfs, p1b, ucmanio))
+			if(process_new(cconfs, p1b, ucmanio))
 				goto error;
 			continue;
 		}
@@ -913,7 +910,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			{
 				case 0: break;
 				case 1: manio_close(&cmanio);
-					if(process_new(sdirs, cconfs, p1b,
+					if(process_new(cconfs, p1b,
 						ucmanio)) goto error;
 					continue;
 				case -1: goto error;

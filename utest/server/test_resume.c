@@ -69,7 +69,9 @@ static struct iobuf expected_iobuf;
 static int expected_read_ret;
 static int short_write=0;
 
-static void build_slist_empty(struct slist *s, int *e, enum protocol p)
+static void build_slist_empty(__attribute__ ((unused)) struct slist *s,
+	__attribute__ ((unused)) int *e,
+	__attribute__ ((unused)) enum protocol p)
 {
 	iobuf_set(&expected_iobuf, CMD_ERROR, NULL, 0);
 }

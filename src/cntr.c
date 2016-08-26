@@ -339,7 +339,7 @@ void cntr_add_phase1(struct cntr *c, char ch, int print)
 	fflush(stdout);
 }
 
-void cntr_add_val(struct cntr *c, char ch, uint64_t val, int print)
+void cntr_add_val(struct cntr *c, char ch, uint64_t val)
 {
 	incr_count_val(c, ch, val);
 }
@@ -549,7 +549,7 @@ void cntr_print(struct cntr *cntr, enum action act, struct asfd *asfd)
 #ifndef HAVE_WIN32
 
 int cntr_stats_to_file(struct cntr *cntr,
-	const char *directory, enum action act, struct conf **confs)
+	const char *directory, enum action act)
 {
 	int ret=-1;
 	int fd=-1;
@@ -808,7 +808,7 @@ end:
 }
 
 #ifndef HAVE_WIN32
-int cntr_send(struct cntr *cntr)
+int cntr_send(void)
 {
 /*
 	size_t l;
@@ -824,8 +824,9 @@ int cntr_send(struct cntr *cntr)
 }
 #endif
 
-static enum asl_ret cntr_recv_func(struct asfd *asfd,
-	struct conf **confs, void *param)
+static enum asl_ret cntr_recv_func(__attribute__ ((unused)) struct asfd *asfd,
+	__attribute__ ((unused)) struct conf **confs,
+	__attribute__ ((unused)) void *param)
 {
 /*
 	if(str_to_cntr(asfd->rbuf->buf, NULL, NULL, NULL, NULL,

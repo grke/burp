@@ -98,8 +98,7 @@ static int blk_read_to_list(struct sbuf *sb, struct blist *blist)
 
 // The client uses this.
 // Return 0 for OK. 1 for OK, and file ended, -1 for error.
-int blks_generate(struct asfd *asfd, struct conf **confs,
-	struct sbuf *sb, struct blist *blist, int just_opened)
+int blks_generate(struct sbuf *sb, struct blist *blist, int just_opened)
 {
 	static ssize_t bytes;
 	first=just_opened;

@@ -7,6 +7,7 @@
 #include "handy.h"
 #include "log.h"
 #include "strlist.h"
+#include "run_script.h"
 
 #ifndef HAVE_WIN32
 
@@ -40,7 +41,7 @@ static int log_script_output(struct asfd *asfd, struct fzp **fzp,
 static int got_sigchld=0;
 static int run_script_status=-1;
 
-static void run_script_sigchld_handler(int sig)
+static void run_script_sigchld_handler(__attribute__ ((unused)) int sig)
 {
 	//printf("in run_script_sigchld_handler\n");
 	got_sigchld=1;

@@ -9,7 +9,7 @@ extern int has_acl(const char *path, enum cmd cmd);
 extern int get_acl(struct asfd *asfd, const char *path, int isdir,
 	char **acltext, size_t *alen, struct cntr *cntr);
 extern int set_acl(struct asfd *asfd, const char *path,
-	const char *acltext, size_t alen, char metacmd, struct cntr *cntr);
+	const char *acltext, char metacmd, struct cntr *cntr);
 #endif
 #endif
 

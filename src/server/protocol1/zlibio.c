@@ -3,6 +3,7 @@
 #include "../../async.h"
 #include "../../fzp.h"
 #include "../../log.h"
+#include "zlibio.h"
 
 int zlib_inflate(struct asfd *asfd, const char *source_path,
 	const char *dest_path, struct cntr *cntr)

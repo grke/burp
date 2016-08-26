@@ -50,7 +50,7 @@ static int is_wrap(const char *val, const char *key, uint16_t bit)
 	return 0;
 }
 
-static int input_integer(void *ctx, long long val)
+static int input_integer(__attribute__ ((unused)) void *ctx, long long val)
 {
 	if(in_counters)
 	{
@@ -115,7 +115,8 @@ error:
         return 0;
 }
 
-static int input_string(void *ctx, const unsigned char *val, size_t len)
+static int input_string(__attribute__ ((unused)) void *ctx,
+	const unsigned char *val, size_t len)
 {
 	char *str;
 	if(!(str=(char *)malloc_w(len+2, __func__)))
@@ -229,7 +230,8 @@ end:
 	return 1;
 }
 
-static int input_map_key(void *ctx, const unsigned char *val, size_t len)
+static int input_map_key(__attribute__((unused)) void *ctx,
+	const unsigned char *val, size_t len)
 {
 	snprintf(lastkey, len+1, "%s", val);
 //	logp("mapkey: %s\n", lastkey);
@@ -267,14 +269,14 @@ static int add_to_bu_list(void)
 	return 0;
 }
 
-static int input_start_map(void *ctx)
+static int input_start_map(__attribute__ ((unused)) void *ctx)
 {
 	map_depth++;
 	//logp("startmap: %d\n", map_depth);
 	return 1;
 }
 
-static int input_end_map(void *ctx)
+static int input_end_map(__attribute__ ((unused)) void *ctx)
 {
 	map_depth--;
 	//logp("endmap: %d\n", map_depth);
@@ -285,7 +287,7 @@ static int input_end_map(void *ctx)
 	return 1;
 }
 
-static int input_start_array(void *ctx)
+static int input_start_array(__attribute__ ((unused)) void *ctx)
 {
 	//logp("start arr\n");
 	if(!strcmp(lastkey, "backups"))
@@ -410,7 +412,7 @@ static void merge_bu_lists(void)
 	}
 }
 
-static int input_end_array(void *ctx)
+static int input_end_array(__attribute__ ((unused)) void *ctx)
 {
 	if(in_backups && !in_flags && !in_counters && !in_logslist)
 	{

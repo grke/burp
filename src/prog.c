@@ -111,8 +111,7 @@ static void usage_client(void)
 #endif
 }
 
-int reload(struct conf **confs, const char *conffile, bool firsttime,
-	int oldmax_children, int oldmax_status_children)
+int reload(struct conf **confs, const char *conffile, bool firsttime)
 {
 	if(!firsttime) logp("Reloading config\n");
 
@@ -231,8 +230,7 @@ static void random_delay(struct conf **confs)
 	sleep(delay);
 }
 
-static int run_test_confs(struct conf **confs,
-	const char *client, const char *conffile)
+static int run_test_confs(struct conf **confs, const char *client)
 {
 	int ret=-1;
 	struct conf **cconfs=NULL;
@@ -259,7 +257,7 @@ end:
 #if defined(HAVE_WIN32)
 #define main BurpMain
 #endif
-int real_main(int argc, char *argv[])
+static int real_main(int argc, char *argv[])
 {
 	int ret=1;
 	int option=0;
@@ -390,16 +388,13 @@ int real_main(int argc, char *argv[])
 	if(!(confs=confs_alloc()))
 		goto end;
 
-	if(reload(confs, conffile,
-	  1 /* first time */,
-	  0 /* no oldmax_children setting */,
-	  0 /* no oldmax_status_children setting */))
+	if(reload(confs, conffile, 1))
 		goto end;
 
 	// Dry run to test config file syntax.
 	if(test_confs)
 	{
-		ret=run_test_confs(confs, orig_client, conffile);
+		ret=run_test_confs(confs, orig_client);
 		goto end;
 	}
 

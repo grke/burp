@@ -49,7 +49,7 @@ static void print_line_ncurses(const char *string, int row, int col)
 
 static struct asfd *stdout_asfd=NULL;
 
-static void print_line_stdout(const char *string, int row, int col)
+static void print_line_stdout(const char *string)
 {
 	int k=0;
 	while(k<LEFT_SPACE)
@@ -70,7 +70,7 @@ static void print_line(const char *string, int row, int col)
 		return;
 	}
 #endif
-	print_line_stdout(string, row, col);
+	print_line_stdout(string);
 }
 
 static char *get_bu_str(struct bu *bu)
@@ -388,7 +388,7 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 */
 
 #ifdef HAVE_NCURSES
-static void screen_header_ncurses(const char *date, int l, int row, int col)
+static void screen_header_ncurses(const char *date, int l, int col)
 {
 	char v[32]="";
 	snprintf(v, sizeof(v), " burp monitor %s", VERSION);
@@ -397,7 +397,7 @@ static void screen_header_ncurses(const char *date, int l, int row, int col)
 }
 #endif
 
-static void screen_header_stdout(const char *date, int l, int row, int col)
+static void screen_header_stdout(const char *date, int l, int col)
 {
 	size_t c=0;
 	char spaces[512]="";
@@ -412,7 +412,7 @@ static void screen_header_stdout(const char *date, int l, int row, int col)
 	stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n\n");
 }
 
-static void screen_header(int row, int col)
+static void screen_header(int col)
 {
 	int l;
 	const char *date=NULL;
@@ -426,11 +426,11 @@ static void screen_header(int row, int col)
 #ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS)
 	{
-		screen_header_ncurses(date, l, row, col);
+		screen_header_ncurses(date, l, col);
 		return;
 	}
 #endif
-	screen_header_stdout(date, l, row, col);
+	screen_header_stdout(date, l, col);
 }
 
 static int need_status(struct sel *sel)
@@ -773,7 +773,7 @@ static int update_screen(struct sel *sel)
 	static int winmin=0;
 	static int winmax=0;
 
-	screen_header(row, col);
+	screen_header(col);
 
 	if(!sel->client) return 0;
 
@@ -1232,7 +1232,7 @@ static void page_down(struct sel *sel)
 	}
 }
 
-static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
+static int parse_stdin_data(struct asfd *asfd, struct sel *sel)
 {
 	static int ch;
 	if(asfd->rbuf->len!=sizeof(ch))
@@ -1290,11 +1290,11 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel, int count)
 }
 #endif
 
-static int parse_data(struct asfd *asfd, struct sel *sel, int count)
+static int parse_data(struct asfd *asfd, struct sel *sel)
 {
 #ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS && asfd->streamtype==ASFD_STREAM_NCURSES_STDIN)
-		return parse_stdin_data(asfd, sel, count);
+		return parse_stdin_data(asfd, sel);
 #endif
 	switch(json_input(asfd, sel))
 	{
@@ -1381,7 +1381,7 @@ int status_client_ncurses_main_loop(struct async *as,
 		{
 			while(asfd->rbuf->buf)
 			{
-				switch(parse_data(asfd, sel, count))
+				switch(parse_data(asfd, sel))
 				{
 					case 0: break;
 					case 1: goto end;

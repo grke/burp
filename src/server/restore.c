@@ -26,7 +26,8 @@
 #include "sdirs.h"
 
 static enum asl_ret restore_end_func(struct asfd *asfd,
-	struct conf **confs, void *param)
+	__attribute__ ((unused)) struct conf **confs,
+	__attribute__ ((unused)) void *param)
 {
 	if(!strcmp(asfd->rbuf->buf, "restoreend ok"))
 		return ASL_END_OK;
@@ -76,8 +77,7 @@ int want_to_restore(int srestore, struct sbuf *sb,
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
-        regex_t *regex, int srestore,
-        enum action act, char status, struct conf **cconfs)
+        regex_t *regex, int srestore, struct conf **cconfs)
 {
 	int ars=0;
 	int ret=-1;
@@ -114,7 +114,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 				  cntr_add_val(cntr,
 					CMD_BYTES_ESTIMATED,
 					strtoull(sb->endfile.buf,
-						NULL, 10), 0);
+						NULL, 10));
 			}
 		}
 		sbuf_free_content(sb);
@@ -250,12 +250,12 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	if(get_protocol(cconfs)==PROTO_1)
 	{
 		return restore_sbuf_protocol1(asfd, sb, bu,
-		  act, sdirs, cntr_status, cconfs);
+		  act, sdirs, cconfs);
 	}
 	else
 	{
 		return restore_sbuf_protocol2(asfd, sb,
-		  act, cntr_status, get_cntr(cconfs), need_data);
+		  act, get_cntr(cconfs), need_data);
 	}
 }
 
@@ -336,7 +336,7 @@ end:
 
 static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	struct slist *slist, enum action act, struct sdirs *sdirs,
-	enum cntr_status cntr_status, struct conf **cconfs)
+	struct conf **cconfs)
 {
 	int ret=-1;
 	struct sbuf *sb;
@@ -348,13 +348,13 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 		if(get_protocol(cconfs)==PROTO_1)
 		{
 			if(restore_sbuf_protocol1(asfd, sb, bu, act,
-				sdirs, cntr_status, cconfs))
+				sdirs, cconfs))
 					goto end;
 		}
 		else
 		{
 			if(restore_sbuf_protocol2(asfd, sb, act,
-				cntr_status, get_cntr(cconfs), need_data))
+				get_cntr(cconfs), need_data))
 					goto end;
 		}
 	}
@@ -531,11 +531,11 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 			goto end;
 
 	if(restore_remaining_dirs(asfd, bu, slist,
-		act, sdirs, cntr_status, cconfs)) goto end;
+		act, sdirs, cconfs)) goto end;
 
 	if(cconfs) cntr=get_cntr(cconfs);
 	cntr_print(cntr, act, asfd);
-	cntr_stats_to_file(cntr, bu->path, act, cconfs);
+	cntr_stats_to_file(cntr, bu->path, act);
 end:
         slist_free(&slist);
 	linkhash_free();
@@ -583,7 +583,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		get_protocol(cconfs)==PROTO_1?
 			"manifest.gz":"manifest")))
 	{
-		log_and_send_oom(asfd, __func__);
+		log_and_send_oom(asfd);
 		goto end;
 	}
 
@@ -604,11 +604,11 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	// This is the equivalent of a phase1 scan during backup.
 
 	if(setup_cntr(asfd, manifest,
-		regex, srestore, act, cntr_status, cconfs))
+		regex, srestore, cconfs))
 			goto end;
 
 	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
-	  && cntr_send(get_cntr(cconfs)))
+	  && cntr_send())
 		goto end;
 
 	// Now, do the actual restore.

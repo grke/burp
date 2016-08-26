@@ -143,7 +143,7 @@ static int asfd_do_read_ncurses(struct asfd *asfd)
 	return 0;
 }
 
-static int asfd_do_write_ncurses(struct asfd *asfd)
+static int asfd_do_write_ncurses(__attribute__ ((unused)) struct asfd *asfd)
 {
 	logp("This function should not have been called: %s\n", __func__);
 	return -1;

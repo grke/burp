@@ -103,7 +103,6 @@ static void test_acl(struct acldata x)
 			NULL, // asfd
 			path,
 			x.write_access,
-			strlen(x.write_access),
 			META_ACCESS_ACL,
 			NULL // cntr
 		));
@@ -112,7 +111,6 @@ static void test_acl(struct acldata x)
 			NULL, // asfd
 			path,
 			x.write_default,
-			strlen(x.write_default),
 			META_DEFAULT_ACL,
 			NULL // cntr
 		));
@@ -170,7 +168,6 @@ START_TEST(test_set_default_acl_on_file)
 		NULL, // asfd
 		path,
 		acl,
-		strlen(acl),
 		META_DEFAULT_ACL,
 		NULL // cntr
 	)==-1);
@@ -185,7 +182,6 @@ START_TEST(test_set_acl_bad_type)
 		NULL, // asfd
 		BASE,
 		acl,
-		strlen(acl),
 		CMD_ERROR,
 		NULL // cntr
 	)==-1);
@@ -200,7 +196,6 @@ START_TEST(test_set_acl_acl_from_text_fail)
 		NULL, // asfd
 		BASE,
 		acl,
-		strlen(acl),
 		META_DEFAULT_ACL,
 		NULL // cntr
 	)==-1);

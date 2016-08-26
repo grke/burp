@@ -14,6 +14,7 @@
 #include "manio.h"
 #include "quota.h"
 #include "sdirs.h"
+#include "backup_phase1.h"
 
 int backup_phase1_server_all(struct async *as,
 	struct sdirs *sdirs, struct conf **confs)

@@ -8,6 +8,7 @@
 #include "../handy.h"
 #include "../iobuf.h"
 #include "../log.h"
+#include "auth.h"
 
 #ifndef UTEST
 static

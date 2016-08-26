@@ -5,6 +5,7 @@
 #include "../../sbuf.h"
 #include "../manio.h"
 #include "json_output.h"
+#include "cache.h"
 
 typedef struct ent ent_t;
 

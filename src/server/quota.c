@@ -4,6 +4,7 @@
 #include "../cmd.h"
 #include "../cntr.h"
 #include "../log.h"
+#include "quota.h"
 
 static void quota_log_bytes(struct async *as,
 	const char *msg, uint64_t byte, uint64_t quota)

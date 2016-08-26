@@ -356,7 +356,7 @@ int looks_like_tmp_or_hidden_file(const char *filename)
 	return 0;
 }
 
-int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
+static int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
 	int *count, int (*compar)(const void *, const void *))
 {
 	int status;

@@ -19,6 +19,7 @@
 #include "restore.h"
 #include "rubble.h"
 #include "sdirs.h"
+#include "run_action.h"
 
 // FIX THIS: Somewhat haphazard.
 /* Return 0 for everything OK. -1 for error, or 1 to mean that there was

@@ -496,7 +496,7 @@ char *make_win32_path_UTF8_2_wchar_w(const char *pszUTF)
 	{
 		ret=(char *)malloc(2*strlen(pszUTF)+MAX_PATH);
 		//ret=(char *)malloc((size+1)*sizeof(WCHAR));
-        	wcscpy((LPWSTR)ret, (LPWSTR)tmp);
+		wcscpy((LPWSTR)ret, (LPWSTR)tmp);
 	}
 	sm_free_pool_memory(tmp);
 	return ret;
@@ -1237,44 +1237,42 @@ int closedir(DIR *dirp)
 	return 0;
 }
 
-static int copyin(struct dirent &dp, const char *fname)
+struct dirent *readdir(DIR *dirp)
 {
-	dp.d_ino=0;
-	dp.d_reclen=0;
-	char *cp=dp.d_name;
-	while(*fname)
-	{
-		*cp++=*fname++;
-		dp.d_reclen++;
-	}
-	*cp=0;
-	return dp.d_reclen;
-}
+	static struct dirent drnt;
+	_dir *dp;
+	char *fn;
 
-int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
-{
-	_dir *dp=(_dir *)dirp;
-	if(dp->valid_w || dp->valid_a)
-	{
-		entry->d_off=dp->offset;
+	dp=(_dir *)dirp;
+	fn=dp->data_a.cFileName;
 
+	drnt.d_ino=0;
+	drnt.d_reclen=0;
+	drnt.d_off=dp->offset;
+
+	if(dp->valid_w)
+	{
 		// Copy unicode.
-		if(dp->valid_w)
+		wchar_2_UTF8(drnt.d_name, fn);
+		drnt->d_reclen=strlen(drnt.d_name);
+	}
+	else if(dp->valid_a)
+	{
+		// Copy ansi.
+		char *cp=drnt->d_name;
+		while(*fn)
 		{
-			char szBuf[MAX_PATH_UTF8+1];
-			wchar_2_UTF8(szBuf, dp->data_w.cFileName);
-			dp->offset+=copyin(*entry, szBuf);
+			*cp++=*fn++;
+			drnt->d_reclen++;
 		}
-		else if(dp->valid_a) // copy ansi (only 1 will be valid)
-			dp->offset+=copyin(*entry, dp->data_a.cFileName);
-
-		*result=entry; // Return entry address.
+		*cp=0;
 	}
 	else
 	{
 		errno=b_errno_win32;
-		return -1;
+		return NULL;
 	}
+	dp->offset+=drnt->d_reclen;
 
 	// Get next file, try unicode first.
 	if(p_FindNextFileW)
@@ -1287,39 +1285,7 @@ int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
 		dp->valid_w=FALSE;
 	}
 
-	return 0;
-}
-
-// Dotted IP address to network address. Returns 1 if OK, 0 on error.
-int inet_aton(const char *a, struct in_addr *inp)
-{
-	const char *cp=a;
-	uint32_t acc=0;
-	uint32_t tmp=0;
-	int dotc=0;
-
-	if(!isdigit(*cp))
-		return 0; // Error.
-	do
-	{
-		if(isdigit(*cp))
-			tmp=(tmp * 10) + (*cp -'0');
-		else if(*cp=='.' || !*cp)
-		{
-			if(tmp>255)
-				return 0; // Error.
-			acc=(acc<<8)+tmp;
-			dotc++;
-			tmp=0;
-		}
-		else
-			return 0; // Error.
-	}
-	while(*cp++);
-
-	if(dotc!=4) return 0; // Error.
-	inp->s_addr=htonl(acc); // Store addr in network format.
-	return 1;
+	return &drnt;
 }
 
 void init_stack_dump(void)

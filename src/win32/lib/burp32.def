@@ -53,8 +53,6 @@ _Z8getpwuidj
 _Z8pathconfPKci
 _Z8readlinkPKcPci
 _Z9ErrorExitPKc
-_Z9inet_atonPKcP7in_addr
-_Z9readdir_rPvP6direntPS1_
 _ZN6winverC1Ev
 _ZN6winverC2Ev
 syslog

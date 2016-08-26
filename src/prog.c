@@ -259,7 +259,10 @@ end:
 #if defined(HAVE_WIN32)
 #define main BurpMain
 #endif
-static int real_main(int argc, char *argv[])
+#ifndef UTEST
+static
+#endif
+int real_main(int argc, char *argv[])
 {
 	int ret=1;
 	int option=0;

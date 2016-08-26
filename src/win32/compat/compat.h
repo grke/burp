@@ -270,7 +270,6 @@ int fcntl(int fd, int cmd, long arg);
 int fstat(intptr_t fd, struct stat *sb);
 int stat(intptr_t fd, struct stat *sb);
 
-int inet_aton(const char *cp, struct in_addr *inp);
 int pipe(int []);
 int fork();
 int waitpid(int, int *, int);
@@ -286,8 +285,7 @@ int waitpid(int, int *, int);
 #define HAVE_OLD_SOCKOPT
 
 struct timespec;
-int readdir(unsigned int fd, struct dirent *dirp, unsigned int count);
-int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
+struct dirent *readdir(DIR *dirp);
 long int random(void);
 void srandom(unsigned int seed);
 int lstat(const char *, struct stat *);

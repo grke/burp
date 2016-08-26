@@ -188,7 +188,6 @@ static int do_recursive_delete(const char *d, const char *file,
 	int ret=RECDEL_ERROR;
 	DIR *dirp=NULL;
 	struct dirent *entry=NULL;
-	struct dirent *result;
 	struct stat statp;
 	char *directory=NULL;
 	char *fullpath=NULL;
@@ -216,14 +215,17 @@ static int do_recursive_delete(const char *d, const char *file,
 		goto end;
 	}
 
-	if(!(entry=(struct dirent *)
-		malloc_w(sizeof(struct dirent)+name_max+100, __func__)))
-			goto end;
-
 	while(1)
 	{
-		if(readdir_r(dirp, entry, &result) || !result)
+		errno=0;
+		if(!(entry=readdir(dirp)))
 		{
+			if(errno)
+			{
+				logp("error in readdir: %s\n",
+					strerror(errno));
+				goto end;
+			}
 			// Got to the end of the directory.
 			ret=RECDEL_OK;
 			break;
@@ -275,7 +277,6 @@ end:
 	if(dirp) closedir(dirp);
 	free_w(&fullpath);
 	free_w(&directory);
-	free_v((void **)&entry);
 	return ret;
 }
 
@@ -359,39 +360,39 @@ int looks_like_tmp_or_hidden_file(const char *filename)
 static int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
 	int *count, int (*compar)(const void *, const void *))
 {
-	int status;
+	char *p;
 	int allocated=0;
 	struct dirent **ntmp=NULL;
 	struct dirent *entry=NULL;
 	struct dirent *result=NULL;
+	size_t elen;
 
 	*count=0;
+	elen=sizeof(struct dirent)+fs_name_max+100;
 
 	// This here is doing a funky kind of scandir/alphasort
 	// that can also run on Windows.
 	while(1)
 	{
-		char *p;
-		if(!(entry=(struct dirent *)malloc_w(
-		  sizeof(struct dirent)+fs_name_max+100, __func__)))
-			goto error;
-		status=readdir_r(directory, entry, &result);
-		if(status || !result)
+		errno=0;
+		if(!(result=readdir(directory)))
 		{
-			free_v((void **)&entry);
+			if(errno)
+			{
+				logp("error in readdir: %s\n",
+					strerror(errno));
+				goto error;
+			}
 			break;
 		}
 
-		p=entry->d_name;
+		p=result->d_name;
 		ASSERT(fs_name_max+1 > (int)sizeof(struct dirent)+strlen(p));
 
 		if(!p
 		  || !strcmp(p, ".")
 		  || !strcmp(p, ".."))
-		{
-			free_v((void **)&entry);
 			continue;
-		}
 
 		if(*count==allocated)
 		{
@@ -403,12 +404,14 @@ static int do_get_entries_in_directory(DIR *directory, struct dirent ***nl,
 				goto error;
 			*nl=ntmp;
 		}
+		if(!(entry=(struct dirent *)malloc_w(elen, __func__)))
+			goto error;
+		memcpy(entry, result, elen);
 		(*nl)[(*count)++]=entry;
 	}
 	if(*nl && compar) qsort(*nl, *count, sizeof(**nl), compar);
 	return 0;
 error:
-	free_v((void **)&entry);
 	if(*nl)
 	{
 		int i;

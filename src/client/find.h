@@ -49,10 +49,6 @@
 #include <regex.h>
 #endif
 
-#ifndef HAVE_READDIR_R
-int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
-#endif
-
 #define FT_LNK_H	1  // hard link to file already saved.
 #define FT_REG		3  // Regular file.
 #define FT_LNK_S	4  // Soft Link.

@@ -98,7 +98,7 @@ dnl --------------------------------------------------------------------------
 dnl Check for required functions
 dnl --------------------------------------------------------------------------
 
-AC_CHECK_FUNCS_ONCE([lockf lutimes chflags readdir_r])
+AC_CHECK_FUNCS_ONCE([lockf lutimes chflags])
 
 AC_FUNC_ALLOCA
 

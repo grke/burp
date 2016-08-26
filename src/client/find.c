@@ -402,7 +402,8 @@ static void windows_reparse_point_fiddling(struct FF_PKT *ff_pkt)
 #endif
 
 // Prototype because process_entries_in_directory() recurses using find_files().
-static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
+static int find_files(struct asfd *asfd,
+	struct FF_PKT *ff_pkt, struct conf **confs,
 	char *fname, dev_t parent_device, bool top_level);
 
 static int process_entries_in_directory(struct asfd *asfd, struct dirent **nl,

@@ -9,6 +9,7 @@
 #include "../../../strlist.h"
 #include "../../sdirs.h"
 #include "../backup_phase4.h"
+#include "dindex.h"
 
 static int backup_in_progress(const char *fullpath)
 {

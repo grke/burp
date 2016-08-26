@@ -12,6 +12,7 @@
 #include "child.h"
 #include "sdirs.h"
 #include "protocol2/backup_phase4.h"
+#include "delete.h"
 
 static int do_rename_w(const char *a, const char *b,
 	const char *cname, struct bu *bu)

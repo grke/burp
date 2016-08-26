@@ -10,6 +10,7 @@
 #include "../log.h"
 #include "../run_script.h"
 #include "cvss.h"
+#include "ca.h"
 
 static int generate_key_and_csr(struct asfd *asfd,
 	struct conf **confs, const char *csr_path)

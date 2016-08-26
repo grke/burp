@@ -6,6 +6,7 @@
 #include "../handy.h"
 #include "../iobuf.h"
 #include "../log.h"
+#include "auth.h"
 
 int authorise_client(struct asfd *asfd,
 	char **server_version, const char *cname, const char *password,

@@ -13,6 +13,7 @@
 #include "../../protocol1/msg.h"
 #include "../extrameta.h"
 #include "../restore.h"
+#include "restore.h"
 
 static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	struct sbuf *sb, const char *fname,

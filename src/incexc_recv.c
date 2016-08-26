@@ -5,6 +5,7 @@
 #include "cmd.h"
 #include "iobuf.h"
 #include "prepend.h"
+#include "incexc_recv.h"
 
 static const char *endreqstrf;
 static const char *endrepstrf;

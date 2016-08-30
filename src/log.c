@@ -252,7 +252,7 @@ void log_and_send(struct asfd *asfd, const char *msg)
 		asfd->write_str(asfd, CMD_ERROR, msg);
 }
 
-void log_and_send_oom(struct asfd *asfd, const char *function)
+void log_and_send_oom(struct asfd *asfd)
 {
 	char m[256]="";
         snprintf(m, sizeof(m), "out of memory in %s()\n", __func__);

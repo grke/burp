@@ -46,7 +46,7 @@ void candidates_free(void)
 }
 
 static void candidates_set_score_pointers(struct candidate **candidates,
-	size_t clen, struct scores *scores)
+	struct scores *scores)
 {
 	size_t a;
 	for(a=0; candidates && a<candidates_len; a++)
@@ -127,7 +127,7 @@ end:
 		ret=CAND_RET_PERM;
 		goto error;
 	}
-	candidates_set_score_pointers(candidates, candidates_len, scores);
+	candidates_set_score_pointers(candidates, scores);
 	scores_reset(scores);
 	//logp("Now have %d candidates\n", (int)candidates_len);
 	ret=CAND_RET_OK;

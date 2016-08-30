@@ -109,11 +109,10 @@ int write_endfile(struct asfd *asfd, uint64_t bytes, uint8_t *checksum)
    Encryption off and compression off uses send_whole_file().
    Perhaps a separate function is needed for encryption on compression off.
 */
-int send_whole_file_gzl(struct asfd *asfd,
-	const char *fname, const char *datapth, int quick_read,
-	uint64_t *bytes, const char *encpassword, struct cntr *cntr,
-	int compression, struct BFILE *bfd, const char *extrameta,
-	size_t elen)
+int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
+	int quick_read, uint64_t *bytes, const char *encpassword,
+	struct cntr *cntr, int compression, struct BFILE *bfd,
+	const char *extrameta, size_t elen)
 {
 	int ret=0;
 	int zret=0;
@@ -381,8 +380,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 }
 #endif
 
-int send_whole_filel(struct asfd *asfd,
-	enum cmd cmd, const char *datapth,
+int send_whole_filel(struct asfd *asfd, const char *datapth,
 	int quick_read, uint64_t *bytes, struct cntr *cntr,
 	struct BFILE *bfd, const char *extrameta, size_t elen)
 {

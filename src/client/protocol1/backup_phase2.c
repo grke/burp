@@ -12,6 +12,7 @@
 #include "../../protocol1/msg.h"
 #include "../extrameta.h"
 #include "../find.h"
+#include "backup_phase2.h"
 
 static int rs_loadsig_network_run(struct asfd *asfd,
 	rs_job_t *job, struct cntr *cntr)
@@ -151,12 +152,10 @@ static int send_whole_file_w(struct asfd *asfd,
 	const char *extrameta, size_t elen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
-		return send_whole_file_gzl(asfd,
-		  sb->path.buf, datapth, quick_read, bytes,
+		return send_whole_file_gzl(asfd, datapth, quick_read, bytes,
 		  encpassword, cntr, compression, bfd, extrameta, elen);
 	else
-		return send_whole_filel(asfd,
-		  sb->path.cmd, datapth, quick_read, bytes,
+		return send_whole_filel(asfd, datapth, quick_read, bytes,
 		  cntr, bfd, extrameta, elen);
 }
 
@@ -257,7 +256,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 #endif
 	  )
 	{
-		if(get_extrameta(asfd, bfd, sb->path.buf,
+		if(get_extrameta(asfd, sb->path.buf,
 			S_ISDIR(sb->statp.st_mode),
 			&extrameta, &elen, cntr))
 		{

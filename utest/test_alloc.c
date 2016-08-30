@@ -1,6 +1,7 @@
 #include <check.h>
 #include <stdlib.h>
 #include "../src/alloc.h"
+#include "test.h"
 
 void alloc_check(void)
 {

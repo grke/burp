@@ -246,7 +246,7 @@ void attribs_decode(struct sbuf *sb)
 
 static int set_file_times(struct asfd *asfd,
 	const char *path, struct utimbuf *ut,
-	struct stat *statp, struct cntr *cntr)
+	struct cntr *cntr)
 {
 	int e;
 // The mingw64 utime() appears not to work on read-only files.
@@ -306,7 +306,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(asfd, path, &ut, statp, cntr);
+	set_file_times(asfd, path, &ut, cntr);
 	return 0;
 #endif
 
@@ -348,7 +348,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 			return -1;
 		}
 
-		if(set_file_times(asfd, path, &ut, statp, cntr))
+		if(set_file_times(asfd, path, &ut, cntr))
 			return -1;
 #ifdef HAVE_CHFLAGS
 		/*

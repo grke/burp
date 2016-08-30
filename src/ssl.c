@@ -3,6 +3,7 @@
 #include "conf.h"
 #include "log.h"
 #include "server/ca.h"
+#include "ssl.h"
 
 static const char *pass=NULL;
 
@@ -56,7 +57,9 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 	return 0;
 }
 
-static int password_cb(char *buf, int num, int rwflag, void *userdata)
+static int password_cb(char *buf, int num,
+	__attribute__ ((unused)) int rwflag,
+	__attribute__ ((unused)) void *userdata)
 {
 	if(num<(int)strlen(pass)+1) return 0;
 	strcpy(buf, pass);

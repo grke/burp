@@ -6,6 +6,7 @@
 #include "../../log.h"
 #include "../../sbuf.h"
 #include "../extrameta.h"
+#include "rabin_read.h"
 
 static char *meta_buffer=NULL;
 static size_t meta_buffer_len=0;
@@ -26,7 +27,7 @@ static int rabin_open_file_extrameta(struct sbuf *sb, struct asfd *asfd,
 {
 	// Load all of the metadata into a buffer.
 	rabin_close_file_extrameta(sb);
-	if(get_extrameta(asfd, NULL, sb->path.buf, S_ISDIR(sb->statp.st_mode),
+	if(get_extrameta(asfd, sb->path.buf, S_ISDIR(sb->statp.st_mode),
 		&meta_buffer, &meta_buffer_len, cntr))
 			return -1;
 	if(!meta_buffer)
@@ -36,7 +37,7 @@ static int rabin_open_file_extrameta(struct sbuf *sb, struct asfd *asfd,
 	return 1;
 }
 
-static ssize_t rabin_read_extrameta(struct sbuf *sb, char *buf, size_t bufsize)
+static ssize_t rabin_read_extrameta(char *buf, size_t bufsize)
 {
 	// Place bufsize of the meta buffer contents into buf.
 	size_t to_read=meta_buffer_len;
@@ -96,7 +97,7 @@ ssize_t rabin_read(struct sbuf *sb, char *buf, size_t bufsize)
 {
 	struct BFILE *bfd;
 	if(sbuf_is_metadata(sb))
-		return rabin_read_extrameta(sb, buf, bufsize);
+		return rabin_read_extrameta(buf, bufsize);
 	bfd=&sb->protocol2->bfd;
 	return (ssize_t)bfd->read(bfd, buf, bufsize);
 }

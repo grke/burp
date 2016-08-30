@@ -37,7 +37,6 @@ int has_extrameta(const char *path, enum cmd cmd,
 }
 
 int get_extrameta(struct asfd *asfd,
-	struct BFILE *bfd,
 	const char *path,
 	int isdir,
 	char **extrameta,
@@ -71,7 +70,6 @@ int get_extrameta(struct asfd *asfd,
 }
 
 int set_extrameta(struct asfd *asfd,
-	struct BFILE *bfd,
 	const char *path,
 	const char *extrameta,
 	size_t metalen,
@@ -118,11 +116,11 @@ int set_extrameta(struct asfd *asfd,
     defined(HAVE_NETBSD_OS)
 #ifdef HAVE_ACL
 			case META_ACCESS_ACL:
-				if(set_acl(asfd, path, m, s, cmdtmp, cntr))
+				if(set_acl(asfd, path, m, cmdtmp, cntr))
 					errors++;
 				break;
 			case META_DEFAULT_ACL:
-				if(set_acl(asfd, path, m, s, cmdtmp, cntr))
+				if(set_acl(asfd, path, m, cmdtmp, cntr))
 					errors++;
 				break;
 #endif

@@ -245,9 +245,8 @@ static int do_counters(struct cntr *cntr)
 	return 0;
 }
 
-static int json_send_backup(struct asfd *asfd, struct cstat *cstat,
-	struct bu *bu, int print_flags,
-	const char *logfile, const char *browse,
+static int json_send_backup(struct cstat *cstat, struct bu *bu,
+	int print_flags, const char *logfile, const char *browse,
 	int use_cache)
 {
 	long long bno=0;
@@ -342,7 +341,7 @@ static int str_array(const char *field, struct cstat *cstat)
 	return 0;
 }
 
-static int json_send_client_start(struct asfd *asfd, struct cstat *cstat)
+static int json_send_client_start(struct cstat *cstat)
 {
 	const char *run_status=run_status_to_str(cstat);
 
@@ -366,7 +365,7 @@ static int json_send_client_start(struct asfd *asfd, struct cstat *cstat)
 	return 0;
 }
 
-static int json_send_client_end(struct asfd *asfd)
+static int json_send_client_end(void)
 {
 	if(yajl_array_close_w()
 	  || yajl_map_close_w())
@@ -374,38 +373,36 @@ static int json_send_client_end(struct asfd *asfd)
 	return 0;
 }
 
-static int json_send_client_backup(struct asfd *asfd,
-	struct cstat *cstat, struct bu *bu1, struct bu *bu2,
-	const char *logfile, const char *browse, int use_cache)
+static int json_send_client_backup(struct cstat *cstat, struct bu *bu1,
+	struct bu *bu2, const char *logfile, const char *browse, int use_cache)
 {
 	int ret=-1;
-	if(json_send_client_start(asfd, cstat)) return -1;
-	if((ret=json_send_backup(asfd, cstat,
-		bu1, 1 /* print flags */, logfile, browse, use_cache)))
+	if(json_send_client_start(cstat)) return -1;
+	if((ret=json_send_backup(cstat, bu1,
+		1 /* print flags */, logfile, browse, use_cache)))
 			goto end;
-	if((ret=json_send_backup(asfd, cstat,
-		bu2, 1 /* print flags */, logfile, browse, use_cache)))
+	if((ret=json_send_backup(cstat, bu2,
+		1 /* print flags */, logfile, browse, use_cache)))
 			goto end;
 end:
-	if(json_send_client_end(asfd)) ret=-1;
+	if(json_send_client_end()) ret=-1;
 	return ret;
 }
 
-static int json_send_client_backup_list(struct asfd *asfd,
-	struct cstat *cstat, int use_cache)
+static int json_send_client_backup_list(struct cstat *cstat, int use_cache)
 {
 	int ret=-1;
 	struct bu *bu;
-	if(json_send_client_start(asfd, cstat)) return -1;
+	if(json_send_client_start(cstat)) return -1;
 	for(bu=cstat->bu; bu; bu=bu->prev)
 	{
-		if(json_send_backup(asfd, cstat, bu,
+		if(json_send_backup(cstat, bu,
 			1 /* print flags */, NULL, NULL, use_cache))
 				goto end;
 	}
 	ret=0;
 end:
-	if(json_send_client_end(asfd)) ret=-1;
+	if(json_send_client_end()) ret=-1;
 	return ret;
 }
 
@@ -422,18 +419,18 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 
 	if(cstat && bu)
 	{
-		if(json_send_client_backup(asfd, cstat, bu, NULL,
+		if(json_send_client_backup(cstat, bu, NULL,
 			logfile, browse, use_cache)) goto end;
 	}
 	else if(cstat)
 	{
-		if(json_send_client_backup_list(asfd, cstat, use_cache))
+		if(json_send_client_backup_list(cstat, use_cache))
 			goto end;
 	}
 	else for(c=clist; c; c=c->next)
 	{
 		if(!c->permitted) continue;
-		if(json_send_client_backup(asfd, c,
+		if(json_send_client_backup(c,
 			bu_find_current(c->bu),
 			bu_find_working_or_finishing(c->bu),
 			NULL, NULL, use_cache))

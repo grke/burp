@@ -16,7 +16,6 @@ extern int has_extrameta(const char *path, enum cmd cmd,
 	int enable_acl, int enable_xattr);
 
 extern int get_extrameta(struct asfd *asfd,
-	struct BFILE *bfd,
 	const char *path,
 	int isdir,
 	char **extrameta,
@@ -24,7 +23,6 @@ extern int get_extrameta(struct asfd *asfd,
 	struct cntr *cntr);
 
 extern int set_extrameta(struct asfd *asfd,
-	struct BFILE *bfd,
 	const char *path,
 	const char *extrameta,
 	size_t metalen,

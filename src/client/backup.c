@@ -10,6 +10,7 @@
 #include "cvss.h"
 #include "protocol1/backup_phase2.h"
 #include "protocol2/backup_phase2.h"
+#include "backup.h"
 
 #ifdef HAVE_WIN32
 static void set_priority(int priority, const char *str)
@@ -75,7 +76,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 			breakpoint(breaking, __func__);
 			goto end;
 		}
-		if(backup_phase1_client(asfd, confs, action==ACTION_ESTIMATE))
+		if(backup_phase1_client(asfd, confs))
 			goto end;
 	}
 

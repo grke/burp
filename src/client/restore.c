@@ -73,9 +73,8 @@ end:
 	return ret;
 }
 
-static int make_link(struct asfd *asfd,
-	const char *fname, const char *lnk, enum cmd cmd, struct cntr *cntr,
-	const char *restore_prefix)
+static int make_link(const char *fname, const char *lnk,
+	enum cmd cmd, const char *restore_prefix)
 {
 	int ret=-1;
 
@@ -326,9 +325,8 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 				"build path failed: %s", fname);
 			goto end;
 		}
-		else if(make_link(asfd,
-			fname, sb->link.buf, sb->link.cmd,
-			cntr, restore_prefix))
+		else if(make_link(fname, sb->link.buf,
+			sb->link.cmd, restore_prefix))
 		{
 			ret=warn_and_interrupt(asfd, sb, cntr, protocol,
 				"could not create link", "");
@@ -488,7 +486,8 @@ static int write_data(struct asfd *asfd, struct BFILE *bfd, struct blk *blk)
 static char *restore_style=NULL;
 
 static enum asl_ret restore_style_func(struct asfd *asfd,
-	struct conf **confs, void *param)
+	__attribute__ ((unused)) struct conf **confs,
+	__attribute__ ((unused)) void *param)
 {
 	char msg[32]="";
 	restore_style=NULL;
@@ -560,7 +559,7 @@ int do_restore_client(struct asfd *asfd,
 	if(!(sb=sbuf_alloc(protocol))
 	  || (protocol==PROTO_2 && !(blk=blk_alloc())))
 	{
-		log_and_send_oom(asfd, __func__);
+		log_and_send_oom(asfd);
 		goto error;
 	}
 
@@ -633,7 +632,7 @@ int do_restore_client(struct asfd *asfd,
 				if(!(fullpath=prepend_s(restore_prefix,
 					sb->path.buf)))
 				{
-					log_and_send_oom(asfd, __func__);
+					log_and_send_oom(asfd);
 					goto error;
 				}
 				if(act==ACTION_RESTORE)

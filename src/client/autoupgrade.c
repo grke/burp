@@ -9,6 +9,7 @@
 #include "../prepend.h"
 #include "../run_script.h"
 #include "cvss.h"
+#include "autoupgrade.h"
 
 static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 	const char *file, struct cntr *cntr)
@@ -22,7 +23,8 @@ static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 }
 
 static enum asl_ret autoupgrade_func(struct asfd *asfd,
-	struct conf **confs, void *param)
+	__attribute__ ((unused)) struct conf **confs,
+	__attribute__ ((unused)) void *param)
 {
 	if(!strcmp(asfd->rbuf->buf, "do not autoupgrade"))
 		return ASL_END_OK;

@@ -98,7 +98,7 @@ static enum append_ret mock_asfd_assert_append_all_to_write_buffer(
 	return ret;
 }
 
-static int mock_parse_readbuf(struct asfd *asfd)
+static int mock_parse_readbuf(__attribute__ ((unused)) struct asfd *asfd)
 {
 	return 0;
 }

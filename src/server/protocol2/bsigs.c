@@ -7,6 +7,7 @@
 #include "../../iobuf.h"
 #include "../../log.h"
 #include "../../protocol2/blk.h"
+#include "bsigs.h"
 
 static const char *path=NULL;
 
@@ -16,7 +17,7 @@ static int usage(void)
 	return 1;
 }
 
-static int parse_cmd(struct iobuf *rbuf, struct blk *blk, struct sbuf *sb)
+static int parse_cmd(struct iobuf *rbuf, struct blk *blk)
 {
 	int ret=-1;
 
@@ -67,7 +68,6 @@ int run_bsigs(int argc, char *argv[])
 	struct fzp *fzp=NULL;
 	struct iobuf rbuf;
 	struct blk blk;
-	struct sbuf *sb=sbuf_alloc(PROTO_1);
 	memset(&rbuf, 0, sizeof(struct iobuf));
 
 	base64_init();
@@ -87,7 +87,7 @@ int run_bsigs(int argc, char *argv[])
 			case -1: goto end; // Error.
 		}
 
-		if(parse_cmd(&rbuf, &blk, sb)) goto end;
+		if(parse_cmd(&rbuf, &blk)) goto end;
 	}
 
 end:

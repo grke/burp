@@ -44,6 +44,7 @@
 #include "../strlist.h"
 #include "extrameta.h"
 #include "find.h"
+#include "backup_phase1.h"
 
 static enum cmd filesymbol=CMD_FILE;
 static enum cmd dirsymbol=CMD_DIRECTORY;
@@ -131,7 +132,7 @@ static int do_to_server(struct asfd *asfd,
 
 	if(ff->type==FT_REG)
 		cntr_add_val(cntr, CMD_BYTES_ESTIMATED,
-			(uint64_t)ff->statp.st_size, 0);
+			(uint64_t)ff->statp.st_size);
 #ifdef HAVE_WIN32
 	if(split_vss
 	  && !strip_vss
@@ -208,7 +209,7 @@ static int send_file(struct asfd *asfd, struct FF_PKT *ff, struct conf **confs)
 	}
 }
 
-int backup_phase1_client(struct asfd *asfd, struct conf **confs, int estimate)
+int backup_phase1_client(struct asfd *asfd, struct conf **confs)
 {
 	int ret=-1;
 	struct FF_PKT *ff=NULL;

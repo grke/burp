@@ -9,7 +9,7 @@ extern int merge_files_in_dir(const char *final,
 	const char *fmanifest, const char *srcdir, uint64_t fcount,
 	int merge(const char *dst, const char *src, const char *srcb));
 extern int merge_files_in_dir_no_fcount(const char *final,
-	const char *fmanifest, const char *srcdir,
+	const char *fmanifest,
 	int merge(const char *dst, const char *srca, const char *srcb));
 
 #ifdef UTEST

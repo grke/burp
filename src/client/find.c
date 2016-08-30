@@ -165,7 +165,7 @@ int in_include_regex(struct strlist *increg, const char *fname)
 }
 */
 
-int in_exclude_regex(struct strlist *excreg, const char *fname)
+static int in_exclude_regex(struct strlist *excreg, const char *fname)
 {
 	// If not doing exclude_regex, let the file get backed up.
 	for(; excreg; excreg=excreg->next)
@@ -280,7 +280,7 @@ static int file_size_match(struct FF_PKT *ff_pkt, struct conf **confs)
 }
 
 // Last checks before actually processing the file system entry.
-int send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
+static int send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	if(!file_is_included(confs, ff->fname, top_level)) return 0;
 
@@ -324,7 +324,7 @@ int send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct con
 
 static int found_regular_file(struct asfd *asfd,
 	struct FF_PKT *ff_pkt, struct conf **confs,
-	char *fname, bool top_level)
+	bool top_level)
 {
 	ff_pkt->type=FT_REG;
 	return send_file_w(asfd, ff_pkt, top_level, confs);
@@ -572,8 +572,8 @@ end:
 	return ret;
 }
 
-static int found_other(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
-	char *fname, bool top_level)
+static int found_other(struct asfd *asfd, struct FF_PKT *ff_pkt,
+	struct conf **confs, bool top_level)
 {
 #ifdef HAVE_FREEBSD_OS
 	/*
@@ -624,7 +624,7 @@ static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **co
 	}
 
 	if(S_ISREG(ff_pkt->statp.st_mode))
-		return found_regular_file(asfd, ff_pkt, confs, fname, top_level);
+		return found_regular_file(asfd, ff_pkt, confs, top_level);
 	else if(S_ISLNK(ff_pkt->statp.st_mode))
 	{
 #ifdef S_IFLNK
@@ -639,7 +639,7 @@ static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **co
 			{
 				ff_pkt->statp.st_mode ^= S_IFLNK;
 				ff_pkt->statp.st_mode |= S_IFBLK;
-				return found_other(asfd, ff_pkt, confs, fname,
+				return found_other(asfd, ff_pkt, confs,
 					top_level);
 			}
 		}
@@ -650,7 +650,7 @@ static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **co
 		return found_directory(asfd, ff_pkt, confs, fname,
 			parent_device, top_level);
 	else
-		return found_other(asfd, ff_pkt, confs, fname, top_level);
+		return found_other(asfd, ff_pkt, confs, top_level);
 }
 
 int find_files_begin(struct asfd *asfd,

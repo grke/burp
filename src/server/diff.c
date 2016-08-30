@@ -12,6 +12,7 @@
 #include "bu_get.h"
 #include "child.h"
 #include "manio.h"
+#include "diff.h"
 
 static char *get_manifest_path(const char *fullpath, enum protocol protocol)
 {
@@ -45,9 +46,8 @@ static int send_addition(struct asfd *asfd, struct sbuf *sb)
 	return send_diff(asfd, "+ ", sb);
 }
 
-static int diff_manifests(struct asfd *asfd,
-	const char *fullpath1, const char *fullpath2,
-	struct cntr *cntr, enum protocol protocol)
+static int diff_manifests(struct asfd *asfd, const char *fullpath1,
+	const char *fullpath2, enum protocol protocol)
 {
 	int ret=-1;
 	int pcmp;
@@ -65,7 +65,7 @@ static int diff_manifests(struct asfd *asfd,
 	  || !(sb1=sbuf_alloc(protocol))
 	  || !(sb2=sbuf_alloc(protocol)))
 	{
-		log_and_send_oom(asfd, __func__);
+		log_and_send_oom(asfd);
 		goto end;
 	}
 
@@ -191,7 +191,7 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
 	  || send_backup_name_to_client(asfd, bu2))
 		goto end;
 
-	if(diff_manifests(asfd, bu1->path, bu2->path, cntr, protocol))
+	if(diff_manifests(asfd, bu1->path, bu2->path, protocol))
 		goto end;
 
 	ret=0;

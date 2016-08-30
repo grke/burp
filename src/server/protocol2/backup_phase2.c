@@ -20,6 +20,7 @@
 #include "champ_chooser/champ_server.h"
 #include "champ_chooser/hash.h"
 #include "dpth.h"
+#include "backup_phase2.h"
 
 #define END_SIGS		0x01
 #define END_BACKUP		0x02
@@ -789,8 +790,7 @@ static int deal_with_wrap_up_from_chfd(struct iobuf *rbuf, struct blist *blist,
 }
 
 static int deal_with_read_from_chfd(struct asfd *chfd,
-	struct blist *blist, uint64_t *wrap_up, struct dpth *dpth,
-	struct cntr *cntr)
+	struct blist *blist, struct dpth *dpth, struct cntr *cntr)
 {
 	int ret=-1;
 
@@ -856,7 +856,6 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 	struct manios *manios=NULL;
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
-	uint64_t wrap_up=0;
 	struct asfd *asfd=NULL;
 	struct cntr *cntr=NULL;
 	struct sbuf *csb=NULL;
@@ -959,7 +958,7 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 		while(chfd->rbuf->buf)
 		{
 			if(deal_with_read_from_chfd(chfd,
-				slist->blist, &wrap_up, dpth, cntr))
+				slist->blist, dpth, cntr))
 					goto end;
 			// Get as much out of the readbuf as possible.
 			if(chfd->parse_readbuf(chfd))

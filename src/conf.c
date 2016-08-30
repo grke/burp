@@ -807,7 +807,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	return -1;
 }
 
-static int set_conf(struct conf *c, const char *field, const char *value)
+static int set_conf(struct conf *c, const char *value)
 {
 	switch(c->conf_type)
 	{
@@ -855,7 +855,7 @@ int conf_set(struct conf **confs, const char *field, const char *value)
 	for(i=0; i<OPT_MAX; i++)
 	{
 		if(strcmp(confs[i]->field, field)) continue;
-		r+=set_conf(confs[i], field, value);
+		r+=set_conf(confs[i], value);
 	}
 	return r;
 }

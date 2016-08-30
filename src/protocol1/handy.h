@@ -11,14 +11,12 @@
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-extern int send_whole_file_gzl(struct asfd *asfd,
-	const char *fname, const char *datapth,
+extern int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	int quick_read, uint64_t *bytes, const char *encpassword,
 	struct cntr *cntr, int compression, struct BFILE *bfd,
 	const char *extrameta, size_t elen);
 
-extern int send_whole_filel(struct asfd *asfd,
-	enum cmd cmd, const char *datapth,
+extern int send_whole_filel(struct asfd *asfd, const char *datapth,
 	int quick_read, uint64_t *bytes, struct cntr *cntr,
 	struct BFILE *bfd,
 	const char *extrameta, size_t elen);

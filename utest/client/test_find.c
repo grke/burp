@@ -24,8 +24,8 @@ static void create_file(const char *path, size_t s)
 	fail_unless(!fclose(fp));
 }
 
-static int send_file_callback(
-	struct asfd *asfd, struct FF_PKT *ff, struct conf **confs)
+static int send_file_callback(__attribute__ ((unused)) struct asfd *asfd,
+	struct FF_PKT *ff, __attribute__ ((unused)) struct conf **confs)
 {
 	fail_unless(e!=NULL);
 	fail_unless(!strcmp(e->path, ff->fname));

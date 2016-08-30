@@ -21,6 +21,7 @@
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase2.h"
 #include "protocol2/backup_phase4.h"
+#include "backup.h"
 
 static int open_log(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs)
@@ -223,7 +224,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	}
 
 	cntr_print(cntr, ACTION_BACKUP, asfd);
-	cntr_stats_to_file(cntr, sdirs->rworking, ACTION_BACKUP, cconfs);
+	cntr_stats_to_file(cntr, sdirs->rworking, ACTION_BACKUP);
 
 	// Move the symlink to indicate that we are now in the end phase. The
 	// rename() race condition is automatically recoverable here.

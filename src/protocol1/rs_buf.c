@@ -92,7 +92,8 @@ void rs_filebuf_free(rs_filebuf_t **fb)
  * BUF, and let the stream use that.  On return, SEEN_EOF is true if
  * the end of file has passed into the stream.
  */
-rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
+rs_result rs_infilebuf_fill(__attribute__ ((unused)) rs_job_t *job,
+	rs_buffers_t *buf, void *opaque)
 {
 	int len=0;
 	rs_filebuf_t *fb=(rs_filebuf_t *) opaque;
@@ -236,7 +237,8 @@ rs_result rs_infilebuf_fill(rs_job_t *job, rs_buffers_t *buf, void *opaque)
  * contains some buffered output now.  Write this out to F, and reset
  * the buffer cursor.
  */
-rs_result rs_outfilebuf_drain(rs_job_t *job, rs_buffers_t *buf, void *opaque)
+rs_result rs_outfilebuf_drain(__attribute__ ((unused)) rs_job_t *job,
+	rs_buffers_t *buf, void *opaque)
 {
 	rs_filebuf_t *fb=(rs_filebuf_t *)opaque;
 	size_t wlen;

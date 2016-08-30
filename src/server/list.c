@@ -168,7 +168,7 @@ static int list_manifest(const char *fullpath)
 	  || !(manio=manio_open(manifest_dir, "rb", protocol))
 	  || !(sb=sbuf_alloc(protocol)))
 	{
-		log_and_send_oom(asfd, __func__);
+		log_and_send_oom(asfd);
 		goto error;
 	}
 

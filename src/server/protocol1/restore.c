@@ -18,6 +18,7 @@
 #include "../../slist.h"
 #include "../sdirs.h"
 #include "dpth.h"
+#include "restore.h"
 
 #include <librsync.h>
 
@@ -85,7 +86,7 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 	{
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send. 
-		ret=send_whole_file_gzl(asfd, best, sb->protocol1->datapth.buf,
+		ret=send_whole_file_gzl(asfd, sb->protocol1->datapth.buf,
 			1, &bytes, NULL, cntr, 9, &bfd, NULL, 0);
 	}
 	else
@@ -95,9 +96,8 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// sort it out.
 		if(sbuf_is_encrypted(sb))
 		{
-			ret=send_whole_filel(asfd, sb->path.cmd,
-				sb->protocol1->datapth.buf, 1, &bytes,
-				cntr, &bfd, NULL, 0);
+			ret=send_whole_filel(asfd, sb->protocol1->datapth.buf,
+				1, &bytes, cntr, &bfd, NULL, 0);
 		}
 		// It might have been stored uncompressed. Gzip it during
 		// the send. If the client knew what kind of file it would be
@@ -106,16 +106,15 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 			sb->protocol1->datapth.buf))
 		{
 			ret=send_whole_file_gzl(asfd,
-				best, sb->protocol1->datapth.buf, 1, &bytes,
+				sb->protocol1->datapth.buf, 1, &bytes,
 				NULL, cntr, 9, &bfd, NULL, 0);
 		}
 		else
 		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
-			ret=send_whole_filel(asfd, sb->path.cmd,
-				sb->protocol1->datapth.buf, 1, &bytes,
-				cntr, &bfd, NULL, 0);
+			ret=send_whole_filel(asfd, sb->protocol1->datapth.buf,
+				1, &bytes, cntr, &bfd, NULL, 0);
 		}
 	}
 	bfd.close(&bfd, asfd);
@@ -248,7 +247,7 @@ static int process_data_dir_file(struct asfd *asfd,
 			else tmp=tmppath1;
 		}
 
-		if(do_patch(asfd, best, dpath, tmp,
+		if(do_patch(best, dpath, tmp,
 			0 /* do not gzip the result */,
 			sb->compression /* from the manifest */))
 		{
@@ -335,8 +334,7 @@ end:
 }
 
 int restore_sbuf_protocol1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
-	enum action act, struct sdirs *sdirs,
-	enum cntr_status cntr_status, struct conf **cconfs)
+	enum action act, struct sdirs *sdirs, struct conf **cconfs)
 {
 	if((sb->protocol1->datapth.buf
 		&& asfd->write(asfd, &(sb->protocol1->datapth)))

@@ -20,6 +20,7 @@
 #include "monitor/status_client_ncurses.h"
 #include "protocol2/restore.h"
 #include "restore.h"
+#include "main.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>
@@ -90,8 +91,7 @@ static enum asl_ret maybe_check_timer_func(struct asfd *asfd,
 }
 
 static enum cliret maybe_check_timer(struct asfd *asfd,
-	enum action action, const char *phase1str,
-	struct conf **confs, int *resume)
+	const char *phase1str, struct conf **confs, int *resume)
 {
 	struct tchk tchk;
 	memset(&tchk, 0, sizeof(tchk));
@@ -126,7 +126,7 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 		goto error;
 	}
 
-	switch(maybe_check_timer(asfd, action, phase1str, confs, &resume))
+	switch(maybe_check_timer(asfd, phase1str, confs, &resume))
 	{
 		case CLIENT_OK:
 			if(action==ACTION_TIMER_CHECK) goto end;

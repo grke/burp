@@ -20,13 +20,14 @@
 #include "fdirs.h"
 #include "link.h"
 #include "zlibio.h"
+#include "backup_phase4.h"
 
 #include <librsync.h>
 
 // Also used by restore.c.
 // FIX THIS: This stuff is very similar to make_rev_delta, can maybe share
 // some code.
-int do_patch(struct asfd *asfd, const char *dst, const char *del,
+int do_patch(const char *dst, const char *del,
 	const char *upd, bool gzupd, int compression)
 {
 	struct fzp *dstp=NULL;
@@ -268,7 +269,7 @@ static int forward_patch_and_reverse_diff(
 		goto end;
 	}
 
-	if((lrs=do_patch(NULL, infpath, deltafpath, newpath,
+	if((lrs=do_patch(infpath, deltafpath, newpath,
 		sb->compression, sb->compression /* from manifest */)))
 	{
 		logp("WARNING: librsync error when patching %s: %d\n",
@@ -813,7 +814,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	if(previous_backup && !hardlinked_current)
 	{
 		if(deleteme_move(sdirs,
-			fdirs->fullrealcurrent, realcurrent, cconfs)
+			fdirs->fullrealcurrent, realcurrent)
 		// I have tested that potential race conditions on the
 		// rename() are automatically recoverable here.
 		  || do_rename(fdirs->currentdup, fdirs->fullrealcurrent))

@@ -14,6 +14,7 @@
 #include "../../server/manio.h"
 #include "../../server/sdirs.h"
 #include "champ_chooser/champ_chooser.h"
+#include "backup_phase4.h"
 
 struct hooks
 {
@@ -491,8 +492,7 @@ end:
 	return ret;
 }
 
-int merge_files_in_dir_no_fcount(const char *final,
-	const char *fmanifest, const char *srcdir,
+int merge_files_in_dir_no_fcount(const char *final, const char *fmanifest, 
 	int merge(const char *dst, const char *srca, const char *srcb))
 {
 	int ret=-1;

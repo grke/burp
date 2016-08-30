@@ -13,6 +13,7 @@
 #include "../../protocol1/msg.h"
 #include "../extrameta.h"
 #include "../restore.h"
+#include "restore.h"
 
 static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	struct sbuf *sb, const char *fname,
@@ -44,7 +45,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 
 	if(metadata)
 	{
-		ret=transfer_gzfile_inl(asfd, sb, fname, NULL,
+		ret=transfer_gzfile_inl(asfd, NULL,
 			&rcvdbytes, &sentbytes, encpassword, enccompressed,
 			cntr, metadata);
 		*metalen=sentbytes;
@@ -54,7 +55,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	}
 	else
 	{
-		ret=transfer_gzfile_inl(asfd, sb, fname, bfd,
+		ret=transfer_gzfile_inl(asfd, bfd,
 			&rcvdbytes, &sentbytes,
 			encpassword, enccompressed, cntr, NULL);
 #ifndef HAVE_WIN32
@@ -164,7 +165,7 @@ static int restore_metadata(struct asfd *asfd, struct BFILE *bfd, struct sbuf *s
 	if(metadata)
 	{
 		
-		if(!set_extrameta(asfd, bfd, fname,
+		if(!set_extrameta(asfd, fname,
 			metadata, metalen, cntr))
 		{
 #ifndef HAVE_WIN32

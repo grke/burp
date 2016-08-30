@@ -10,6 +10,7 @@
 #include "../log.h"
 #include "../run_script.h"
 #include "cvss.h"
+#include "ca.h"
 
 static int generate_key_and_csr(struct asfd *asfd,
 	struct conf **confs, const char *csr_path)
@@ -124,7 +125,7 @@ end:
 }
 
 static enum asl_ret csr_client_func(struct asfd *asfd,
-        struct conf **confs, void *param)
+        struct conf **confs, __attribute__((unused)) void *param)
 {
 	if(strncmp_w(asfd->rbuf->buf, "csr ok:"))
 	{

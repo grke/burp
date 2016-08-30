@@ -170,8 +170,7 @@ end:
 }
 
 static int do_set_acl(struct asfd *asfd, const char *path,
-	const char *acltext, size_t alen,
-	int acltype, struct cntr *cntr)
+	const char *acltext, int acltype, struct cntr *cntr)
 {
 	acl_t acl;
 	int ret=-1;
@@ -204,16 +203,16 @@ end:
 }
 
 int set_acl(struct asfd *asfd, const char *path,
-	const char *acltext, size_t alen, char metacmd, struct cntr *cntr)
+	const char *acltext, char metacmd, struct cntr *cntr)
 {
 	switch(metacmd)
 	{
 		case META_ACCESS_ACL:
 			return do_set_acl(asfd, path,
-				acltext, alen, ACL_TYPE_ACCESS, cntr);
+				acltext, ACL_TYPE_ACCESS, cntr);
 		case META_DEFAULT_ACL:
 			return do_set_acl(asfd, path,
-				acltext, alen, ACL_TYPE_DEFAULT, cntr);
+				acltext, ACL_TYPE_DEFAULT, cntr);
 		default:
 			logp("unknown acl type: %c\n", metacmd);
 			logw(asfd, cntr, "unknown acl type: %c\n", metacmd);

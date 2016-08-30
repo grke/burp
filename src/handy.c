@@ -58,7 +58,7 @@ int do_quick_read(struct asfd *asfd, const char *datapth, struct cntr *cntr)
 }
 
 static int send_whole_file_gz(struct asfd *asfd,
-	const char *fname, const char *datapth, int quick_read,
+	const char *datapth, int quick_read,
 	uint64_t *bytes, struct cntr *cntr,
 	int compression, struct fzp *fzp)
 {
@@ -72,8 +72,6 @@ static int send_whole_file_gz(struct asfd *asfd,
 	uint8_t out[ZCHUNK];
 
 	struct iobuf wbuf;
-
-//logp("send_whole_file_gz: %s%s\n", fname, extrameta?" (meta)":"");
 
 	/* allocate deflate state */
 	strm.zalloc = Z_NULL;
@@ -543,7 +541,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 		goto end;
 	}
 
-	ret=transfer_gzfile_in(asfd, path, bfd, &rcvdbytes, &sentbytes, cntr);
+	ret=transfer_gzfile_in(asfd, bfd, &rcvdbytes, &sentbytes);
 	if(bfd->close(bfd, asfd))
 	{
 		logp("error closing %s in %s\n", path, __func__);
@@ -566,7 +564,7 @@ int send_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 	struct fzp *fzp=NULL;
 	uint64_t bytes=0;
 	if(!(fzp=fzp_open(path, "rb"))
-	  || send_whole_file_gz(asfd, path, "datapth", 0, &bytes,
+	  || send_whole_file_gz(asfd, "datapth", 0, &bytes,
 		cntr, 9 /*compression*/, fzp))
 	{
 		ret=-1;

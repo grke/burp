@@ -6,6 +6,7 @@
 #include "fzp.h"
 #include "iobuf.h"
 #include "log.h"
+#include "msg.h"
 
 int send_msg_fzp(struct fzp *fzp, enum cmd cmd, const char *buf, size_t s)
 {
@@ -67,8 +68,8 @@ static int do_inflate(struct asfd *asfd, z_stream *zstrm, struct BFILE *bfd,
 	return 0;
 }
 
-int transfer_gzfile_in(struct asfd *asfd, const char *path, struct BFILE *bfd,
-	uint64_t *rcvd, uint64_t *sent, struct cntr *cntr)
+int transfer_gzfile_in(struct asfd *asfd, struct BFILE *bfd,
+	uint64_t *rcvd, uint64_t *sent)
 {
 	int quit=0;
 	int ret=-1;

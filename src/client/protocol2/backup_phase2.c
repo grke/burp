@@ -12,6 +12,7 @@
 #include "../../protocol2/rabin/rabin.h"
 #include "../../slist.h"
 #include "rabin_read.h"
+#include "backup_phase2.h"
 
 #define END_SIGS                0x01
 #define END_BACKUP              0x02
@@ -161,7 +162,7 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 		just_opened=1;
 	}
 
-	switch(blks_generate(asfd, confs, sb, slist->blist, just_opened))
+	switch(blks_generate(sb, slist->blist, just_opened))
 	{
 		case 0: // All OK.
 			break;

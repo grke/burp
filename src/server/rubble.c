@@ -10,6 +10,7 @@
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase4.h"
 #include "sdirs.h"
+#include "rubble.h"
 
 static int incexc_matches(const char *fullrealwork, const char *incexc)
 {
@@ -43,8 +44,7 @@ end:
 	return ret;
 }
 
-static int working_delete(struct async *as, struct sdirs *sdirs,
-	struct conf **cconfs)
+static int working_delete(struct async *as, struct sdirs *sdirs)
 {
 	// Try to remove it and start again.
 	logp("deleting old working directory\n");
@@ -84,15 +84,14 @@ static int working_resume(struct async *as, struct sdirs *sdirs,
 		case 0:
 			logp("Includes/excludes changed since last backup.\n");
 			logp("Will delete instead of resuming.\n");
-			return working_delete(as, sdirs, cconfs);
+			return working_delete(as, sdirs);
 		case -1:
 		default:
 			return -1;
 	}
 }
 
-static int get_fullrealwork(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf **confs)
+static int get_fullrealwork(struct sdirs *sdirs)
 {
 	struct stat statp;
 
@@ -175,7 +174,7 @@ static int recover_working(struct async *as,
 
 	// The working directory has not finished being populated.
 	// Check what to do.
-	if(get_fullrealwork(as->asfd, sdirs, cconfs)) goto end;
+	if(get_fullrealwork(sdirs)) goto end;
 	if(!sdirs->rworking) goto end;
 
 	log_recovery_method(sdirs, recovery_method);
@@ -198,7 +197,7 @@ static int recover_working(struct async *as,
 
 	if(recovery_method==RECOVERY_METHOD_DELETE)
 	{
-		ret=working_delete(as, sdirs, cconfs);
+		ret=working_delete(as, sdirs);
 		goto end;
 	}
 

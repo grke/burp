@@ -9,6 +9,7 @@
 #include "../../../strlist.h"
 #include "../../sdirs.h"
 #include "../backup_phase4.h"
+#include "dindex.h"
 
 static int backup_in_progress(const char *fullpath)
 {
@@ -293,7 +294,7 @@ int delete_unused_data_files(struct sdirs *sdirs, int resume)
 		if(mkdir(cindex_tmp, 0777)
 		  || !(cindex_new=prepend_s(cindex_tmp, "cindex"))
 		  || merge_files_in_dir_no_fcount(cindex_new,
-			sdirs->cfiles, "n1", merge_dindexes))
+			sdirs->cfiles, merge_dindexes))
 				goto end;
 		if(!lstat(cindex_new, &statp))
 		{

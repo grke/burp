@@ -11,6 +11,7 @@
 #include "strlist.h"
 #include "server/timestamp.h"
 #include "client/glob_windows.h"
+#include "conffile.h"
 
 // This will strip off everything after the last quote. So, configs like this
 // should work:

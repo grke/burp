@@ -12,7 +12,6 @@
 #include "../../protocol2/rabin/rabin.h"
 #include "../../slist.h"
 #include "rabin_read.h"
-#include "backup_phase2.h"
 
 #define END_SIGS                0x01
 #define END_BACKUP              0x02

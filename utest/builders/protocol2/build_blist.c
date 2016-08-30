@@ -4,7 +4,6 @@
 #include "../../prng.h"
 #include "../../../src/hexmap.h"
 #include "../../../src/protocol2/blist.h"
-#include "../../builders/build.h"
 
 static void add_blk(struct blist *blist)
 {

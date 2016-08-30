@@ -9,7 +9,6 @@
 #include "../../log.h"
 #include "../../prepend.h"
 #include "../../strlist.h"
-#include "bedup.h"
 
 #include <uthash.h>
 
@@ -51,7 +50,7 @@ struct mystruct
 
 struct mystruct *myfiles=NULL;
 
-static struct mystruct *find_key(off_t st_size)
+struct mystruct *find_key(off_t st_size)
 {
 	struct mystruct *s;
 

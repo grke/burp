@@ -10,7 +10,6 @@
 #include "manio.h"
 #include "sdirs.h"
 #include "child.h"
-#include "backup_phase3.h"
 
 static const char *get_rmanifest_relative(struct sdirs *sdirs,
 	struct conf **confs)

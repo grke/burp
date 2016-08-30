@@ -9,7 +9,6 @@
 #include "../../src/handy.h"
 #include "../../src/pathcmp.h"
 #include "../../src/sbuf.h"
-#include "build.h"
 
 static char char_gen(void)
 {

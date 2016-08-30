@@ -6,7 +6,6 @@
 #include "../cmd.h"
 #include "../handy.h"
 #include "../log.h"
-#include "list.h"
 
 /* Note: The chars in this function are not the same as in the CMD_ set.
    These are for printing to the screen only. */
@@ -28,7 +27,7 @@ static char *encode_mode(mode_t mode, char *buf)
 	return cp;
 }
 
-static void ls_to_buf(char *lsbuf, struct sbuf *sb)
+void ls_to_buf(char *lsbuf, struct sbuf *sb)
 {
 	int n;
 	char *p;

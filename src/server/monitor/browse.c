@@ -9,7 +9,6 @@
 #include "../manio.h"
 #include "cache.h"
 #include "json_output.h"
-#include "browse.h"
 
 static int do_browse_manifest(
 	struct manio *manio, struct sbuf *sb, const char *browse)

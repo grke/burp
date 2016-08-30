@@ -9,7 +9,6 @@
 #include "../prepend.h"
 #include "../run_script.h"
 #include "cvss.h"
-#include "autoupgrade.h"
 
 static int receive_file(struct asfd *asfd, const char *autoupgrade_dir,
 	const char *file, struct cntr *cntr)

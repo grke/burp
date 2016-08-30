@@ -20,7 +20,6 @@
 #include "monitor/status_client_ncurses.h"
 #include "protocol2/restore.h"
 #include "restore.h"
-#include "main.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>

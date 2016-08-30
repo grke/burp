@@ -7,7 +7,6 @@
 #include "handy.h"
 #include "log.h"
 #include "strlist.h"
-#include "run_script.h"
 
 #ifndef HAVE_WIN32
 

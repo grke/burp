@@ -21,7 +21,7 @@ static void fzp_free(struct fzp **fzp)
 	free_v((void **)fzp);
 }
 
-static FILE *open_fp(const char *fname, const char *mode)
+FILE *open_fp(const char *fname, const char *mode)
 {
 	FILE *fp=NULL;
 	if(!(fp=fopen(fname, mode)))
@@ -29,7 +29,7 @@ static FILE *open_fp(const char *fname, const char *mode)
 	return fp;
 }
 
-static gzFile open_zp(const char *fname, const char *mode)
+gzFile open_zp(const char *fname, const char *mode)
 {
 	gzFile zp=NULL;
 

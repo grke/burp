@@ -11,7 +11,6 @@
 #include "../../sbuf.h"
 #include "../extrameta.h"
 #include "../restore.h"
-#include "restore.h"
 
 static int start_restore_file(struct asfd *asfd,
 	struct BFILE *bfd,

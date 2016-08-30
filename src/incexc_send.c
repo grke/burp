@@ -5,7 +5,6 @@
 #include "log.h"
 #include "prepend.h"
 #include "strlist.h"
-#include "incexc_send.h"
 
 static int send_incexc_string(struct asfd *asfd,
 	const char *field, const char *str)

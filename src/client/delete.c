@@ -2,7 +2,6 @@
 #include "../asfd.h"
 #include "../cmd.h"
 #include "../log.h"
-#include "delete.h"
 
 int do_delete_client(struct asfd *asfd, struct conf **confs)
 {

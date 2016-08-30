@@ -14,7 +14,6 @@
 #include "../../server/manio.h"
 #include "../../server/sdirs.h"
 #include "champ_chooser/champ_chooser.h"
-#include "backup_phase4.h"
 
 struct hooks
 {

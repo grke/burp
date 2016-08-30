@@ -10,7 +10,6 @@
 #include "protocol1/backup_phase4.h"
 #include "protocol2/backup_phase4.h"
 #include "sdirs.h"
-#include "rubble.h"
 
 static int incexc_matches(const char *fullrealwork, const char *incexc)
 {

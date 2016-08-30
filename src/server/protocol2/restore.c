@@ -15,7 +15,6 @@
 #include "../restore.h"
 #include "../sdirs.h"
 #include "champ_chooser/hash.h"
-#include "restore.h"
 
 static int send_data(struct asfd *asfd, struct blk *blk,
 	enum action act, struct sbuf *need_data, struct cntr *cntr)

@@ -12,7 +12,6 @@
 #include "../../protocol1/msg.h"
 #include "../extrameta.h"
 #include "../find.h"
-#include "backup_phase2.h"
 
 static int rs_loadsig_network_run(struct asfd *asfd,
 	rs_job_t *job, struct cntr *cntr)

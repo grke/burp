@@ -10,7 +10,6 @@
 #include "../iobuf.h"
 #include "../log.h"
 #include "autoupgrade.h"
-#include "extra_comms.h"
 
 #ifndef HAVE_WIN32
 #include <sys/utsname.h>

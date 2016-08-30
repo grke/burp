@@ -20,7 +20,6 @@
 #include "fdirs.h"
 #include "link.h"
 #include "zlibio.h"
-#include "backup_phase4.h"
 
 #include <librsync.h>
 

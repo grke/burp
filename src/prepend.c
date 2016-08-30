@@ -1,7 +1,6 @@
 #include "burp.h"
 #include "alloc.h"
 #include "log.h"
-#include "prepend.h"
 
 /* This may be given binary data, of which we need to already know the length */
 char *prepend_len(const char *prep, size_t plen, const char *fname,

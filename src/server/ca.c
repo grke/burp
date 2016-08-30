@@ -11,7 +11,6 @@
 #include "../log.h"
 #include "../run_script.h"
 #include "auth.h"
-#include "ca.h"
 
 static int setup_stuff_done=0;
 

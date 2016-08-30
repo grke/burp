@@ -3,7 +3,6 @@
 #include "conf.h"
 #include "log.h"
 #include "server/ca.h"
-#include "ssl.h"
 
 static const char *pass=NULL;
 

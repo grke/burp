@@ -4,7 +4,6 @@
 #include "../../../../src/fsops.h"
 #include "../../../../src/fzp.h"
 #include "../../../../src/protocol2/blk.h"
-#include "build_sparse_index.h"
 
 void build_sparse_index(const char *path, int manifests, int fingerprints)
 {

@@ -44,7 +44,6 @@
 #include "../strlist.h"
 #include "extrameta.h"
 #include "find.h"
-#include "backup_phase1.h"
 
 static enum cmd filesymbol=CMD_FILE;
 static enum cmd dirsymbol=CMD_DIRECTORY;

@@ -9,7 +9,6 @@
 #include "../../log.h"
 #include "cstat.h"
 #include "json_output.h"
-#include "status_server.h"
 
 static int parse_parent_data(struct asfd *asfd, struct cstat *clist)
 {

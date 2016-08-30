@@ -13,7 +13,6 @@
 #include "extra_comms.h"
 #include "monitor/status_server.h"
 #include "run_action.h"
-#include "child.h"
 
 static struct asfd *wasfd=NULL;
 

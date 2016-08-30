@@ -7,7 +7,6 @@
 #include "../prepend.h"
 #include "sdirs.h"
 #include "timestamp.h"
-#include "bu_get.h"
 
 static int get_link(const char *dir, const char *lnk, char real[], size_t r)
 {

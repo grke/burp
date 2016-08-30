@@ -1,8 +1,6 @@
 #ifndef _RESTORE_SERVER_H
 #define _RESTORE_SERVER_H
 
-#include "../regexp.h"
-
 struct bu;
 struct sbuf;
 struct sdirs;

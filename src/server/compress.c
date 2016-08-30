@@ -6,7 +6,6 @@
 #include "../fzp.h"
 #include "../log.h"
 #include "../prepend.h"
-#include "compress.h"
 
 char *comp_level(int compression)
 {

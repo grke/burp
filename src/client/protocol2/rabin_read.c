@@ -6,7 +6,6 @@
 #include "../../log.h"
 #include "../../sbuf.h"
 #include "../extrameta.h"
-#include "rabin_read.h"
 
 static char *meta_buffer=NULL;
 static size_t meta_buffer_len=0;

@@ -7,7 +7,6 @@
 #include "../../iobuf.h"
 #include "../../log.h"
 #include "../../protocol2/blk.h"
-#include "bsigs.h"
 
 static const char *path=NULL;
 

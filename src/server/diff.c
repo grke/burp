@@ -12,7 +12,6 @@
 #include "bu_get.h"
 #include "child.h"
 #include "manio.h"
-#include "diff.h"
 
 static char *get_manifest_path(const char *fullpath, enum protocol protocol)
 {

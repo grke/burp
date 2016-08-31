@@ -7,8 +7,12 @@
 #include "cstat.h"
 #include "fsops.h"
 #include "handy.h"
+#include "iobuf.h"
 #include "log.h"
 
+#include "client/monitor/sel.h"
+#include "client/monitor/json_input.h"
+#include "server/bu_get.h"
 #include "server/monitor/json_output.h"
 
 #include <limits.h>
@@ -258,6 +262,12 @@ static void incr_deleted_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(!cntr) return;
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->deleted+=val;
+}
+
+static void set_phase1_val(struct cntr *cntr, char ch, uint64_t val)
+{
+	if(!cntr) return;
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->phase1=val;
 }
 
 static void incr_phase1_val(struct cntr *cntr, char ch, uint64_t val)
@@ -808,37 +818,115 @@ end:
 }
 
 #ifndef HAVE_WIN32
-int cntr_send(void)
+int cntr_send_bu(struct asfd *asfd, struct bu *bu, struct conf **confs)
 {
-/*
-	size_t l;
-	char buf[4096]="";
-	l=cntr_to_str(get_cntr(confs[OPT_CNTR]), STATUS_RUNNING, " ");
-	if(async_write_strn(CMD_GEN, buf, l))
+	int ret=-1;
+	uint16_t flags;
+	struct cstat *clist=NULL;
+	struct cstat *cstat=NULL;
+
+        if(!get_int(confs[OPT_SEND_CLIENT_CNTR]))
+		return 0;
+
+	flags=bu->flags;
+
+	// Want to setup a cstat and a bu so that we can piggy-back on the
+	// status monitor cntr json code.
+
+	if(!(cstat=cstat_alloc())
+	  || cstat_init(cstat,
+		get_string(confs[OPT_CNAME]), NULL/*clientconfdir*/))
+			goto end;
+	cstat->cntr=get_cntr(confs);
+
+	// Hacky provocation to get the json stuff to send counters in the
+	// case where we are actually doing a restore.
+	bu->flags|=BU_WORKING;
+	cstat->bu=bu;
+
+	clist=cstat;
+
+	ret=json_send(asfd,
+		clist,
+		cstat,
+		bu,
+		NULL /* logfile */,
+		NULL /* browse */,
+		0 /* use_cache */);
+end:
+	cstat->bu=NULL; // 'bu' was not ours to mess with.
+	cstat->cntr=NULL; // 'cntr' was not ours to mess with.
+	bu->flags=flags; // Set flags back to what the were before.
+	cstat_free(&cstat);
+	return ret;
+}
+
+int cntr_send_sdirs(struct asfd *asfd,
+	struct sdirs *sdirs, struct conf **confs)
+{
+	int ret=-1;
+	struct bu *bu=NULL;
+	struct bu *bu_list=NULL;
+
+	// FIX THIS:
+	// It would be better just to set up the correct 'bu' entry instead
+	// of loading everything and then looking through the list.
+	if(bu_get_list_with_working(sdirs, &bu_list, NULL))
+		goto end;
+	for(bu=bu_list; bu; bu=bu->next)
+		if((bu->flags & BU_WORKING)
+		  || (bu->flags & BU_FINISHING))
+			break;
+	if(!bu)
 	{
-		logp("Error when sending counters to client.\n");
-		return -1;
+		logp("could not find working or finishing backup in %s\n",
+			__func__);
+		goto end;
 	}
-*/
-	return 0;
+	ret=cntr_send_bu(asfd, bu, confs);
+end:
+	bu_list_free(&bu_list);
+	return ret;
 }
 #endif
 
-static enum asl_ret cntr_recv_func(__attribute__ ((unused)) struct asfd *asfd,
-	__attribute__ ((unused)) struct conf **confs,
-	__attribute__ ((unused)) void *param)
+static enum asl_ret cntr_recv_func(struct asfd *asfd,
+	struct conf **confs,
+	void *param)
 {
-/*
-	if(str_to_cntr(asfd->rbuf->buf, NULL, NULL, NULL, NULL,
-		conf->p1cntr, get_cntr(confs[OPT_CNTR]), NULL))
-			return ASL_END_ERROR;
-*/
-	return ASL_END_OK;
+	struct sel *sel=param;
+	switch(json_input(asfd, sel))
+	{
+		case 0: return ASL_CONTINUE;
+		case 1: return ASL_END_OK;
+		default: return ASL_END_ERROR;
+	}
 }
 
 int cntr_recv(struct asfd *asfd, struct conf **confs)
 {
-	return asfd->simple_loop(asfd, confs, NULL, __func__, cntr_recv_func);
+	int ret=-1;
+	struct sel *sel=NULL;
+	struct cntr_ent *e;
+	struct cntr *cntr=get_cntr(confs);
+
+	if(!(sel=sel_alloc()))
+		goto end;
+	if(!get_int(confs[OPT_SEND_CLIENT_CNTR]))
+		goto ok;
+	if(json_input_init())
+		goto end;
+	if(asfd->simple_loop(asfd, confs, sel, __func__, cntr_recv_func)
+	  || !sel->clist || !sel->clist->cntr)
+		goto end;
+	for(e=sel->clist->cntr->list; e; e=e->next)
+		set_phase1_val(cntr, e->cmd, e->phase1);
+ok:
+	ret=0;
+end:
+	json_input_free();
+	sel_free(&sel);
+	return ret;
 }
 
 const char *cntr_status_to_str(struct cntr *cntr)

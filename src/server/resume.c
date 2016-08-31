@@ -362,9 +362,6 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 
 	// Now should have all file pointers in the right places to resume.
 
-	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
-	  && cntr_send()) goto error;
-
 	goto end;
 error:
 	man_off_t_free(&p1pos);

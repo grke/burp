@@ -305,7 +305,7 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 	}
 
 	logp("Phase 2 begin (send backup data)\n");
-	logfatal("\n");
+	logfmt("\n");
 
 	if(!(slist=slist_alloc())
 	  || !(wbuf=iobuf_alloc())
@@ -320,10 +320,9 @@ int backup_phase2_client_protocol2(struct asfd *asfd,
 		  || asfd_read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
-	else if(get_int(confs[OPT_SEND_CLIENT_CNTR]))
+	else
 	{
-		// On resume, the server might update the client with the
-		// counters.
+		// On resume, the server might update the client with cntr.
 		if(cntr_recv(asfd, confs))
 			goto end;
         }

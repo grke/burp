@@ -1316,7 +1316,6 @@ int status_client_ncurses_main_loop(struct async *as,
 {
 	int ret=-1;
 	char *client=NULL;
-	int count=0;
 	struct asfd *asfd=NULL;
 	struct asfd *sfd=NULL; // Server asfd.
 	int reqdone=0;

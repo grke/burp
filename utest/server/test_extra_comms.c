@@ -141,10 +141,12 @@ static void common_confs(struct conf **cconfs, const char *version,
 	set_protocol(cconfs, protocol);
 }
 
-static const char *get_features(enum protocol protocol, int srestore)
+static const char *get_features(enum protocol protocol, int srestore,
+	const char *version)
 {
 	char proto[32]="";
 	char rshash[32]="";
+	int old_version=0;
 	static char features[256]="";
 
 #ifndef RS_DEFAULT_STRONG_LEN
@@ -156,7 +158,10 @@ static const char *get_features(enum protocol protocol, int srestore)
 		snprintf(proto, sizeof(proto), "forceproto=%d:",
 			(int)protocol);
 
-	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:%smsg:%s%s", srestore?"srestore:":"", proto, rshash);
+	if(version && !strcmp(version, "1.4.40"))
+		old_version=1;
+
+	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:%s%smsg:%s%s", srestore?"srestore:":"", old_version?"":"counters_json:", proto, rshash);
 	return features;
 }
 
@@ -168,7 +173,7 @@ static void setup_feature_write_problem(struct asfd *asfd,
 	enum protocol protocol=PROTO_AUTO;
 	common_confs(cconfs, VERSION, protocol);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "extra_comms_begin");
-	features=get_features(protocol, /*srestore*/0);
+	features=get_features(protocol, /*srestore*/0, NULL/*version*/);
 	asfd_assert_write(asfd, &w, -1, CMD_GEN, features);
 }
 
@@ -179,7 +184,7 @@ static void setup_send_features_proto_begin(struct asfd *asfd,
 	const char *features=NULL;
 	common_confs(cconfs, version, protocol);
 	asfd_mock_read(asfd, r, 0, CMD_GEN, "extra_comms_begin");
-	features=get_features(protocol, srestore);
+	features=get_features(protocol, srestore, version);
 	asfd_assert_write(asfd, w, 0, CMD_GEN, features);
 }
 

@@ -754,35 +754,35 @@ static char *get_config_path(void)
 
 static int usage(void)
 {
-	logfatal("\nUsage: %s [options]\n", prog);
-	logfatal("\n");
-	logfatal(" Options:\n");
-	logfatal("  -c <path>                Path to config file (default: %s).\n", get_config_path());
-	logfatal("  -g <list of group names> Only run on the directories of clients that\n");
-	logfatal("                           are in one of the groups specified.\n");
-	logfatal("                           The list is comma-separated. To put a client in a\n");
-	logfatal("                           group, use the 'dedup_group' option in the client\n");
-	logfatal("                           configuration file on the server.\n");
-	logfatal("  -h|-?                    Print this text and exit.\n");
-	logfatal("  -d                       Delete any duplicate files found.\n");
-	logfatal("                           (non-burp mode only)\n");
-	logfatal("  -l                       Hard link any duplicate files found.\n");
-	logfatal("  -m <number>              Maximum number of hard links to a single file.\n");
-	logfatal("                           (non-burp mode only - in burp mode, use the\n");
-	logfatal("                           max_hardlinks option in the configuration file)\n");
-	logfatal("                           The default is %d. On ext3, the maximum number\n", DEF_MAX_LINKS);
-	logfatal("                           of links possible is 32000, but space is needed\n");
-	logfatal("                           for the normal operation of burp.\n");
-	logfatal("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
-	logfatal("  -v                       Print duplicate paths.\n");
-	logfatal("  -V                       Print version and exit.\n");
-	logfatal("\n");
-	logfatal("By default, %s will read %s and deduplicate client storage\n", prog, get_config_path());
-	logfatal("directories using special knowledge of the structure.\n");
-	logfatal("\n");
-	logfatal("With '-n', this knowledge is turned off and you have to specify the directories\n");
-	logfatal("to deduplicate on the command line. Running with '-n' is therefore dangerous\n");
-	logfatal("if you are deduplicating burp storage directories.\n\n");
+	logfmt("\nUsage: %s [options]\n", prog);
+	logfmt("\n");
+	logfmt(" Options:\n");
+	logfmt("  -c <path>                Path to config file (default: %s).\n", get_config_path());
+	logfmt("  -g <list of group names> Only run on the directories of clients that\n");
+	logfmt("                           are in one of the groups specified.\n");
+	logfmt("                           The list is comma-separated. To put a client in a\n");
+	logfmt("                           group, use the 'dedup_group' option in the client\n");
+	logfmt("                           configuration file on the server.\n");
+	logfmt("  -h|-?                    Print this text and exit.\n");
+	logfmt("  -d                       Delete any duplicate files found.\n");
+	logfmt("                           (non-burp mode only)\n");
+	logfmt("  -l                       Hard link any duplicate files found.\n");
+	logfmt("  -m <number>              Maximum number of hard links to a single file.\n");
+	logfmt("                           (non-burp mode only - in burp mode, use the\n");
+	logfmt("                           max_hardlinks option in the configuration file)\n");
+	logfmt("                           The default is %d. On ext3, the maximum number\n", DEF_MAX_LINKS);
+	logfmt("                           of links possible is 32000, but space is needed\n");
+	logfmt("                           for the normal operation of burp.\n");
+	logfmt("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
+	logfmt("  -v                       Print duplicate paths.\n");
+	logfmt("  -V                       Print version and exit.\n");
+	logfmt("\n");
+	logfmt("By default, %s will read %s and deduplicate client storage\n", prog, get_config_path());
+	logfmt("directories using special knowledge of the structure.\n");
+	logfmt("\n");
+	logfmt("With '-n', this knowledge is turned off and you have to specify the directories\n");
+	logfmt("to deduplicate on the command line. Running with '-n' is therefore dangerous\n");
+	logfmt("if you are deduplicating burp storage directories.\n\n");
 	return 1;
 }
 
@@ -825,7 +825,7 @@ int run_bedup(int argc, char *argv[])
 				nonburp=1;
 				break;
 			case 'V':
-				logfatal("%s-%s\n", prog, VERSION);
+				logfmt("%s-%s\n", prog, VERSION);
 				return 0;
 			case 'v':
 				verbose=1;

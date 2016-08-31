@@ -906,8 +906,13 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 		sdirs->cfiles,
 		get_int(confs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto end;
-	if(resume && !(p1pos=do_resume(sdirs, dpth, confs)))
-                goto end;
+	if(resume)
+	{
+		if(!(p1pos=do_resume(sdirs, dpth, confs)))
+                	goto end;
+		if(cntr_send_sdirs(asfd, sdirs, confs))
+			goto end;
+	}
 
 	if(!(manios=manios_open_phase2(sdirs, p1pos, PROTO_2))
 	  || !(slist=slist_alloc())

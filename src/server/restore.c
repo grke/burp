@@ -607,8 +607,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		regex, srestore, cconfs))
 			goto end;
 
-	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
-	  && cntr_send())
+	if(cntr_send_bu(asfd, bu, cconfs))
 		goto end;
 
 	// Now, do the actual restore.

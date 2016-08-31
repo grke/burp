@@ -402,10 +402,11 @@ static int do_backup_phase2_client(struct asfd *asfd,
 		  || asfd_read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
-	else if(get_int(confs[OPT_SEND_CLIENT_CNTR]))
+	else
 	{
 		// On resume, the server might update the client with cntr.
-		if(cntr_recv(asfd, confs)) goto end;
+		if(cntr_recv(asfd, confs))
+			goto end;
 	}
 
 	while(1)
@@ -443,7 +444,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	if(confs) cntr=get_cntr(confs);
 
 	logp("Phase 2 begin (send backup data)\n");
-	logfatal("\n");
+	logfmt("\n");
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 

@@ -42,6 +42,9 @@ scp $ssh_opts "$tarfile" "$host:" \
 	|| fail "scp $tarfile to ubuntu machine"
 ssh $ssh_opts "$host" "tar -xjvf $tarfile" \
 	|| fail "unpacking $tarfile"
+# netbsd seems to need to run autoreconf first
+ssh $ssh_opts "$host" \
+	"cd $directory && autoreconf -vif" || fail "autoreconf -vif"
 ssh $ssh_opts "$host" \
 	"cd $directory && ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var && make check" \
 		|| fail "make check"

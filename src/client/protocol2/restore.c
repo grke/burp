@@ -126,7 +126,11 @@ static int restore_metadata(
 			return -1;
 		if(metadata)
 		{
-			if(set_extrameta(asfd, fname,
+			if(set_extrameta(asfd,
+#ifdef HAVE_WIN32
+				NULL,
+#endif
+				fname,
 				metadata, metalen, cntr))
 			{
 				free_w(&metadata);

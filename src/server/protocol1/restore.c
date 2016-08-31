@@ -96,7 +96,11 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		// sort it out.
 		if(sbuf_is_encrypted(sb))
 		{
-			ret=send_whole_filel(asfd, sb->protocol1->datapth.buf,
+			ret=send_whole_filel(asfd,
+#ifdef HAVE_WIN32
+				sb->path.cmd
+#endif
+				sb->protocol1->datapth.buf,
 				1, &bytes, cntr, &bfd, NULL, 0);
 		}
 		// It might have been stored uncompressed. Gzip it during
@@ -113,7 +117,11 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 		{
 			// If we did not do some patches, the resulting
 			// file might already be gzipped. Send it as it is.
-			ret=send_whole_filel(asfd, sb->protocol1->datapth.buf,
+			ret=send_whole_filel(asfd,
+#ifdef HAVE_WIN32
+				sb->path.cmd
+#endif
+				sb->protocol1->datapth.buf,
 				1, &bytes, cntr, &bfd, NULL, 0);
 		}
 	}

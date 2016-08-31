@@ -288,6 +288,8 @@ int get_last_good_entry(struct manio *manio, struct iobuf *result,
 
 		if(cntr)
 		{
+			// FIX THIS: cannot distinguish between new and
+			// changed files.
 			cntr_add_changed(cntr, sb->path.cmd);
 			if(sb->endfile.buf)
 			{

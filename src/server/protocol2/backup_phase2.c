@@ -269,8 +269,8 @@ static int add_to_sig_list(struct slist *slist, struct iobuf *rbuf)
 	blist_add_blk(slist->blist, blk);
 
 	protocol2=slist->add_sigs_here->protocol2;
-        if(!protocol2->bstart) protocol2->bstart=blk;
-        if(!protocol2->bsighead) protocol2->bsighead=blk;
+	if(!protocol2->bstart) protocol2->bstart=blk;
+	if(!protocol2->bsighead) protocol2->bsighead=blk;
 
 	if(blk_set_from_iobuf_sig(blk, rbuf)) return -1;
 
@@ -481,8 +481,8 @@ static void blist_adjust_head(struct blist *blist, struct sbuf *sb)
 }
 
 static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
-        struct asfd *chfd, struct manios *manios,
-        struct slist *slist, int end_flags)
+	struct asfd *chfd, struct manios *manios,
+	struct slist *slist, int end_flags)
 {
 	int ret=-1;
 	struct blk *blk;
@@ -909,14 +909,14 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 	if(resume)
 	{
 		if(!(p1pos=do_resume(sdirs, dpth, confs)))
-                	goto end;
+			goto end;
 		if(cntr_send_sdirs(asfd, sdirs, confs))
 			goto end;
 	}
 
 	if(!(manios=manios_open_phase2(sdirs, p1pos, PROTO_2))
 	  || !(slist=slist_alloc())
-          || !(csb=sbuf_alloc(PROTO_2)))
+	  || !(csb=sbuf_alloc(PROTO_2)))
 		goto end;
 
 	iobuf_free_content(asfd->rbuf);

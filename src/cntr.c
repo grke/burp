@@ -240,6 +240,30 @@ static void set_count_val(struct cntr *cntr, char ch, uint64_t val)
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->count=val;
 }
 
+static void set_changed_val(struct cntr *cntr, char ch, uint64_t val)
+{
+	if(!cntr) return;
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->changed=val;
+}
+
+static void set_same_val(struct cntr *cntr, char ch, uint64_t val)
+{
+	if(!cntr) return;
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->same=val;
+}
+
+static void set_deleted_val(struct cntr *cntr, char ch, uint64_t val)
+{
+	if(!cntr) return;
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->deleted=val;
+}
+
+static void set_phase1_val(struct cntr *cntr, char ch, uint64_t val)
+{
+	if(!cntr) return;
+	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->phase1=val;
+}
+
 static void incr_count_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(!cntr) return;
@@ -262,12 +286,6 @@ static void incr_deleted_val(struct cntr *cntr, char ch, uint64_t val)
 {
 	if(!cntr) return;
 	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->deleted+=val;
-}
-
-static void set_phase1_val(struct cntr *cntr, char ch, uint64_t val)
-{
-	if(!cntr) return;
-	if(cntr->ent[(uint8_t)ch]) cntr->ent[(uint8_t)ch]->phase1=val;
 }
 
 static void incr_phase1_val(struct cntr *cntr, char ch, uint64_t val)
@@ -894,7 +912,7 @@ static enum asl_ret cntr_recv_func(struct asfd *asfd,
 	struct conf **confs,
 	void *param)
 {
-	struct sel *sel=param;
+	struct sel *sel=(struct sel *)param;
 	switch(json_input(asfd, sel))
 	{
 		case 0: return ASL_CONTINUE;
@@ -920,7 +938,13 @@ int cntr_recv(struct asfd *asfd, struct conf **confs)
 	  || !sel->clist || !sel->clist->cntr)
 		goto end;
 	for(e=sel->clist->cntr->list; e; e=e->next)
+	{
+		set_count_val(cntr, e->cmd, e->count);
+		set_changed_val(cntr, e->cmd, e->changed);
+		set_same_val(cntr, e->cmd, e->same);
+		set_deleted_val(cntr, e->cmd, e->deleted);
 		set_phase1_val(cntr, e->cmd, e->phase1);
+	}
 ok:
 	ret=0;
 end:

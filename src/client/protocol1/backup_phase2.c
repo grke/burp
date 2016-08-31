@@ -155,7 +155,11 @@ static int send_whole_file_w(struct asfd *asfd,
 		return send_whole_file_gzl(asfd, datapth, quick_read, bytes,
 		  encpassword, cntr, compression, bfd, extrameta, elen);
 	else
-		return send_whole_filel(asfd, datapth, quick_read, bytes,
+		return send_whole_filel(asfd,
+#ifdef HAVE_WIN32
+		  sb->path.cmd,
+#endif
+		  datapth, quick_read, bytes,
 		  cntr, bfd, extrameta, elen);
 }
 
@@ -256,7 +260,11 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 #endif
 	  )
 	{
-		if(get_extrameta(asfd, sb->path.buf,
+		if(get_extrameta(asfd,
+#ifdef HAVE_WIN32
+			bfd,
+#endif
+			sb->path.buf,
 			S_ISDIR(sb->statp.st_mode),
 			&extrameta, &elen, cntr))
 		{

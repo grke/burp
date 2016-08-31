@@ -111,7 +111,7 @@ static int input_integer(__attribute__ ((unused)) void *ctx, long long val)
 		}
 	}
 error:
-	logp("Unexpected integer: %s %llu\n", lastkey, val);
+	logp("Unexpected integer: %s %"PRIu64"\n", lastkey, (uint64_t)val);
         return 0;
 }
 

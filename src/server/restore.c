@@ -562,6 +562,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	char *logpathz=NULL;
 	enum protocol protocol;
 	enum cntr_status cntr_status;
+	static int manifest_count=0;
 
 	protocol=get_protocol(cconfs);
 
@@ -607,9 +608,17 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		regex, srestore, cconfs))
 			goto end;
 
-	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
-	  && cntr_send())
-		goto end;
+	if(!manifest_count)
+	{
+		// FIX THIS: Only send the counters once, otherwise the
+		// client will break on '-b a' because it does not expect
+		// multiple sets of counters to turn up.
+		// This means that the client side 'expected' counter will be
+		// confusing in that case. Live with it for now.
+		// However, the server side log will be OK.
+		if(cntr_send_bu(asfd, bu, cconfs))
+			goto end;
+	}
 
 	// Now, do the actual restore.
 	ret=actual_restore(asfd, bu, manifest,
@@ -622,6 +631,7 @@ end:
 	free_w(&logpathz);
 	if(protocol==PROTO_2)
 		blks_generate_free();
+	manifest_count++;
 	return ret;
 }
 

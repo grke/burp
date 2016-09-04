@@ -288,6 +288,8 @@ int get_last_good_entry(struct manio *manio, struct iobuf *result,
 
 		if(cntr)
 		{
+			// FIX THIS: cannot distinguish between new and
+			// changed files.
 			cntr_add_changed(cntr, sb->path.cmd);
 			if(sb->endfile.buf)
 			{
@@ -361,9 +363,6 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	}
 
 	// Now should have all file pointers in the right places to resume.
-
-	if(get_int(cconfs[OPT_SEND_CLIENT_CNTR])
-	  && cntr_send()) goto error;
 
 	goto end;
 error:

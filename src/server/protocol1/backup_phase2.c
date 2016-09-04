@@ -822,8 +822,13 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			goto error;
 	}
 
-	if(resume && !(p1pos=do_resume(sdirs, dpth, cconfs)))
-		goto error;
+	if(resume)
+	{
+		if(!(p1pos=do_resume(sdirs, dpth, cconfs)))
+			goto error;
+		if(cntr_send_sdirs(asfd, sdirs, cconfs))
+			goto error;
+	}
 
 	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", PROTO_1))
 	  || (resume && manio_seek(p1manio, p1pos)))

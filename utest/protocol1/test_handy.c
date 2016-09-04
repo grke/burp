@@ -36,6 +36,9 @@ START_TEST(test_send_whole_filel)
 	uint64_t bytes=0;
 	send_whole_filel(
 		NULL, // asfd
+#ifdef HAVE_WIN32
+		CMD_FILE,
+#endif
 		NULL, // datapth
 		0, // quick_read
 		&bytes,

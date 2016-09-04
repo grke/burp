@@ -27,7 +27,11 @@ static int rabin_open_file_extrameta(struct sbuf *sb, struct asfd *asfd,
 {
 	// Load all of the metadata into a buffer.
 	rabin_close_file_extrameta(sb);
-	if(get_extrameta(asfd, sb->path.buf, S_ISDIR(sb->statp.st_mode),
+	if(get_extrameta(asfd,
+#ifdef HAVE_WIN32
+		NULL,
+#endif
+		sb->path.buf, S_ISDIR(sb->statp.st_mode),
 		&meta_buffer, &meta_buffer_len, cntr))
 			return -1;
 	if(!meta_buffer)

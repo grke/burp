@@ -7,6 +7,8 @@
 #include "burp.h"
 #include "cmd.h"
 #include "action.h"
+#include "bu.h"
+#include "server/sdirs.h"
 
 #define CNTR_ENT_SIZE	256
 
@@ -107,7 +109,10 @@ extern void cntr_add_changed_val(struct cntr *c,
 
 #ifndef HAVE_WIN32
 extern size_t cntr_to_str(struct cntr *cntr, const char *path);
-extern int cntr_send(void);
+extern int cntr_send_bu(struct asfd *asfd,
+	struct bu *bu, struct conf **confs);
+extern int cntr_send_sdirs(struct asfd *asfd,
+	struct sdirs *sdirs, struct conf **confs);
 #endif
 
 extern int str_to_cntr(const char *str, struct cstat *cstat, char **path);

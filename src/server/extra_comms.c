@@ -43,7 +43,19 @@ static char *get_restorepath(struct conf **cconfs)
 	return restorepath;
 }
 
-static int send_features(struct asfd *asfd, struct conf **cconfs)
+struct vers
+{
+	long min;
+	long cli;
+	long ser;
+	long feat_list;
+	long directory_tree;
+	long burp2;
+	long counters_json;
+};
+
+static int send_features(struct asfd *asfd, struct conf **cconfs,
+	struct vers *vers)
 {
 	int ret=-1;
 	char *feat=NULL;
@@ -81,11 +93,12 @@ static int send_features(struct asfd *asfd, struct conf **cconfs)
 	  && append_to_feat(&feat, "sincexc:"))
 		goto end;
 
-	/* Clients can be sent cntrs on resume/verify/restore. */
-/*
-	if(append_to_feat(&feat, "counters_json:"))
-		goto end;
-*/
+	if(vers->cli>=vers->counters_json)
+	{
+		/* Clients can be sent cntrs on resume/verify/restore. */
+		if(append_to_feat(&feat, "counters_json:"))
+			goto end;
+	}
 
 	// We support CMD_MESSAGE.
 	if(append_to_feat(&feat, "msg:"))
@@ -128,16 +141,6 @@ end:
 	free_w(&restorepath);
 	return ret;
 }
-
-struct vers
-{
-	long min;
-	long cli;
-	long ser;
-	long feat_list;
-	long directory_tree;
-	long burp2;
-};
 
 static int extra_comms_read(struct async *as,
 	struct vers *vers, int *srestore,
@@ -339,7 +342,8 @@ static int vers_init(struct vers *vers, struct conf **cconfs)
 	  || (vers->ser=version_to_long(VERSION))<0
 	  || (vers->feat_list=version_to_long("1.3.0"))<0
 	  || (vers->directory_tree=version_to_long("1.3.6"))<0
-	  || (vers->burp2=version_to_long("2.0.0"))<0);
+	  || (vers->burp2=version_to_long("2.0.0"))<0
+	  || (vers->counters_json=version_to_long("2.0.46"))<0);
 }
 
 int extra_comms(struct async *as,
@@ -384,7 +388,7 @@ int extra_comms(struct async *as,
 	}
 	else
 	{
-		if(send_features(asfd, cconfs))
+		if(send_features(asfd, cconfs, &vers))
 			goto error;
 	}
 

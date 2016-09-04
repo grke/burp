@@ -73,7 +73,12 @@ end:
 	return ret;
 }
 
-static int make_link(const char *fname, const char *lnk,
+static int make_link(
+#ifdef HAVE_WIN32
+	struct asfd *asfd,
+	struct cntr *cntr,
+#endif
+	const char *fname, const char *lnk,
 	enum cmd cmd, const char *restore_prefix)
 {
 	int ret=-1;
@@ -325,7 +330,12 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 				"build path failed: %s", fname);
 			goto end;
 		}
-		else if(make_link(fname, sb->link.buf,
+		else if(make_link(
+#ifdef HAVE_WIN32
+			asfd,
+			cntr,
+#endif
+			fname, sb->link.buf,
 			sb->link.cmd, restore_prefix))
 		{
 			ret=warn_and_interrupt(asfd, sb, cntr, protocol,
@@ -548,12 +558,12 @@ int do_restore_client(struct asfd *asfd,
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();
 #endif
 
-	if(!(style=get_restore_style(asfd, confs)))
+	logfmt("\n");
+
+	if(cntr_recv(asfd, confs))
 		goto error;
 
-	logfatal("\n");
-
-	if(get_int(confs[OPT_SEND_CLIENT_CNTR]) && cntr_recv(asfd, confs))
+	if(!(style=get_restore_style(asfd, confs)))
 		goto error;
 
 	if(!(sb=sbuf_alloc(protocol))
@@ -658,7 +668,7 @@ int do_restore_client(struct asfd *asfd,
 			case CMD_MESSAGE:
 			case CMD_WARNING:
 				log_recvd(&sb->path, cntr, 1);
-				logfatal("\n");
+				logfmt("\n");
 				continue;
 			default:
 				break;

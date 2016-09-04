@@ -45,7 +45,11 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 
 	if(metadata)
 	{
-		ret=transfer_gzfile_inl(asfd, NULL,
+		ret=transfer_gzfile_inl(asfd,
+#ifdef HAVE_WIN32
+			sb,
+#endif
+			NULL,
 			&rcvdbytes, &sentbytes, encpassword, enccompressed,
 			cntr, metadata);
 		*metalen=sentbytes;
@@ -55,7 +59,11 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	}
 	else
 	{
-		ret=transfer_gzfile_inl(asfd, bfd,
+		ret=transfer_gzfile_inl(asfd,
+#ifdef HAVE_WIN32
+			sb,
+#endif
+			bfd,
 			&rcvdbytes, &sentbytes,
 			encpassword, enccompressed, cntr, NULL);
 #ifndef HAVE_WIN32
@@ -133,7 +141,8 @@ end:
 	return ret;
 }
 
-static int restore_metadata(struct asfd *asfd, struct BFILE *bfd, struct sbuf *sb,
+static int restore_metadata(struct asfd *asfd,
+	struct BFILE *bfd, struct sbuf *sb,
 	const char *fname, enum action act,
 	int vss_restore, struct cntr *cntr, const char *encryption_password)
 {
@@ -165,7 +174,11 @@ static int restore_metadata(struct asfd *asfd, struct BFILE *bfd, struct sbuf *s
 	if(metadata)
 	{
 		
-		if(!set_extrameta(asfd, fname,
+		if(!set_extrameta(asfd,
+#ifdef HAVE_WIN32
+			bfd,
+#endif
+			fname,
 			metadata, metalen, cntr))
 		{
 #ifndef HAVE_WIN32

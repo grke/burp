@@ -101,6 +101,9 @@ static void test_extrameta(struct extrametadata x)
 
 	fail_unless(!set_extrameta(
 		NULL, // asfd
+#ifdef HAVE_WIN32
+		NULL, // bfd
+#endif
 		path,
 		expected,
 		strlen(expected),
@@ -108,6 +111,9 @@ static void test_extrameta(struct extrametadata x)
 	));
 	fail_unless(!get_extrameta(
 		NULL, // asfd
+#ifdef HAVE_WIN32
+		NULL, // bfd
+#endif
 		path,
 		x.do_dir,
 		&retrieved,

@@ -36,16 +36,6 @@ CLIENT_OBJS = \
 	$(OBJDIR)/berrno.o \
 	$(OBJDIR)/bfile.o \
 	$(OBJDIR)/bu.o \
-	$(OBJDIR)/protocol1/handy.o \
-	$(OBJDIR)/protocol1/msg.o \
-	$(OBJDIR)/protocol1/rs_buf.o \
-	$(OBJDIR)/protocol1/sbuf_protocol1.o \
-	$(OBJDIR)/protocol2/blist.o \
-	$(OBJDIR)/protocol2/blk.o \
-	$(OBJDIR)/protocol2/rabin/rabin.o \
-	$(OBJDIR)/protocol2/rabin/rconf.o \
-	$(OBJDIR)/protocol2/rabin/win.o \
-	$(OBJDIR)/protocol2/sbuf_protocol2.o \
 	$(OBJDIR)/client/acl.o \
 	$(OBJDIR)/client/auth.o \
 	$(OBJDIR)/client/autoupgrade.o \
@@ -66,12 +56,16 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/list.o \
 	$(OBJDIR)/client/main.o \
 	$(OBJDIR)/client/monitor.o \
+	$(OBJDIR)/client/monitor/lline.o \
+	$(OBJDIR)/client/monitor/sel.o \
+	$(OBJDIR)/client/monitor/json_input.o \
 	$(OBJDIR)/client/restore.o \
 	$(OBJDIR)/client/xattr.o \
 	$(OBJDIR)/cmd.o \
 	$(OBJDIR)/cntr.o \
 	$(OBJDIR)/conf.o \
 	$(OBJDIR)/conffile.o \
+	$(OBJDIR)/cstat.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/fsops.o \
 	$(OBJDIR)/fzp.o \
@@ -88,6 +82,16 @@ CLIENT_OBJS = \
 	$(OBJDIR)/pathcmp.o \
 	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
+	$(OBJDIR)/protocol1/handy.o \
+	$(OBJDIR)/protocol1/msg.o \
+	$(OBJDIR)/protocol1/rs_buf.o \
+	$(OBJDIR)/protocol1/sbuf_protocol1.o \
+	$(OBJDIR)/protocol2/blist.o \
+	$(OBJDIR)/protocol2/blk.o \
+	$(OBJDIR)/protocol2/rabin/rabin.o \
+	$(OBJDIR)/protocol2/rabin/rconf.o \
+	$(OBJDIR)/protocol2/rabin/win.o \
+	$(OBJDIR)/protocol2/sbuf_protocol2.o \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/run_script.o \
 	$(OBJDIR)/sbuf.o \

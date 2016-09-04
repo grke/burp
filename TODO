@@ -12,8 +12,6 @@ roughly in order of most important to least.
 
 * Make the status monitor work.
 
-* Make the status monitor and counters use JSON.
-
 * Add data compression.
 
 * Add data encryption.

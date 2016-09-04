@@ -1,3 +1,26 @@
+2016-09-04 Changes in burp-2.0.46:
+  * Fix server segfault in no-fork mode.
+  * Counter fixes for protocol1.
+  * Server to client counters via JSON.
+  * Replace deprecated readdir_r() with readdir().
+  * Make asfds count received and sent bytes instead of trying to do
+    it inside the backup/restore/verify code.
+  * Don't count metadata in the phase1 estimate counts.
+  * Add cname_lowercase to force lowercase cname on server-side (from
+    Benjamin Sans).
+  * Add cname_fqdn option to allow stripping FQDN (from Benjamin Sans).
+  * Switch to pure C for non-Windows (from Ruben Kerkhof).
+  * Make 'burp -a e' work again.
+  * Remove restore_spool.
+  * Make 'burp -a s/S' output the 'burp -a m' log lines on error.
+  * Re-enable chuser_and_or_chgrp code, which got broken during the
+    automake/autoconf refactoring a few versions ago.
+  * Remove unused configs/install script.
+  * Use /proc/%d/exec to figure out the path to run when forking a
+    monitor 'burp -a m' process.
+  * Fix for the debian init script so that it understands $BURP_USER
+    (from Peter Maloney).
+
 2016-07-30 Changes in burp-2.0.44:
   * Default to protocol 1.
   * Another attempt to remove network timeout from champ chooser main socket.

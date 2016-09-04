@@ -155,7 +155,11 @@ static int send_whole_file_w(struct asfd *asfd,
 		return send_whole_file_gzl(asfd, datapth, quick_read, bytes,
 		  encpassword, cntr, compression, bfd, extrameta, elen);
 	else
-		return send_whole_filel(asfd, datapth, quick_read, bytes,
+		return send_whole_filel(asfd,
+#ifdef HAVE_WIN32
+		  sb->path.cmd,
+#endif
+		  datapth, quick_read, bytes,
 		  cntr, bfd, extrameta, elen);
 }
 
@@ -256,7 +260,11 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 #endif
 	  )
 	{
-		if(get_extrameta(asfd, sb->path.buf,
+		if(get_extrameta(asfd,
+#ifdef HAVE_WIN32
+			bfd,
+#endif
+			sb->path.buf,
 			S_ISDIR(sb->statp.st_mode),
 			&extrameta, &elen, cntr))
 		{
@@ -402,10 +410,11 @@ static int do_backup_phase2_client(struct asfd *asfd,
 		  || asfd_read_expect(asfd, CMD_GEN, "ok"))
 			goto end;
 	}
-	else if(get_int(confs[OPT_SEND_CLIENT_CNTR]))
+	else
 	{
 		// On resume, the server might update the client with cntr.
-		if(cntr_recv(asfd, confs)) goto end;
+		if(cntr_recv(asfd, confs))
+			goto end;
 	}
 
 	while(1)
@@ -443,7 +452,7 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	if(confs) cntr=get_cntr(confs);
 
 	logp("Phase 2 begin (send backup data)\n");
-	logfatal("\n");
+	logfmt("\n");
 
 	ret=do_backup_phase2_client(asfd, confs, resume);
 

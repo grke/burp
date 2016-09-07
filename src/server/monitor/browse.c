@@ -14,6 +14,7 @@
 static int do_browse_manifest(
 	struct manio *manio, struct sbuf *sb, const char *browse)
 {
+	int browse_all = !strncmp(browse, "*", 1)? 1:0;
 	int ret=-1;
 	int ars=0;
 	//char ls[1024]="";
@@ -43,9 +44,11 @@ static int do_browse_manifest(
 		  && !cmd_is_link(sb->path.cmd))
 			continue;
 
-		if((r=check_browsedir(browse, sb, blen, &last_bd_match))<0)
-			goto end;
-		if(!r) continue;
+		if(!browse_all) {
+			if((r=check_browsedir(browse, sb, blen, &last_bd_match))<0)
+				goto end;
+			if(!r) continue;
+		}
 
 		if(json_from_entry(sb->path.buf, sb->link.buf, &sb->statp)) goto end;
 	}
@@ -83,6 +86,12 @@ end:
 int browse_manifest(struct cstat *cstat,
 	struct bu *bu, const char *browse, int use_cache)
 {
+	/* if browse directory is *, we dump all file entries, with full path
+           we also avoid caching the whole list */
+	if (!strncmp(browse, "*", 1))
+	{
+        	use_cache = 0;
+	}
 	if(use_cache)
 	{
 		if(!cache_loaded(cstat->name, bu->bno)

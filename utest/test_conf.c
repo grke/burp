@@ -54,6 +54,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_R_SCRIPT:
 		case OPT_RESTORE_PATH:
 		case OPT_ORIG_CLIENT:
+		case OPT_ORIG_CNAME:
 		case OPT_CONFFILE:
 		case OPT_USER:
 		case OPT_GROUP:

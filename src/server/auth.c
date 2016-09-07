@@ -50,8 +50,6 @@ static int check_client_and_password(struct conf **globalcs,
 		}
 	}
 
-	cname=get_string(cconfs[OPT_CNAME]);
-
 	if(password_check)
 	{
 		const char *conf_passwd=get_string(cconfs[OPT_PASSWD]);
@@ -107,7 +105,7 @@ int authorise_server(struct asfd *asfd,
 	int ret=-1;
 	char *cp=NULL;
 	char *password=NULL;
-	char *cname=NULL;
+	char *cname=NULL, *orig_cname=NULL;
 	char whoareyou[256]="";
 	struct iobuf *rbuf=asfd->rbuf;
 	const char *peer_version=NULL;
@@ -158,6 +156,9 @@ int authorise_server(struct asfd *asfd,
 
 	if(!(cname=strdup_w(rbuf->buf, __func__)))
 		goto end;
+	if(!(orig_cname=strdup_w(rbuf->buf, __func__)))
+		goto end;
+
 	if(!get_int(globalcs[OPT_CNAME_FQDN]))
 		strip_fqdn(&cname);
 	if(get_int(globalcs[OPT_CNAME_LOWERCASE]))
@@ -183,6 +184,9 @@ int authorise_server(struct asfd *asfd,
 	if(get_int(cconfs[OPT_VERSION_WARN]))
 		version_warn(asfd, globalcs, cconfs);
 
+	if(set_string(cconfs[OPT_ORIG_CNAME], orig_cname))
+		goto end;
+
 	logp("auth ok for: %s%s\n", get_string(cconfs[OPT_CNAME]),
 		get_int(cconfs[OPT_PASSWORD_CHECK])?
 			"":" (no password needed)");
@@ -195,5 +199,6 @@ end:
 	iobuf_free_content(rbuf);
 	free_w(&password);
 	free_w(&cname);
+	free_w(&orig_cname);
 	return ret;
 }

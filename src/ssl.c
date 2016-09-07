@@ -260,7 +260,9 @@ int ssl_check_cert(SSL *ssl, struct conf **confs, struct conf **cconfs)
 	X509 *peer;
 	char tmpbuf[256]="";
 	const char *ssl_peer_cn=get_string(cconfs[OPT_SSL_PEER_CN]);
+	unsigned int first=1;
 
+redo:
 	if(!ssl_peer_cn)
 	{
 		logp("ssl_peer_cn not set.\n");
@@ -285,7 +287,16 @@ int ssl_check_cert(SSL *ssl, struct conf **confs, struct conf **cconfs)
 		NID_commonName, tmpbuf, sizeof(tmpbuf));
 	if(strcasecmp(tmpbuf, ssl_peer_cn))
 	{
-		logp("cert common name doesn't match configured ssl_peer_cn\n");
+		if(first)
+		{
+			logp("cert common name doesn't match configured ssl_peer_cn\n");
+			logp("'%s'!='%s'\n", tmpbuf, ssl_peer_cn);
+			logp("falling back to cname\n");
+			first=0;
+			ssl_peer_cn=get_string(cconfs[OPT_ORIG_CNAME]);
+			goto redo;
+		}
+		logp("cert common name doesn't match cname\n");
 		logp("'%s'!='%s'\n", tmpbuf, ssl_peer_cn);
 		return -1;
 	}

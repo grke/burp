@@ -275,6 +275,8 @@ enum conf_opt
 	// Original client that backed up. Used when doing a server initiated
 	// restore to an alternative client,
 	OPT_ORIG_CLIENT,
+	// Original cname sent by the client. Used when stripping/lowercasing cname
+	OPT_ORIG_CNAME,
 
 	OPT_CNTR,
 

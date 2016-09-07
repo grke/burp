@@ -47,7 +47,7 @@ static int do_browse_manifest(
 			goto end;
 		if(!r) continue;
 
-		if(json_from_statp(sb->path.buf, &sb->statp)) goto end;
+		if(json_from_entry(sb->path.buf, sb->link.buf, &sb->statp)) goto end;
 	}
 
 	ret=0;

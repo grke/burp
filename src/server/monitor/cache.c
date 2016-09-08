@@ -12,6 +12,7 @@ typedef struct ent ent_t;
 struct ent
 {
 	char *name;
+        char *link;
 	int count;
 	struct stat statp;
 	struct ent **ents;
@@ -21,15 +22,16 @@ static void ent_free(struct ent **ent)
 {
 	if(!ent || !*ent) return;
 	free_w(&(*ent)->name);
+	free_w(&(*ent)->link);
 	free_v((void **)&(*ent)->ents);
 	free_v((void **)ent);
 }
 
-static struct ent *ent_alloc(const char *name)
+static struct ent *ent_alloc(const char *name, const char *link)
 {
 	struct ent *ent;
 	if(!(ent=(struct ent *)calloc_w(1, sizeof(struct ent), __func__))
-	  || !(ent->name=strdup_w(name, __func__)))
+           || !(ent->name=strdup_w(name, __func__)) || !(ent->link=strdup_w(link? link:"", __func__)))
 		goto error;
 	return ent;
 error:
@@ -51,7 +53,7 @@ static int ent_add_to_list(struct ent *ent,
 	struct ent *enew=NULL;
         if(!(ent->ents=(struct ent **)realloc_w(ent->ents,
                 (ent->count+1)*sizeof(struct ent *), __func__))
-          || !(enew=ent_alloc(ent_name)))
+           || !(enew=ent_alloc(ent_name, sb->link.buf)))
         {
                 log_out_of_memory(__func__);
                 return -1;
@@ -106,7 +108,7 @@ int cache_load(struct manio *manio, struct sbuf *sb,
 //printf("in cache load\n");
 	cache_free();
 
-	if(!(root=ent_alloc(""))) goto end;
+	if(!(root=ent_alloc("",""))) goto end;
 
 	while(1)
 	{
@@ -186,7 +188,7 @@ int cache_loaded(const char *cname, unsigned long bno)
 static int result_single(struct ent *ent)
 {
 //	printf("result: %s\n", ent->name);
-	return json_from_statp(ent->name, &ent->statp);
+	return json_from_entry(ent->name, ent->link, &ent->statp);
 }
 
 static int result_list(struct ent *ent)

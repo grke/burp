@@ -8,7 +8,7 @@ extern int json_send(struct asfd *asfd,
 	struct cstat *clist, struct cstat *cstat,
         struct bu *bu, const char *logfile, const char *browse,
 	int use_cache);
-extern int json_from_statp(const char *path, struct stat *statp);
+extern int json_from_entry(const char *path, const char *link, struct stat *statp);
 extern int json_cntr(struct asfd *asfd, struct cntr *cntr);
 
 extern int json_send_warn(struct asfd *asfd, const char *msg);

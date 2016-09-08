@@ -456,10 +456,11 @@ end:
 	return ret;
 }
 
-int json_from_statp(const char *path, struct stat *statp)
+int json_from_entry(const char *path, const char *link, struct stat *statp)
 {
 	return yajl_map_open_w()
 	  || yajl_gen_str_pair_w("name", path)
+	  || yajl_gen_str_pair_w("link", link? link:"")
 	  || yajl_gen_int_pair_w("dev", statp->st_dev)
 	  || yajl_gen_int_pair_w("ino", statp->st_ino)
 	  || yajl_gen_int_pair_w("mode", statp->st_mode)

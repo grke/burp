@@ -196,6 +196,7 @@ static int hard_link_substitution(struct asfd *asfd,
 			free_w(&hb->path.buf);
 			if(!(hb->path.buf=strdup_w(sb->path.buf, __func__)))
 				goto end;
+			hb->path.len = sb->path.len;
 			// Should now be able to restore the original data
 			// to the new location.
 			ret=restore_sbuf(asfd, hb, bu, act, sdirs,

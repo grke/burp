@@ -14,7 +14,7 @@
 static int do_browse_manifest(
 	struct manio *manio, struct sbuf *sb, const char *browse)
 {
-	int browse_all = !strncmp(browse, "*", 1)? 1:0;
+	int browse_all = (browse && !strncmp(browse, "*", 1))? 1:0;
 	int ret=-1;
 	int ars=0;
 	//char ls[1024]="";
@@ -88,7 +88,7 @@ int browse_manifest(struct cstat *cstat,
 {
 	/* if browse directory is *, we dump all file entries, with full path
            we also avoid caching the whole list */
-	if (!strncmp(browse, "*", 1))
+	if (browse && !strncmp(browse, "*", 1))
 	{
         	use_cache = 0;
 	}

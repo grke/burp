@@ -16,13 +16,6 @@
 #include "champ_chooser/champ_chooser.h"
 #include "backup_phase4.h"
 
-struct hooks
-{
-	char *path;
-	uint64_t *fingerprints;
-	size_t len;
-};
-
 static int hookscmp(struct hooks *a, struct hooks *b)
 {
 	size_t i;
@@ -56,7 +49,10 @@ static int hooks_alloc(struct hooks **hnew,
 }
 
 // Return 0 for OK, -1 for error, 1 for finished reading the file.
-static int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
+#ifndef UTEST
+static
+#endif
+int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 	struct fzp *spzp, char **path, uint64_t **fingerprints, size_t *len)
 {
 	struct blk blk;
@@ -102,7 +98,10 @@ error:
 	return -1;
 }
 
-static int gzprintf_hooks(struct fzp *fzp, struct hooks *hooks)
+#ifndef UTEST
+static
+#endif
+int hooks_gzprintf(struct fzp *fzp, struct hooks *hooks)
 {
 	size_t i;
 	fzp_printf(fzp, "%c%04lX%s\n", CMD_MANIFEST,
@@ -113,7 +112,10 @@ static int gzprintf_hooks(struct fzp *fzp, struct hooks *hooks)
 	return 0;
 }
 
-static void hooks_free(struct hooks **hooks)
+#ifndef UTEST
+static
+#endif
+void hooks_free(struct hooks **hooks)
 {
 	if(!*hooks) return;
 	free_w(&(*hooks)->path);
@@ -181,12 +183,12 @@ int merge_sparse_indexes(const char *dst, const char *srca, const char *srcb)
 
 		if(anew && !bnew)
 		{
-			if(gzprintf_hooks(dzp, anew)) goto end;
+			if(hooks_gzprintf(dzp, anew)) goto end;
 			hooks_free(&anew);
 		}
 		else if(!anew && bnew)
 		{
-			if(gzprintf_hooks(dzp, bnew)) goto end;
+			if(hooks_gzprintf(dzp, bnew)) goto end;
 			hooks_free(&bnew);
 		}
 		else if(!anew && !bnew)
@@ -196,18 +198,18 @@ int merge_sparse_indexes(const char *dst, const char *srca, const char *srcb)
 		else if(!(fcmp=hookscmp(anew, bnew)))
 		{
 			// They were the same - write the new one.
-			if(gzprintf_hooks(dzp, bnew)) goto end;
+			if(hooks_gzprintf(dzp, bnew)) goto end;
 			hooks_free(&anew);
 			hooks_free(&bnew);
 		}
 		else if(fcmp<0)
 		{
-			if(gzprintf_hooks(dzp, anew)) goto end;
+			if(hooks_gzprintf(dzp, anew)) goto end;
 			hooks_free(&anew);
 		}
 		else
 		{
-			if(gzprintf_hooks(dzp, bnew)) goto end;
+			if(hooks_gzprintf(dzp, bnew)) goto end;
 			hooks_free(&bnew);
 		}
 	}
@@ -235,9 +237,9 @@ end:
 }
 
 #ifndef UTEST
-static 
+static
 #endif
-int gzprintf_dindex(struct fzp *fzp, uint64_t *dindex)
+int dindex_gzprintf(struct fzp *fzp, uint64_t *dindex)
 {
 	struct blk blk;
 	struct iobuf wbuf;
@@ -324,12 +326,12 @@ int merge_dindexes(const char *dst, const char *srca, const char *srcb)
 
 		if(anew && !bnew)
 		{
-			if(gzprintf_dindex(dzp, anew)) goto end;
+			if(dindex_gzprintf(dzp, anew)) goto end;
 			free_v((void **)&anew);
 		}
 		else if(!anew && bnew)
 		{
-			if(gzprintf_dindex(dzp, bnew)) goto end;
+			if(dindex_gzprintf(dzp, bnew)) goto end;
 			free_v((void **)&bnew);
 		}
 		else if(!anew && !bnew)
@@ -339,18 +341,18 @@ int merge_dindexes(const char *dst, const char *srca, const char *srcb)
 		else if(*anew==*bnew)
 		{
 			// They were the same - write the new one.
-			if(gzprintf_dindex(dzp, bnew)) goto end;
+			if(dindex_gzprintf(dzp, bnew)) goto end;
 			free_v((void **)&anew);
 			free_v((void **)&bnew);
 		}
 		else if(*anew<*bnew)
 		{
-			if(gzprintf_dindex(dzp, anew)) goto end;
+			if(dindex_gzprintf(dzp, anew)) goto end;
 			free_v((void **)&anew);
 		}
 		else
 		{
-			if(gzprintf_dindex(dzp, bnew)) goto end;
+			if(dindex_gzprintf(dzp, bnew)) goto end;
 			free_v((void **)&bnew);
 		}
 	}
@@ -378,18 +380,21 @@ static char *get_global_sparse_tmp(const char *global)
 	return prepend_n(global, "tmp", strlen("tmp"), ".");
 }
 
-static int merge_into_global_sparse(const char *sparse, const char *global)
+int merge_into_global_sparse(const char *sparse, const char *global,
+	struct lock *lock)
 {
 	int ret=-1;
-	char *tmpfile=NULL;
 	struct stat statp;
-	struct lock *lock=NULL;
+	char *tmpfile=NULL;
 	const char *globalsrc=NULL;
-	
-	if(!(tmpfile=get_global_sparse_tmp(global)))
-		goto end;
 
-	if(!(lock=try_to_get_sparse_lock(global)))
+	if(lock->status!=GET_LOCK_GOT)
+	{
+		logp("Attempt to merge into sparse index without a lock!\n");
+		goto end;
+	}
+
+	if(!(tmpfile=get_global_sparse_tmp(global)))
 		goto end;
 
 	if(!lstat(global, &statp)) globalsrc=global;
@@ -398,13 +403,31 @@ static int merge_into_global_sparse(const char *sparse, const char *global)
 		goto end;
 
 	// FIX THIS: nasty race condition needs to be recoverable.
-	if(do_rename(tmpfile, global)) goto end;
+	if(do_rename(tmpfile, global))
+		goto end;
+
+	ret=0;
+end:
+	free_w(&tmpfile);
+	return ret;
+}
+
+static int lock_and_merge_into_global_sparse(const char *sparse,
+	const char *global)
+{
+	int ret=-1;
+	struct lock *lock=NULL;
+	
+	if(!(lock=try_to_get_sparse_lock(global)))
+		goto end;
+
+	if(merge_into_global_sparse(sparse, global, lock))
+		goto end;
 
 	ret=0;
 end:
 	lock_release(lock);
 	lock_free(&lock);
-	free_w(&tmpfile);
 	return ret;
 }
 
@@ -492,7 +515,7 @@ end:
 	return ret;
 }
 
-int merge_files_in_dir_no_fcount(const char *final, const char *fmanifest, 
+int merge_files_in_dir_no_fcount(const char *final, const char *fmanifest,
 	int merge(const char *dst, const char *srca, const char *srcb))
 {
 	int ret=-1;
@@ -603,7 +626,7 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		merge_sparse_indexes))
 			goto end;
 
-	if(merge_into_global_sparse(sparse, sdirs->global_sparse))
+	if(lock_and_merge_into_global_sparse(sparse, sdirs->global_sparse))
 		goto end;
 
 	logp("End phase4 (sparse generation)\n");
@@ -762,7 +785,7 @@ int remove_from_global_sparse(const char *global_sparse,
 		  && *(anew->path+clen)=='/')
 			continue;
 
-		if(gzprintf_hooks(dzp, anew)) goto end;
+		if(hooks_gzprintf(dzp, anew)) goto end;
 		hooks_free(&anew);
 	}
 

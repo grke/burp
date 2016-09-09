@@ -11,31 +11,8 @@
 #include "server/main.h"
 #include "server/protocol1/bedup.h"
 #include "server/protocol2/bsigs.h"
+#include "server/protocol2/bsparse.h"
 #include "server/protocol2/champ_chooser/champ_server.h"
-
-static char *get_conf_path(void)
-{
-	static char path[256]="";
-#ifdef HAVE_WIN32
-	char *pfenv=NULL;
-
-	// Burp used to always install to 'C:/Program Files/Burp/', but as
-	// of 1.3.11, it changed to %PROGRAMFILES%. Still want the old way
-	// to work though. So check %PROGRAMFILES% first, then fall back.
-	if((pfenv=getenv("PROGRAMFILES")))
-	{
-		struct stat statp;
-		snprintf(path, sizeof(path), "%s/Burp/burp.conf", pfenv);
-		if(!lstat(path, &statp)
-		  && !S_ISDIR(statp.st_mode))
-			return path;
-	}
-	snprintf(path, sizeof(path), "C:/Program Files/Burp/burp.conf");
-#else
-	snprintf(path, sizeof(path), "%s", SYSCONFDIR "/burp.conf");
-#endif
-	return path;
-}
 
 static void usage_server(void)
 {
@@ -45,7 +22,8 @@ static void usage_server(void)
 	printf("\n");
 	printf(" Options:\n");
 	printf("  -a c          Run as a stand-alone champion chooser.\n");
-	printf("  -c <path>     Path to conf file (default: %s).\n", get_conf_path());
+	printf("  -c <path>     Path to conf file (default: %s).\n", config_default_path());
+	printf("  -d <path>     a single client in the status monitor.\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
@@ -82,7 +60,7 @@ static void usage_client(void)
 	printf("                  T: check backup timer, but do not actually backup\n");
 	printf("                  v: verify\n");
 	printf("  -b <number>    Backup number (default: the most recent backup).\n");
-	printf("  -c <path>      Path to conf file (default: %s).\n", get_conf_path());
+	printf("  -c <path>      Path to conf file (default: %s).\n", config_default_path());
 	printf("  -d <directory> Directory to restore to, or directory to list.\n");
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
@@ -255,7 +233,7 @@ end:
 	return ret;
 }
 
-#if defined(HAVE_WIN32)
+#ifdef HAVE_WIN32
 #define main BurpMain
 #endif
 #ifndef UTEST
@@ -280,7 +258,7 @@ int real_main(int argc, char *argv[])
 	const char *regex=NULL;
 	const char *browsefile=NULL;
 	char *browsedir=NULL;
-	const char *conffile=get_conf_path();
+	const char *conffile=config_default_path();
 	const char *orig_client=NULL;
 	const char *logfile=NULL;
 	// The orig_client is the original client that the normal client
@@ -298,6 +276,8 @@ int real_main(int argc, char *argv[])
 		return run_bedup(argc, argv);
 	if(!strcmp(prog, "bsigs"))
 		return run_bsigs(argc, argv);
+	if(!strcmp(prog, "bsparse"))
+		return run_bsparse(argc, argv);
 #endif
 
 	while((option=getopt(argc, argv, "a:b:c:C:d:fFghil:nq:Qr:s:tvxjz:?"))!=-1)

@@ -5,6 +5,7 @@
 #include "../fsops.h"
 #include "../fzp.h"
 #include "../handy.h"
+#include "../lock.h"
 #include "../log.h"
 #include "../prepend.h"
 #include "protocol1/backup_phase4.h"

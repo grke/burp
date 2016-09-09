@@ -7,7 +7,7 @@ static void dindex_to_fzp(struct fzp *fzp, uint64_t *di, size_t len)
 {
         size_t i;
         for(i=0; i<len; i++)
-                fail_unless(!gzprintf_dindex(fzp, &di[i]));
+                fail_unless(!dindex_gzprintf(fzp, &di[i]));
 }
 
 void build_dindex(uint64_t *di, size_t s, const char *fname)

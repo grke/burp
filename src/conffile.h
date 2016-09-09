@@ -19,6 +19,8 @@ extern int conf_switch_to_orig_client(struct conf **globalcs,
 
 extern int reeval_glob(struct conf **c);
 
+extern char *config_default_path(void);
+
 #ifdef UTEST
 extern int conf_load_lines_from_buf(const char *buf, struct conf **c);
 extern int conf_finalise(struct conf **c);

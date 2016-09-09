@@ -29,6 +29,9 @@ static struct lock *locklist=NULL;
 
 static int verbose=0;
 
+static unsigned int maxlinks=DEF_MAX_LINKS;
+static char ext[16]="";
+
 typedef struct file file_t;
 
 struct file
@@ -261,7 +264,7 @@ static int get_full_cksum(struct file *f, struct fzp **fzp)
 }
 
 /* Make it atomic by linking to a temporary file, then moving it into place. */
-static int do_hardlink(struct file *o, struct file *n, const char *ext)
+static int do_hardlink(struct file *o, struct file *n)
 {
 	int ret=-1;
 	char *tmppath=NULL;
@@ -296,7 +299,7 @@ static void reset_old_file(struct file *oldfile, struct file *newfile,
 }
 
 static int check_files(struct mystruct *find, struct file *newfile,
-	struct stat *info, const char *ext, unsigned int maxlinks)
+	struct stat *info)
 {
 	int found=0;
 	struct fzp *nfp=NULL;
@@ -382,7 +385,7 @@ static int check_files(struct mystruct *find, struct file *newfile,
 		// Now hardlink it.
 		if(makelinks)
 		{
-			switch(do_hardlink(newfile, f, ext))
+			switch(do_hardlink(newfile, f))
 			{
 				case 0:
 					f->nlink++;
@@ -514,7 +517,7 @@ static int level_exclusion(int level, const char *fname,
 
 // Return 0 for directory processed, -1 for error, 1 for not processed.
 static int process_dir(const char *oldpath, const char *newpath,
-	const char *ext, unsigned int maxlinks, int burp_mode, int level)
+	int burp_mode, int level)
 {
 	int ret=-1;
 	DIR *dirp=NULL;
@@ -571,7 +574,8 @@ static int process_dir(const char *oldpath, const char *newpath,
 
 		if(S_ISDIR(info.st_mode))
 		{
-			if(process_dir(path, dirinfo->d_name, ext, maxlinks,					burp_mode, level+1))
+			if(process_dir(path, dirinfo->d_name,
+				burp_mode, level+1))
 					goto end;
 			continue;
 		}
@@ -589,7 +593,7 @@ static int process_dir(const char *oldpath, const char *newpath,
 		if((find=find_key(info.st_size)))
 		{
 			//printf("check %d: %s\n", info.st_size, newfile.path);
-			if(check_files(find, &newfile, &info, ext, maxlinks))
+			if(check_files(find, &newfile, &info))
 				goto end;
 		}
 		else
@@ -639,17 +643,13 @@ static int in_group(struct strlist *grouplist, const char *dedup_group)
 }
 
 static int iterate_over_clients(struct conf **globalcs,
-	struct strlist *grouplist, const char *ext, unsigned int maxlinks)
+	struct strlist *grouplist)
 {
 	int ret=0;
 	DIR *dirp=NULL;
 	struct conf **cconfs=NULL;
 	struct dirent *dirinfo=NULL;
 	const char *globalclientconfdir=get_string(globalcs[OPT_CLIENTCONFDIR]);
-
-	signal(SIGABRT, &sighandler);
-	signal(SIGTERM, &sighandler);
-	signal(SIGINT, &sighandler);
 
 	if(!(cconfs=confs_alloc())) return -1;
 	if(confs_init(cconfs)) return -1;
@@ -728,7 +728,7 @@ static int iterate_over_clients(struct conf **globalcs,
 
 		switch(process_dir(get_string(cconfs[OPT_DIRECTORY]),
 			dirinfo->d_name,
-			ext, maxlinks, 1 /* burp mode */, 0 /* level */))
+			1 /* burp mode */, 0 /* level */))
 		{
 			case 0: ccount++;
 			case 1: continue;
@@ -745,11 +745,102 @@ static int iterate_over_clients(struct conf **globalcs,
 	return ret;
 }
 
-static char *get_config_path(void)
+static int process_from_conf(const char *configfile, char **groups)
 {
-        static char path[256]="";
-        snprintf(path, sizeof(path), "%s", SYSCONFDIR "/burp.conf");
-        return path;
+	int ret=-1;
+	struct conf **globalcs=NULL;
+	struct strlist *grouplist=NULL;
+	struct lock *globallock=NULL;
+
+	signal(SIGABRT, &sighandler);
+	signal(SIGTERM, &sighandler);
+	signal(SIGINT, &sighandler);
+
+	if(*groups)
+	{
+		char *tok=NULL;
+		if((tok=strtok(*groups, ",\n")))
+		{
+			do
+			{
+				if(strlist_add(&grouplist, tok, 1))
+				{
+					log_out_of_memory(__func__);
+					goto end;
+				}
+			} while((tok=strtok(NULL, ",\n")));
+		}
+		if(!grouplist)
+		{
+			logp("unable to read list of groups\n");
+			goto end;
+		}
+	}
+
+	// Read directories from config files, and get locks.
+	if(!(globalcs=confs_alloc())
+	  || confs_init(globalcs)
+	  || conf_load_global_only(configfile, globalcs))
+		goto end;
+
+	if(get_e_burp_mode(globalcs[OPT_BURP_MODE])!=BURP_MODE_SERVER)
+	{
+		logp("%s is not a server config file\n", configfile);
+		goto end;
+	}
+	logp("Dedup clients from %s\n",
+		get_string(globalcs[OPT_CLIENTCONFDIR]));
+	maxlinks=get_int(globalcs[OPT_MAX_HARDLINKS]);
+	if(grouplist)
+	{
+		struct strlist *g=NULL;
+		logp("in dedup groups:\n");
+		for(g=grouplist; g; g=g->next)
+			logp("%s\n", g->path);
+	}
+	else
+	{
+		char *lockpath=NULL;
+		const char *opt_lockfile=confs_get_lockfile(globalcs);
+		// Only get the global lock when doing a global run.
+		// If you are doing individual groups, you are likely
+		// to want to do many different dedup jobs and a
+		// global lock would get in the way.
+		if(!(lockpath=prepend(opt_lockfile, ".bedup"))
+		  || !(globallock=lock_alloc_and_init(lockpath)))
+			goto end;
+		lock_get(globallock);
+		if(globallock->status!=GET_LOCK_GOT)
+		{
+			logp("Could not get lock %s (%d)\n", lockpath,
+				globallock->status);
+			free_w(&lockpath);
+			goto end;
+		}
+		logp("Got %s\n", lockpath);
+	}
+	ret=iterate_over_clients(globalcs, grouplist);
+end:
+	confs_free(&globalcs);
+	lock_release(globallock);
+	lock_free(&globallock);
+	strlists_free(&grouplist);
+	return ret;
+}
+
+static int process_from_command_line(int argc, char *argv[])
+{
+	int i;
+	for(i=optind; i<argc; i++)
+	{
+		// Strip trailing slashes, for tidiness.
+		if(argv[i][strlen(argv[i])-1]=='/')
+			argv[i][strlen(argv[i])-1]='\0';
+		if(process_dir("", argv[i],
+			0 /* not burp mode */, 0 /* level */))
+				return 1;
+	}
+	return  0;
 }
 
 static int usage(void)
@@ -757,7 +848,7 @@ static int usage(void)
 	logfmt("\nUsage: %s [options]\n", prog);
 	logfmt("\n");
 	logfmt(" Options:\n");
-	logfmt("  -c <path>                Path to config file (default: %s).\n", get_config_path());
+	logfmt("  -c <path>                Path to config file (default: %s).\n", config_default_path());
 	logfmt("  -g <list of group names> Only run on the directories of clients that\n");
 	logfmt("                           are in one of the groups specified.\n");
 	logfmt("                           The list is comma-separated. To put a client in a\n");
@@ -777,7 +868,7 @@ static int usage(void)
 	logfmt("  -v                       Print duplicate paths.\n");
 	logfmt("  -V                       Print version and exit.\n");
 	logfmt("\n");
-	logfmt("By default, %s will read %s and deduplicate client storage\n", prog, get_config_path());
+	logfmt("By default, %s will read %s and deduplicate client storage\n", prog, config_default_path());
 	logfmt("directories using special knowledge of the structure.\n");
 	logfmt("\n");
 	logfmt("With '-n', this knowledge is turned off and you have to specify the directories\n");
@@ -788,17 +879,14 @@ static int usage(void)
 
 int run_bedup(int argc, char *argv[])
 {
-	int i=1;
 	int ret=0;
 	int option=0;
 	int nonburp=0;
-	unsigned int maxlinks=DEF_MAX_LINKS;
 	char *groups=NULL;
-	char ext[16]="";
 	int givenconfigfile=0;
 	const char *configfile=NULL;
 
-	configfile=get_config_path();
+	configfile=config_default_path();
 	snprintf(ext, sizeof(ext), ".bedup.%d", getpid());
 
 	while((option=getopt(argc, argv, "c:dg:hlm:nvV?"))!=-1)
@@ -888,93 +976,13 @@ int run_bedup(int argc, char *argv[])
 	if(nonburp)
 	{
 		// Read directories from command line.
-		for(i=optind; i<argc; i++)
-		{
-			// Strip trailing slashes, for tidiness.
-			if(argv[i][strlen(argv[i])-1]=='/')
-				argv[i][strlen(argv[i])-1]='\0';
-			if(process_dir("", argv[i], ext, maxlinks,
-				0 /* not burp mode */, 0 /* level */))
-			{
-				ret=1;
-				break;
-			}
-		}
+		if(process_from_command_line(argc, argv))
+			ret=1;
 	}
 	else
 	{
-		struct conf **globalcs=NULL;
-		struct strlist *grouplist=NULL;
-		struct lock *globallock=NULL;
-
-		if(groups)
-		{
-			char *tok=NULL;
-			if((tok=strtok(groups, ",\n")))
-			{
-				do
-				{
-					if(strlist_add(&grouplist, tok, 1))
-					{
-						log_out_of_memory(__func__);
-						return -1;
-					}
-				} while((tok=strtok(NULL, ",\n")));
-			}
-			if(!grouplist)
-			{
-				logp("unable to read list of groups\n");
-				return -1;
-			}
-		}
-
-		// Read directories from config files, and get locks.
-		if(!(globalcs=confs_alloc())) return -1;
-		if(confs_init(globalcs)) return -1;
-		if(conf_load_global_only(configfile, globalcs)) return 1;
-		if(get_e_burp_mode(globalcs[OPT_BURP_MODE])!=BURP_MODE_SERVER)
-		{
-			logp("%s is not a server config file\n", configfile);
-			confs_free(&globalcs);
-			return 1;
-		}
-		logp("Dedup clients from %s\n",
-			get_string(globalcs[OPT_CLIENTCONFDIR]));
-		maxlinks=get_int(globalcs[OPT_MAX_HARDLINKS]);
-		if(grouplist)
-		{
-			struct strlist *g=NULL;
-			logp("in dedup groups:\n");
-			for(g=grouplist; g; g=g->next)
-				logp("%s\n", g->path);
-		}
-		else
-		{
-			char *lockpath=NULL;
-			const char *opt_lockfile=confs_get_lockfile(globalcs);
-			// Only get the global lock when doing a global run.
-			// If you are doing individual groups, you are likely
-			// to want to do many different dedup jobs and a
-			// global lock would get in the way.
-			if(!(lockpath=prepend(opt_lockfile, ".bedup"))
-			  || !(globallock=lock_alloc_and_init(lockpath)))
-				return 1;
-			lock_get(globallock);
-			if(globallock->status!=GET_LOCK_GOT)
-			{
-				logp("Could not get lock %s (%d)\n", lockpath,
-					globallock->status);
-				free_w(&lockpath);
-				return 1;
-			}
-			logp("Got %s\n", lockpath);
-		}
-		ret=iterate_over_clients(globalcs, grouplist, ext, maxlinks);
-		confs_free(&globalcs);
-
-		lock_release(globallock);
-		lock_free(&globallock);
-		strlists_free(&grouplist);
+		if(process_from_conf(configfile, &groups))
+			ret=1;
 	}
 
 	if(!nonburp)

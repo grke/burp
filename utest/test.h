@@ -113,6 +113,7 @@ Suite *suite_server_protocol1_fdirs(void);
 Suite *suite_server_protocol1_restore(void);
 Suite *suite_server_protocol2_backup_phase2(void);
 Suite *suite_server_protocol2_backup_phase4(void);
+Suite *suite_server_protocol2_bsparse(void);
 Suite *suite_server_protocol2_champ_chooser_champ_chooser(void);
 Suite *suite_server_protocol2_champ_chooser_champ_server(void);
 Suite *suite_server_protocol2_champ_chooser_dindex(void);

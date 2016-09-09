@@ -1361,3 +1361,27 @@ end:
 	confs_free(&sconfs);
 	return ret;
 }
+
+char *config_default_path(void)
+{
+	static char path[256]="";
+#ifdef HAVE_WIN32
+	char *pfenv=NULL;
+
+	// Burp used to always install to 'C:/Program Files/Burp/', but as
+	// of 1.3.11, it changed to %PROGRAMFILES%. Still want the old way
+	// to work though. So check %PROGRAMFILES% first, then fall back.
+	if((pfenv=getenv("PROGRAMFILES")))
+	{
+		struct stat statp;
+		snprintf(path, sizeof(path), "%s/Burp/burp.conf", pfenv);
+		if(!lstat(path, &statp)
+		  && !S_ISDIR(statp.st_mode))
+			return path;
+	}
+	snprintf(path, sizeof(path), "C:/Program Files/Burp/burp.conf");
+#else
+	snprintf(path, sizeof(path), "%s", SYSCONFDIR "/burp.conf");
+#endif
+	return path;
+}

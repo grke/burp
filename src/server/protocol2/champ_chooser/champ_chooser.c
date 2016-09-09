@@ -32,7 +32,7 @@ static int try_to_get_lock(struct lock *lock)
 		switch(lock->status)
 		{
 			case GET_LOCK_GOT:
-				logp("Got sparse lock\n");
+				logp("locked: sparse index\n");
 				return 0;
 			case GET_LOCK_NOT_GOT:
 				lock_tries++;

@@ -50,6 +50,7 @@ dist_doc_DATA = \
 dist_man8_MANS = \
 	manpages/bedup.8 \
 	manpages/bsigs.8 \
+	manpages/bsparse.8 \
 	manpages/burp.8 \
 	manpages/burp_ca.8 \
 	manpages/vss_strip.8
@@ -65,6 +66,7 @@ LN_S = ln -s -f
 install-exec-hook:
 	$(AM_V_at)$(LN_S) burp $(DESTDIR)$(sbindir)/bedup
 	$(AM_V_at)$(LN_S) burp $(DESTDIR)$(sbindir)/bsigs
+	$(AM_V_at)$(LN_S) burp $(DESTDIR)$(sbindir)/bsparse
 
 install-configs: $(configs) install-clientconfdir
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/CA-client
@@ -242,6 +244,7 @@ burp_SOURCES = \
 	src/server/protocol2/backup_phase2.c src/server/protocol2/backup_phase2.h \
 	src/server/protocol2/backup_phase4.c src/server/protocol2/backup_phase4.h \
 	src/server/protocol2/bsigs.c src/server/protocol2/bsigs.h \
+	src/server/protocol2/bsparse.c src/server/protocol2/bsparse.h \
 	src/server/protocol2/champ_chooser/candidate.c src/server/protocol2/champ_chooser/candidate.h \
 	src/server/protocol2/champ_chooser/champ_chooser.c src/server/protocol2/champ_chooser/champ_chooser.h \
 	src/server/protocol2/champ_chooser/champ_client.c src/server/protocol2/champ_chooser/champ_client.h \
@@ -332,6 +335,7 @@ runner_SOURCES = \
 	utest/server/protocol2/champ_chooser/test_sparse.c \
 	utest/server/protocol2/test_backup_phase2.c \
 	utest/server/protocol2/test_backup_phase4.c \
+	utest/server/protocol2/test_bsparse.c \
 	utest/server/protocol2/test_dpth.c \
 	utest/server/test_auth.c \
 	utest/server/test_ca.c \

@@ -111,7 +111,7 @@ static int input_integer(__attribute__ ((unused)) void *ctx, long long val)
 		}
 	}
 error:
-	logp("Unexpected integer: %s %"PRIu64"\n", lastkey, (uint64_t)val);
+	logp("Unexpected integer: '%s' %"PRIu64"\n", lastkey, (uint64_t)val);
         return 0;
 }
 
@@ -119,9 +119,10 @@ static int input_string(__attribute__ ((unused)) void *ctx,
 	const unsigned char *val, size_t len)
 {
 	char *str;
-	if(!(str=(char *)malloc_w(len+2, __func__)))
+	if(!(str=(char *)malloc_w(len+1, __func__)))
 		return 0;
 	snprintf(str, len+1, "%s", val);
+	str[len]='\0';
 
 	if(in_counters)
 	{
@@ -222,7 +223,7 @@ static int input_string(__attribute__ ((unused)) void *ctx,
 		goto end;
 	}
 error:
-	logp("Unexpected string: %s %s\n", lastkey, str);
+	logp("Unexpected string: '%s' '%s'\n", lastkey, str);
 	free_w(&str);
         return 0;
 end:
@@ -234,6 +235,7 @@ static int input_map_key(__attribute__((unused)) void *ctx,
 	const unsigned char *val, size_t len)
 {
 	snprintf(lastkey, len+1, "%s", val);
+	lastkey[len]='\0';
 //	logp("mapkey: %s\n", lastkey);
 	return 1;
 }

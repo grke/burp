@@ -1,0 +1,134 @@
+<p>
+Burp is open and free software. Some assume that this means that I will
+spend my time working for them, and that I will do it for free.
+</p>
+
+<p>
+This is not the case. Although I enjoy working on burp, I have my own idea of
+priorities that do not necessarily align with anybody else's priorities.
+</p>
+
+<p>
+Additionally, the spare time that I use to work on burp is actually very
+limited.
+<br>
+I am a dad, I have non-burp paid work, I am in a
+<a href="http://www.reverbnation.com/thefifthrule">rock band</a>,
+and I sometimes like to eat or sleep.
+</p>
+
+<p>
+If you want some work to go into a burp release, here are some suggestions:
+</p>
+
+<ul>
+ <li>Make a request for paid work.
+  <br>This will take you to the front of my queue.
+  <br>You may request support, advice, bug fixes or anything else.
+      <a href="/contact/email.html">Email me directly</a> to do this.
+ <li>Make a request for free work.
+  <br>This will be prioritised as I find appropriate.
+ <li>Do the work yourself and request that I merge your patch.
+  <br>
+  All of the sources and build tools are available to you.
+</ul>
+
+<p>
+Of course, you are also quite welcome to do the work yourself and never send me
+anything, but this means that you'll probably end up doing more in the future
+as you will have to maintain your own patches.
+</p>
+
+<p>
+<b>Making a request</b>
+</p>
+
+<p>
+Requests may be made via three different means.
+</p>
+<p>
+1. In general, I prefer that they are sent to the burp-users mailing list. If
+you use the mailing list, it means everybody on the mailing list gets a chance
+to respond to your questions, not just me. And messages on the mailing list
+can be find via search engines too, so everybody benefits.
+Use this link to subscribe: 
+<a href="https://lists.sourceforge.net/lists/listinfo/burp-users">
+https://lists.sourceforge.net/lists/listinfo/burp-users
+</a>
+</p>
+
+<p>
+2. You may send me an email directly by using
+<a href="/contact/email.html">this page</a>.
+This is the best choice if you are looking for me to do some paid work, or
+want to send a message that is personal to me only.
+</p>
+
+<p>
+3. You may open a pull request or an issue on
+<a href="https://github.com/grke/burp">github</a>.
+Opening pull requests directly on github is great.
+But if you want to open an issue on github, I prefer that you discuss it on the
+mailing list first. It is often the case that issues opened on github are
+actually requests for help that can be answered more efficiently on the mailing
+list. This is because more people read and reply to the mailing list than
+the github issue list.
+</p>
+
+<p>
+Sometimes, I receive messages that are full of arrogance and entitlement.
+If you are like that, you greatly reduce your chances of achieving anything.
+</p>
+<p>
+I always try to be polite and courteous, so please try to be
+polite and courteous in your requests. Most people are fine in this respect.
+A lot of people do not speak English as a first language, but good will
+still comes across in their messages. That is very much appreciated.
+</p>
+
+<p>
+<b>Support</b>
+</p>
+<p>
+The majority of requests that I get fall into this category. These requests
+are often resolved by pointing the person at a relevant page in the
+<a href="/docs.html">DOCS</a> section of the website. So, you should check
+there before making your request.
+</p>
+
+<p>
+<b>Feature requests and bug reports</b>
+</p>
+
+<p>
+A smaller percentage of requests are for new features and bug fixes.
+I am happy to receive them, because they help to make burp better.
+</p>
+
+<p>
+However, be aware that your feature or bug may be very important to you, but I
+may have different priorities.
+</p>
+
+<p>
+<b>Pull requests</b>
+</p>
+
+<p>
+If you have done some work yourself, you may then wish to submit a patch
+in order to get it into a proper release. The best way to do this is via a pull
+request on github, but patches via email are OK too.
+<br>
+<br>
+If you are adding a new feature, you should add an automated test, or tests,
+to the utest directory so that your new code is demonstrably functional and
+doesn't break existing code.
+<br>
+<br>
+If you are fixing a bug, you should try to include a test case that
+demonstrates that you have fixed the bug.
+</p>
+<p>
+Pull requests are the most infrequent of the requests that I receive, and I
+am happy to review them and point you in the right direction when I can.
+<p>

@@ -259,6 +259,25 @@ rm -rf "$dir" || fail
 EOF
 }
 
+add_run_restore_server_initiated()
+{
+	local bno="$1"
+	local dir
+	res=$((res+1))
+	dir="$2$res"
+	test_includes_restore=1
+	echo "backup=$bno
+restoreprefix=$dir" > "$target/var/spool/burp/testclient/restore"
+	makedir_client "$dir"
+cat >> "$clientscript" << EOF
+echo "Starting test server initiated restore of backup $bno"
+rm -rf "$dir" || fail
+
+"$burpbin" -c "$clientconfarg" -a l \
+	|| fail "server initiated restore returned \$?"
+EOF
+}
+
 add_run_snapshot()
 {
 	cat >> "$clientscript" <<EOF
@@ -473,6 +492,17 @@ add_client_breakpoint_on()
 {
 	add_client_breakpoint_off
 	append_client "breakpoint = $1"
+}
+
+add_client_server_can_restore_off()
+{
+	sed_rep_client '/^server_can_restore = .*/d' "$clientconf"
+}
+
+add_client_server_can_restore_on()
+{
+	add_client_server_can_restore_off
+	append_client "server_can_restore = 1"
 }
 
 add_recovery_method_delete()
@@ -776,6 +806,17 @@ all_tests()
 	add_run_list_expect_fail 99999
 	run_scripts
 	end_test
+
+	# Currently no way to pass '-x' via server initiated restore, so skip
+	# this test for $STRIP_VSS.
+	if [ -z "$STRIP_VSS" ] ; then
+		start_test "Server-initiated restore"
+		add_client_server_can_restore_on
+		add_run_restore_server_initiated $bno "$restoredir"
+		run_scripts
+		add_restore_diff
+		end_test
+	fi
 
 	start_test "Status monitor snapshot"
 	add_run_snapshot

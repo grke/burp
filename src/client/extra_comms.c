@@ -38,7 +38,7 @@ int extra_comms_client(struct async *as, struct conf **confs,
 	char *feat=NULL;
 	struct asfd *asfd;
 	struct iobuf *rbuf;
-	const char *orig_client=get_string(confs[OPT_ORIG_CLIENT]);
+	const char *orig_client=NULL;
 	asfd=as->asfd;
 	rbuf=asfd->rbuf;
 
@@ -103,7 +103,9 @@ int extra_comms_client(struct async *as, struct conf **confs,
 		}
 	}
 
-	if(orig_client)
+	// Needs to be after the srestore stuff, as the server may set
+	// orig_client in the server-initiated restore file.
+	if((orig_client=get_string(confs[OPT_ORIG_CLIENT])))
 	{
 		char str[512]="";
 		snprintf(str, sizeof(str), "orig_client=%s", orig_client);

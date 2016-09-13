@@ -194,6 +194,34 @@ static void check_srestore(struct conf **confs,
 	fail_unless(s->next->next==NULL);
 	fail_unless(!strcmp(get_string(confs[OPT_BACKUP]), "20"));
 	fail_unless(action==ACTION_RESTORE);
+	fail_unless(get_string(confs[OPT_ORIG_CLIENT])==NULL);
+}
+
+static void setup_srestore_orig_client(struct asfd *asfd, struct conf **confs)
+{
+	int r=0; int w=0;
+	set_int(confs[OPT_SERVER_CAN_RESTORE], 1);
+	setup_extra_comms_begin(asfd, &r, &w, "srestore:orig_client");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore ok");
+
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backup = 10");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "include = /blah1");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "orig_client = altclient");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "srestore end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore end ok");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "orig_client=altclient");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "orig_client ok");
+
+	setup_extra_comms_end(asfd, &r, &w);
+}
+
+static void check_srestore_orig_client(struct conf **confs,
+	enum action action, const char *incexc)
+{
+	fail_unless(!strcmp(incexc, "backup = 10\ninclude = /blah1\norig_client = altclient\n\n"));
+	fail_unless(!strcmp(get_string(confs[OPT_BACKUP]), "10"));
+	fail_unless(action==ACTION_RESTORE);
+	fail_unless(!strcmp(get_string(confs[OPT_ORIG_CLIENT]), "altclient"));
 }
 
 static void setup_switch_client_denied(struct asfd *asfd, struct conf **confs)
@@ -402,6 +430,8 @@ START_TEST(test_client_extra_comms)
 	run_test(0,  ACTION_BACKUP, setup_srestore_denied, NULL);
 	run_test(0,  ACTION_MONITOR,setup_srestore_action_monitor, NULL);
 	run_test(0,  ACTION_BACKUP, setup_srestore, check_srestore);
+	run_test(0,  ACTION_BACKUP,
+		setup_srestore_orig_client, check_srestore_orig_client);
 	run_test(-1, ACTION_BACKUP, setup_switch_client_denied, NULL);
 	run_test(0,  ACTION_BACKUP, setup_switch_client, NULL);
 	run_test(-1, ACTION_BACKUP, setup_switch_client_read_unexpected, NULL);

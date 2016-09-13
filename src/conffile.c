@@ -1293,7 +1293,7 @@ static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
 	for(r=get_strlist(sconfs[OPT_RESTORE_CLIENTS]); r; r=r->next)
 		if(!strcmp(r->path, get_string(cconfs[OPT_CNAME])))
 			return 1;
-	logp("Access to client is not allowed: %s",
+	logp("Access to client is not allowed: %s\n",
 		get_string(sconfs[OPT_CNAME]));
 	return 0;
 }

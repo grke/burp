@@ -124,12 +124,12 @@ int child(struct async *as, int is_status_server,
 	int srestore=0;
 	int timer_ret=0;
 	char *incexc=NULL;
-	const char *confs_user=get_string(confs[OPT_USER]);
-	const char *cconfs_user=get_string(cconfs[OPT_USER]);
-	const char *confs_group=get_string(confs[OPT_GROUP]);
-	const char *cconfs_group=get_string(cconfs[OPT_GROUP]);
-	const char *s_script_pre=get_string(cconfs[OPT_S_SCRIPT_PRE]);
-	const char *s_script_post=get_string(cconfs[OPT_S_SCRIPT_POST]);
+	const char *confs_user;
+	const char *cconfs_user;
+	const char *confs_group;
+	const char *cconfs_group;
+	const char *s_script_pre;
+	const char *s_script_post;
 
 	// If we are not a status server, we are a normal child - set up the
 	// parent socket to write status to.
@@ -148,6 +148,12 @@ int child(struct async *as, int is_status_server,
 		log_and_send(as->asfd, "running extra comms failed on server");
 		goto end;
 	}
+
+	// Needs to happen after extra_comms, in case extra_comms resets them.
+	confs_user=get_string(confs[OPT_USER]);
+	cconfs_user=get_string(cconfs[OPT_USER]);
+	confs_group=get_string(confs[OPT_GROUP]);
+	cconfs_group=get_string(cconfs[OPT_GROUP]);
 
 	/* Now that the client conf is loaded, we might want to chuser or
 	   chgrp.
@@ -175,6 +181,9 @@ int child(struct async *as, int is_status_server,
 	}
 
 	ret=0;
+
+	s_script_pre=get_string(cconfs[OPT_S_SCRIPT_PRE]);
+	s_script_post=get_string(cconfs[OPT_S_SCRIPT_POST]);
 
 	// FIX THIS: Make the script components part of a struct, and just
 	// pass in the correct struct. Same below.

@@ -545,6 +545,14 @@ static char *extract_cn(X509_NAME *subj)
 	return (char *)ASN1_STRING_data(d);
 }
 
+static void mangle_cname(char **cname, struct conf **c)
+{
+	if(!get_int(c[OPT_CNAME_FQDN]))
+		strip_fqdn(cname);
+	if(get_int(c[OPT_CNAME_LOWERCASE]))
+		strlwr(*cname);
+}
+
 static int get_cname_from_ssl_cert(struct conf **c)
 {
 	int ret=-1;
@@ -553,6 +561,7 @@ static int get_cname_from_ssl_cert(struct conf **c)
 	X509_NAME *subj=NULL;
 	char *path=get_string(c[OPT_SSL_CERT]);
 	const char *cn=NULL;
+	char *copy=NULL;
 
 	if(!path || !(fzp=fzp_open(path, "rb"))) return 0;
 
@@ -572,14 +581,20 @@ static int get_cname_from_ssl_cert(struct conf **c)
 		logp("could not get CN from %s\n", path);
 		goto end;
 	}
-	if(set_string(c[OPT_CNAME], cn))
+	if(!(copy=strdup_w(cn, __func__)))
+		goto end;
+	mangle_cname(&copy, c);
+	if(set_string(c[OPT_CNAME], copy))
 		goto end;
 	logp("cname from cert: %s\n", cn);
+	if(strcmp(copy, cn))
+		logp("cname mangled to: %s\n", copy);
 
 	ret=0;
 end:
 	if(cert) X509_free(cert);
 	fzp_close(&fzp);
+	free_w(&copy);
 	return ret;
 }
 
@@ -625,10 +640,7 @@ static int get_fqdn(struct conf **c)
 
 	if(!(fqdn=strdup_w(info->ai_canonname, __func__)))
 		goto end;
-	if(!get_int(c[OPT_CNAME_FQDN]))
-		strip_fqdn(&fqdn);
-	if(get_int(c[OPT_CNAME_LOWERCASE]))
-		strlwr(fqdn);
+	mangle_cname(&fqdn, c);
 
 	if(set_string(c[OPT_CNAME], fqdn))
 		goto end;

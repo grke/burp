@@ -77,8 +77,8 @@ static void do_test(
 
 	fail_unless(!set_string(globalcs[OPT_CLIENTCONFDIR], CLIENTCONFDIR));
 
-	fail_unless(!set_int(cconfs[OPT_CNAME_LOWERCASE], CNAME_LOWERCASE));
-	fail_unless(!set_int(cconfs[OPT_CNAME_FQDN], CNAME_FQDN));
+	fail_unless(!set_int(globalcs[OPT_CNAME_LOWERCASE], CNAME_LOWERCASE));
+	fail_unless(!set_int(globalcs[OPT_CNAME_FQDN], CNAME_FQDN));
 
 	asfd=asfd_mock_setup(&reads, &writes);
 

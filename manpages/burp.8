@@ -212,6 +212,7 @@ Defines the TCP port that the server listens on for status requests. Comment thi
 .TP
 \fBcname_lowercase=[0|1]\fR
 Whether to force lowercase cname when looking-up in clientconfdir. This also affects the fqdn lookup on the client (see client configuration options for details). The default is 0. When set to 1 the name provided by the client while authenticating will be lowercased.
+.TP
 \fBcname_fqdn=[0|1]\fR
 Whether to keep fqdn cname (like 'testclient.example.com') when looking-up in clientconfdir. This also affects the fqdn lookup on the client (see client configuration options for details). The default is 1. When set to 0, the fqdn provided by the client while authenticating will be stripped ('testclient.example.com' becomes 'testclient').
 .TP
@@ -468,8 +469,10 @@ Defines the TCP port that the server is listening on.
 .TP
 \fBcname=[password]\fR
 Defines the client name to identify as to the server.
+.TP
 \fBcname_lowercase=[0|1]\fR
 Whether to force lowercase cname when detecting cname automatically (ie. no cname provided above). The default is 0. When set to 1 the name returned by the get_fqdn function will be lowercased.
+.TP
 \fBcname_fqdn=[0|1]\fR
 Whether to keep fqdn cname (like 'testclient.example.com') when detecting cname automatically (ie. no cname provided above). The default is 1. When set to 0, the fqdn returned by the get_fqdn function will be stripped ('testclient.example.com' becomes 'testclient').
 .TP

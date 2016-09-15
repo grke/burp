@@ -26,6 +26,9 @@ cname = data_store
 password = abcdefgh
 server= 1.2.3.4
 
+(Note that you don't necessarily have to specify cname - see the 'automatic
+client names' section below) 
+
 You will also need to set up a timed job on the client, to run 'burp -a t'.
 This is done automatically on Windows. On other operating systems, you will
 need to add a cron job.
@@ -122,3 +125,48 @@ Notes:
 
  4. <client>.csr is the client's initial signing request and <client>.crt is
     the signed certificate that the server gave back to the client.
+
+
+Automatic client names
+----------------------
+
+The following procedure is for burp-2 only.
+
+If you do not specify a cname in the client burp.conf, and it hasn't yet
+generated its SSL certificates, it will use its own fully qualified domain
+name as the common name in its new SSL certificate.
+
+If you do not specify a cname in the client burp.conf, and you have generated
+its SSL certificate, it will use the common name in the certificate as the
+cname.
+
+There are some further options related to the automatic cname on the client
+side:
+*) cname_fqdn=[0|1] - If you want to use the hostname instead of the whole
+                      fqdn, set this to 0. The default is 1.
+*) cname_lowecase=[0|1] - If you want to force it to lowercase, use 1. The
+                          default is 0.
+
+If you have already generated the SSL certificate before using these options,
+you will need adjust a few things. Assume the cname was originally
+testclient.f.q.d.n and now you want to set cname_fqdn=0 on the client side.
+Now, on the server:
+
+  1) Make sure that no backup of the client is already running.
+  2) You have to move your storage directory if you already have backups:
+     cd /var/spool/burp && mv testclient.f.q.d.n testclient
+  3) You have to setup clientconfdir accordingly:
+     cd /etc/burp/clientconfdir && mv testclient.f.q.d.n testclient
+  4) The certificate won't match on the server side because it has the common
+     name testclient.f.q.d.n and we are now looking for testclient. You can
+     add 'ssl_peer_cn=testclient.f.q.d.n' in /etc/burp/clientconfdir/testclient
+     and it will work again.
+  5) On the client, run 'burp -a l' to check that things work correctly.
+
+The cname_fqdn and cname_lowercase options are also available server-side, in
+burp-server.conf. When set here, they adjust the cname server side.
+So, following the example above, the client would still be sending
+'testclient.f.q.d.n', but the server will treat it according to its own
+options.
+Again, if you set these options once a client has already introduced itself,
+you will have to follow the same steps above.

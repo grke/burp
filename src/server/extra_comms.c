@@ -5,6 +5,7 @@
 #include "../cmd.h"
 #include "../conf.h"
 #include "../conffile.h"
+#include "../fsops.h"
 #include "../handy.h"
 #include "../incexc_recv.h"
 #include "../incexc_send.h"
@@ -32,7 +33,11 @@ static int append_to_feat(char **feat, const char *str)
 	return 0;
 }
 
-static char *get_restorepath(struct conf **cconfs)
+// It is unfortunate that we are having to figure out the server-initiated
+// restore paths here instead of setting it in a struct sdirs.
+// But doing the extra_comms needs to come before setting the sdirs, because
+// extra_comms sets up a bunch of settings that sdirs need to know.
+static char *get_restorepath_proto1(struct conf **cconfs)
 {
 	char *tmp=NULL;
 	char *restorepath=NULL;
@@ -41,6 +46,54 @@ static char *get_restorepath(struct conf **cconfs)
 			restorepath=prepend_s(tmp, "restore");
 	free_w(&tmp);
 	return restorepath;
+}
+
+static char *get_restorepath_proto2(struct conf **cconfs)
+{
+	char *tmp1=NULL;
+	char *tmp2=NULL;
+	char *restorepath=NULL;
+	if(!(tmp1=prepend_s(get_string(cconfs[OPT_DIRECTORY]),
+		get_string(cconfs[OPT_DEDUP_GROUP]))))
+			goto error;
+	if(!(tmp2=prepend_s(tmp1, "clients")))
+		goto error;
+	free_w(&tmp1);
+	if(!(tmp1=prepend_s(tmp2, get_string(cconfs[OPT_CNAME]))))
+		goto error;
+	if(!(restorepath=prepend_s(tmp1, "restore")))
+		goto error;
+	goto end;
+error:
+	free_w(&restorepath);
+end:
+	free_w(&tmp1);
+	free_w(&tmp2);
+	return restorepath;
+}
+
+static int set_restore_path(struct conf **cconfs, char **feat)
+{
+	int ret=-1;
+	char *restorepath1=NULL;
+	char *restorepath2=NULL;
+	if(!(restorepath1=get_restorepath_proto1(cconfs))
+	  || !(restorepath2=get_restorepath_proto2(cconfs)))
+		goto end;
+	if(is_reg_lstat(restorepath1)==1
+	  && set_string(cconfs[OPT_RESTORE_PATH], restorepath1))
+		goto end;
+	else if(is_reg_lstat(restorepath2)==1
+	  && set_string(cconfs[OPT_RESTORE_PATH], restorepath2))
+		goto end;
+	if(get_string(cconfs[OPT_RESTORE_PATH])
+	  && append_to_feat(feat, "srestore:"))
+		goto end;
+	ret=0;
+end:
+	free_w(&restorepath1);
+	free_w(&restorepath2);
+	return ret;
 }
 
 struct vers
@@ -59,8 +112,6 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 {
 	int ret=-1;
 	char *feat=NULL;
-	struct stat statp;
-	char *restorepath=NULL;
 	enum protocol protocol=get_protocol(cconfs);
 	struct strlist *startdir=get_strlist(cconfs[OPT_STARTDIR]);
 	struct strlist *incglob=get_strlist(cconfs[OPT_INCGLOB]);
@@ -79,11 +130,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 		goto end;
 
 	/* Clients can receive restore initiated from the server. */
-	if(!(restorepath=get_restorepath(cconfs))
-	  || set_string(cconfs[OPT_RESTORE_PATH], restorepath))
-		goto end;
-	if(!lstat(restorepath, &statp) && S_ISREG(statp.st_mode)
-	  && append_to_feat(&feat, "srestore:"))
+	if(set_restore_path(cconfs, &feat))
 		goto end;
 
 	/* Clients can receive incexc conf from the server.
@@ -138,7 +185,6 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 	ret=0;
 end:
 	free_w(&feat);
-	free_w(&restorepath);
 	return ret;
 }
 
@@ -183,12 +229,18 @@ static int extra_comms_read(struct async *as,
 		}
 		else if(!strcmp(rbuf->buf, "srestore ok"))
 		{
+			char *restore_path=get_string(cconfs[OPT_RESTORE_PATH]);
+			if(!restore_path)
+			{
+				logp("got srestore ok without a restore_path");
+				goto end;
+			}
+			
 			iobuf_free_content(rbuf);
 			// Client can accept the restore.
 			// Load the restore config, then send it.
 			*srestore=1;
-			if(conf_parse_incexcs_path(cconfs,
-				get_string(cconfs[OPT_RESTORE_PATH]))
+			if(conf_parse_incexcs_path(cconfs, restore_path)
 			  || incexc_send_server_restore(asfd, cconfs))
 				goto end;
 			// Do not unlink it here - wait until

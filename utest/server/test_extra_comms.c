@@ -138,6 +138,7 @@ static void common_confs(struct conf **cconfs, const char *version,
 	set_string(cconfs[OPT_PEER_VERSION], version);
 	set_string(cconfs[OPT_DIRECTORY], BASE "/spool");
 	set_string(cconfs[OPT_CNAME], TESTCLIENT);
+	set_string(cconfs[OPT_DEDUP_GROUP], "global");
 	set_protocol(cconfs, protocol);
 }
 

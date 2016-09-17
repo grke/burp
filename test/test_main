@@ -266,8 +266,12 @@ add_run_restore_server_initiated()
 	res=$((res+1))
 	dir="$2$res"
 	test_includes_restore=1
+	local srestore="$target/var/spool/burp/testclient/restore"
+	[ "$PROTOCOL" = "2" ] && \
+	  srestore="$target/var/spool/burp/global/clients/testclient/restore"
+
 	echo "backup=$bno
-restoreprefix=$dir" > "$target/var/spool/burp/testclient/restore"
+restoreprefix=$dir" > "$srestore"
 	makedir_client "$dir"
 cat >> "$clientscript" << EOF
 echo "Starting test server initiated restore of backup $bno"
@@ -811,10 +815,12 @@ all_tests()
 	# this test for $STRIP_VSS.
 	if [ -z "$STRIP_VSS" ] ; then
 		start_test "Server-initiated restore"
+		start_script_server
+		start_script_client
 		add_client_server_can_restore_on
 		add_run_restore_server_initiated $bno "$restoredir"
-		run_scripts
 		add_restore_diff
+		run_scripts
 		end_test
 	fi
 

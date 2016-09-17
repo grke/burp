@@ -85,12 +85,10 @@ static int client_can_generic(struct conf **cconfs, enum conf_opt o)
 
 static int client_can_restore(struct conf **cconfs)
 {
-	struct stat statp;
 	const char *restore_path=get_string(cconfs[OPT_RESTORE_PATH]);
 
 	// If there is a restore file on the server, it is always OK.
-	if(restore_path
-	  && !lstat(restore_path, &statp))
+	if(is_reg_lstat(restore_path)==1)
 	{
 		// Remove the file.
 		unlink(restore_path);

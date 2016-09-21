@@ -129,11 +129,14 @@ static int send_file(struct asfd *asfd, struct sbuf *sb,
 	return ret;
 }
 
-static int verify_file(struct asfd *asfd, struct sbuf *sb,
+#ifndef UTEST
+static
+#endif
+int verify_file(struct asfd *asfd, struct sbuf *sb,
 	int patches, const char *best, struct cntr *cntr)
 {
 	MD5_CTX md5;
-	size_t b=0;
+	int b=0;
 	const char *cp=NULL;
 	const char *newsum=NULL;
 	uint8_t in[ZCHUNK];
@@ -141,7 +144,8 @@ static int verify_file(struct asfd *asfd, struct sbuf *sb,
 	uint64_t cbytes=0;
 	struct fzp *fzp=NULL;
 
-	if(!(cp=strrchr(sb->endfile.buf, ':')))
+	if(!sb->endfile.buf
+	  || !(cp=strrchr(sb->endfile.buf, ':')))
 	{
 		logw(asfd, cntr,
 			"%s has no md5sum!\n", sb->protocol1->datapth.buf);
@@ -298,7 +302,10 @@ end:
 
 // a = length of struct bu array
 // i = position to restore from
-static int restore_file(struct asfd *asfd, struct bu *bu,
+#ifndef UTEST
+static
+#endif
+int restore_file(struct asfd *asfd, struct bu *bu,
 	struct sbuf *sb, enum action act,
 	struct sdirs *sdirs, struct conf **cconfs)
 {
@@ -323,7 +330,8 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 		if(b!=bu && (bu->flags & BU_HARDLINKED)) hlwarn=b;
 
 		if(process_data_dir_file(asfd, bu, b,
-			path, sb, act, sdirs, cconfs)) goto end;
+			path, sb, act, sdirs, cconfs))
+				goto end;
 
 		// This warning must be done after everything else,
 		// Because the client does not expect another cmd after
@@ -334,8 +342,12 @@ static int restore_file(struct asfd *asfd, struct bu *bu,
 		break;
 	}
 
-	if(!b) logw(asfd, cntr, "restore could not find %s (%s)\n",
-		sb->path.buf, sb->protocol1->datapth.buf);
+	if(!b)
+	{
+		logw(asfd, cntr, "restore could not find %s (%s)\n",
+			sb->path.buf, sb->protocol1->datapth.buf);
+		ret=0; // Carry on to subsequent files.
+	}
 end:
 	free_w(&path);
 	return ret;

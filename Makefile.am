@@ -322,6 +322,7 @@ runner_SOURCES = \
 	utest/server/protocol1/test_blocklen.c \
 	utest/server/protocol1/test_dpth.c \
 	utest/server/protocol1/test_fdirs.c \
+	utest/server/protocol1/test_restore.c \
 	utest/server/protocol2/champ_chooser/test_champ_chooser.c \
 	utest/server/protocol2/champ_chooser/test_champ_server.c \
 	utest/server/protocol2/champ_chooser/test_dindex.c \

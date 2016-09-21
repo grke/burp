@@ -109,6 +109,7 @@ Suite *suite_server_protocol1_bedup(void);
 Suite *suite_server_protocol1_blocklen(void);
 Suite *suite_server_protocol1_dpth(void);
 Suite *suite_server_protocol1_fdirs(void);
+Suite *suite_server_protocol1_restore(void);
 Suite *suite_server_protocol2_backup_phase2(void);
 Suite *suite_server_protocol2_backup_phase4(void);
 Suite *suite_server_protocol2_champ_chooser_champ_chooser(void);

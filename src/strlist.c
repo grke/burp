@@ -21,7 +21,7 @@ void strlists_free(struct strlist **bd, int count)
 	}
 }
 
-int strlist_add(struct strlist ***bdlist, int *count, char *path, long flag)
+int strlist_add(struct strlist ***bdlist, int *count, char *path, unsigned int flag)
 {
 	//int b=0;
 	struct strlist *bdnew=NULL;

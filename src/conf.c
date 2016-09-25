@@ -538,7 +538,7 @@ static void do_build_regex(struct strlist **list, int count, struct strlist ***d
 struct fstype
 {
 	const char *str;
-	long flag;
+	unsigned int flag;
 };
 
 static struct fstype fstypes[]={
@@ -590,7 +590,7 @@ int main(int argc, char *argv[])
 
 #endif
 
-static int fstype_to_flag(const char *fstype, long *flag)
+static int fstype_to_flag(const char *fstype, unsigned int *flag)
 {
 #ifdef HAVE_LINUX_OS
 	int i=0;

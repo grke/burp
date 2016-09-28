@@ -103,6 +103,11 @@ static int mock_parse_readbuf(__attribute__ ((unused)) struct asfd *asfd)
 	return 0;
 }
 
+static int mock_set_bulk_packets(struct asfd *asfd)
+{
+	return 0;
+}
+
 struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
 	struct ioevent_list *user_writes)
 {
@@ -116,6 +121,7 @@ struct asfd *asfd_mock_setup(struct ioevent_list *user_reads,
 		mock_asfd_assert_append_all_to_write_buffer;
 	asfd->parse_readbuf=mock_parse_readbuf;
 	asfd->simple_loop=asfd_simple_loop;
+	asfd->set_bulk_packets=mock_set_bulk_packets;
 	ioevent_list_init(user_reads);
 	ioevent_list_init(user_writes);
 	asfd->data1=(void *)user_reads;

@@ -373,6 +373,8 @@ static int run_diff(struct asfd *asfd,
 	ret=do_diff_server(asfd, sdirs,
 		get_cntr(cconfs), get_protocol(cconfs), backup1, backup2);
 end:
+	free_w(&backup1);
+	free_w(&backup2);
 	return ret;
 }
 
@@ -411,7 +413,8 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 		return -1;
 	}
 
-	if(rbuf->cmd!=CMD_GEN) return unknown_command(as->asfd);
+	if(rbuf->cmd!=CMD_GEN)
+		return unknown_command(as->asfd);
 
 	// List and diff should work even while backups are running.
 	if(!strncmp_w(rbuf->buf, "list ")

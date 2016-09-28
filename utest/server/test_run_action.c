@@ -1,8 +1,20 @@
 #include "../test.h"
 #include "../src/action.h"
 #include "../src/alloc.h"
+#include "../src/asfd.h"
+#include "../src/async.h"
 #include "../src/conf.h"
+#include "../src/conffile.h"
+#include "../src/fsops.h"
+#include "../src/iobuf.h"
 #include "../src/server/run_action.h"
+#include "../builders/build_asfd_mock.h"
+#include "../builders/build_file.h"
+
+#define BASE		"utest_server_run_action"
+#define CLIENTCONFDIR   "clientconfdir"
+#define GLOBAL_CONF	BASE "/burp-server.conf"
+#define CCONFFILE	CLIENTCONFDIR "/utestclient"
 
 struct parsedata
 {
@@ -26,7 +38,7 @@ static struct parsedata pd[] = {
 	{ NULL, (enum action)0, NULL, NULL, -1 },
 };
 
-static void run_test(struct parsedata *p)
+static void run_parse_test(struct parsedata *p)
 {
 	int ret;
 	enum action act;
@@ -58,8 +70,209 @@ START_TEST(test_parse_restore_str_and_set_confs)
 {
 	FOREACH(pd)
 	{
-		run_test(&pd[i]);
+		run_parse_test(&pd[i]);
 	}
+}
+END_TEST
+
+static struct ioevent_list reads;
+static struct ioevent_list writes;
+
+static struct conf **setup_conf(void)
+{
+	struct conf **confs=NULL;
+	fail_unless((confs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(confs));
+	return confs;
+}
+
+static struct async *setup_async(void)
+{
+	struct async *as;
+	fail_unless((as=async_alloc())!=NULL);
+	as->init(as, 0 /* estimate */);
+	return as;
+}
+
+static void clean(void)
+{
+	fail_unless(!recursive_delete(BASE));
+	fail_unless(!recursive_delete(CLIENTCONFDIR));
+}
+
+static void setup(struct async **as,
+	struct conf ***confs, struct conf ***cconfs)
+{
+	clean();
+	*as=setup_async();
+	*confs=setup_conf();
+	*cconfs=setup_conf();
+}
+
+static void tear_down(struct async **as, struct asfd **asfd,
+	struct conf ***confs, struct conf ***cconfs)
+{
+	clean();
+	async_free(as);
+	asfd_free(asfd);
+	asfd_mock_teardown(&reads, &writes);
+	confs_free(confs);
+	confs_free(cconfs);
+	alloc_check();
+}
+
+static int async_rw_simple(struct async *as)
+{
+	return as->asfd->read(as->asfd);
+}
+
+static void setup_could_not_mkpath(struct asfd *asfd)
+{
+	int w=0;
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR,
+		"could not mkpath " BASE "/directory/a_group/clients/utestclient/current");
+}
+
+static void build_directory_path(void)
+{
+	char path[256]="";
+	snprintf(path, sizeof(path), BASE "/directory/a_group/clients/utestclient/current");
+	fail_unless(!build_path_w(path));
+}
+
+static void setup_unknown_command(struct asfd *asfd)
+{
+	int w=0;
+	build_directory_path();
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "unknown command");
+}
+
+static void set_rbuf(struct asfd *asfd, enum cmd cmd, const char *str)
+{
+	struct iobuf *rbuf=asfd->rbuf;
+	rbuf->cmd=cmd;
+	fail_unless((rbuf->buf=strdup_w(str, __func__))!=NULL);
+}
+
+static void setup_unknown_command_gen(struct asfd *asfd)
+{
+	int w=0;
+	build_directory_path();
+	set_rbuf(asfd, CMD_GEN, "blah ");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "unknown command");
+}
+
+static void setup_list(struct asfd *asfd)
+{
+	int w=0;
+	build_directory_path();
+	set_rbuf(asfd, CMD_GEN, "list ");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_MESSAGE, "no backups");
+}
+
+static void setup_diff(struct asfd *asfd)
+{
+	int w=0;
+	build_directory_path();
+	set_rbuf(asfd, CMD_GEN, "diff ");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0,
+		CMD_ERROR, "you need to specify two backups");
+}
+
+static void setup_backup(struct asfd *asfd)
+{
+	int r=0;
+	int w=0;
+	build_directory_path();
+	set_rbuf(asfd, CMD_GEN, "backup ");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok:9");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
+}
+
+static void setup_restore(struct asfd *asfd)
+{
+	int w=0;
+	build_directory_path();
+	set_rbuf(asfd, CMD_GEN, "restore ");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "backup not found");
+}
+
+static void setup_verify(struct asfd *asfd)
+{
+	int w=0;
+	build_directory_path();
+	set_rbuf(asfd, CMD_GEN, "verify ");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "ok");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "backup not found");
+}
+
+static void setup_delete(struct asfd *asfd)
+{
+	struct iobuf *rbuf=asfd->rbuf;
+	build_directory_path();
+	set_rbuf(asfd, CMD_GEN, "Delete ");
+}
+
+static void setup_delete_old_style(struct asfd *asfd)
+{
+	int w=0;
+	build_directory_path();
+	set_rbuf(asfd, CMD_GEN, "delete ");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR,
+		"old style delete is not supported on this server");
+}
+
+static void run_test(
+	int expected_ret,
+	void setup_callback(struct asfd *)
+)
+{
+	struct async *as;
+	struct asfd *asfd;
+	struct conf **confs;
+	struct conf **cconfs;
+	int timer_ret=0;
+
+	setup(&as, &confs, &cconfs);
+	asfd=asfd_mock_setup(&reads, &writes);
+	as->asfd_add(as, asfd);
+	as->read_write=async_rw_simple;
+	asfd->as=as;
+
+	build_file(GLOBAL_CONF,
+		MIN_SERVER_CONF
+		"directory=" BASE "/directory\n");
+	build_file(CCONFFILE, "");
+	fail_unless(!conf_load_global_only(GLOBAL_CONF, confs));
+	fail_unless(!conf_load_overrides(confs, cconfs, CCONFFILE));
+	fail_unless(!set_string(cconfs[OPT_CNAME], "utestclient"));
+	setup_callback(asfd);
+
+	fail_unless(run_action_server(
+		as,
+		NULL, // incexc
+		0, // srestore
+		&timer_ret,
+		cconfs)==expected_ret);
+
+	tear_down(&as, &asfd, &confs, &cconfs);
+}
+
+START_TEST(test_run_action)
+{
+	run_test(-1, setup_could_not_mkpath);
+	run_test(-1, setup_unknown_command);
+	run_test(-1, setup_unknown_command_gen);
+	run_test(0, setup_list);
+	run_test(-1, setup_diff);
+	run_test(-1, setup_backup);
+	run_test(-1, setup_restore);
+	run_test(-1, setup_verify);
+	run_test(0, setup_delete);
+	run_test(-1, setup_delete_old_style);
 }
 END_TEST
 
@@ -72,6 +285,7 @@ Suite *suite_server_run_action(void)
 
 	tc_core=tcase_create("Core");
 	tcase_add_test(tc_core, test_parse_restore_str_and_set_confs);
+	tcase_add_test(tc_core, test_run_action);
 
 	suite_add_tcase(s, tc_core);
 

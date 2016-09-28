@@ -245,7 +245,11 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	iobuf_move(&p1b->protocol1->datapth, &cb->protocol1->datapth);
 	iobuf_move(&p1b->endfile, &cb->endfile);
 	p1b->compression=cb->compression;
+	// Why is winattr not getting sent in phase1?
 	p1b->winattr=cb->winattr;
+	// Need to free attr so that it is reallocated, because it may get
+	// longer than what the client told us in phase1.
+	iobuf_free_content(&p1b->attr);
 	if(attribs_encode(p1b))
 		return -1;
 	if(manio_write_sbuf(ucmanio, p1b))

@@ -1,3 +1,28 @@
+2016-10-01 Changes in burp-2.0.48:
+  * Fix server-side segfault on re-encoding Windows attributes.
+  * Stop server child hanging on verify/restore when gzipped file is corrupt.
+  * If a file is missing on verify/restore, continue to verify/restore more
+    files.
+  * Make server initiated restores work in protocol 2.
+  * Benjamin Sans' fixes for cname_ options:
+    + manpage misses some returns
+    + use globalcs while authenticating client
+    + fix unit test
+    + allow to change cname_fqdn and cname_lowercase on already setup servers
+  * Add better docs for the cname_ options.
+  * On the client side, make OPT_CNAME_FQDN and OPT_CNAME_LOWERCASE
+    affect the cname retrieved from the ssl cert, as well as the
+    cname when the certificate is generated in the first place.
+  * Fix chuser/chgrp when switching with orig_client.
+  * Fix server-initiated restores with orig_client.
+  * Add end-to-end test for a server-initiated restore.
+  * Avi Rozen's fixes:
+    + for possible hardlink truncation on restore.
+    + for burpfs support:
+      - monitor/browse: link field added to file entries
+      - monitor/browse: use "*" as browse directory in order to dump all files
+      - fixed handling of NULL browse directory
+
 2016-09-04 Changes in burp-2.0.46:
   * Fix server segfault in no-fork mode.
   * Counter fixes for protocol1.

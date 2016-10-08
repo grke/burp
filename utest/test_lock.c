@@ -67,8 +67,8 @@ static void run_with_fork(int child_exit_early)
 		fail_unless(lock_test(lockfile)==-1);
 		lock_get_quick(lock);
 		fail_unless(lock->status==GET_LOCK_NOT_GOT);
-		wait(&stat);
 	}
+	wait(&stat);
 
 	// The child has exited, should now be able to get it.
 	assert_can_get_lock(lock);

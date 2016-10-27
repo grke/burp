@@ -226,9 +226,19 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	cntr_print(cntr, ACTION_BACKUP, asfd);
 	cntr_stats_to_file(cntr, sdirs->rworking, ACTION_BACKUP);
 
+	if(protocol==PROTO_2)
+	{
+		// Regenerate dindex before the symlink is renamed, so that the
+		// champ chooser cleanup does not try to remove data files
+		// whilst the dindex regeneration is happening.
+		if(regenerate_client_dindex(sdirs))
+			goto error;
+	}
+
 	// Move the symlink to indicate that we are now in the end phase. The
 	// rename() race condition is automatically recoverable here.
-	if(do_rename(sdirs->finishing, sdirs->current)) goto error;
+	if(do_rename(sdirs->finishing, sdirs->current))
+		goto error;
 
 	logp("Backup completed.\n");
 	log_fzp_set(NULL, cconfs);
@@ -320,12 +330,11 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 
 	if((ret=do_backup_server(as, sdirs, cconfs, incexc, resume)))
 		goto end;
+
 	if((ret=delete_backups(sdirs, cname,
 		get_strlist(cconfs[OPT_KEEP]),
 		get_string(cconfs[OPT_MANUAL_DELETE]))))
 			goto end;
-	if(get_protocol(cconfs)==PROTO_2)
-		ret=regenerate_client_dindex(sdirs);
 end:
 	return ret;
 }

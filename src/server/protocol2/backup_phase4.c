@@ -617,6 +617,23 @@ end:
 	return ret;
 }
 
+static void wait_for_champ_dindex_lock(struct sdirs *sdirs)
+{
+	while(lock_test(sdirs->champ_dindex_lock))
+	{
+		logp("Waiting for %s\n", sdirs->champ_dindex_lock);
+		sleep(3);
+	}
+}
+
+// Never call this outside of backup phases 2 to 4, because it cannot run
+// at the same time as the champ chooser starts up - that is when the champ
+// chooser attempts to delete data files. If the champ chooser attempts to
+// delete data files whilst the dindex is being regenerated, data could be
+// lost.
+// Backup phase 2 may start a champ chooser, and the champ chooser will not
+// attempt deletion if any client in the dedup_group has working/finishing
+// symlinks or a dfiles.regenerating file.
 int regenerate_client_dindex(struct sdirs *sdirs)
 {
 	int ret=-1;
@@ -628,10 +645,11 @@ int regenerate_client_dindex(struct sdirs *sdirs)
 	int path_built=0;
 	uint64_t last_index=0;
 	char *dfiles_new=NULL;
+	char *dfiles_regenerating=NULL;
+	struct fzp *fzp=NULL;
 
-	if(recursive_delete(sdirs->dindex)) goto end;
-
-	if(bu_get_list(sdirs, &bu_list)) goto end;
+	if(bu_get_list_with_working(sdirs, &bu_list, NULL))
+		goto end;
 
 	for(bu=bu_list; bu; bu=bu->next)
 	{
@@ -656,20 +674,47 @@ int regenerate_client_dindex(struct sdirs *sdirs)
 		last_index=(uint64_t)bu->index;
 	}
 
-	if(!(dfiles_new=prepend(sdirs->dfiles, ".new")))
+	if(!(dfiles_new=prepend(sdirs->dfiles, ".new"))
+	  || !(dfiles_regenerating=prepend(sdirs->dfiles, ".regenerating")))
+		goto end;
+
+	// dfiles.regenerating is checked in champ_chooser/dindex.c, the
+	// champ chooser will not delete data files if it exists. We need
+	// to make sure the champ chooser does not try to delete data files
+	// whilst we have dfiles in an inconsistent state, or data will be
+	// lost.
+	// If we are interrupted after this point, the champ chooser deletion
+	// code will not run again until this code here is re-run (or somebody
+	// deletes dfiles_regenerating by hand, which they should not do).
+	if(!(fzp=fzp_open(dfiles_regenerating, "wb"))
+	  || fzp_close(&fzp))
+		goto end;
+
+	if(recursive_delete(dfiles_new))
 		goto end;
 	if(merge_files_in_dir(dfiles_new, sdirs->client,
 		"dindex", last_index, merge_dindexes))
 			goto end;
 
+	// If the champ chooser is deleting files, we do not want to mess with
+	// our dindex/dfiles. Wait until it is finished.
+	wait_for_champ_dindex_lock(sdirs);
+
+	if(recursive_delete(sdirs->dindex))
+		goto end;
 	if(do_rename(dfiles_new, sdirs->dfiles))
 		goto end;
+	if(recursive_delete(sdirs->dindex))
+		goto end;
 
-	if(recursive_delete(sdirs->dindex)) goto end;
+	if(unlink_w(dfiles_regenerating, __func__))
+		goto end;
 
 	ret=0;
 end:
 	bu_list_free(&bu_list);
+	free_w(&dfiles_new);
+	free_w(&dfiles_regenerating);
 	free_w(&newpath);
 	free_w(&oldpath);
 	return ret;

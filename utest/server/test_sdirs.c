@@ -85,6 +85,7 @@ static void protocol1_tests(struct sdirs *sdirs)
 	fail_unless(sdirs->champlock==NULL);
 	fail_unless(sdirs->champsock==NULL);
 	fail_unless(sdirs->champlog==NULL);
+	fail_unless(sdirs->champ_dindex_lock==NULL);
 	fail_unless(sdirs->data==NULL);
 	ck_assert_str_eq(sdirs->clients, BASE);
 	ck_assert_str_eq(sdirs->client, CLIENT);
@@ -124,6 +125,7 @@ static void protocol2_tests(struct sdirs *sdirs)
 	ck_assert_str_eq(sdirs->champlock, DATA "/cc.lock");
 	ck_assert_str_eq(sdirs->champsock, DATA "/cc.sock");
 	ck_assert_str_eq(sdirs->champlog, DATA "/cc.log");
+	ck_assert_str_eq(sdirs->champ_dindex_lock, DATA "/dindex.lock");
 	ck_assert_str_eq(sdirs->data, DATA);
 	ck_assert_str_eq(sdirs->clients, CLIENTS);
 	ck_assert_str_eq(sdirs->client, CLIENT2);

@@ -16,6 +16,7 @@ struct sdirs
 	char *champlock;
 	char *champsock;
 	char *champlog;
+	char *champ_dindex_lock;
 	char *data;
 	char *clients;
 	char *client;

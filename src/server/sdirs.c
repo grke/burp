@@ -173,6 +173,7 @@ static int do_protocol2_dirs(struct sdirs *sdirs,
 	  || !(sdirs->champlock=prepend_s(sdirs->data, "cc.lock"))
 	  || !(sdirs->champsock=prepend_s(sdirs->data, "cc.sock"))
 	  || !(sdirs->champlog=prepend_s(sdirs->data, "cc.log"))
+	  || !(sdirs->champ_dindex_lock=prepend_s(sdirs->data, "dindex.lock"))
 	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest"))
 	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest")))
 		return -1;
@@ -234,6 +235,7 @@ void sdirs_free_content(struct sdirs *sdirs)
         free_w(&sdirs->champlock);
         free_w(&sdirs->champsock);
         free_w(&sdirs->champlog);
+        free_w(&sdirs->champ_dindex_lock);
         free_w(&sdirs->data);
         free_w(&sdirs->clients);
         free_w(&sdirs->client);

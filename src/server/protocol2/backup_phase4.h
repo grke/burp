@@ -3,6 +3,7 @@
 
 extern int backup_phase4_server_protocol2(struct sdirs *sdirs,
 	struct conf **confs);
+// Never call regenerate_client_dindex() outside of backup phases 2 to 4!
 extern int regenerate_client_dindex(struct sdirs *sdirs);
 extern int merge_dindexes(const char *dst, const char *srca, const char *srcb);
 extern int merge_files_in_dir(const char *final,

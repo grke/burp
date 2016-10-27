@@ -2,6 +2,7 @@
 #include "../../../alloc.h"
 #include "../../../fsops.h"
 #include "../../../hexmap.h"
+#include "../../../lock.h"
 #include "../../../log.h"
 #include "../../../prepend.h"
 #include "../../../protocol2/blk.h"
@@ -17,9 +18,11 @@ static int backup_in_progress(const char *fullpath)
 	struct stat statp;
 	char *working=NULL;
 	char *finishing=NULL;
+	char *dfiles_regenerating=NULL;
 
 	if(!(working=prepend_s(fullpath, "working"))
-	  || !(finishing=prepend_s(fullpath, "finishing")))
+	  || !(finishing=prepend_s(fullpath, "finishing"))
+	  || !(dfiles_regenerating=prepend_s(fullpath, "dfiles.regenerating")))
 		goto end;
 
 	if(!lstat(working, &statp)
@@ -27,14 +30,23 @@ static int backup_in_progress(const char *fullpath)
 	{
 		logp("%s looks like it has a backup in progress.\n",
 			fullpath);
-		logp("Give up clean up attempt.\n");
+		ret=1;
+		goto end;
+	}
+	if(!lstat(dfiles_regenerating, &statp))
+	{
+		logp("%s looks like it was interrupted whilst "
+			"regenerating its dfiles.\n", fullpath);
 		ret=1;
 		goto end;
 	}
 	ret=0;
 end:
+	if(ret==1)
+		logp("Give up clean up attempt.\n");
 	free_w(&working);
 	free_w(&finishing);
+	free_w(&dfiles_regenerating);
 	return ret;
 }
 
@@ -248,6 +260,7 @@ int delete_unused_data_files(struct sdirs *sdirs, int resume)
 	struct strlist *s=NULL;
 	struct strlist *slist=NULL;
 	struct stat statp;
+	struct lock *lock=NULL;
 
 	if(!sdirs)
 	{
@@ -264,6 +277,20 @@ int delete_unused_data_files(struct sdirs *sdirs, int resume)
 		ret=0;
 		goto end;
 	}
+
+	if(!(lock=lock_alloc_and_init(sdirs->champ_dindex_lock)))
+		goto end;
+	lock_get(lock);
+	switch(lock->status)
+	{
+		case GET_LOCK_GOT:
+			break;
+		default:
+			logp("Could not get %s\n", sdirs->champ_dindex_lock);
+			logp("This should not happen.\n");
+			goto end;
+	}
+
 	logp("Attempting to clean up unused data files %s\n", sdirs->clients);
 
 	// Get all lists of files in all backups.
@@ -363,6 +390,8 @@ end:
 	strlists_free(&slist);
 	if(cindex_tmp) recursive_delete(cindex_tmp);
 	if(dindex_tmp) recursive_delete(dindex_tmp);
+	lock_release(lock);
+	lock_free(&lock);
 	free_w(&fullpath);
 	free_w(&hlinks);
 	free_w(&cindex_tmp);

@@ -434,6 +434,27 @@ START_TEST(test_large_file_support)
 }
 END_TEST
 
+START_TEST(test_file_is_included_no_incext)
+{
+	struct conf **confs;
+	confs=setup_conf();
+	add_to_strlist(confs[OPT_INCEXCDIR], "/", 1);
+	add_to_strlist(confs[OPT_INCEXCDIR], "/blah", 0);
+	add_to_strlist(confs[OPT_INCEXCDIR], "/tmp", 0);
+	add_to_strlist(confs[OPT_INCEXCDIR], "/tmp/some/sub/dir", 1);
+
+	fail_unless(file_is_included_no_incext(confs, "/blah2"));
+	fail_unless(file_is_included_no_incext(confs, "/blah2/blah3"));
+	fail_unless(file_is_included_no_incext(confs, "/tmp/some/sub/dir/1"));
+	fail_unless(!file_is_included_no_incext(confs, "/tmp"));
+	fail_unless(!file_is_included_no_incext(confs, "/tmp/blah"));
+	fail_unless(!file_is_included_no_incext(confs, "/tmp/some/sub"));
+
+	confs_free(&confs);
+	alloc_check();
+}
+END_TEST
+
 Suite *suite_client_find(void)
 {
 	Suite *s;
@@ -445,6 +466,7 @@ Suite *suite_client_find(void)
 
 	tcase_add_test(tc_core, test_find);
 	tcase_add_test(tc_core, test_large_file_support);
+	tcase_add_test(tc_core, test_file_is_included_no_incext);
 	suite_add_tcase(s, tc_core);
 
 	return s;

@@ -88,4 +88,9 @@ extern int find_files_begin(struct asfd *asfd,
 extern int in_exclude_comp(struct strlist *excom, const char *fname,
 	int compression);
 
+#ifdef UTEST
+extern int file_is_included_no_incext(struct conf **confs, const char *fname);
+#endif
+
+
 #endif

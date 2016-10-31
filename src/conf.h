@@ -322,8 +322,6 @@ extern int set_mode_t(struct conf *conf, mode_t m);
 extern int set_float(struct conf *conf, float f);
 extern int set_uint64_t(struct conf *conf, uint64_t s);
 extern int add_to_strlist(struct conf *conf, const char *value, int include);
-extern int add_to_strlist_include(struct conf *conf, const char *value);
-extern int add_to_strlist_exclude(struct conf *conf, const char *value);
 extern int add_to_strlist_include_uniq(struct conf *conf, const char *value);
 
 extern enum burp_mode str_to_burp_mode(const char *str);

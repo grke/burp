@@ -175,7 +175,10 @@ static int in_exclude_regex(struct strlist *excreg, const char *fname)
 }
 
 // When recursing into directories, do not want to check the include_ext list.
-static int file_is_included_no_incext(struct conf **confs, const char *fname)
+#ifndef UTEST
+static
+#endif
+int file_is_included_no_incext(struct conf **confs, const char *fname)
 {
 	int ret=0;
 	int longest=0;
@@ -191,7 +194,7 @@ static int file_is_included_no_incext(struct conf **confs, const char *fname)
 	for(l=get_strlist(confs[OPT_INCEXCDIR]); l; l=l->next)
 	{
 		matching=is_subdir(l->path, fname);
-		if(matching>longest)
+		if(matching>=longest)
 		{
 			longest=matching;
 			best=l;

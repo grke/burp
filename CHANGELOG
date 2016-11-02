@@ -1,3 +1,8 @@
+2016-11-02 Changes in burp-2.0.50:
+  * Bug fix for excluding directories directly inside /.
+  * Fix for dindex regeneration concurrency accidently resulting in
+    protocol2 data files getting deleted prematurely.
+
 2016-10-01 Changes in burp-2.0.48:
   * Fix server-side segfault on re-encoding Windows attributes.
   * Stop server child hanging on verify/restore when gzipped file is corrupt.

@@ -1,7 +1,7 @@
 #ifndef _SEL_H
 #define _SEL_H
 
-enum page
+enum page_e
 {
 	PAGE_CLIENT_LIST=0,
 	PAGE_BACKUP_LIST,
@@ -17,7 +17,7 @@ struct sel
 	uint16_t logop;
 	struct lline *llines;
 	struct lline *lline;
-	enum page page;
+	enum page_e page;
 	int offset;
 };
 

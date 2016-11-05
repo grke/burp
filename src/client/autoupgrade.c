@@ -85,6 +85,7 @@ int autoupgrade_client(struct async *as, struct conf **confs)
 		goto end;
 	}
 	else if(a<0) // Error.
+		goto end;
 
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();

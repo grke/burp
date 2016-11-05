@@ -229,7 +229,8 @@ int transfer_gzfile_inl(struct asfd *asfd,
 			if(enc_ctx)
 			{
 				EVP_CIPHER_CTX_cleanup(enc_ctx);
-				free_v((void **)&enc_ctx);
+				EVP_CIPHER_CTX_free(enc_ctx);
+				enc_ctx=NULL;
 			}
 			inflateEnd(&zstrm);
 			return -1;
@@ -363,7 +364,8 @@ int transfer_gzfile_inl(struct asfd *asfd,
 	if(enc_ctx)
 	{
 		EVP_CIPHER_CTX_cleanup(enc_ctx);
-		free_v((void **)&enc_ctx);
+		EVP_CIPHER_CTX_free(enc_ctx);
+		enc_ctx=NULL;
 	}
 
 	iobuf_free_content(rbuf);

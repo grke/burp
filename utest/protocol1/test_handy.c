@@ -14,19 +14,12 @@ START_TEST(test_enc_setup_no_password)
 }
 END_TEST
 
-START_TEST(test_enc_setup_alloc_error)
-{
-	alloc_errors=1;
-	fail_unless(enc_setup(1 /*encrypt*/, "somepass")==NULL);
-	tear_down();
-}
-END_TEST
-
 START_TEST(test_enc_setup_ok)
 {
 	EVP_CIPHER_CTX *ctx;
 	fail_unless((ctx=enc_setup(1 /*encrypt*/, "somepass"))!=NULL);
-	free_v((void **)&ctx);
+	EVP_CIPHER_CTX_cleanup(ctx);
+	EVP_CIPHER_CTX_free(ctx);
 	tear_down();
 }
 END_TEST
@@ -60,7 +53,6 @@ Suite *suite_protocol1_handy(void)
 	tc_core=tcase_create("Core");
 
 	tcase_add_test(tc_core, test_enc_setup_no_password);
-	tcase_add_test(tc_core, test_enc_setup_alloc_error);
 	tcase_add_test(tc_core, test_enc_setup_ok);
 	tcase_add_test(tc_core, test_send_whole_filel);
 

@@ -567,7 +567,13 @@ int ca_x509_verify_crl(struct conf **confs,
 	{
 		revoked=(X509_REVOKED *)
 			sk_X509_REVOKED_value(X509_CRL_get_REVOKED(crl), i);
-		if(!ASN1_INTEGER_cmp(revoked->serialNumber, X509_get_serialNumber(peer_cert)))
+		if(!ASN1_INTEGER_cmp(
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
+			X509_REVOKED_get0_serialNumber(revoked),
+#else
+			revoked->serialNumber,
+#endif
+			X509_get_serialNumber(peer_cert)))
 		{
 			serial=X509_get_serialNumber(peer_cert);
 			bnser=ASN1_INTEGER_to_BN(serial, NULL);

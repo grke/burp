@@ -530,8 +530,6 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 #include <openssl/x509.h>
 #endif
 
-const unsigned char *ASN1_STRING_get0_data(const ASN1_STRING *x) __attribute__((weak));
-
 static char *extract_cn(X509_NAME *subj)
 {
 	int nid;
@@ -544,10 +542,11 @@ static char *extract_cn(X509_NAME *subj)
 	  || !(e=X509_NAME_get_entry(subj, index))
 	  || !(d=X509_NAME_ENTRY_get_data(e)))
 		return NULL;
-	if(ASN1_STRING_get0_data)
+#if OPENSSL_VERSION_NUMBER >= 0x1010000fL
 		return (char *)ASN1_STRING_get0_data(d);
-	else
+#else
 		return (char *)ASN1_STRING_data(d);
+#endif
 }
 
 static void mangle_cname(char **cname, struct conf **c)

@@ -1,3 +1,8 @@
+2016-11-07 Changes in burp-2.0.52:
+  * Make compilation with openssl-1.1.0 work.
+  * Fix for client side autoupgrade.
+  * Rename 'enum page' so that compilation on Solaris 10 works.
+
 2016-11-02 Changes in burp-2.0.50:
   * Bug fix for excluding directories directly inside /.
   * Fix for dindex regeneration concurrency accidently resulting in

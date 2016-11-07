@@ -199,6 +199,9 @@ void log_restore_settings(struct conf **cconfs, int srestore)
 	if(get_string(cconfs[OPT_RESTOREPREFIX]))
 		logp("restoreprefix = '%s'\n",
 			get_string(cconfs[OPT_RESTOREPREFIX]));
+	if(get_string(cconfs[OPT_STRIP_FROM_PATH]))
+		logp("stripfrompath = '%s'\n",
+			get_string(cconfs[OPT_STRIP_FROM_PATH]));
 	if(get_string(cconfs[OPT_REGEX]))
 		logp("regex = '%s'\n", get_string(cconfs[OPT_REGEX]));
 	for(l=get_strlist(cconfs[OPT_INCLUDE]); l; l=l->next)

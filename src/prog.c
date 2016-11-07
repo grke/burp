@@ -275,6 +275,7 @@ int real_main(int argc, char *argv[])
 	const char *backup=NULL;
 	const char *backup2=NULL;
 	char *restoreprefix=NULL;
+	char *stripfrompath=NULL;
 	const char *regex=NULL;
 	const char *browsefile=NULL;
 	char *browsedir=NULL;
@@ -491,6 +492,7 @@ int real_main(int argc, char *argv[])
 	if(replace_conf_str(confs[OPT_BACKUP], backup)
 	  || replace_conf_str(confs[OPT_BACKUP2], backup2)
 	  || replace_conf_str(confs[OPT_RESTOREPREFIX], restoreprefix)
+	  || replace_conf_str(confs[OPT_STRIP_FROM_PATH], stripfrompath)
 	  || replace_conf_str(confs[OPT_REGEX], regex)
 	  || replace_conf_str(confs[OPT_BROWSEFILE], browsefile)
 	  || replace_conf_str(confs[OPT_BROWSEDIR], browsedir)

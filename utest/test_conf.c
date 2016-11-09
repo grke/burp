@@ -44,6 +44,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_BACKUP:
 		case OPT_BACKUP2:
 		case OPT_RESTOREPREFIX:
+		case OPT_STRIP_FROM_PATH:
 		case OPT_BROWSEFILE:
 		case OPT_BROWSEDIR:
 		case OPT_B_SCRIPT_PRE:

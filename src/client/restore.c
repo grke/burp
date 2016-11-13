@@ -388,7 +388,7 @@ static const char *act_str(enum action act)
 
 void strip_from_path(char *path, const char *strip)
 {
-	if (strlen(path) > strlen(strip))
+	if (path && strip && strlen(path) > strlen(strip))
 	{
 		char *p = strstr(path, strip);
 		if(p != NULL)

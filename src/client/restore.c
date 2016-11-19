@@ -386,18 +386,23 @@ static const char *act_str(enum action act)
 	return ret;
 }
 
+#ifndef UTEST
+static
+#endif
 void strip_from_path(char *path, const char *strip)
 {
-	if (path && strip && strlen(path) > strlen(strip))
-	{
-		char *p = strstr(path, strip);
-		if(p != NULL)
-		{
-			size_t len = strlen(p) - strlen(strip) + 1;
-			char *src = p + strlen(strip);
-			memmove(p, src, len);
-		}
-	}
+	char *p;
+	char *src;
+	size_t len;
+	if(!path
+	  || !strip
+	  || strlen(path)<=strlen(strip)
+	  || !(p=strstr(path, strip)))
+		return;
+
+	len=strlen(p)-strlen(strip)+1;
+	src=p+strlen(strip);
+	memmove(p, src, len);
 }
 
 
@@ -654,10 +659,9 @@ int do_restore_client(struct asfd *asfd,
 					}
 					// It is OK, sb.path is now stripped.
 				}
-				if(strip_path && strlen(strip_path)) {
+				if(strip_path)
 					strip_from_path(sb->path.buf,
 						strip_path);
-				}
 				free_w(&fullpath);
 				if(!(fullpath=prepend_s(restore_prefix,
 					sb->path.buf)))

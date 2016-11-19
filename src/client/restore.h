@@ -24,4 +24,8 @@ extern int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct cntr *cntr,
 	enum protocol protocol);
 
+#ifdef UTEST
+extern void strip_from_path(char *path, const char *strip);
+#endif
+
 #endif

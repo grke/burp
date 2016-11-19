@@ -18,8 +18,6 @@
 
 #define BASE	"utest_restore"
 
-extern void strip_from_path(char *path, const char *strip);
-
 static struct ioevent_list reads;
 static struct ioevent_list writes;
 
@@ -362,45 +360,32 @@ START_TEST(test_restore_proto2_interrupt)
 }
 END_TEST
 
+struct sdata
+{
+	const char *input;
+	const char *strip;
+	const char *expected;
+};
+
+static struct sdata s[] = {
+        { "/path/to/a/file", "/to/a", "/path/file" },
+	{ "/path/to/a/file/to/a/foo", "/to/a", "/path/file/to/a/foo" },
+	{ "/path/to/a/file", "/path/to/a/file", "/path/to/a/file" },
+	{ "/path/to/a/file", "/", "path/to/a/file" },
+	{ "/path/to/a/file/", "/path/to/a/file", "/" },
+	{ "/path/to/a/file", "", "/path/to/a/file" },
+	{ "/path/to/a/file", NULL, "/path/to/a/file" }
+};
+
 START_TEST(test_strip_from_path)
 {
-	char test[256];
-	char expected[256];
-
-	snprintf(test, sizeof(test), "/path/to/a/file");
-	snprintf(expected, sizeof(expected), "/path/file");
-	strip_from_path(test, "/to/a");
-	fail_unless(strcmp(test,expected)==0);
-
-	snprintf(test, sizeof(test), "/path/to/a/file/to/a/foo");
-	snprintf(expected, sizeof(expected), "/path/file/to/a/foo");
-	strip_from_path(test, "/to/a");
-	fail_unless(strcmp(test,expected)==0);
-
-	snprintf(test, sizeof(test), "/path/to/a/file");
-	snprintf(expected, sizeof(expected), "/path/to/a/file");
-	strip_from_path(test, "/path/to/a/file");
-	fail_unless(strcmp(test,expected)==0);
-
-	snprintf(test, sizeof(test), "/path/to/a/file");
-	snprintf(expected, sizeof(expected), "path/to/a/file");
-	strip_from_path(test, "/");
-	fail_unless(strcmp(test,expected)==0);
-
-	snprintf(test, sizeof(test), "/path/to/a/file/");
-	snprintf(expected, sizeof(expected), "/");
-	strip_from_path(test, "/path/to/a/file");
-	fail_unless(strcmp(test,expected)==0);
-
-	snprintf(test, sizeof(test), "/path/to/a/file");
-	snprintf(expected, sizeof(expected), "/path/to/a/file");
-	strip_from_path(test, "");
-	fail_unless(strcmp(test,expected)==0);
-
-	snprintf(test, sizeof(test), "/path/to/a/file");
-	snprintf(expected, sizeof(expected), "/path/to/a/file");
-	strip_from_path(test, NULL);
-	fail_unless(strcmp(test,expected)==0);
+	FOREACH(s)
+	{
+		char input[256];
+		snprintf(input, sizeof(input), s[i].input);
+		strip_from_path(input, s[i].strip);
+		fail_unless(!strcmp(input, s[i].expected));
+	}
 }
 END_TEST
 

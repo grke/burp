@@ -174,6 +174,7 @@ enum conf_opt
 	// These are to do with restore.
 	OPT_OVERWRITE,
 	OPT_STRIP,
+	OPT_STRIP_FROM_PATH,
 	OPT_BACKUP,
 	OPT_BACKUP2, // For diffs.
 	OPT_RESTOREPREFIX,

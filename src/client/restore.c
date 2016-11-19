@@ -386,6 +386,21 @@ static const char *act_str(enum action act)
 	return ret;
 }
 
+void strip_from_path(char *path, const char *strip)
+{
+	if (path && strip && strlen(path) > strlen(strip))
+	{
+		char *p = strstr(path, strip);
+		if(p != NULL)
+		{
+			size_t len = strlen(p) - strlen(strip) + 1;
+			char *src = p + strlen(strip);
+			memmove(p, src, len);
+		}
+	}
+}
+
+
 // Return 1 for ok, -1 for error, 0 for too many components stripped.
 static int strip_path_components(struct asfd *asfd,
 	struct sbuf *sb, int strip, struct cntr *cntr, enum protocol protocol)
@@ -537,6 +552,7 @@ int do_restore_client(struct asfd *asfd,
 	enum protocol protocol=get_protocol(confs);
 	int strip=get_int(confs[OPT_STRIP]);
 	int overwrite=get_int(confs[OPT_OVERWRITE]);
+	const char *strip_path=get_string(confs[OPT_STRIP_FROM_PATH]);
 	const char *backup=get_string(confs[OPT_BACKUP]);
 	const char *regex=get_string(confs[OPT_REGEX]);
 	const char *restore_prefix=get_string(confs[OPT_RESTOREPREFIX]);
@@ -637,6 +653,10 @@ int do_restore_client(struct asfd *asfd,
 						continue;
 					}
 					// It is OK, sb.path is now stripped.
+				}
+				if(strip_path && strlen(strip_path)) {
+					strip_from_path(sb->path.buf,
+						strip_path);
 				}
 				free_w(&fullpath);
 				if(!(fullpath=prepend_s(restore_prefix,

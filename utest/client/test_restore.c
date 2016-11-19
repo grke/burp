@@ -18,6 +18,8 @@
 
 #define BASE	"utest_restore"
 
+extern void strip_from_path(char *path, const char *strip);
+
 static struct ioevent_list reads;
 static struct ioevent_list writes;
 
@@ -360,6 +362,48 @@ START_TEST(test_restore_proto2_interrupt)
 }
 END_TEST
 
+START_TEST(test_strip_from_path)
+{
+	char test[256];
+	char expected[256];
+
+	snprintf(test, sizeof(test), "/path/to/a/file");
+	snprintf(expected, sizeof(expected), "/path/file");
+	strip_from_path(test, "/to/a");
+	fail_unless(strcmp(test,expected)==0);
+
+	snprintf(test, sizeof(test), "/path/to/a/file/to/a/foo");
+	snprintf(expected, sizeof(expected), "/path/file/to/a/foo");
+	strip_from_path(test, "/to/a");
+	fail_unless(strcmp(test,expected)==0);
+
+	snprintf(test, sizeof(test), "/path/to/a/file");
+	snprintf(expected, sizeof(expected), "/path/to/a/file");
+	strip_from_path(test, "/path/to/a/file");
+	fail_unless(strcmp(test,expected)==0);
+
+	snprintf(test, sizeof(test), "/path/to/a/file");
+	snprintf(expected, sizeof(expected), "path/to/a/file");
+	strip_from_path(test, "/");
+	fail_unless(strcmp(test,expected)==0);
+
+	snprintf(test, sizeof(test), "/path/to/a/file/");
+	snprintf(expected, sizeof(expected), "/");
+	strip_from_path(test, "/path/to/a/file");
+	fail_unless(strcmp(test,expected)==0);
+
+	snprintf(test, sizeof(test), "/path/to/a/file");
+	snprintf(expected, sizeof(expected), "/path/to/a/file");
+	strip_from_path(test, "");
+	fail_unless(strcmp(test,expected)==0);
+
+	snprintf(test, sizeof(test), "/path/to/a/file");
+	snprintf(expected, sizeof(expected), "/path/to/a/file");
+	strip_from_path(test, NULL);
+	fail_unless(strcmp(test,expected)==0);
+}
+END_TEST
+
 Suite *suite_client_restore(void)
 {
 	Suite *s;
@@ -378,6 +422,8 @@ Suite *suite_client_restore(void)
 
 	tcase_add_test(tc_core, test_restore_proto2_bad_read);
 	tcase_add_test(tc_core, test_restore_proto2_some_things);
+	tcase_add_test(tc_core, test_strip_from_path);
+
 	tcase_add_test(tc_core, test_restore_proto2_interrupt);
 
 	suite_add_tcase(s, tc_core);

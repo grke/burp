@@ -340,14 +340,14 @@ static void setup_send_features_proto_2_1(struct asfd *asfd,
 static void setup_send_features_proto_1_1(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto_x_y(asfd, confs, cconfs,
+	setup_send_features_proto_proto(asfd, confs, cconfs, VERSION,
 		PROTO_1, PROTO_1);
 }
 
 static void setup_send_features_proto_2_2(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto_x_y(asfd, confs, cconfs,
+	setup_send_features_proto_proto(asfd, confs, cconfs, VERSION,
 		PROTO_2, PROTO_2);
 }
 
@@ -758,9 +758,10 @@ START_TEST(test_server_extra_comms)
 		NULL);
 	run_test(-1, setup_send_features_proto_2_1,
 		NULL);
-	run_test(-1, setup_send_features_proto_1_1,
+
+	run_test(0, setup_send_features_proto_1_1,
 		NULL);
-	run_test(-1, setup_send_features_proto_2_2,
+	run_test(0, setup_send_features_proto_2_2,
 		NULL);
 
 	run_test(-1, setup_unexpected_cmd_feature,

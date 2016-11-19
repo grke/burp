@@ -331,23 +331,33 @@ static int extra_comms_read(struct async *as,
 		{
 			char msg[128]="";
 			// Client wants to set protocol.
-			enum protocol protocol=get_protocol(cconfs);
-			const char *cliproto=rbuf->buf+strlen("protocol=");
+			enum protocol protocol;
+			enum protocol cprotocol;
+			const char *cliproto=NULL;
+			protocol=get_protocol(cconfs);
+			cliproto=rbuf->buf+strlen("protocol=");
+			cprotocol=atoi(cliproto);
+
 			if(protocol!=PROTO_AUTO)
 			{
-				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s but server is set to protocol=%d\n", cliproto, protocol);
+				if(protocol==cprotocol)
+				{
+					logp("Client is forcing protocol=%d\n", (int)protocol);
+					continue;
+				}
+				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%d but server is set to protocol=%d\n", (int)cprotocol, (int)protocol);
 				log_and_send(asfd, msg);
 				goto end;
 			}
-			else if(!strcmp(cliproto, "1"))
+			else if(cprotocol==PROTO_1)
 			{
-				set_protocol(cconfs, PROTO_1);
-				set_protocol(globalcs, PROTO_1);
+				set_protocol(cconfs, cprotocol);
+				set_protocol(globalcs, cprotocol);
 			}
-			else if(!strcmp(cliproto, "2"))
+			else if(cprotocol==PROTO_2)
 			{
-				set_protocol(cconfs, PROTO_2);
-				set_protocol(globalcs, PROTO_2);
+				set_protocol(cconfs, cprotocol);
+				set_protocol(globalcs, cprotocol);
 			}
 			else
 			{

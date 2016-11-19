@@ -92,6 +92,7 @@ Suite *suite_server_monitor_browse(void)
 
 	tc_core=tcase_create("Core");
 
+	tcase_set_timeout(tc_core, 60);
 	tcase_add_test(tc_core, test_server_monitor_browse);
 	suite_add_tcase(s, tc_core);
 

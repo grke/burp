@@ -77,7 +77,7 @@ int want_to_restore(int srestore, struct sbuf *sb,
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
-        regex_t *regex, int srestore, struct conf **cconfs)
+	regex_t *regex, int srestore, struct conf **cconfs)
 {
 	int ars=0;
 	int ret=-1;
@@ -158,7 +158,7 @@ static int hard_link_substitution(struct asfd *asfd,
 	if(protocol==PROTO_2)
 	{
 		  if(!(blk=blk_alloc()))
-                	goto end;
+			goto end;
 	}
 
 	while(1)
@@ -297,6 +297,13 @@ int restore_ent(struct asfd *asfd,
 			  act, sdirs, cntr_status, cconfs, need_data, manifest,
 			  slist))
 				goto end;
+			if(get_protocol(cconfs)==PROTO_2
+			  && sbuf_is_filedata(xb))
+			{
+				// Windows directories need endfile to be sent.
+				if(asfd->write(asfd, &xb->endfile))
+					goto end;
+			}
 			slist->head=xb->next;
 			sbuf_free(&xb);
 		}
@@ -355,8 +362,14 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 		else
 		{
 			if(restore_sbuf_protocol2(asfd, sb, act,
-				get_cntr(cconfs), need_data))
+				get_cntr(cconfs), NULL))
 					goto end;
+			if(sbuf_is_filedata(sb))
+			{
+				// Windows directories need endfile to be sent.
+				if(asfd->write(asfd, &sb->endfile))
+					goto end;
+			}
 		}
 	}
 	ret=0;
@@ -366,9 +379,9 @@ end:
 }
 
 static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
-        struct slist *slist, struct bu *bu, const char *manifest,
+	struct slist *slist, struct bu *bu, const char *manifest,
 	regex_t *regex, int srestore, struct conf **cconfs, enum action act,
-        enum cntr_status cntr_status)
+	enum cntr_status cntr_status)
 {
 	int ret=-1;
 	int last_ent_was_dir=0;
@@ -448,9 +461,25 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		{
 			if(sb->endfile.buf)
 			{
-				if(act==ACTION_RESTORE
-				  && asfd->write(asfd, &sb->endfile))
-					goto end;
+				if(act==ACTION_RESTORE)
+				{
+					if(last_ent_was_dir)
+					{
+						// Delay sending endfile until
+						// we actually send the
+						// directory.
+						struct sbuf *xb=slist->head;
+						iobuf_free_content(&xb->endfile);
+						iobuf_move(&xb->endfile,
+							&sb->endfile);
+					}
+					else
+					{
+						if(asfd->write(asfd,
+							&sb->endfile))
+								goto end;
+					}
+				}
 				sbuf_free_content(sb);
 				iobuf_free_content(&interrupt);
 				continue;
@@ -512,15 +541,15 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 	const char *manifest, regex_t *regex, int srestore, enum action act,
 	struct sdirs *sdirs, enum cntr_status cntr_status, struct conf **cconfs)
 {
-        int ret=-1;
-        // For out-of-sequence directory restoring so that the
-        // timestamps come out right:
-        struct slist *slist=NULL;
+	int ret=-1;
+	// For out-of-sequence directory restoring so that the
+	// timestamps come out right:
+	struct slist *slist=NULL;
 	struct cntr *cntr=NULL;
 
 	if(linkhash_init()
-          || !(slist=slist_alloc()))
-                goto end;
+	  || !(slist=slist_alloc()))
+		goto end;
 
 	if(get_protocol(cconfs)==PROTO_2
 	  && rblk_init())
@@ -538,10 +567,10 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 	cntr_print(cntr, act, asfd);
 	cntr_stats_to_file(cntr, bu->path, act);
 end:
-        slist_free(&slist);
+	slist_free(&slist);
 	linkhash_free();
 	rblk_free();
-        return ret;
+	return ret;
 }
 
 static int get_logpaths(struct bu *bu, const char *file,

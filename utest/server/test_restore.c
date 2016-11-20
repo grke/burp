@@ -15,6 +15,7 @@
 #include "../../src/iobuf.h"
 #include "../../src/protocol2/blk.h"
 #include "../../src/regexp.h"
+#include "../../src/server/manio.h"
 #include "../../src/server/restore.h"
 #include "../../src/server/sdirs.h"
 #include "../../src/slist.h"
@@ -437,6 +438,88 @@ START_TEST(test_proto2_interrupt_on_non_filedata)
 }
 END_TEST
 
+static void setup_windows_restore_endfile(struct asfd *asfd)
+{
+	int r=0; int w=0;
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore_stream");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restore_stream_ok");
+	asfd_mock_read_no_op(asfd, &r, 10);
+
+	asfd_assert_write(asfd, &w, 0, CMD_ATTRIBS,
+		" J A A A EP4 B A A A A A A BYMChy BYMChy BXih7j A W");
+	asfd_assert_write(asfd, &w, 0, CMD_FILE, "C:/$Recycle.Bin");
+	asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
+
+	asfd_assert_write(asfd, &w, 0, CMD_ATTRIBS,
+		" J A A A EP4 B A A A BAA A A BYMCnk BYMCnk BXic5o A A");
+	asfd_assert_write(asfd, &w, 0, CMD_FILE, "C:/");
+	asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
+
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
+	asfd_mock_read_no_op(asfd, &r, 10);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend ok");
+}
+
+START_TEST(test_proto2_windows_restore_endfile)
+{
+	struct async *as;
+	struct asfd *asfd;
+	struct sdirs *sdirs;
+	struct conf **confs;
+	enum protocol protocol=PROTO_2;
+	struct manio *manio=NULL;
+	struct sbuf *sb=NULL;
+	char *dir_for_notify=NULL;
+
+	prng_init(0);
+	base64_init();
+	hexmap_init();
+	setup(protocol, &as, &sdirs, &confs);
+	set_string(confs[OPT_BACKUP], "1");
+	set_protocol(confs, protocol);
+	asfd=asfd_mock_setup(&reads, &writes);
+	as->asfd_add(as, asfd);
+	as->read_write=async_rw_simple;
+	as->read_quick=async_rw_simple;
+	asfd->as=as;
+
+	build_storage_dirs(sdirs, sd1, ARR_LEN(sd1));
+	manio=manio_open(sdirs->cmanifest, "wb", protocol);
+	fail_unless(manio!=NULL);
+	fail_unless((sb=sbuf_alloc(protocol))!=NULL);
+
+	iobuf_from_str(&sb->attr, CMD_ATTRIBS,
+		strdup_w(" J A A A EP4 B A A A BAA A A BYMCnk BYMCnk BXic5o A A", __func__));
+	iobuf_from_str(&sb->path, CMD_FILE, strdup_w("C:/", __func__));
+	iobuf_from_str(&sb->endfile, CMD_END_FILE, strdup_w("0:0", __func__));
+	fail_unless(!manio_write_sbuf(manio, sb));
+	sbuf_free(&sb);
+
+	fail_unless((sb=sbuf_alloc(protocol))!=NULL);
+	iobuf_from_str(&sb->attr, CMD_ATTRIBS,
+		strdup_w(" J A A A EP4 B A A A A A A BYMChy BYMChy BXih7j A W", __func__));
+	iobuf_from_str(&sb->path, CMD_FILE, strdup_w("C:/$Recycle.Bin", __func__));
+	iobuf_from_str(&sb->endfile, CMD_END_FILE, strdup_w("0:0", __func__));
+	fail_unless(!manio_write_sbuf(manio, sb));
+
+	manio_close(&manio);
+
+	setup_windows_restore_endfile(asfd);
+
+	fail_unless(do_restore_server(
+		asfd,
+		sdirs,
+		ACTION_RESTORE,
+		0, // srestore
+		&dir_for_notify,
+		confs)==0);
+
+	sbuf_free(&sb);
+	free_w(&dir_for_notify);
+	tear_down(&as, &asfd, &sdirs, &confs);
+}
+END_TEST
+
 Suite *suite_server_restore(void)
 {
 	Suite *s;
@@ -453,6 +536,7 @@ Suite *suite_server_restore(void)
 	tcase_add_test(tc_core, test_proto2_interrupt);
 	tcase_add_test(tc_core, test_proto2_interrupt_no_match);
 	tcase_add_test(tc_core, test_proto2_interrupt_on_non_filedata);
+	tcase_add_test(tc_core, test_proto2_windows_restore_endfile);
 
 	suite_add_tcase(s, tc_core);
 

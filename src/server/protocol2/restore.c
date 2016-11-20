@@ -48,7 +48,7 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 				default:
 				{
 					char msg[256];
-					snprintf(msg, sizeof(msg), "Error when attempting  to verify block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, uint64_to_savepathstr_with_sig(blk->savepath));
+					snprintf(msg, sizeof(msg), "Error when attempting to verify block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, uint64_to_savepathstr_with_sig(blk->savepath));
 					return -1;
 				}
 			}
@@ -88,8 +88,11 @@ int restore_sbuf_protocol2(struct asfd *asfd, struct sbuf *sb, enum action act,
 
 	if(sbuf_is_filedata(sb))
 	{
-		iobuf_copy(&need_data->path, &sb->path);
-		sb->path.buf=NULL;
+		if(need_data)
+		{
+			iobuf_copy(&need_data->path, &sb->path);
+			sb->path.buf=NULL;
+		}
 	}
 	else
 		cntr_add(cntr, sb->path.cmd, 0);

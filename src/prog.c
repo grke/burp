@@ -46,13 +46,12 @@ static void usage_server(void)
 	printf(" Options:\n");
 	printf("  -a c          Run as a stand-alone champion chooser.\n");
 	printf("  -c <path>     Path to conf file (default: %s).\n", get_conf_path());
-	printf("  -d <path>     a single client in the status monitor.\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit.\n");
-	printf("  -l <path>     Log file for the status monitor.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
+	printf("  -Q            Do not log to stdout (overrides config file)\n");
 	printf("  -t            Dry-run to test config file syntax.\n");
 	printf("  -v            Print version and exit.\n");
 	printf("Options to use with '-a c':\n");
@@ -89,6 +88,7 @@ static void usage_client(void)
 	printf("  -h|-?          Print this text and exit.\n");
 	printf("  -i             Print index of symbols and exit.\n");
 	printf("  -q <max secs>  Randomised delay of starting a timed backup.\n");
+	printf("  -Q             Do not log to stdout (overrides config file)\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -t             Dry-run to test config file syntax.\n");
@@ -98,8 +98,9 @@ static void usage_client(void)
 	printf("Options to use with '-a S':\n");
 	printf("  -C <client>   Show a particular client.\n");
 	printf("  -b <number>   Show listable files in a particular backup (requires -C).\n");
-	printf("  -z <file>     Dump a particular log file in a backup (requires -C and -b).\n");
 	printf("  -d <path>     Show a particular path in a backup (requires -C and -b).\n");
+	printf("  -l <path>     Log file for the status monitor.\n");
+	printf("  -z <file>     Dump a particular log file in a backup (requires -C and -b).\n");
 #endif
 	printf("\n");
 #ifndef HAVE_WIN32
@@ -299,7 +300,7 @@ int real_main(int argc, char *argv[])
 		return run_bsigs(argc, argv);
 #endif
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:fFghil:nq:r:s:tvxjz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:fFghil:nq:Qr:s:tvxjz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -345,6 +346,9 @@ int real_main(int argc, char *argv[])
 				break;
 			case 'q':
 				randomise=atoi(optarg);
+				break;
+			case 'Q':
+				log_force_quiet();
 				break;
 			case 'r':
 				regex=optarg;

@@ -15,13 +15,12 @@ BackUp and Restore Program.
 
 .SH SERVER OPTIONS
 .TP
+\fB\-a c\fR \fB\fR
+Run as a stand-alone champion chooser process (useful for debugging protocol2 style backups).
+.TP
 \fB\-c\fR \fB[path]\fR
 Short for 'config file'. The argument is a path to the config file. The default
 is /etc/burp/burp.conf.
-.TP
-\fB\-n\fR \fB\fR
-No forking mode. The program will accept a single query, deal with it, and then
-exit. This is useful for debugging. Implies '\-F'. If you intend to debug a protocol2 session, you will also want to run a separate champion chooser process ('\-a c' below).
 .TP
 \fB\-F\fR \fB\fR
 Foreground mode. The server will fork into the background and run as a daemon if you do not give this option.
@@ -29,14 +28,27 @@ Foreground mode. The server will fork into the background and run as a daemon if
 \fB\-g\fR \fB\fR
 Generate initial CA keys and certificates, and then exit.
 .TP
-\fB\-t\fR \fB\fR
-Dry-run mode to test config file syntax.
+\fB\-h\fR \fB\fR
+Print help and then exit.
+.TP
+\fB\-?\fR \fB\fR
+Print help and then exit.
 .TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see burp produce, and exit.
 .TP
-\fB\-a c\fR \fB\fR
-Run as a stand-alone champion chooser process (useful for debugging protocol2 style backups).
+\fB\-n\fR \fB\fR
+No forking mode. The program will accept a single query, deal with it, and then
+exit. This is useful for debugging. Implies '\-F'. If you intend to debug a protocol2 session, you will also want to run a separate champion chooser process ('\-a c' below).
+.TP
+\fB\-Q\fR \fB\fR
+Do not log to stdout (overrides config file 'stdout' setting).
+.TP
+\fB\-t\fR \fB\fR
+Dry-run mode to test config file syntax.
+.TP
+\fB\-v\fR \fB\fR
+Print version and exit.
 .TP
 ADDITIONAL SERVER OPTIONS TO USE WITH '\-a c'
 .TP
@@ -66,11 +78,20 @@ Short for 'directory'. When restoring, the argument is a path to an alternative 
 Short for 'force overwrite'. Without this option set, a restore will not
 overwrite existing files.
 .TP
+\fB\-h\fR \fB\fR
+Print help and then exit.
+.TP
+\fB\-?\fR \fB\fR
+Print help and then exit.
+.TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see burp produce, and exit.
 .TP
 \fB\-q\fR \fB[max secs]\fR
 When running a timed backup, sleep for a random number of seconds (between 0 and the number given) before contacting the server. Alternatively, this can be specified by the 'randomise' configuration file option.
+.TP
+\fB\-Q\fR \fB\fR
+Do not log to stdout (overrides config file 'stdout' setting).
 .TP
 \fB\-r\fR \fB[regex]\fR
 Short for 'regular expression'. The argument is a regular expression with

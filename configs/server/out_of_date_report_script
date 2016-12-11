@@ -52,7 +52,7 @@ send_email_report(){
 # example output line:
 # hosname       idle           last backup: 0000023 2015-04-10 16:04:01
 # read by line report from burp
-burp -a S -c /etc/burp/burp-server.conf | grep -i "last backup" | while read -r line; do reports "$line" ; done
+burp -a S | grep -i "last backup" | while read -r line; do reports "$line" ; done
 
 echo "finishing and sending email"
 #Send email using function, parse file and then subject inside "subject line"

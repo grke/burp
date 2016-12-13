@@ -7,6 +7,7 @@
 #include "../../src/iobuf.h"
 #include "../../src/sbuf.h"
 #include "../../src/server/extra_comms.h"
+#include "../../src/strlist.h"
 #include "../builders/build.h"
 #include "../builders/build_file.h"
 #include "../builders/build_asfd_mock.h"
@@ -552,9 +553,15 @@ static void checks_srestore_not_ok(struct conf **confs, struct conf **cconfs,
 static void setup_srestore(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs, int *r, int *w)
 {
+	struct strlist *strlist=NULL;
 	build_file(SRESTORE_FILE, "");
 	setup_send_features_proto_begin(asfd, confs, cconfs, PROTO_AUTO,
 		r, w, VERSION, /*srestore*/1);
+
+	strlist_add(&strlist, "/some/path", 1);
+	// This needs to get unset.
+	set_strlist(cconfs[OPT_INCEXCDIR], strlist);
+
 	asfd_mock_read(asfd, r, 0, CMD_GEN, "srestore ok");
 	asfd_assert_write(asfd, w, 0, CMD_GEN, "overwrite = 0");
 	asfd_assert_write(asfd, w, 0, CMD_GEN, "strip = 0");
@@ -579,6 +586,7 @@ static void checks_srestore_ok(struct conf **confs, struct conf **cconfs,
 	fail_unless(!strcmp(get_string(cconfs[OPT_RESTORE_PATH]),
 		SRESTORE_FILE));
 	fail_unless(srestore==1);
+	fail_unless(get_strlist(cconfs[OPT_INCEXCDIR])==NULL);
 }
 
 static void setup_srestore_ok_error(struct asfd *asfd,

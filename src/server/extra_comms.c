@@ -240,6 +240,11 @@ static int extra_comms_read(struct async *as,
 			// Client can accept the restore.
 			// Load the restore config, then send it.
 			*srestore=1;
+			// Need to wipe out OPT_INCEXDIR, as it is needed for
+			// srestore includes. If it is not wiped out, it can
+			// interfere if cconfs[OPT_RESTORE_PATH] contained no
+			// includes.
+			set_strlist(cconfs[OPT_INCEXCDIR], NULL);
 			if(conf_parse_incexcs_path(cconfs, restore_path)
 			  || incexc_send_server_restore(asfd, cconfs))
 				goto end;
@@ -250,6 +255,8 @@ static int extra_comms_read(struct async *as,
 			// restore is to an alternative client, so
 			// that the code below that reloads the config
 			// can read it again.
+			// NOTE: that appears to be in
+			// src/server/run_action.c::client_can_restore()
 			//unlink(get_string(cconfs[OPT_RESTORE_PATH]));
 		}
 		else if(!strcmp(rbuf->buf, "srestore not ok"))

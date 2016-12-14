@@ -1,7 +1,7 @@
 ECHO_CMD=@
 
 DIRS=	lib \
-	burp
+	burp \
 
 ifeq ($(WIN64),yes)
   INSTALLER=installer64

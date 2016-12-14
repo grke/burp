@@ -29,20 +29,6 @@ define link_conapp
 	$(ECHO_CMD)$(CXX) $(CFLAGS) $(LDFLAGS) -static -mconsole $^ $(1) -o $@
 endef
 
-define link_winapp
-	@echo "Linkingb $@"
-	$(call checkdir,$@)
-	$(ECHO_CMD)$(CXX) $(CFLAGS) $(LDFLAGS) -mwindows $^ $(1) -o $@
-endef
-
-define makedbg
-	@echo "Stripping debug info from $@"
-	$(call checkdir,$@)
-	$(ECHO_CMD)$(OBJCPY) --only-keep-debug $@ $(addsuffix .dbg,$(basename $@)) ; \
-	$(OBJCPY) --strip-debug $@ ; \
-	$(OBJCPY) --add-gnu-debuglink=$(addsuffix .dbg,$(basename $@)) $@
-endef
-
 $(OBJDIR)/%.o: %.c
 	@echo "Compiling $(CXX) $<"
 	$(call checkdir, $@)
@@ -52,11 +38,6 @@ $(OBJDIR)/%.o: %.cpp
 	@echo "Compiling $(CXX) $<"
 	$(call checkdir, $@)
 	$(ECHO_CMD)$(CXX) $(CFLAGS) -c $< -o $@
-
-$(OBJDIR)/%.res: %.rc
-	@echo "Compiling $<"
-	$(call checkdir, $@)
-	$(ECHO_CMD)$(WINDRES) -O coff $< -o $@
 
 $(OBJDIR)/%.d: %.c
 	$(call checkdir, $@)

@@ -104,7 +104,6 @@ CLIENT_OBJS = \
 	$(OBJDIR)/vss_W2K3.o \
 	$(OBJDIR)/vss_Vista.o \
 	$(OBJDIR)/yajl_gen_w.o \
-	$(OBJDIR)/burp.res
 
 ALL_OBJS = $(CLIENT_OBJS)
 
@@ -144,10 +143,5 @@ $(BINDIR)/burp.exe: $(CLIENT_OBJS) $(LIBS_BURP)
 
 $(BINDIR)/burp_ca.bat:
 	cp $(MAINDIR)/configs/certs/CA/burp_ca.bat $(BINDIR)
-
-$(OBJDIR)/winres.res: ../libwin32/winres.rc
-	@echo "Compiling $(WINDRES) $@"
-	$(call checkdir,$@)
-	$(ECHO_CMD)$(WINDRES) $(INCLUDE_ICONS) -O coff $< -o $@
 
 include ../Makefile.rules

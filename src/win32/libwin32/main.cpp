@@ -44,7 +44,7 @@
  */
 
 #include "burp.h"
-#include "win32.h"
+#include "libwin32.h"
 #include <signal.h>
 
 #undef  _WIN32_IE

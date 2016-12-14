@@ -25,8 +25,6 @@ COMPAT_OBJS = \
 	$(OBJDIR)/print.o \
 	$(OBJDIR)/winapi.o
 
-#	$(OBJDIR)/getopt.o \
-
 FIND_OBJS = 
 
 LIB_OBJS = 
@@ -61,7 +59,8 @@ clean:
 	@echo "Cleaning `pwd`"
 	$(call clean_obj,$(ALL_OBJS))
 	$(call clean_exe,$(BINDIR)/burp.dll)
-	$(ECHO_CMD)rm -f $(OBJDIR)/burp.a $(LIBDIR)/libburp.a
+	$(ECHO_CMD)rm -f $(OBJDIR)/burp.a
+	$(ECHO_CMD)rm -f $(OBJDIR)/libburp.a
 	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 #

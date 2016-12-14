@@ -32,7 +32,7 @@ INSTALL_EXE := $(BUILDDIR)/release@BITS@/burp-win@BITS@-installer-$(VERSION).exe
 BURP_BINARIES := \
 	burp.dll \
 	burp.exe \
-	burp_ca.bat
+	burp_ca.bat \
 
 DEPKGS_BINARIES := \
 	$(SSL_DLL) \

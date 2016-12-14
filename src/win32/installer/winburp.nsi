@@ -281,8 +281,8 @@ FunctionEnd
 Function InstallCommonFiles
 	${If} $CommonFilesDone = 0
 		SetOutPath "$INSTDIR\bin"
-		File "${SRC_DIR}\libeay32.dll"
-		File "${SRC_DIR}\ssleay32.dll"
+		File "${SRC_DIR}\${SSL_DLL}"
+		File "${SRC_DIR}\${CRYPTO_DLL}"
 		File "${SRC_DIR}\libpcreposix-0.dll"
 		File "${SRC_DIR}\libpcre-1.dll"
 		File "${SRC_DIR}\libyajl.dll"

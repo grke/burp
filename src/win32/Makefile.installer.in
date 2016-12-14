@@ -10,12 +10,22 @@ include ../Makefile.inc
 
 VERSION := $(shell awk '/AC_INIT/{print ;exit}' ../../../configure.ac | cut -d ',' -f 2 | sed -e 's/\[//' -e 's/\]//')
 
+ifeq ($(WIN64),yes)
+  SSL_DLL := libssl-1_1-x64.dll
+  CRYPTO_DLL := libcrypto-1_1-x64.dll
+else
+  SSL_DLL := libssl-1_1.dll
+  CRYPTO_DLL := libcrypto-1_1.dll
+endif
+
 DEFINES := \
 	-DVERSION=$(VERSION) \
 	-DRPMVERSION=$(RPMVERSION) \
 	-DOUT_DIR=..\\release@BITS@ \
 	-DSRC_DIR=release@BITS@ \
 	-DBITS=@BITS@ \
+	-DSSL_DLL=$(SSL_DLL) \
+	-DCRYPTO_DLL=$(CRYPTO_DLL) \
 
 INSTALL_EXE := $(BUILDDIR)/release@BITS@/burp-win@BITS@-installer-$(VERSION).exe
 
@@ -25,9 +35,9 @@ BURP_BINARIES := \
 	burp_ca.bat
 
 DEPKGS_BINARIES := \
+	$(SSL_DLL) \
+	$(CRYPTO_DLL) \
 	zlib1.dll \
-	libeay32.dll \
-	ssleay32.dll \
 	libpcre-1.dll \
 	libpcreposix-0.dll \
 	libyajl.dll \

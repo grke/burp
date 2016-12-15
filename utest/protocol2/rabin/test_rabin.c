@@ -25,6 +25,7 @@ static struct bdata b[] = {
 START_TEST(test_rabin_blk_verify_fingerprint)
 {
 	struct blk *blk;
+	alloc_check_init();
 	hexmap_init();
 	blks_generate_init();
 	fail_unless((blk=blk_alloc_with_data(1))!=NULL);

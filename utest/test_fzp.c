@@ -62,6 +62,7 @@ static void read_checks(
 static void do_read_tests(
 	struct fzp *(*open_func)(const char *, const char *))
 {
+	alloc_check_init();
 	setup_for_read(open_func, content);
 	FOREACH(rd) read_checks(open_func, &rd[i]);
 	tear_down();
@@ -106,11 +107,13 @@ static void seek_checks(
 static void do_seek_tests(
 	struct fzp *(*open_func)(const char *, const char *))
 {
+	alloc_check_init();
 	setup_for_read(open_func, content);
 	FOREACH(sd) seek_checks(open_func, &sd[i]);
 	tear_down();
 };
 
+#ifndef HAVE_WIN32
 struct tdata
 {
 	off_t pos;
@@ -148,11 +151,13 @@ static void do_truncate_tests(
 {
 	FOREACH(td)
 	{
+		alloc_check_init();
 		setup_for_read(open_func, content);
 		truncate_checks(open_func, type, &td[i]);
 		tear_down();
 	}
 }
+#endif
 
 START_TEST(test_fzp_read)
 {
@@ -180,6 +185,7 @@ START_TEST(test_fzp_gzseek)
 }
 END_TEST
 
+#ifndef HAVE_WIN32
 START_TEST(test_fzp_truncate)
 {
 	do_truncate_tests(fzp_open, FZP_FILE);
@@ -214,6 +220,7 @@ START_TEST(test_fzp_null_pointer)
 	tear_down();
 }
 END_TEST
+#endif
 
 Suite *suite_fzp(void)
 {
@@ -228,9 +235,11 @@ Suite *suite_fzp(void)
 	tcase_add_test(tc_core, test_fzp_gzread);
 	tcase_add_test(tc_core, test_fzp_seek);
 	tcase_add_test(tc_core, test_fzp_gzseek);
+#ifndef HAVE_WIN32
 	tcase_add_test(tc_core, test_fzp_truncate);
 	tcase_add_test(tc_core, test_fzp_gztruncate);
 	tcase_add_test(tc_core, test_fzp_null_pointer);
+#endif
 	suite_add_tcase(s, tc_core);
 
 	return s;

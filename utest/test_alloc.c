@@ -3,6 +3,13 @@
 #include "../src/alloc.h"
 #include "test.h"
 
+void alloc_check_init(void)
+{
+	free_count=0;
+	alloc_count=0;
+	alloc_errors=0;
+}
+
 void alloc_check(void)
 {
 //printf("%d %d\n", free_count, alloc_count);

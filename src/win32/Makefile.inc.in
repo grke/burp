@@ -1,7 +1,3 @@
-#
-# Makefile for win32 burp executables
-# Using MinGW cross-compiler on GNU/Linux
-#
 #  Written by Robert Nelson, June 2006
 #
 #  Absolute paths used in place of relative paths
@@ -93,6 +89,9 @@ LIBS_PCRE := \
 
 LIBS_YAJL := \
 	$(DEPKGS)/lib/libyajl.dll.a
+
+LIBS_CHECK := \
+	$(DEPKGS)/lib/libcheck.dll.a
 
 LIBS_BURP := \
 	$(LIBDIR)/libburp.a

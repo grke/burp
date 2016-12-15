@@ -1,7 +1,3 @@
-#
-# Makefile for win32 burp executables
-# Using MinGW cross-compiler on GNU/Linux
-#
 #  Written by Robert Nelson, June 2006
 #
 

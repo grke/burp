@@ -279,6 +279,7 @@ runner_SOURCES = \
 	utest/builders/build_asfd_mock.c utest/builders/build_asfd_mock.h \
 	utest/builders/build_clientconfdir.c \
 	utest/builders/build_file.c utest/builders/build_file.h \
+	utest/builders/build_slist.c \
 	utest/builders/build_paths.c \
 	utest/builders/build.h \
 	utest/builders/protocol2/build_blist.c \

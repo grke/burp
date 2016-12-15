@@ -1,0 +1,7 @@
+/Makefile.inc
+/installer32/
+/installer64/
+/release32/
+/release64/
+obj32/
+obj64/

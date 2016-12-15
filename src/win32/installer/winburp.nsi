@@ -289,6 +289,7 @@ Function InstallCommonFiles
 		File "${SRC_DIR}\zlib1.dll"
 		File "${SRC_DIR}\libgcc_s_sjlj-1.dll"
 		File "${SRC_DIR}\burp.dll"
+		File "${SRC_DIR}\libcheck-0.dll"
 		File "${SRC_DIR}\openssl.exe"
 		File "${SRC_DIR}\burp_ca.bat"
 		StrCpy $CommonFilesDone 1
@@ -406,6 +407,7 @@ Section "File Service" SecFileDaemon
 
 	Call InstallCommonFiles
 	File "${SRC_DIR}\burp.exe"
+	File "${SRC_DIR}\utest.exe"
 SectionEnd
 
 SectionGroupEnd

@@ -12,6 +12,7 @@ START_TEST(test_win)
 {
 	struct rconf rconf;
 	struct win *win;
+	alloc_check_init();
 	rconf_init(&rconf);
 	fail_unless((win=win_alloc(&rconf))!=NULL);
 	win_free(&win);
@@ -23,6 +24,7 @@ START_TEST(test_win_alloc_error)
 {
 	struct rconf rconf;
 	struct win *win;
+	alloc_check_init();
 	rconf_init(&rconf);
 	alloc_errors=1;
 	fail_unless((win=win_alloc(&rconf))==NULL);

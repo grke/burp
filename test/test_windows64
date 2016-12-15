@@ -95,13 +95,17 @@ clientburpdir="/cygdrive/c/Program Files/Burp"
 rm -f windowsscript
 cat >> windowsscript << EOF
 #!/usr/bin/env bash
-rm -rf "/cygdrive/c/Program Files/Burp" || exit 1
-./$installer /S || exit 1
+set -e
+rm -rf "/cygdrive/c/Program Files/Burp"
+./$installer /S
 # Remove the cron job, or unexpected results can occur.
-schtasks /DELETE /TN "burp cron" /F || exit 1
-tar -xjf build.tar.bz2 -C "$clientburpdir" || exit 1
+schtasks /DELETE /TN "burp cron" /F
+tar -xjf build.tar.bz2 -C "$clientburpdir"
 # Encrypt some directories and files to test EFS.
-cipher.exe /E /S:"C:/Program Files/Burp/build/utest/builders" || exit 1
+cipher.exe /E /S:"C:/Program Files/Burp/build/utest/builders"
+# Run utest.exe.
+cd "/cygdrive/c/Program Files/Burp/bin"
+./utest.exe
 EOF
 
 scp $ssh_opts windowsscript "$user@$client:" || fail

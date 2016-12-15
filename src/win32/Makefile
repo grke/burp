@@ -2,6 +2,7 @@ ECHO_CMD=@
 
 DIRS=	lib \
 	burp \
+	utest \
 
 ifeq ($(WIN64),yes)
   INSTALLER=installer64

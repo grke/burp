@@ -40,6 +40,7 @@ struct sdirs;
 
 extern int sub_ntests;
 
+extern void alloc_check_init(void);
 extern void alloc_check(void);
 
 extern void assert_iobuf(struct iobuf *a, struct iobuf *b);

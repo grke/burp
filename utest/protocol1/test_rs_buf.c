@@ -5,6 +5,7 @@
 static rs_filebuf_t *setup(rs_buffers_t *rsbuf, int data_len)
 {
 	rs_filebuf_t *fb;
+	alloc_check_init();
         if(rsbuf) memset(rsbuf, 0, sizeof(rs_buffers_t));
 	fail_unless((fb=rs_filebuf_new(
 		NULL, // bfd

@@ -64,7 +64,9 @@ END_TEST
 START_TEST(test_cmd_print_all)
 {
 	// Just for code coverage.
+#ifndef HAVE_WIN32
 	close(1); // Close stdout, to keep test output clean.
+#endif
 	cmd_print_all();
 }
 END_TEST

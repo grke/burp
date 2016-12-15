@@ -22,6 +22,7 @@ static struct bdata b[] = {
 START_TEST(test_protocol2_blk)
 {
 	struct blk *blk;
+	alloc_check_init();
 	hexmap_init();
 	blks_generate_init();
 	fail_unless((blk=blk_alloc_with_data(1))!=NULL);
@@ -45,6 +46,7 @@ START_TEST(test_protocol2_blk_length_errors)
 {
 	struct iobuf iobuf;
 	struct blk blk;
+	alloc_check_init();
 	iobuf.len=0;
 	fail_unless(blk_set_from_iobuf_sig_and_savepath(&blk, &iobuf)==-1);
 	fail_unless(blk_set_from_iobuf_fingerprint(&blk, &iobuf)==-1);
@@ -57,6 +59,7 @@ END_TEST
 
 START_TEST(test_protocol2_blk_alloc_error)
 {
+	alloc_check_init();
 	alloc_errors=1;
 	fail_unless(blk_alloc_with_data(1)==NULL);
 	alloc_errors=2;

@@ -13,6 +13,7 @@ static void tear_down(struct slist **slist)
 START_TEST(test_slist_alloc)
 {
 	struct slist *slist;
+	alloc_check_init();
 	fail_unless((slist=slist_alloc())!=NULL);
 	fail_unless(slist->blist!=NULL);
 	tear_down(&slist);
@@ -21,6 +22,7 @@ END_TEST
 
 START_TEST(test_slist_alloc_error)
 {
+	alloc_check_init();
 	alloc_errors++;
 	fail_unless(slist_alloc()==NULL);
 	tear_down(NULL);
@@ -57,6 +59,7 @@ START_TEST(test_slist_add)
 {
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	fail_unless(slist->head==sb1);
 	fail_unless(slist->tail==sb3);
@@ -72,6 +75,7 @@ START_TEST(test_slist_add_pointers_fell_off_end)
 {
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3, *sb4;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	slist->last_requested=NULL;
 	slist->add_sigs_here=NULL;
@@ -93,6 +97,7 @@ START_TEST(test_slist_del_sb1)
 {
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	fail_unless(!slist_del_sbuf(slist, sb1));
 	sbuf_free(&sb1);
@@ -109,6 +114,7 @@ START_TEST(test_slist_del_sb2)
 {
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	fail_unless(!slist_del_sbuf(slist, sb2));
 	sbuf_free(&sb2);
@@ -125,6 +131,7 @@ START_TEST(test_slist_del_sb3)
 {
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	fail_unless(!slist_del_sbuf(slist, sb3));
 	sbuf_free(&sb3);
@@ -141,6 +148,7 @@ START_TEST(test_slist_del_all)
 {
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	fail_unless(!slist_del_sbuf(slist, sb1));
 	fail_unless(!slist_del_sbuf(slist, sb2));
@@ -159,6 +167,7 @@ START_TEST(test_slist_del_sb2_adjust_pointers)
 {
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	slist->last_requested=sb2;
 	slist->add_sigs_here=sb2;
@@ -179,6 +188,7 @@ START_TEST(test_slist_del_no_slist)
 {
 	struct sbuf *sb;
 	struct slist *slist=NULL;
+	alloc_check_init();
 	fail_unless((sb=sbuf_alloc(PROTO_2))!=NULL);
 	fail_unless(!slist_del_sbuf(slist, sb));
 	sbuf_free(&sb);
@@ -191,6 +201,7 @@ START_TEST(test_slist_del_sbuf_has_blks)
 	struct blk blk;
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	sb1->protocol2->bstart=&blk;
 	fail_unless(slist_del_sbuf(slist, sb1)==-1);
@@ -202,6 +213,7 @@ START_TEST(test_slist_advance)
 {
 	struct slist *slist;
 	struct sbuf *sb1, *sb2, *sb3;
+	alloc_check_init();
 	slist=setup(&sb1, &sb2, &sb3);
 	slist_advance(slist);
 	fail_unless(slist->head==sb2);

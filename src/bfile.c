@@ -280,7 +280,7 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 static int bfile_close_encrypted(struct BFILE *bfd, struct asfd *asfd)
 {
 	CloseEncryptedFileRaw(bfd->pvContext);
-	if(bfd->mode==BF_WRITE)
+	if(bfd->mode==BF_WRITE && bfd->set_attribs_on_close)
 		attribs_set(asfd,
 			bfd->path, &bfd->statp, bfd->winattr, bfd->cntr);
 	bfd->pvContext=NULL;
@@ -420,7 +420,7 @@ static int bfile_close(struct BFILE *bfd, struct asfd *asfd)
 
 	if(!close(bfd->fd))
 	{
-		if(bfd->mode==BF_WRITE)
+		if(bfd->mode==BF_WRITE && bfd->set_attribs_on_close)
 			attribs_set(asfd, bfd->path,
 				&bfd->statp, bfd->winattr, bfd->cntr);
 		bfd->mode=BF_CLOSED;

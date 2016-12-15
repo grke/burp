@@ -35,6 +35,7 @@ struct BFILE
 #else
 	int fd;
 #endif
+	int set_attribs_on_close;
 
 	// Let us try using function pointers.
 	int (*open)(struct BFILE *bfd, struct asfd *asfd,

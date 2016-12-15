@@ -159,6 +159,7 @@ enum ofr_e open_for_restore(struct asfd *asfd, struct BFILE *bfd, const char *pa
 #endif
 
 	bfile_init(bfd, sb->winattr, cntr);
+	bfd->set_attribs_on_close=1;
 #ifdef HAVE_WIN32
 	bfd->set_win32_api(bfd, vss_restore);
 #endif
@@ -566,6 +567,7 @@ int do_restore_client(struct asfd *asfd,
 	if(!(bfd=bfile_alloc())) goto end;
 
 	bfile_init(bfd, 0, cntr);
+	bfd->set_attribs_on_close=1;
 
 	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
 		backup?backup:"", regex?regex:"");

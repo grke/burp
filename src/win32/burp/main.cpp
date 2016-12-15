@@ -29,5 +29,46 @@
  * Kern Sibbald, August 2007
  */
 
-#include "who.h"
-#include "../libwin32/main.cpp"
+#include "burp.h"
+#include <signal.h>
+
+#undef  _WIN32_IE
+#define _WIN32_IE 0x0501
+#undef  _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#include <commctrl.h>
+
+#include <vss.h>
+
+// Globals
+HINSTANCE appInstance;
+bool have_service_api;
+
+extern int BurpMain(int argc, char *argv[]);
+
+// Main Windows entry point.
+int main(int argc, char *argv[])
+{
+	int ret;
+
+	InitWinAPIWrapper();
+
+	// Start up Volume Shadow Copy.
+	if(VSSInit()) return 1;
+
+	// Startup networking
+	WSA_Init();
+
+	// Set this process to be the last application to be shut down.
+	if(p_SetProcessShutdownParameters)
+		p_SetProcessShutdownParameters(0x100, 0);
+
+	// Call the Unix Burp daemon
+	ret=BurpMain(argc, argv);
+
+	// Terminate our main message loop
+	PostQuitMessage(0);
+
+	WSACleanup();
+	return ret;
+}

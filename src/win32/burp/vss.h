@@ -140,4 +140,6 @@ private:
 
 extern VSSClient *g_pVSSClient;
 
+extern int VSSInit(void);
+
 #endif

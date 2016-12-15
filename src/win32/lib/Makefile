@@ -17,25 +17,13 @@ vpath %.cpp $(BUILDDIR)/compat
 
 ######################################################################
 
-# Files files in src/lib
+# Files files in src/win32/compat
 
 COMPAT_OBJS = \
 	$(OBJDIR)/compat.o \
 	$(OBJDIR)/mem_pool.o \
 	$(OBJDIR)/print.o \
 	$(OBJDIR)/winapi.o
-
-FIND_OBJS = 
-
-LIB_OBJS = 
-
-DLL_OBJS = \
-	$(COMPAT_OBJS) $(FIND_OBJS) $(LIB_OBJS)
-
-STATIC_OBJS = 
-
-ALL_OBJS = \
-	$(DLL_OBJS) $(STATIC_OBJS)
 
 LIBS_DLL = \
 	$(LIBS_SSL) \
@@ -57,7 +45,7 @@ all: $(BINDIR)/burp.dll $(LIBDIR)/libburp.a
 
 clean:
 	@echo "Cleaning `pwd`"
-	$(call clean_obj,$(ALL_OBJS))
+	$(call clean_obj,$(COMPAT_OBJS))
 	$(call clean_exe,$(BINDIR)/burp.dll)
 	$(ECHO_CMD)rm -f $(OBJDIR)/burp.a
 	$(ECHO_CMD)rm -f $(OBJDIR)/libburp.a
@@ -77,7 +65,7 @@ $(LIBDIR)/libburp.a: $(BINDIR)/burp.dll $(STATIC_OBJS)
 
 $(BINDIR)/burp.dll: DLL_DEFINE=BUILDING_DLL
 
-$(BINDIR)/burp.dll: $(DLL_OBJS) burp$(WIN_VERSION).def
+$(BINDIR)/burp.dll: $(COMPAT_OBJS) burp$(WIN_VERSION).def
 	@echo "Linkinga $@"
 	$(call checkdir,$@)
 	$(ECHO_CMD)$(CXX) $(LDFLAGS) -mdll -mwindows -Wl,--out-implib,$(OBJDIR)/burp.a $^ $(LIBS_DLL) -o $@

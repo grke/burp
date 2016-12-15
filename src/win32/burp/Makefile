@@ -13,7 +13,6 @@ INCLUDES = \
 	$(INCLUDE_ZLIB) \
 	$(INCLUDE_VSS) \
 	$(INCLUDE_OPENSSL) \
-	$(INCLUDE_ICONS)
 
 DEFINES = \
 	-DUSING_DLL \
@@ -21,8 +20,8 @@ DEFINES = \
 	-DWINVER=0x500 \
 	$(HAVES)
 
-vpath %.c $(MAINDIR)/src $(BUILDDIR)/libwin32
-vpath %.cpp $(MAINDIR)/src $(BUILDDIR)/libwin32
+vpath %.c $(MAINDIR)/src
+vpath %.cpp $(MAINDIR)/src
 
 ##########################################################################
 

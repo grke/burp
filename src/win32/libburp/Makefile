@@ -4,26 +4,10 @@
 
 include ../Makefile.inc
 
-INCLUDES = \
-	$(INCLUDE_GCC) \
-	$(INCLUDE_MINGW) \
-	$(INCLUDE_BURP) \
-	$(INCLUDE_ZLIB) \
-	$(INCLUDE_VSS) \
-	$(INCLUDE_ICONS) \
-	$(INCLUDE_OPENSSL)
-
 DEFINES = \
 	-DWIN32 \
 	$(HAVES)
 
-######################################################################
-
-# Files files in src/lib
-
-LIB_OBJS = 
-
-######################################################################
 
 # Targets
 
@@ -39,7 +23,7 @@ clean:
 # Rules
 # 
 
-$(LIBDIR)/libburp.a: $(LIB_OBJS)
+$(LIBDIR)/libburp.a:
 	@echo "Updating archive $@"
 	$(call checkdir,$@)
 	$(ECHO_CMD)$(AR) rs $@ $^

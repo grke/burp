@@ -382,7 +382,7 @@ START_TEST(test_strip_from_path)
 	FOREACH(s)
 	{
 		char input[256];
-		snprintf(input, sizeof(input), s[i].input);
+		snprintf(input, sizeof(input), "%s", s[i].input);
 		strip_from_path(input, s[i].strip);
 		fail_unless(!strcmp(input, s[i].expected));
 	}

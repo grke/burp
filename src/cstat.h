@@ -59,4 +59,6 @@ extern enum run_status run_str_to_status(const char *str);
 
 extern struct cstat *cstat_get_by_name(struct cstat *clist, const char *name);
 
+extern int cstat_count(struct cstat *clist);
+
 #endif

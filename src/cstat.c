@@ -132,3 +132,12 @@ struct cstat *cstat_get_by_name(struct cstat *clist, const char *name)
         for(c=clist; c; c=c->next) if(!strcmp(c->name, name)) return c;
         return NULL;
 }
+
+int cstat_count(struct cstat *clist)
+{
+	int count=0;
+	struct cstat *c;
+        for(c=clist; c; c=c->next)
+		count++;
+	return count;
+}

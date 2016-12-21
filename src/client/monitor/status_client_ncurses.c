@@ -1319,6 +1319,7 @@ int status_client_ncurses_main_loop(struct async *as,
 	struct asfd *asfd=NULL;
 	struct asfd *sfd=NULL; // Server asfd.
 	int reqdone=0;
+	int client_count=-1;
 
 	if(!sel
 	  || !as
@@ -1408,13 +1409,19 @@ int status_client_ncurses_main_loop(struct async *as,
 		refresh();
 #endif
 
-		if(actg==ACTION_STATUS_SNAPSHOT
-		  && sel->client)
+		if(actg==ACTION_STATUS_SNAPSHOT)
 		{
-			if(update_screen(sel))
-				goto error;
-			stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n");
-			break;
+			int new_count=cstat_count(sel->clist);
+			if(new_count==client_count
+		  	  && sel->client)
+			{
+				if(update_screen(sel))
+					goto error;
+				stdout_asfd->write_str(stdout_asfd,
+					CMD_GEN, "\n");
+				break;
+			}
+			client_count=new_count;
 		}
 	}
 

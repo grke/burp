@@ -8,6 +8,7 @@ export DH_VERBOSE=1
 	dh $@ 
 
 override_dh_install:
+	make install-configs DESTDIR=debian/burp
 	dh_install
 
 override_dh_fixperms:
@@ -18,7 +19,7 @@ override_dh_fixperms:
 	chmod 0700 debian/burp/var/spool/burp
 
 override_dh_auto_configure:
-	./configure
+	./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var
 
 override_dh_strip:
 	dh_strip --dbg-package=burp-dbg

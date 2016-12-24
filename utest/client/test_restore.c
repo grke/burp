@@ -16,7 +16,7 @@
 #include "../builders/build_asfd_mock.h"
 #include "../builders/build_file.h"
 
-#define BASE	"utest_restore"
+#define BASE	"utest_client_restore"
 
 static struct ioevent_list reads;
 static struct ioevent_list writes;
@@ -55,7 +55,7 @@ static void setup_proto1_no_datapth(struct asfd *asfd, struct slist *slist)
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 	asfd_mock_read(asfd, &r, 0, CMD_ATTRIBS, "attribs");
 	asfd_mock_read(asfd, &r, 0, CMD_FILE, BASE "/afile");
-	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "datapth not supplied for f:utest_restore/afile in restore_switch_protocol1\n");
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "datapth not supplied for f:utest_client_restore/afile in restore_switch_protocol1\n");
 }
 
 static void setup_proto1_no_attribs(struct asfd *asfd, struct slist *slist)

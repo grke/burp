@@ -182,10 +182,12 @@ static int restore_metadata(struct asfd *asfd,
 			metadata, metalen, cntr))
 		{
 #ifndef HAVE_WIN32
-			// Set attributes again, since we just diddled with the
-			// file.
-			attribs_set(asfd, fname,
-				&(sb->statp), sb->winattr, cntr);
+			// Set file times again, since we just diddled with the
+			// file. Do not set all attributes, as it will wipe
+			// out any security attributes (eg getcap /usr/bin/ping)
+			if(attribs_set_file_times(asfd, fname,
+				&sb->statp, cntr))
+					return -1;
 			cntr_add(cntr, sb->path.cmd, 1);
 #endif
 		}

@@ -22,7 +22,7 @@
 #include "../builders/build.h"
 #include "../builders/build_asfd_mock.h"
 
-#define BASE	"utest_restore"
+#define BASE	"utest_server_restore"
 
 static struct ioevent_list reads;
 static struct ioevent_list writes;
@@ -81,6 +81,7 @@ static void tear_down(struct async **as, struct asfd **asfd,
 	confs_free(confs);
 //printf("%d %d\n", alloc_count, free_count);
 	alloc_check();
+	fail_unless(!recursive_delete(BASE));
 }
 
 // Tests that the client gets sent a suitable message when the server tried

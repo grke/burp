@@ -244,18 +244,22 @@ void attribs_decode(struct sbuf *sb)
 	}
 }
 
-static int set_file_times(struct asfd *asfd,
-	const char *path, struct utimbuf *ut,
+int attribs_set_file_times(struct asfd *asfd,
+	const char *path, struct stat *statp,
 	struct cntr *cntr)
 {
 	int e;
+	struct utimbuf ut;
+	ut.actime=statp->st_atime;
+	ut.modtime=statp->st_mtime;
+
 // The mingw64 utime() appears not to work on read-only files.
 // Use the utime() from bacula instead.
 #ifdef HAVE_WIN32
-	//e=utime(path, ut);
-	e=win32_utime(path, ut);
+	//e=utime(path, &ut);
+	e=win32_utime(path, &ut);
 #else
-	e=utime(path, ut);
+	e=utime(path, &ut);
 #endif
 	if(e<0)
 	{
@@ -299,14 +303,9 @@ static int do_lutimes(const char *path, struct stat *statp)
 int attribs_set(struct asfd *asfd, const char *path,
 	struct stat *statp, uint64_t winattr, struct cntr *cntr)
 {
-	struct utimbuf ut;
-
-	ut.actime=statp->st_atime;
-	ut.modtime=statp->st_mtime;
-
 #ifdef HAVE_WIN32
 	win32_chmod(path, statp->st_mode, winattr);
-	set_file_times(asfd, path, &ut, cntr);
+	attribs_set_file_times(asfd, path, statp, cntr);
 	return 0;
 #endif
 
@@ -348,7 +347,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 			return -1;
 		}
 
-		if(set_file_times(asfd, path, &ut, cntr))
+		if(attribs_set_file_times(asfd, path, statp, cntr))
 			return -1;
 #ifdef HAVE_CHFLAGS
 		/*

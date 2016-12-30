@@ -1,3 +1,8 @@
+2017-01-01 Changes in burp-2.0.54:
+ * Fix certificate and csr permissions on receive_a_file().
+ * Fix for metadata restore removing security capabilities.
+ * Fix for 'burp -a S' not outputting all clients.
+
 2016-11-07 Changes in burp-2.0.52:
   * Make compilation with openssl-1.1.0 work.
   * Fix for client side autoupgrade.

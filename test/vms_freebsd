@@ -37,9 +37,11 @@ while true ; do
 done
 
 ssh $ssh_opts "$host" "rm -rf $tarfile $directory /tmp/burp_ca.lock" \
-	|| fail "cleaning ubuntu machine"
+	|| fail "cleaning freebsd machine"
+ssh $ssh_opts "$host" "rm -rf burp-2.*" \
+	|| fail "cleaning freebsd machine"
 scp $ssh_opts "$tarfile" "$host:" \
-	|| fail "scp $tarfile to ubuntu machine"
+	|| fail "scp $tarfile to freebsd machine"
 ssh $ssh_opts "$host" "tar -xvf $tarfile" \
 	|| fail "unpacking $tarfile"
 ssh $ssh_opts "$host" \

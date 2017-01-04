@@ -121,13 +121,25 @@ end:
 	return ret;
 }
 
+enum processed_e
+{
+	P_ERROR=-1,
+	P_DONE_NEW=0,
+	P_DONE_CHANGED=1,
+	P_DONE_UNCHANGED=2,
+	P_DONE_DELETED=3,
+	P_NEW=4,
+	P_CHANGED=5
+};
+
 #include <librsync.h>
 
-static int process_changed_file(struct asfd *asfd, struct conf **cconfs,
+static enum processed_e process_changed_file(struct asfd *asfd,
+	struct conf **cconfs,
 	struct sbuf *cb, struct sbuf *p1b,
 	const char *adir)
 {
-	int ret=-1;
+	int ret=P_ERROR;
 	size_t blocklen=0;
 	char *curpath=NULL;
 	//logp("need to process changed file: %s (%s)\n",
@@ -189,13 +201,13 @@ static int process_changed_file(struct asfd *asfd, struct conf **cconfs,
 	//logp("sending sig for %s\n", p1b->path);
 	//logp("(%s)\n", p1b->datapth);
 
-	ret=0;
+	ret=P_CHANGED;
 end:
 	free_w(&curpath);
 	return ret;
 }
 
-static int new_non_file(struct sbuf *p1b,
+static enum processed_e new_non_file(struct sbuf *p1b,
 	struct manio *ucmanio, struct conf **cconfs)
 {
 	// Is something that does not need more data backed up.
@@ -204,27 +216,24 @@ static int new_non_file(struct sbuf *p1b,
 	// order with normal files, which has to wait around for their data
 	// to turn up.
 	if(manio_write_sbuf(ucmanio, p1b))
-		return -1;
+		return P_ERROR;
 	cntr_add(get_cntr(cconfs), p1b->path.cmd, 0);
-	sbuf_free_content(p1b);
-	return 0;
+	return P_DONE_NEW;
 }
 
-static int changed_non_file(struct sbuf *p1b,
+static enum processed_e changed_non_file(struct sbuf *p1b,
 	struct manio *ucmanio, enum cmd cmd, struct conf **cconfs)
 {
 	// As new_non_file.
 	if(manio_write_sbuf(ucmanio, p1b))
-		return -1;
+		return P_ERROR;
 	cntr_add_changed(get_cntr(cconfs), cmd);
-	sbuf_free_content(p1b);
-	return 0;
+	return P_DONE_CHANGED;
 }
 
-static int process_new(struct conf **cconfs,
+static enum processed_e process_new(struct conf **cconfs,
 	struct sbuf *p1b, struct manio *ucmanio)
 {
-	if(!p1b->path.buf) return 0;
 	if(sbuf_is_filedata(p1b)
 	  || sbuf_is_vssdata(p1b))
 	{
@@ -232,12 +241,12 @@ static int process_new(struct conf **cconfs,
 		// Flag the things that need to be sent (to the client)
 		p1b->flags |= SBUF_SEND_STAT;
 		p1b->flags |= SBUF_SEND_PATH;
-		return 0;
+		return P_NEW;
 	}
 	return new_non_file(p1b, ucmanio, cconfs);
 }
 
-static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
+static enum processed_e process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	struct manio *ucmanio, struct conf **cconfs)
 {
 	// Need to re-encode the p1b attribs to include compression and
@@ -251,26 +260,16 @@ static int process_unchanged_file(struct sbuf *p1b, struct sbuf *cb,
 	// longer than what the client told us in phase1.
 	iobuf_free_content(&p1b->attr);
 	if(attribs_encode(p1b))
-		return -1;
+		return P_ERROR;
 	if(manio_write_sbuf(ucmanio, p1b))
-		return -1;
+		return P_ERROR;
 	cntr_add_same(get_cntr(cconfs), p1b->path.cmd);
 	if(p1b->endfile.buf) cntr_add_bytes(get_cntr(cconfs),
-		 strtoull(p1b->endfile.buf, NULL, 10));
-	sbuf_free_content(cb);
-	return 1;
+		strtoull(p1b->endfile.buf, NULL, 10));
+	return P_DONE_UNCHANGED;
 }
 
-static int process_new_file(struct conf **cconfs,
-	struct sbuf *cb, struct sbuf *p1b, struct manio *ucmanio)
-{
-	if(process_new(cconfs, p1b, ucmanio))
-		return -1;
-	sbuf_free_content(cb);
-	return 1;
-}
-
-static int maybe_do_delta_stuff(struct asfd *asfd,
+static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
 	struct manio *ucmanio, struct conf **cconfs)
 {
@@ -280,7 +279,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	// If the file type changed, I think it is time to back it up again
 	// (for example, EFS changing to normal file, or back again).
 	if(cb->path.cmd!=p1b->path.cmd)
-		return process_new_file(cconfs, cb, p1b, ucmanio);
+		return process_new(cconfs, p1b, ucmanio);
 
 	// mtime is the actual file data.
 	// ctime is the attributes or meta data.
@@ -309,7 +308,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		  || p1b->path.cmd==CMD_METADATA
 		  || sbuf_is_vssdata(cb)
 		  || sbuf_is_vssdata(p1b))
-			return process_new_file(cconfs, cb, p1b, ucmanio);
+			return process_new(cconfs, p1b, ucmanio);
 		// On Windows, we have to back up the whole file if ctime
 		// changed, otherwise things like permission changes do not get
 		// noticed. So, in that case, fall through to the changed stuff
@@ -334,7 +333,7 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 	  || sbuf_is_encrypted(p1b)
 	  || sbuf_is_vssdata(cb)
 	  || sbuf_is_vssdata(p1b))
-		return process_new_file(cconfs, cb, p1b, ucmanio);
+		return process_new(cconfs, p1b, ucmanio);
 
 	// Get new files if they have switched between compression on or off.
 	if(cb->protocol1->datapth.buf
@@ -343,53 +342,58 @@ static int maybe_do_delta_stuff(struct asfd *asfd,
 		oldcompressed=1;
 	if( ( oldcompressed && !compression)
 	 || (!oldcompressed &&  compression))
-		return process_new_file(cconfs, cb, p1b, ucmanio);
+		return process_new(cconfs, p1b, ucmanio);
 
 	// Otherwise, do the delta stuff (if possible).
 	if(sbuf_is_filedata(p1b)
 	  || sbuf_is_vssdata(p1b))
-	{
-		if(process_changed_file(asfd, cconfs, cb, p1b,
-			sdirs->currentdata)) return -1;
-	}
-	else
-	{
-		if(changed_non_file(p1b, ucmanio, p1b->path.cmd, cconfs))
-			return -1;
-	}
-	sbuf_free_content(cb);
-	return 1;
+		return process_changed_file(asfd, cconfs, cb, p1b,
+			sdirs->currentdata);
+	return changed_non_file(p1b, ucmanio, p1b->path.cmd, cconfs);
+}
+
+static enum processed_e process_deleted_file(struct sbuf *cb,
+	struct conf **cconfs)
+{
+	cntr_add_deleted(get_cntr(cconfs), cb->path.cmd);
+	return P_DONE_DELETED;
 }
 
 // return 1 to say that a file was processed
-static int maybe_process_file(struct asfd *asfd,
+static enum processed_e maybe_process_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
 	struct manio *ucmanio, struct conf **cconfs)
 {
 	int pcmp;
-	if(!(pcmp=sbuf_pathcmp(cb, p1b)))
-		return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
-			ucmanio, cconfs);
-	else if(pcmp>0)
+	if(p1b)
 	{
-		//logp("ahead: %s\n", p1b->path);
-		// ahead - need to get the whole file
-		if(process_new(cconfs, p1b, ucmanio))
-			return -1;
-		// Do not free.
-		return 1;
+		if(!(pcmp=sbuf_pathcmp(cb, p1b)))
+			return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
+				ucmanio, cconfs);
+		else if(pcmp>0)
+		{
+			//logp("ahead: %s\n", p1b->path);
+			// ahead - need to get the whole file
+			return process_new(cconfs, p1b, ucmanio);
+		}
 	}
 	//logp("behind: %s\n", p1b->path);
 	// Behind - need to read more from the old manifest.
 	// Count a deleted file - it was in the old manifest
 	// but not the new.
-	cntr_add_deleted(get_cntr(cconfs), cb->path.cmd);
-	return 0;
+	return process_deleted_file(cb, cconfs);
 }
+
+enum sts_e
+{
+	STS_ERROR=-1,
+	STS_OK=0,
+	STS_BLOCKED=1
+};
 
 // Return 1 if there is still stuff needing to be sent.
 // FIX THIS: lots of repeated code.
-static int do_stuff_to_send(struct asfd *asfd,
+static enum sts_e do_stuff_to_send(struct asfd *asfd,
 	struct sbuf *p1b, char **last_requested)
 {
 	static struct iobuf wbuf;
@@ -399,8 +403,8 @@ static int do_stuff_to_send(struct asfd *asfd,
 		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
 		{
 			case APPEND_OK: break;
-			case APPEND_BLOCKED: return 1;
-			default: return -1;
+			case APPEND_BLOCKED: return STS_BLOCKED;
+			default: return STS_ERROR;
 		}
 		p1b->flags &= ~SBUF_SEND_DATAPTH;
 	}
@@ -410,8 +414,8 @@ static int do_stuff_to_send(struct asfd *asfd,
 		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
 		{
 			case APPEND_OK: break;
-			case APPEND_BLOCKED: return 1;
-			default: return -1;
+			case APPEND_BLOCKED: return STS_BLOCKED;
+			default: return STS_ERROR;
 		}
 		p1b->flags &= ~SBUF_SEND_STAT;
 	}
@@ -421,13 +425,13 @@ static int do_stuff_to_send(struct asfd *asfd,
 		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
 		{
 			case APPEND_OK: break;
-			case APPEND_BLOCKED: return 1;
-			default: return -1;
+			case APPEND_BLOCKED: return STS_BLOCKED;
+			default: return STS_ERROR;
 		}
 		p1b->flags &= ~SBUF_SEND_PATH;
 		free_w(last_requested);
 		if(!(*last_requested=strdup_w(p1b->path.buf, __func__)))
-			return -1;
+			return STS_ERROR;
 	}
 	if(p1b->protocol1->sigjob && !(p1b->flags & SBUF_SEND_ENDOFSIG))
 	{
@@ -443,10 +447,10 @@ static int do_stuff_to_send(struct asfd *asfd,
 			case RS_BLOCKED:
 			case RS_RUNNING:
 				// keep going round the loop.
-				return 1;
+				return STS_BLOCKED;
 			default:
 				logp("error in rs_async: %d\n", sigresult);
-				return -1;
+				return STS_ERROR;
 		}
 	}
 	if(p1b->flags & SBUF_SEND_ENDOFSIG)
@@ -455,12 +459,12 @@ static int do_stuff_to_send(struct asfd *asfd,
 		switch(asfd->append_all_to_write_buffer(asfd, &wbuf))
 		{
 			case APPEND_OK: break;
-			case APPEND_BLOCKED: return 1;
-			default: return -1;
+			case APPEND_BLOCKED: return STS_BLOCKED;
+			default: return STS_ERROR;
 		}
 		p1b->flags &= ~SBUF_SEND_ENDOFSIG;
 	}
-	return 0;
+	return STS_OK;
 }
 
 static int start_to_receive_delta(struct sdirs *sdirs, struct sbuf *rb)
@@ -586,23 +590,20 @@ static int deal_with_filedata(struct asfd *asfd,
 	return 0;
 }
 
+enum str_e
+{
+	STR_ERROR=-1,
+	STR_OK=0,
+	STR_FINISHED=1
+};
+
 // returns 1 for finished ok.
-static int do_stuff_to_receive(struct asfd *asfd,
+static enum str_e do_stuff_to_receive(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *rb, struct manio *chmanio,
 	struct dpth *dpth, char **last_requested)
 {
 	struct iobuf *rbuf=asfd->rbuf;
-
-	iobuf_free_content(rbuf);
-	// This also attempts to write anything in the write buffer.
-	if(asfd->as->read_write(asfd->as))
-	{
-		logp("error in %s\n", __func__);
-		return -1;
-	}
-
-	if(!rbuf->buf) return 0;
 
 	if(rbuf->cmd==CMD_MESSAGE
 	  || rbuf->cmd==CMD_WARNING)
@@ -610,7 +611,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 		struct cntr *cntr=NULL;
 		if(cconfs) cntr=get_cntr(cconfs);
 		log_recvd(rbuf, cntr, 0);
-		return 0;
+		return STR_OK;
 	}
 
 	if(rb->protocol1->fzp)
@@ -621,12 +622,12 @@ static int do_stuff_to_receive(struct asfd *asfd,
 			case CMD_APPEND:
 				if(deal_with_receive_append(asfd, rb))
 					goto error;
-				return 0;
+				return STR_OK;
 			case CMD_END_FILE:
 				if(deal_with_receive_end_file(asfd, sdirs, rb,
 					chmanio, cconfs, last_requested))
 						goto error;
-				return 0;
+				return STR_OK;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);
 				goto error;
@@ -638,11 +639,11 @@ static int do_stuff_to_receive(struct asfd *asfd,
 	{
 		case CMD_DATAPTH:
 			iobuf_move(&rb->protocol1->datapth, rbuf);
-			return 0;
+			return STR_OK;
 		case CMD_ATTRIBS:
 			iobuf_move(&rb->attr, rbuf);
 			attribs_decode(rb);
-			return 0;
+			return STR_OK;
 		case CMD_GEN:
 			if(!strcmp(rbuf->buf, "okbackupphase2end"))
 				goto end_phase2;
@@ -656,7 +657,7 @@ static int do_stuff_to_receive(struct asfd *asfd,
 			if(*last_requested
 			  && !strcmp(rbuf->buf, *last_requested))
 				free_w(last_requested);
-			return 0;
+			return STR_OK;
 		default:
 			break;
 	}
@@ -665,14 +666,14 @@ static int do_stuff_to_receive(struct asfd *asfd,
 	{
 		if(deal_with_filedata(asfd, sdirs, rb, rbuf, dpth, cconfs))
 			goto error;
-		return 0;
+		return STR_OK;
 	}
 	iobuf_log_unexpected(rbuf, __func__);
 
 error:
-	return -1;
+	return STR_ERROR;
 end_phase2:
-	return 1;
+	return STR_FINISHED;
 }
 
 static int vss_opts_changed(struct sdirs *sdirs, struct conf **cconfs,
@@ -752,6 +753,124 @@ static int open_previous_manifest(struct manio **cmanio,
 		logp("could not open old manifest %s\n", sdirs->cmanifest);
 		return -1;
 	}
+	return 0;
+}
+
+static int process_next_file_from_manios(struct asfd *asfd,
+	struct sdirs *sdirs,
+	struct manio **p1manio,
+	struct manio **cmanio,
+	struct manio *ucmanio,
+	struct sbuf **p1b,
+	struct sbuf *cb,
+	struct conf **cconfs)
+{
+	if(!(*p1b=sbuf_alloc(PROTO_1)))
+		goto error;
+	switch(manio_read(*p1manio, *p1b))
+	{
+		case 0:
+			break;
+		case 1:
+			manio_close(p1manio);
+			if(asfd->write_str(asfd, CMD_GEN, "backupphase2end"))
+				goto error;
+			sbuf_free(p1b);
+			break;
+		case -1:
+			goto error;
+	}
+
+	if(!*cmanio)
+	{
+		if(!*p1b) return 0;
+		// No old manifest, need to ask for a new file.
+		switch(process_new(cconfs, *p1b, ucmanio))
+		{
+			case P_NEW:
+				return 0;
+			case P_DONE_NEW:
+				goto p1b_done;
+			default:
+				goto error;
+		}
+	}
+
+	// Have an old manifest, look for it there.
+
+	// Might already have it, or be ahead in the old
+	// manifest.
+	if(cb->path.buf)
+	{
+		switch(maybe_process_file(asfd,
+			sdirs, cb, *p1b, ucmanio, cconfs))
+		{
+			case P_NEW:
+			case P_CHANGED:
+				// Free cb content for things like encrypted
+				// files, which we only pretend are new.
+				sbuf_free_content(cb);
+				return 0;
+			case P_DONE_NEW:
+				goto p1b_done;
+			case P_DONE_CHANGED:
+			case P_DONE_UNCHANGED:
+				sbuf_free_content(cb);
+				goto p1b_done;
+			case P_DONE_DELETED:
+				sbuf_free_content(cb);
+				break;
+			case P_ERROR:
+				goto error;
+		}
+	}
+
+	while(1)
+	{
+		sbuf_free_content(cb);
+		switch(manio_read(*cmanio, cb))
+		{
+			case 0: break;
+			case 1: manio_close(cmanio);
+				if(*p1b) switch(process_new(cconfs,
+					*p1b, ucmanio))
+				{
+					case P_NEW:
+						return 0;
+					case P_DONE_NEW:
+						goto p1b_done;
+					default:
+						goto error;
+				}
+				return 0;
+			case -1: goto error;
+		}
+		switch(maybe_process_file(asfd, sdirs,
+			cb, *p1b, ucmanio, cconfs))
+		{
+			case P_NEW:
+			case P_CHANGED:
+				// Free cb content for things like encrypted
+				// files, which we only pretend are new.
+				sbuf_free_content(cb);
+				return 0;
+			case P_DONE_NEW:
+				goto p1b_done;
+			case P_DONE_CHANGED:
+			case P_DONE_UNCHANGED:
+				sbuf_free_content(cb);
+				goto p1b_done;
+			case P_DONE_DELETED:
+				sbuf_free_content(cb);
+				continue;
+			case P_ERROR:
+				goto error;
+		}
+	}
+error:
+	return -1;
+p1b_done:
+	sbuf_free(p1b);
 	return 0;
 }
 
@@ -856,83 +975,47 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			return breakpoint(breaking, __func__);
 
 		if(write_status(CNTR_STATUS_BACKUP,
-			rb->path.buf?rb->path.buf:p1b->path.buf, cntr))
+			rb->path.buf?rb->path.buf:"", cntr))
 				goto error;
 		if(last_requested
 		  || !p1manio
 		  || asfd->writebuflen)
 		{
-			switch(do_stuff_to_receive(asfd, sdirs,
+			iobuf_free_content(asfd->rbuf);
+			if(asfd->as->read_write(asfd->as))
+			{
+				logp("error in %s\n", __func__);
+				goto error;
+			}
+
+			if(asfd->rbuf->buf)
+			  switch(do_stuff_to_receive(asfd, sdirs,
 				cconfs, rb, chmanio, dpth, &last_requested))
 			{
-				case 0: break;
-				case 1: goto end; // Finished ok.
-				case -1: goto error;
+				case STR_OK:
+					break;
+				case STR_FINISHED:
+					goto end;
+				case STR_ERROR:
+					goto error;
 			}
 		}
 
-		switch(do_stuff_to_send(asfd, p1b, &last_requested))
+		if(p1b) switch(do_stuff_to_send(asfd, p1b, &last_requested))
 		{
-			case 0: break;
-			case 1: continue;
-			case -1: goto error;
-		}
-
-		if(!p1manio) continue;
-
-		sbuf_free_content(p1b);
-
-		switch(manio_read(p1manio, p1b))
-		{
-			case 0: break;
-			case 1: manio_close(&p1manio);
-				if(asfd->write_str(asfd,
-				  CMD_GEN, "backupphase2end")) goto error;
+			case STS_OK:
+				sbuf_free(&p1b);
 				break;
-			case -1: goto error;
-		}
-
-		if(!cmanio)
-		{
-			// No old manifest, need to ask for a new file.
-			if(process_new(cconfs, p1b, ucmanio))
+			case STS_BLOCKED:
+				continue;
+			case STS_ERROR:
 				goto error;
-			continue;
 		}
 
-		// Have an old manifest, look for it there.
-
-		// Might already have it, or be ahead in the old
-		// manifest.
-		if(cb->path.buf) switch(maybe_process_file(asfd,
-			sdirs, cb, p1b, ucmanio, cconfs))
-		{
-			case 0: break;
-			case 1: continue;
-			case -1: goto error;
-		}
-
-		while(cmanio)
-		{
-			sbuf_free_content(cb);
-			switch(manio_read(cmanio, cb))
-			{
-				case 0: break;
-				case 1: manio_close(&cmanio);
-					if(process_new(cconfs, p1b,
-						ucmanio)) goto error;
-					continue;
-				case -1: goto error;
-			}
-			switch(maybe_process_file(asfd, sdirs,
-				cb, p1b, ucmanio, cconfs))
-			{
-				case 0: continue;
-				case 1: break;
-				case -1: goto error;
-			}
-			break;
-		}
+		if(p1manio
+		 && process_next_file_from_manios(asfd, sdirs,
+			&p1manio, &cmanio, ucmanio, &p1b, cb, cconfs))
+					goto error;
 	}
 
 error:

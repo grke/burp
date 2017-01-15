@@ -250,6 +250,13 @@ int attribs_set_file_times(struct asfd *asfd,
 {
 	int e;
 	struct utimbuf ut;
+
+#ifdef HAVE_WIN32
+	// You cannot set times on Windows junction points.
+	if(statp->st_rdev==WIN32_JUNCTION_POINT)
+		return 0;
+#endif
+
 	ut.actime=statp->st_atime;
 	ut.modtime=statp->st_mtime;
 

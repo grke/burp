@@ -715,7 +715,7 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	  && strstr(autoupgrade_os, ".."))
 		conf_problem(path,
 			"autoupgrade_os must not contain a '..' component", r);
-	if(!get_string(c[OPT_CA_BURP_CA]))
+	if(get_string(c[OPT_CA_BURP_CA]))
 	{
 		if(!get_string(c[OPT_CA_CSR_DIR]))
 			conf_problem(path,

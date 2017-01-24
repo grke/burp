@@ -529,12 +529,16 @@ int ca_x509_verify_crl(struct conf **confs,
 	const char *ca_conf=get_string(confs[OPT_CA_CONF]);
 	int crl_check=get_int(confs[OPT_CA_CRL_CHECK]);
 
+	if(!crl_check)
+	{
+		ret=0;
+		goto end;
+	}
+
 	if(!(ca_dir=get_ca_dir(ca_conf)))
 		goto end;
 
-	if(!crl_check
-	  || !ca_name || !*ca_name
-	  || !ca_dir)
+	if(!ca_name || !*ca_name  || !ca_dir)
 	{
 		ret=0;
 		goto end;

@@ -38,7 +38,7 @@ static void tear_down(struct conf ***globalcs, struct conf ***confs)
 
 struct data
 {
-        const char *str;
+	const char *str;
 	const char *field;
 	const char *value;
 };
@@ -63,7 +63,7 @@ static struct data d[] = {
 
 START_TEST(test_conf_get_pair)
 {
-        FOREACH(d)
+	FOREACH(d)
 	{
 		char *field=NULL;
 		char *value=NULL;
@@ -98,6 +98,23 @@ START_TEST(test_client_conf)
 	ck_assert_str_eq(get_string(confs[OPT_SSL_PEER_CN]), "my_cn");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_KEY]), "/ssl/key/path");
 	ck_assert_str_eq(get_string(confs[OPT_CA_CSR_DIR]), "/csr/dir");
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_client_conf_ca_conf_problems)
+{
+	const char *buf="mode=client\n"
+		"server=4.5.6.7\n"
+		"port=1234\n"
+		"status_port=12345\n"
+		"lockfile=/lockfile/path\n"
+		"ca_burp_ca=blah\n"
+	;
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, buf);
+	fail_unless(conf_load_global_only(CONFFILE, confs)==-1);
 	tear_down(NULL, &confs);
 }
 END_TEST
@@ -695,6 +712,7 @@ Suite *suite_conffile(void)
 
 	tcase_add_test(tc_core, test_conf_get_pair);
 	tcase_add_test(tc_core, test_client_conf);
+	tcase_add_test(tc_core, test_client_conf_ca_conf_problems);
 	tcase_add_test(tc_core, test_client_includes_excludes);
 	tcase_add_test(tc_core, test_client_include_failures);
 	tcase_add_test(tc_core, test_client_include_glob);

@@ -491,7 +491,7 @@ static void setup_asfds_happy_path_one_blk_per_file_full_dedup_big(
 	setup_reads_from_slist(asfd, &ar, slist, 1, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "4Q");
+	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "BOJ");
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");
@@ -538,7 +538,7 @@ static void setup_asfds_happy_path_three_blks_per_file_full_dedup_big(
 	setup_reads_from_slist(asfd, &ar, slist, 3, 0);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "sigs_end");
 
-	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "4s");
+	asfd_assert_write(asfd, &aw, 0, CMD_WRAP_UP, "BOJ");
 	asfd_assert_write(asfd, &aw, 0, CMD_GEN, "blk_requests_end");
 	asfd_mock_read_no_op(asfd, &ar, 25600);
 	asfd_mock_read(asfd, &ar, 0, CMD_GEN, "backup_end");

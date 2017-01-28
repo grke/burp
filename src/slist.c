@@ -61,6 +61,7 @@ void slist_add_sbuf(struct slist *slist, struct sbuf *sb)
 		slist->blks_to_request=sb;
 		slist->blks_to_send=sb;
 	}
+	slist->count++;
 }
 
 static void adjust_dropped_markers(struct slist *slist, struct sbuf *sb)
@@ -95,6 +96,7 @@ int slist_del_sbuf(struct slist *slist, struct sbuf *sb)
 	{
 		// There is one entry in the list.
 		slist->head=slist->head->next;
+		slist->count--;
 	}
 	else
 	{
@@ -104,6 +106,7 @@ int slist_del_sbuf(struct slist *slist, struct sbuf *sb)
 			s->next=sb->next;
 			if(!sb->next)
 				slist->tail=s;
+			slist->count--;
 			break;
 		}
 	}
@@ -139,6 +142,8 @@ void slist_advance(struct slist *slist)
 	adjust_dropped_markers(slist, sb);
 
 	slist->head=sb->next;
+
+	slist->count--;
 
 	sbuf_free(&sb);
 }

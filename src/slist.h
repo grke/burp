@@ -5,6 +5,7 @@
 
 struct slist
 {
+	int count;
 	struct sbuf *head;
 	struct sbuf *tail;
 	// The following stuff is for burp-2 only.

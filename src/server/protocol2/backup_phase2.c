@@ -27,6 +27,10 @@
 #define END_REQUESTS		0x04
 #define END_BLK_REQUESTS	0x08
 
+#define BLKS_MAX_UNREQUESTED	BLKS_MAX_IN_MEM/4
+// This needs to be greater than BLKS_MAX_UNREQUESTED
+#define SLIST_MAX_IN_MEM	BLKS_MAX_IN_MEM
+
 static int breaking=0;
 static int breakcount=0;
 
@@ -488,6 +492,7 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 	struct blk *blk;
 	static struct iobuf wbuf;
 	struct blist *blist=slist->blist;
+	static int unrequested=0;
 
 	if(!(sb->flags & SBUF_HEADER_WRITTEN_TO_MANIFEST))
 	{
@@ -524,18 +529,20 @@ static int sbuf_needs_data(struct sbuf *sb, struct asfd *asfd,
 				// adjacent blocks are deduplicated well.
 				if(hash_load_blk(blk))
 					goto end;
-
-				if(!blk->requested)
-				{
-					// Also let the client know, so that it
-					// can free memory if there was a long
-					// consecutive number of unrequested
-					// blocks.
-					get_wbuf_from_index(&wbuf, blk->index);
-					if(asfd->write(asfd, &wbuf))
-						goto end;
-				}
 			}
+		}
+
+		if(!blk->requested)
+			unrequested++;
+
+		if(unrequested>BLKS_MAX_UNREQUESTED)
+		{
+			unrequested=0;
+			// Let the client know that it can free memory if there
+			// was a long consecutive number of unrequested blocks.
+			get_wbuf_from_index(&wbuf, blk->index);
+			if(asfd->write(asfd, &wbuf))
+				goto end;
 		}
 
 		if(blk==sb->protocol2->bend)
@@ -608,12 +615,8 @@ static int maybe_add_from_scan(struct manios *manios,
 		sbuf_free(&snew);
 		if(!manios->phase1) return 0;
 		// Limit the amount loaded into memory at any one time.
-		if(slist && slist->head)
-		{
-			if(slist->head->protocol2->index
-			  - slist->tail->protocol2->index>4096)
-				return 0;
-		}
+		if(slist->count>SLIST_MAX_IN_MEM)
+			return 0;
 		if(!(snew=sbuf_alloc(PROTO_2))) goto end;
 
 		switch(manio_read(manios->phase1, snew))

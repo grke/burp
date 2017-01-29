@@ -12,6 +12,7 @@ static void tear_down(void)
 START_TEST(test_rconf_init)
 {
 	struct rconf rconf;
+	alloc_check_init();
 	rconf_init(&rconf);
 
 	fail_unless(rconf.win_size >= rconf.win_min);

@@ -136,7 +136,8 @@ int blks_generate(struct sbuf *sb, struct blist *blist, int just_opened)
 	{
 		// Empty file, set up an empty block so that the server
 		// can skip over it.
-		if(!(sb->protocol2->bstart=blk_alloc())) return -1;
+		free_w(&blk->data);
+		sb->protocol2->bstart=blk;
 		sb->protocol2->bsighead=blk;
 		blist_add_blk(blist, blk);
 		blk=NULL;

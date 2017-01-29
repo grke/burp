@@ -1,3 +1,16 @@
+2017-02-01 Changes in burp-2.1.2:
+ * Protocol 2 fixes:
+   - lient side empty block memory leak
+   - server side empty blocks lock up
+   - server side limit number of paths loaded into memory
+   - metadata protocol2 restore removing security capabilities
+ * Don't try to set file times on Windows junction points.
+ * Create 'bsparse' for recreating the sparse index.
+ * Cleanup code in protocol1/backup_phase2.c.
+ * Reinhard Biegel's fixes:
+   - bad open call when ca_conf is not set
+   - config check logic for ca_burp_ca
+
 2017-01-01 Changes in burp-2.1.0:
  * Fix certificate and csr permissions on receive_a_file().
  * Fix for metadata restore removing security capabilities.

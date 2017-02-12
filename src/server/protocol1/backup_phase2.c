@@ -18,6 +18,7 @@
 #include "blocklen.h"
 #include "dpth.h"
 #include "backup_phase2.h"
+#include "link.h"
 
 static size_t treepathlen=0;
 
@@ -269,9 +270,91 @@ static enum processed_e process_unchanged_file(struct sbuf *p1b, struct sbuf *cb
 	return P_DONE_UNCHANGED;
 }
 
+static int get_hardlink_master_from_hmanio(
+	struct manio **hmanio,
+	struct sbuf *cb,
+	struct sbuf *hb
+) {
+	while(1)
+	{
+		sbuf_free_content(hb);
+		switch(manio_read(*hmanio, hb))
+		{
+			case 0: // Keep going.
+				break;
+			case 1: // Finished OK.
+				manio_close(hmanio);
+				return 0;
+			default: // Error;
+				return -1;
+		}
+		if(hb->path.cmd!=CMD_FILE
+		  && hb->path.cmd!=CMD_ENC_FILE)
+			continue;
+		if(!strcmp(hb->path.buf, cb->link.buf))
+			return 1; // Found it.
+	}
+	return -1;
+}
+
+static int relink_deleted_hardlink_master(
+	struct manio **hmanio,
+	struct sdirs *sdirs,
+	struct sbuf *p1b,
+	struct sbuf *cb,
+	struct conf **cconfs
+) {
+	int ret=-1;
+	char *oldpath=NULL;
+	char *newpath=NULL;
+	struct stat statp;
+	struct sbuf *hb=NULL;
+
+	if(!(hb=sbuf_alloc(PROTO_1)))
+		goto end;
+
+	switch(get_hardlink_master_from_hmanio(hmanio, cb, hb))
+	{
+		case 0: // Did not find it.
+			return 0;
+		case 1: // Found it.
+			break;
+		default: // Error.
+			goto end;
+	}
+
+	// Protect against the old file being encrypted, and the new file not
+	// being encrypted - and vice versa.
+	if(p1b->path.cmd!=hb->path.cmd)
+		return 0;
+
+	if(!(oldpath=prepend_s(sdirs->ctreepath, cb->link.buf))
+	  || !(newpath=prepend_s(sdirs->treepath, p1b->path.buf)))
+		goto end;
+	if(lstat(oldpath, &statp) || !S_ISREG(statp.st_mode))
+	{
+		ret=0;
+		goto end;
+	}
+	if(build_path_w(newpath))
+		goto end;
+	if(do_link(oldpath, newpath, &statp, cconfs, /*overwrite*/0))
+		goto end;
+
+	iobuf_move(&cb->protocol1->datapth, &hb->protocol1->datapth);
+	iobuf_move(&cb->endfile, &hb->endfile);
+
+	ret=1;
+end:
+	free_w(&oldpath);
+	free_w(&newpath);
+	sbuf_free(&hb);
+	return ret;
+}
+
 static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
-	struct manio *ucmanio, struct conf **cconfs)
+	struct manio *ucmanio, struct manio **hmanio, struct conf **cconfs)
 {
 	int oldcompressed=0;
 	int compression=p1b->compression;
@@ -279,7 +362,38 @@ static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 	// If the file type changed, I think it is time to back it up again
 	// (for example, EFS changing to normal file, or back again).
 	if(cb->path.cmd!=p1b->path.cmd)
+	{
+		if(hmanio && *hmanio
+		  && cb->path.cmd==CMD_HARD_LINK
+		  && (p1b->path.cmd==CMD_FILE
+			|| p1b->path.cmd==CMD_ENC_FILE))
+		{
+			struct stat *p1statp=&p1b->statp;
+			struct stat *cstatp=&cb->statp;
+			// A hardlink changed into a file. It is possible that
+			// The file that the hardlink was pointing to got
+			// deleted. Maybe we can reuse the previous file.
+			if(p1statp->st_dev==cstatp->st_dev
+			  && p1statp->st_ino==cstatp->st_ino
+			  && p1statp->st_mtime==cstatp->st_mtime)
+			{
+				switch(relink_deleted_hardlink_master(
+					hmanio, sdirs,
+					p1b, cb, cconfs))
+				{
+					case 0:
+						break;
+					case 1:
+						return process_unchanged_file(
+							p1b, cb,
+							ucmanio, cconfs);
+					default:
+						return P_ERROR;
+				}
+			}
+		}
 		return process_new(cconfs, p1b, ucmanio);
+	}
 
 	// mtime is the actual file data.
 	// ctime is the attributes or meta data.
@@ -362,14 +476,14 @@ static enum processed_e process_deleted_file(struct sbuf *cb,
 // return 1 to say that a file was processed
 static enum processed_e maybe_process_file(struct asfd *asfd,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
-	struct manio *ucmanio, struct conf **cconfs)
+	struct manio *ucmanio, struct manio **hmanio, struct conf **cconfs)
 {
 	int pcmp;
 	if(p1b)
 	{
 		if(!(pcmp=sbuf_pathcmp(cb, p1b)))
 			return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
-				ucmanio, cconfs);
+				ucmanio, hmanio, cconfs);
 		else if(pcmp>0)
 		{
 			//logp("ahead: %s\n", p1b->path);
@@ -737,18 +851,11 @@ end:
 	return ret;
 }
 
-// Open the previous (current) manifest.
-// If the split_vss setting changed between the previous backup and the new
-// backup, do not open the previous manifest. This will have the effect of
-// making the client back up everything fresh. Need to do this, otherwise
-// toggling split_vss on and off will result in backups that do not work.
-static int open_previous_manifest(struct manio **cmanio,
-	struct sdirs *sdirs, const char *incexc, struct conf **cconfs)
+static int open_previous_manifest(struct manio **manio, struct sdirs *sdirs)
 {
 	struct stat statp;
 	if(!lstat(sdirs->cmanifest, &statp)
-	  && !vss_opts_changed(sdirs, cconfs, incexc)
-	  && !(*cmanio=manio_open(sdirs->cmanifest, "rb", PROTO_1)))
+	  && !(*manio=manio_open(sdirs->cmanifest, "rb", PROTO_1)))
 	{
 		logp("could not open old manifest %s\n", sdirs->cmanifest);
 		return -1;
@@ -756,11 +863,25 @@ static int open_previous_manifest(struct manio **cmanio,
 	return 0;
 }
 
+// Maybe open the previous (current) manifest.
+// If the split_vss setting changed between the previous backup and the new
+// backup, do not open the previous manifest. This will have the effect of
+// making the client back up everything fresh. Need to do this, otherwise
+// toggling split_vss on and off will result in backups that do not work.
+static int maybe_open_previous_manifest(struct manio **manio,
+	struct sdirs *sdirs, const char *incexc, struct conf **cconfs)
+{
+	if(vss_opts_changed(sdirs, cconfs, incexc))
+		return 0;
+	return open_previous_manifest(manio, sdirs);
+}
+
 static int process_next_file_from_manios(struct asfd *asfd,
 	struct sdirs *sdirs,
 	struct manio **p1manio,
 	struct manio **cmanio,
 	struct manio *ucmanio,
+	struct manio **hmanio,
 	struct sbuf **p1b,
 	struct sbuf *cb,
 	struct conf **cconfs)
@@ -803,7 +924,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 	if(cb->path.buf)
 	{
 		switch(maybe_process_file(asfd,
-			sdirs, cb, *p1b, ucmanio, cconfs))
+			sdirs, cb, *p1b, ucmanio, hmanio, cconfs))
 		{
 			case P_NEW:
 			case P_CHANGED:
@@ -846,7 +967,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 			case -1: goto error;
 		}
 		switch(maybe_process_file(asfd, sdirs,
-			cb, *p1b, ucmanio, cconfs))
+			cb, *p1b, ucmanio, hmanio, cconfs))
 		{
 			case P_NEW:
 			case P_CHANGED:
@@ -885,7 +1006,8 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	char *last_requested=NULL;
 	struct manio *chmanio=NULL; // changed data
 	struct manio *ucmanio=NULL; // unchanged data
-	struct manio *cmanio=NULL; // previous (current) manifest.
+	struct manio *cmanio=NULL; // previous (current) manifest
+	struct manio *hmanio=NULL; // to look up deleted hardlinks
 	struct sbuf *cb=NULL; // file list in current manifest
 	struct sbuf *p1b=NULL; // file list from client
 	struct sbuf *rb=NULL; // receiving file from client
@@ -931,7 +1053,13 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		get_int(cconfs[OPT_MAX_STORAGE_SUBDIRS])))
 			goto error;
 
-	if(open_previous_manifest(&cmanio, sdirs, incexc, cconfs))
+	if(maybe_open_previous_manifest(&cmanio, sdirs, incexc, cconfs))
+		goto error;
+	// If the first file that others hardlink to has been deleted, we will
+	// need to look through the previous manifest to find the information
+	// for that original file, in order to not have to copy all the data
+	// across again.
+	if(open_previous_manifest(&hmanio, sdirs))
 		goto error;
 
 	if(get_int(cconfs[OPT_DIRECTORY_TREE]))
@@ -1014,7 +1142,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 		if(p1manio
 		 && process_next_file_from_manios(asfd, sdirs,
-			&p1manio, &cmanio, ucmanio, &p1b, cb, cconfs))
+			&p1manio, &cmanio, ucmanio, &hmanio, &p1b, cb, cconfs))
 					goto error;
 	}
 
@@ -1038,6 +1166,7 @@ end:
 	sbuf_free(&rb);
 	manio_close(&p1manio);
 	manio_close(&cmanio);
+	manio_close(&hmanio);
 	dpth_free(&dpth);
 	man_off_t_free(&p1pos);
 	if(!ret && sdirs)

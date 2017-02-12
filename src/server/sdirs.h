@@ -49,6 +49,7 @@ struct sdirs
 	char *cincexc;
 	char *deltmppath;
 	char *treepath;
+	char *ctreepath;
 };
 
 extern struct sdirs *sdirs_alloc(void);

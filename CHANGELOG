@@ -1,6 +1,6 @@
 2017-02-01 Changes in burp-2.1.2:
  * Protocol 2 fixes:
-   - lient side empty block memory leak
+   - Client side empty block memory leak
    - server side empty blocks lock up
    - server side limit number of paths loaded into memory
    - metadata protocol2 restore removing security capabilities

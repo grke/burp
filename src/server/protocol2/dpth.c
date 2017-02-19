@@ -180,7 +180,8 @@ static int open_cfile_fzp(struct dpth *dpth,
 		goto end;
 	if(!(fullpath=prepend_s(cfiles, fname)))
 		goto end;
-	if(build_path_w(fullpath))
+	errno=0;
+	if(build_path_w(fullpath) && errno!=EEXIST)
 		goto end;
 	if((fd=mkstemp(fullpath))<0)
 	{

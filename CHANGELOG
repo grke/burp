@@ -1,3 +1,12 @@
+2017-03-01 Changes in burp-2.1.4:
+ * Protocol 1: When a file that is deleted on the client side was one that
+   others hardlink to, do not treat the new first entry as a new file - link
+   it in from the previous backup.
+ * Protocol 2: It is OK if the cfiles directory already exists when trying to
+   mkdir it.
+ * Set windows d_name buffer to MAX_PATH.
+ * Tests for run_action.
+
 2017-02-01 Changes in burp-2.1.2:
  * Protocol 2 fixes:
    - Client side empty block memory leak

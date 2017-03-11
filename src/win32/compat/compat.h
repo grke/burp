@@ -137,7 +137,7 @@ struct dirent
 	uint64_t d_ino;
 	uint32_t d_off;
 	uint16_t d_reclen;
-	char d_name[MAX_PATH];
+	char d_name[MAX_PATH_UTF8];
 };
 typedef void DIR;
 

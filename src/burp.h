@@ -77,13 +77,13 @@
 // Local Burp includes. Be sure to put all the system includes before these.
 #ifdef HAVE_WIN32
 	#include <windows.h>
+	#include "win32/winapi.h"
 	#include "win32/compat/compat.h"
 #endif
 
 #include "burpconfig.h"
 
 #ifdef HAVE_WIN32
-	#include "win32/winapi.h"
 	#include "winhost.h"
 #endif
 

@@ -171,9 +171,9 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 	{
 		int a=0;
 		const char *args[12];
+		args[a++]=b_script_post;
 		if(get_int(confs[OPT_B_SCRIPT_RESERVED_ARGS]))
 		{
-			args[a++]=b_script_post;
 			args[a++]="post";
 			// Tell post script whether the restore failed.
 			args[a++]=ret?"1":"0";

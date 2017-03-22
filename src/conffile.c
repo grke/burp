@@ -200,6 +200,7 @@ static struct fstype fstypes[]={
 	{ "ramfs",		0x858458f6 },
 	{ "romfs",		0x00007275 },
 	{ "tmpfs",		0x01021994 },
+	{ "zfs",		0x2fc12fc1 },
 	{ NULL,			0 },
 };
 /* Use this C code to figure out what f_type gets set to.

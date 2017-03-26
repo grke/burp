@@ -42,10 +42,6 @@
 	#endif
 #endif
 
-#ifdef S_IFLNK
-#define S_ISLNK(m) (((m) & S_IFMT) == S_IFLNK)
-#endif
-
 #ifndef O_BINARY
 	#define O_BINARY 0
 #endif

@@ -678,8 +678,8 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 			"/%" PRIu64
 			"/%" PRIu64
 			"\t",
-				e->cmd, e->count, e->same,
-				e->changed, e->deleted, e->phase1);
+				e->cmd, e->count, e->changed,
+				e->same, e->deleted, e->phase1);
 		strcat(str, tmp);
 	}
 

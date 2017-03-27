@@ -486,12 +486,12 @@ static enum processed_e maybe_process_file(struct asfd *asfd,
 				ucmanio, hmanio, cconfs);
 		else if(pcmp>0)
 		{
-			//logp("ahead: %s\n", p1b->path);
+			//logp("ahead: %s\n", p1b->path.buf);
 			// ahead - need to get the whole file
 			return process_new(cconfs, p1b, ucmanio);
 		}
 	}
-	//logp("behind: %s\n", p1b->path);
+	//logp("behind: %s\n", p1b->path.buf);
 	// Behind - need to read more from the old manifest.
 	// Count a deleted file - it was in the old manifest
 	// but not the new.
@@ -927,6 +927,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 			sdirs, cb, *p1b, ucmanio, hmanio, cconfs))
 		{
 			case P_NEW:
+				return 0;
 			case P_CHANGED:
 				// Free cb content for things like encrypted
 				// files, which we only pretend are new.
@@ -970,6 +971,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 			cb, *p1b, ucmanio, hmanio, cconfs))
 		{
 			case P_NEW:
+				return 0;
 			case P_CHANGED:
 				// Free cb content for things like encrypted
 				// files, which we only pretend are new.

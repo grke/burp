@@ -249,7 +249,6 @@ int attribs_set_file_times(struct asfd *asfd,
 	struct cntr *cntr)
 {
 	int e;
-	struct utimbuf ut;
 
 #ifdef HAVE_WIN32
 	// You cannot set times on Windows junction points.
@@ -257,16 +256,20 @@ int attribs_set_file_times(struct asfd *asfd,
 		return 0;
 #endif
 
-	ut.actime=statp->st_atime;
-	ut.modtime=statp->st_mtime;
-
 // The mingw64 utime() appears not to work on read-only files.
 // Use the utime() from bacula instead.
 #ifdef HAVE_WIN32
-	//e=utime(path, &ut);
+	struct utimbuf ut;
+	ut.actime=statp->st_atime;
+	ut.modtime=statp->st_mtime;
 	e=win32_utime(path, &ut);
 #else
-	e=utime(path, &ut);
+	struct timeval tv[2];
+	tv[0].tv_sec=statp->st_atime;
+	tv[0].tv_usec=0;
+	tv[1].tv_sec=statp->st_mtime;
+	tv[1].tv_usec=0;
+	e=lutimes(path, tv);
 #endif
 	if(e<0)
 	{

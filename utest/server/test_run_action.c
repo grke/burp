@@ -211,7 +211,6 @@ static void setup_verify(struct asfd *asfd)
 
 static void setup_delete(struct asfd *asfd)
 {
-	struct iobuf *rbuf=asfd->rbuf;
 	build_directory_path();
 	set_rbuf(asfd, CMD_GEN, "Delete ");
 }

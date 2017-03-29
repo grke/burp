@@ -45,15 +45,11 @@ while ! lock; do
 	fi
 done
 
-case "$(uname -s)" init
-	# Solaris derivates don't support 'hostname -f' and, in fact,
-	# set the hostname to '-f' with that call.
-	SunOS)
-		name=$( (check-hostname | cut -d' ' -f7) 2>/dev/null )
-	;;
-	*)
-		name=$(hostname -f 2>/dev/null)
-	;;
+# Solaris derivates don't support 'hostname -f' and, in fact,
+# set the hostname to '-f' with that call.
+case "$(uname -s)" in
+	SunOS) name=$( (check-hostname | cut -d' ' -f7) 2>/dev/null ) ;;
+	*) name=$(hostname -f 2>/dev/null) ;;
 esac
 # Try NetBSD style.
 [ -n "$name" ] || name=$(hostname 2>/dev/null)

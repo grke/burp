@@ -1,3 +1,12 @@
+2017-04-01 Changes in burp-2.1.6:
+ * Fix for bug treating too many files as new (a problem since 2.1.2).
+ * Fix for changed/same counters being reversed in the monitor.
+ * Set times on symlinks instead of dereferencing them.
+ * Fix bug with backup_script_reserved_args = 0.
+ * moenoel's burp_ca fix for SunOS.
+ * trustchk's addition of ZFS to fstypes so that it can be excluded using
+   exclude_fs.
+
 2017-03-01 Changes in burp-2.1.4:
  * Protocol 1: When a file that is deleted on the client side was one that
    others hardlink to, do not treat the new first entry as a new file - link

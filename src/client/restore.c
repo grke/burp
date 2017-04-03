@@ -8,6 +8,7 @@
 #include "../cntr.h"
 #include "../fsops.h"
 #include "../handy.h"
+#include "../pathcmp.h"
 #include "../log.h"
 #include "../prepend.h"
 #include "../protocol2/blk.h"

@@ -914,11 +914,11 @@ static void set_max_ext(struct strlist *list)
 	if(list) list->flag=max+1;
 }
 
-static int finalise_fstypes(struct conf **c)
+static int finalise_fstypes(struct conf **c, int opt)
 {
 	struct strlist *l;
 	// Set the strlist flag for the excluded fstypes
-	for(l=get_strlist(c[OPT_EXCFS]); l; l=l->next)
+	for(l=get_strlist(c[opt]); l; l=l->next)
 	{
 		l->flag=0;
 		if(!strncasecmp(l->path, "0x", 2))
@@ -962,7 +962,8 @@ static
 int conf_finalise(struct conf **c)
 {
 	int s_script_notify=0;
-	if(finalise_fstypes(c)) return -1;
+	if(finalise_fstypes(c, OPT_EXCFS)) return -1;
+	if(finalise_fstypes(c, OPT_INCFS)) return -1;
 
 	strlist_compile_regexes(get_strlist(c[OPT_INCREG]));
 	strlist_compile_regexes(get_strlist(c[OPT_EXCREG]));

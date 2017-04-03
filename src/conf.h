@@ -155,6 +155,7 @@ enum conf_opt
 	OPT_INCREG, // include (regular expression)
 	OPT_EXCREG, // exclude (regular expression)
 	OPT_EXCFS, // exclude filesystems
+	OPT_INCFS, // include filesystems
 	OPT_EXCOM, // exclude from compression
 	OPT_INCGLOB, // include (glob expression)
 	OPT_CROSS_ALL_FILESYSTEMS,

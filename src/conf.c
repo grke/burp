@@ -749,6 +749,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_EXCFS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_fs");
+	case OPT_INCFS:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_fs");
 	case OPT_EXCOM:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_comp");

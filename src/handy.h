@@ -35,7 +35,7 @@ extern void setup_signal(int sig, void handler(int sig));
 
 extern long version_to_long(const char *version);
 
-/* These receive_a_file() and send_file() functions are for use by extra_comms
+/* These receive_a_file() and burp_send_file() functions are for use by extra_comms
    and the CA stuff, rather than backups/restores. */
 extern int receive_a_file(struct asfd *asfd,
 	const char *path, struct cntr *cntr);

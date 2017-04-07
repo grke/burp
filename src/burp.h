@@ -139,6 +139,12 @@
 	#define __BIG_ENDIAN    BIG_ENDIAN
 	#define __LITTLE_ENDIAN	LITTLE_ENDIAN
 	#define __PDP_ENDIAN	PDP_ENDIAN
+#elif _AIX && __GNUC__
+	/* AIX is always big endian */
+	#define htobe64(x) (x)
+	#define htole64(x) __builtin_bswap64(x)
+	#define be64toh(x) (x)
+	#define le64toh(x) __builtin_bswap64(x)
 #endif
 
 #if !defined(htobe64) && defined(__GLIBC__) && __GLIBC__ <= 2 && __GLIBC_MINOR__ < 9

@@ -1,0 +1,81 @@
+BURP on IBM AIX 7.1 using GCC
+=============================
+
+This document assumes AIX 7.1 and GCC from Perzl. For more information, visit
+http://perzl.org/aix/index.php?n=Main.Instructions
+
+Packages
+--------
+You need to have the following filesets installed before
+continuing:
+* bos.adt.base
+* bos.adt.include
+* bos.mp64
+* bos.adt.libm
+
+Assitionally, assuming that you are using Perzls RPMs, you need to install the
+IBM Linux toolchain (for rpm support). If you intend to compile uthash into an
+RPM package, you need version 4 of the rpm fileset.
+* libiconv-1.14-3
+* rsync-3.1.2-1
+* libgcc-4.9.3-1
+* info-5.2-2
+* popt-1.16-3
+* librsync-0.9.7-1
+* zlib-1.2.8-1
+* librsync-devel-0.9.7-1
+* tar-1.28-1
+* gdbm-1.9.1-1
+* gmp-6.1.2-1
+* bzip2-1.0.6-1
+* bash_64-4.3-18
+* coreutils-64bit-8.25-2
+* openssl-1.0.1t-1
+* libstdc++-4.9.3-1
+* gcc-4.9.3-1
+* gcc-cpp-4.9.3-1
+* libmpc-1.0.3-1
+* make-4.2.1-1
+* mpfr-3.1.5-1
+* ncurses-5.9-1
+* ncurses-devel-5.9-1
+* zlib-devel-1.2.8-1
+* libtool-2.4.6-1
+* automake-1.15-2
+* autoconf-2.69-2
+* perl-5.8.8-2
+* grep-2.9-1
+* sed-4.3-1
+* m4-1.4.18-1
+* pcre-8.40-1
+* libsigsegv-2.10-1
+* readline-7.0-2
+
+Build Environment
+-----------------
+Setup your build environment like Perzl does for GCC, for ease of use just put this into
+your ~/.bashrc:
+    export CONFIG_SHELL=/opt/freeware/bin/bash
+    export CONFIG_ENV_ARGS=/opt/freeware/bin/bash
+
+    export CC=gcc
+    export CFLAGS="-DSYSV -D_AIX -D_AIX32 -D_AIX41 -D_AIX43 -D_AIX51 -D_AIX52 -D_AIX53 -D_AIX61 -D_AIX71 -D_ALL_SOURCE -DFUNCPROTO=15 -O -I/opt/freeware/include"
+
+    export CXX=g++
+    export CXXFLAGS=$CFLAGS
+
+    export F77=xlf
+    export FFLAGS="-O -I/opt/freeware/include"
+
+    export LD=ld
+    export LDFLAGS="-L/opt/freeware/lib64 -L/opt/freeware/lib -Wl,-blibpath:/opt/freeware/lib64:/opt/freeware/lib:/usr/lib:/lib -Wl,-bmaxdata:0x80000000"
+
+    export PATH=/opt/freeware/bin:/opt/freeware/sbin:/usr/bin:/bin:/etc:/usr/sbin:/usr/ucb:/usr/bin/X11:/sbin:/usr/vac/bin:/usr/vacpp/bin:/usr/ccs/bin:/usr/dt/bin:/usr/opt/perl5/bin::/usr/local/bin:/usr/lib/instl
+
+uthash
+------
+uthash has to be installed manually as there are no RPMs for it for AIX yet. uthash-1.9.9.1 works fine.
+
+Building BURP
+-------------
+Building burp is very straight forward. Just run "./configure", "make" and "make install".

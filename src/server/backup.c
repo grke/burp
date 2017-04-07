@@ -57,21 +57,29 @@ end:
 static int write_incexc(const char *realworking, const char *incexc)
 {
 	int ret=-1;
-	struct fzp *fzp=NULL;
+	char *tmp=NULL;
 	char *path=NULL;
+	struct fzp *fzp=NULL;
+
 	if(!incexc || !*incexc) return 0;
+
 	if(!(path=prepend_s(realworking, "incexc"))
-	  || !(fzp=fzp_open(path, "wb")))
+	  || !(tmp=prepend(path, ".tmp"))
+	  || !(fzp=fzp_open(tmp, "wb")))
 		goto end;
+
 	fzp_printf(fzp, "%s", incexc);
-	ret=0;
-end:
 	if(fzp_close(&fzp))
 	{
-		logp("error writing to %s in write_incexc\n", path);
-		ret=-1;
+		logp("error writing to %s in %s\n", tmp, __func__);
+		goto end;
 	}
+	if(do_rename(tmp, path))
+		goto end;
+	ret=0;
+end:
 	free_w(&path);
+	free_w(&tmp);
 	return ret;
 }
 

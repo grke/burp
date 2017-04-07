@@ -18,6 +18,7 @@ static struct fzp *fzp_alloc(void)
 static void fzp_free(struct fzp **fzp)
 {
 	if(!fzp || !*fzp) return;
+	free_w(&(*fzp)->buf);
 	free_v((void **)fzp);
 }
 
@@ -292,27 +293,60 @@ error:
 
 int fzp_printf(struct fzp *fzp, const char *format, ...)
 {
-	static char buf[4096];
 	int ret=-1;
-	va_list ap;
-	va_start(ap, format);
-	vsnprintf(buf, sizeof(buf), format, ap);
+	int n;
 
-	if(fzp) switch(fzp->type)
+	if(!fzp)
+	{
+		not_open(__func__);
+		return ret;
+	}
+
+	if(!fzp->buf)
+	{
+		fzp->s=128;
+		if(!(fzp->buf=(char *)malloc_w(fzp->s, __func__)))
+			return ret;
+	}
+
+	// Avoid fixed size buffer.
+	while(1)
+	{
+		va_list ap;
+		va_start(ap, format);
+		n=vsnprintf(fzp->buf, fzp->s, format, ap);
+		va_end(ap);
+		if(n<0)
+		{
+			logp("Failed to vsnprintf in %s: %s\n",
+				__func__, strerror(errno));
+			return ret;
+		}
+		if(fzp->s<(size_t)n)
+		{
+			fzp->s*=2;
+			if(!(fzp->buf=(char *)
+				realloc_w(fzp->buf, fzp->s, __func__)))
+					return ret;
+			continue;
+		}
+
+		break;
+	}
+
+	switch(fzp->type)
 	{
 		case FZP_FILE:
-			ret=fprintf(fzp->fp, "%s", buf);
+			ret=fprintf(fzp->fp, "%s", fzp->buf);
 			break;
 		case FZP_COMPRESSED:
-			ret=gzprintf(fzp->zp, "%s", buf);
+			ret=gzprintf(fzp->zp, "%s", fzp->buf);
 			break;
 		default:
 			unknown_type(fzp->type, __func__);
 			break;
 	}
-	else
-		not_open(__func__);
-	va_end(ap);
+
 	return ret;
 }
 

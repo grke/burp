@@ -491,9 +491,11 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 	}
 	if(get_string(c[OPT_MANUAL_DELETE]))
 	{
-		if(is_not_absolute(get_string(c[OPT_MANUAL_DELETE]),
-			"ERROR: Please use an absolute manual_delete path.\n"))
-				return -1;
+		if(!is_absolute(get_string(c[OPT_MANUAL_DELETE])))
+		{
+			logp("ERROR: Please use an absolute manual_delete path.\n");
+			return -1;
+		}
 	}
 
 	return 0;
@@ -755,9 +757,11 @@ static int incexc_munge(struct conf **c, struct strlist *s)
 #ifdef HAVE_WIN32
 	convert_backslashes(&s->path);
 #endif
-	if(is_not_absolute(s->path,
-		"ERROR: Please use absolute include/exclude paths.\n"))
-			return -1;
+	if(!is_absolute(s->path))
+	{
+		logp("ERROR: Please use absolute include/exclude paths.\n");
+		return -1;
+	}
 	if(add_to_strlist(c[OPT_INCEXCDIR], s->path, s->flag))
 		return -1;
 	return 0;
@@ -797,9 +801,11 @@ static int finalise_start_dirs(struct conf **c)
 #ifdef HAVE_WIN32
 		convert_backslashes(&s->path);
 #endif
-		if(is_not_absolute(s->path,
-			"ERROR: Please use absolute include/exclude paths.\n"))
-				return -1;
+		if(!is_absolute(s->path))
+		{
+			logp("ERROR: Please use absolute include/exclude paths.\n");
+			return -1;
+		}
 
 		// Ensure that we do not backup the same directory twice.
 		if(last_ie && !strcmp(s->path, last_ie->path))

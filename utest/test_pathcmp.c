@@ -98,6 +98,39 @@ START_TEST(test_is_subdir)
 }
 END_TEST
 
+struct abs
+{
+	int expected;
+	const char *a;
+};
+
+static struct data a[] = {
+	{ 0, "foo/bar" },
+#ifndef HAVE_WIN32
+	{ 1, "/foo/bar" },
+#endif
+	{ 0, ":/foo/bar" },
+	{ 0, ".." },
+	{ 0, "../" },
+	{ 0, "/foo/.." },
+	{ 0, "/foo/../" },
+	{ 0, "/foo/../bar" },
+	{ 0, "." },
+	{ 0, "./" },
+	{ 0, "/foo/." },
+	{ 0, "/foo/./" },
+	{ 0, "/foo/./bar" },
+	{ 1, "C:/foo/bar" },
+	{ 1, "D:/foo/bar" },
+	{ 0, "CD:/foo/bar" },
+};
+
+START_TEST(test_is_absolute)
+{
+	FOREACH(a) fail_unless(is_absolute(a[i].a)==a[i].expected);
+}
+END_TEST
+
 Suite *suite_pathcmp(void)
 {
 	Suite *s;
@@ -110,6 +143,7 @@ Suite *suite_pathcmp(void)
 	tcase_add_test(tc_core, test_pathcmp);
 	tcase_add_test(tc_core, test_pathcmp_s);
 	tcase_add_test(tc_core, test_is_subdir);
+	tcase_add_test(tc_core, test_is_absolute);
 	suite_add_tcase(s, tc_core);
 
 	return s;

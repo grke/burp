@@ -27,35 +27,6 @@ int is_subdir(const char *dir, const char *sub)
 	return 0;
 }
 
-int is_not_absolute(const char *path, const char *err_msg)
-{
-        const char *p=NULL;
-        for(p=path; *p; p++)
-        {
-                if(*p!='.' || *(p+1)!='.') continue;
-                if((p==path || *(p-1)=='/') && (*(p+2)=='/' || !*(p+2)))
-                {
-                        if (err_msg)
-                                logp("%s", err_msg);
-                        return -1;
-                }
-        }
-// This is being run on the server too, where you can enter paths for the
-// clients, so need to allow windows style paths for windows and unix.
-        if((!isalpha(*path) || *(path+1)!=':')
-#ifndef HAVE_WIN32
-        // Windows does not need to check for unix style paths.
-          && *path!='/'
-#endif
-        )
-        {
-                if(err_msg)
-                        logp("%s", err_msg);
-                return -1;
-        }
-        return 0;
-}
-
 int pathcmp(const char *a, const char *b)
 {
 	// This should have used 'unsigned chars', but now its too late and
@@ -88,4 +59,37 @@ int pathcmp(const char *a, const char *b)
 	if( *x && !*y)
 		return 1; // x is longer
 	return -1; // y is longer
+}
+
+// Not really pathcmp functions, but there is nowhere better to put them.
+static int has_dot_component(const char *path)
+{
+	const char *p=NULL;
+	for(p=path; *p; p++)
+	{
+		if(*p!='.')
+			continue;
+		// Check for single dot.
+		if((p==path || *(p-1)=='/') && (*(p+1)=='/' || !*(p+1)))
+			return 1;
+		// Check for double dot.
+		if(*(p+1)=='.'
+		  && (p==path || *(p-1)=='/') && (*(p+2)=='/' || !*(p+2)))
+			return 1;
+	}
+	return 0;
+}
+
+int is_absolute(const char *path)
+{
+	if(has_dot_component(path))
+		return 0;
+// This is being run on the server too, where you can enter paths for the
+// clients, so need to allow windows style paths for windows and unix.
+	return (isalpha(*path) && *(path+1)==':')
+#ifndef HAVE_WIN32
+	// Windows does not need to check for unix style paths.
+	  || *path=='/'
+#endif
+	;
 }

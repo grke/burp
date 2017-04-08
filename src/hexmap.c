@@ -42,8 +42,16 @@ static void str_to_bytes(const char *str, uint8_t *bytes, size_t len)
 			spos++;
 			continue;
 		}
+#if BYTE_ORDER == LITTLE_ENDIAN
 		bytes[bpos++] = hexmap1[(uint8_t)str[spos]]
 			| hexmap2[(uint8_t)str[spos+1]];
+#elif BYTE_ORDER == LITTLE_ENDIAN
+		bytes[bpos-bpos%4+3-bpos%4] = hexmap1[(uint8_t)str[spos]]
+			| hexmap2[(uint8_t)str[spos+1]];
+		bpos+=1;
+#else
+		#error byte order not supported
+#endif
 		spos+=2;
 	}
 }

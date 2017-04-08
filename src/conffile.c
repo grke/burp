@@ -106,33 +106,6 @@ int conf_get_pair(char buf[], char **f, char **v)
 	return 0;
 }
 
-static int path_checks(const char *path, const char *err_msg)
-{
-	const char *p=NULL;
-	for(p=path; *p; p++)
-	{
-		if(*p!='.' || *(p+1)!='.') continue;
-		if((p==path || *(p-1)=='/') && (*(p+2)=='/' || !*(p+2)))
-		{
-			logp("%s", err_msg);
-			return -1;
-		}
-	}
-// This is being run on the server too, where you can enter paths for the
-// clients, so need to allow windows style paths for windows and unix.
-	if((!isalpha(*path) || *(path+1)!=':')
-#ifndef HAVE_WIN32
-	  // Windows does not need to check for unix style paths.
-	  && *path!='/'
-#endif
-	)
-	{
-		logp("%s", err_msg);
-		return -1;
-	}
-	return 0;
-}
-
 static int conf_error(const char *conf_path, int line)
 {
 	logp("%s: parse error on line %d\n", conf_path, line);
@@ -518,7 +491,7 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 	}
 	if(get_string(c[OPT_MANUAL_DELETE]))
 	{
-		if(path_checks(get_string(c[OPT_MANUAL_DELETE]),
+		if(is_not_absolute(get_string(c[OPT_MANUAL_DELETE]),
 			"ERROR: Please use an absolute manual_delete path.\n"))
 				return -1;
 	}
@@ -782,7 +755,7 @@ static int incexc_munge(struct conf **c, struct strlist *s)
 #ifdef HAVE_WIN32
 	convert_backslashes(&s->path);
 #endif
-	if(path_checks(s->path,
+	if(is_not_absolute(s->path,
 		"ERROR: Please use absolute include/exclude paths.\n"))
 			return -1;
 	if(add_to_strlist(c[OPT_INCEXCDIR], s->path, s->flag))
@@ -824,7 +797,7 @@ static int finalise_start_dirs(struct conf **c)
 #ifdef HAVE_WIN32
 		convert_backslashes(&s->path);
 #endif
-		if(path_checks(s->path,
+		if(is_not_absolute(s->path,
 			"ERROR: Please use absolute include/exclude paths.\n"))
 				return -1;
 

@@ -264,12 +264,21 @@ int attribs_set_file_times(struct asfd *asfd,
 	ut.modtime=statp->st_mtime;
 	e=win32_utime(path, &ut);
 #else
+#ifdef HAVE_LUTIMES
 	struct timeval tv[2];
 	tv[0].tv_sec=statp->st_atime;
 	tv[0].tv_usec=0;
 	tv[1].tv_sec=statp->st_mtime;
 	tv[1].tv_usec=0;
 	e=lutimes(path, tv);
+#else
+	struct timespec tv[2];
+	tv[0].tv_sec=statp->st_atime;
+	tv[0].tv_nsec=0;
+	tv[1].tv_sec=statp->st_mtime;
+	tv[1].tv_nsec=0;
+	e=utimensat(AT_FDCWD, path, tv, AT_SYMLINK_NOFOLLOW);
+#endif /* HAVE_LUTIMES */
 #endif
 	if(e<0)
 	{

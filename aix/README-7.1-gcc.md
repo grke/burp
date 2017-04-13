@@ -78,4 +78,7 @@ uthash has to be installed manually as there are no RPMs for it for AIX yet. uth
 
 Building BURP
 -------------
-Building burp is very straight forward. Just run "./configure", "make" and "make install".
+Building burp is very straight forward.
+./configure --program-prefix= --prefix=/opt/freeware --exec-prefix=/opt/freeware --bindir=/opt/freeware/bin --sbindir=/opt/freeware/sbin --sysconfdir=/etc --datadir=/opt/freeware/share --includedir=/opt/freeware/include --libdir=/opt/freeware/lib --libexecdir=/opt/freeware/libexec --localstatedir=/opt/freeware/var --sharedstatedir=/opt/freeware/com --mandir=/opt/freeware/share/man --infodir=/opt/freeware/share/info --sysconfdir=/etc/burp
+
+Then "make" and "make install".

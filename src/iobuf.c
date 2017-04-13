@@ -129,8 +129,9 @@ int iobuf_is_estimatable(struct iobuf *iobuf)
 static int do_iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp,
 	int extra_bytes)
 {
-	static unsigned int s;
-	static char lead[5]="";
+	unsigned int s;
+	char lead[5]="";
+	char command;
 
 	switch(fzp_read_ensure(fzp, lead, sizeof(lead), __func__))
 	{
@@ -142,11 +143,12 @@ static int do_iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp,
 			return -1; // Error.
 		}
 	}
-	if((sscanf(lead, "%c%04X", (char *)&iobuf->cmd, &s))!=2)
+	if((sscanf(lead, "%c%04X", &command, &s))!=2)
 	{
 		logp("sscanf failed reading manifest: %s\n", lead);
 		return -1;
 	}
+	iobuf->cmd=(enum cmd)command;
 	iobuf->len=(size_t)s;
 	if(!(iobuf->buf=(char *)malloc_w(
 		iobuf->len+extra_bytes+1, __func__)))

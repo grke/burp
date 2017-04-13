@@ -17,6 +17,8 @@ struct fzp
 		FILE *fp;
 		gzFile zp;
 	};
+	char *buf;
+	size_t s;
 };
 
 extern struct fzp *fzp_open(const char *path, const char *mode);

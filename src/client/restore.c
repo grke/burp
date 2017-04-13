@@ -8,6 +8,7 @@
 #include "../cntr.h"
 #include "../fsops.h"
 #include "../handy.h"
+#include "../pathcmp.h"
 #include "../log.h"
 #include "../prepend.h"
 #include "../protocol2/blk.h"
@@ -662,8 +663,14 @@ int do_restore_client(struct asfd *asfd,
 					// It is OK, sb.path is now stripped.
 				}
 				if(strip_path)
+				{
 					strip_from_path(sb->path.buf,
 						strip_path);
+					// Strip links if their path is absolute
+					if(!is_absolute(sb->link.buf))
+						strip_from_path(sb->link.buf,
+							strip_path);
+				}
 				free_w(&fullpath);
 				if(!(fullpath=prepend_s(restore_prefix,
 					sb->path.buf)))

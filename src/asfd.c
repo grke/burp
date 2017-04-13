@@ -102,10 +102,10 @@ static int parse_readbuf_line_buf(struct asfd *asfd)
 
 static int parse_readbuf_standard(struct asfd *asfd)
 {
-	enum cmd cmdtmp=CMD_ERROR;
 	unsigned int s=0;
+	char command;
 	if(asfd->readbuflen<5) return 0;
-	if((sscanf(asfd->readbuf, "%c%04X", (char *)&cmdtmp, &s))!=2)
+	if((sscanf(asfd->readbuf, "%c%04X", &command, &s))!=2)
 	{
 		logp("%s: sscanf of '%s' failed in %s\n",
 			asfd->desc, asfd->readbuf, __func__);
@@ -113,7 +113,7 @@ static int parse_readbuf_standard(struct asfd *asfd)
 	}
 	if(asfd->readbuflen>=s+5)
 	{
-		asfd->rbuf->cmd=cmdtmp;
+		asfd->rbuf->cmd=(enum cmd)command;
 		if(extract_buf(asfd, s, 5))
 			return -1;
 	}

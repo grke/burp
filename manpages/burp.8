@@ -662,6 +662,11 @@ Extensions to exclude from compression. Case insensitive. You can have multiple 
 \fBexclude_fs=[fstype]\fR
 File systems to exclude from the backup. Case insensitive. You can have multiple exclude file system lines. For example, set 'tmpfs' to exclude tmpfs. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also exclude tmpfs.
 .TP
+\fBinclude_fs=[fstype]\fR
+File systems to include into the backup. Case insensitive. You can have multiple include file system lines. For example, set 'ext4' to include ext4. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also include tmpfs. If at least one file system is included, all other filesystems will be excluded per default. Included directories that do not live on an included file system will be skipped, even if \fBcross_all_filesystems\fR is enabled and they contain subdirectories with included file systems.
+
+Note that on SunOS systems \fBinclude_fs\fR and \fBexclude_fs\fR will do a case sensitive compare of the string descriptors of the file systems instead of the numeric IDs (see \fBf_basetype\fR member is \fBstruct statvfs\fR).
+.TP
 \fBmin_file_size=[b/Kb/Mb/Gb]\fR
 Do not back up files that are less than the specified size. Example: 'min_file_size = 10Mb'. Set to 0 (the default) to have no limit.
 .TP

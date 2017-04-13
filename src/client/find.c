@@ -59,6 +59,9 @@
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>
 #endif
+#ifdef HAVE_SUN_OS
+#include <sys/statvfs.h>
+#endif
 
 static int (*burp_send_file)(struct asfd *, struct FF_PKT *, struct conf **);
 
@@ -353,20 +356,30 @@ static int found_soft_link(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf
 	return burp_send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
-static int fstype_excluded(struct asfd *asfd,
-	struct conf **confs, const char *fname)
+static int fstype_matches(struct asfd *asfd,
+	struct conf **confs, const char *fname, int inex)
 {
+#if defined(HAVE_LINUX_OS) \
+ || defined(HAVE_SUN_OS)
+	struct strlist *l;
 #if defined(HAVE_LINUX_OS)
 	struct statfs buf;
-	struct strlist *l;
 	if(statfs(fname, &buf))
+#elif defined(HAVE_SUN_OS)
+	struct statvfs buf;
+	if(statvfs(fname, &buf))
+#endif
 	{
 		logw(asfd, get_cntr(confs), "Could not statfs %s: %s\n",
 			fname, strerror(errno));
 		return -1;
 	}
-	for(l=get_strlist(confs[OPT_EXCFS]); l; l=l->next)
+	for(l=get_strlist(confs[inex]); l; l=l->next)
+#if defined(HAVE_LINUX_OS)
 		if(l->flag==buf.f_type)
+#elif defined(HAVE_SUN_OS)
+		if(strcmp(l->path,buf.f_basetype)==0)
+#endif
 			return -1;
 #endif
 	return 0;
@@ -534,8 +547,13 @@ static int found_directory(struct asfd *asfd,
 #endif
 		))
 	{
-		if(fstype_excluded(asfd, confs, ff_pkt->fname))
+		if(fstype_matches(asfd, confs, ff_pkt->fname, OPT_EXCFS)
+		  || (get_strlist(confs[OPT_INCFS])
+		     && !fstype_matches(asfd, confs, ff_pkt->fname, OPT_INCFS)))
 		{
+			if(top_level)
+				logw(asfd, get_cntr(confs),
+					"Skipping '%s' because of file system include or exclude.\n", fname);
 			ret=burp_send_file_w(asfd, ff_pkt, top_level, confs);
 			goto end;
 		}

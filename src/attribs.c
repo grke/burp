@@ -251,25 +251,30 @@ int attribs_set_file_times(struct asfd *asfd,
 	int e;
 
 #ifdef HAVE_WIN32
-	// You cannot set times on Windows junction points.
+	// You (probably) cannot set times on Windows junction points.
 	if(statp->st_rdev==WIN32_JUNCTION_POINT)
 		return 0;
-#endif
 
-// The mingw64 utime() appears not to work on read-only files.
-// Use the utime() from bacula instead.
-#ifdef HAVE_WIN32
+	// The mingw64 utime() appears not to work on read-only files.
+	// Use the utime() from bacula instead.
 	struct utimbuf ut;
 	ut.actime=statp->st_atime;
 	ut.modtime=statp->st_mtime;
 	e=win32_utime(path, &ut);
+#elif HAVE_LUTIMES
+	struct timeval t[2];
+	t[0].tv_sec = statp->st_atime;
+	t[0].tv_usec = 0;
+	t[1].tv_sec = statp->st_mtime;
+	t[1].tv_usec = 0;
+	e=lutimes(path, t);
 #else
-	struct timeval tv[2];
-	tv[0].tv_sec=statp->st_atime;
-	tv[0].tv_usec=0;
-	tv[1].tv_sec=statp->st_mtime;
-	tv[1].tv_usec=0;
-	e=lutimes(path, tv);
+	struct timespec ts[2];
+	ts[0].tv_sec=statp->st_atime;
+	ts[0].tv_nsec=0;
+	ts[1].tv_sec=statp->st_mtime;
+	ts[1].tv_nsec=0;
+	e=utimensat(AT_FDCWD, path, ts, AT_SYMLINK_NOFOLLOW);
 #endif
 	if(e<0)
 	{
@@ -298,18 +303,6 @@ uint64_t decode_file_no_and_save_path(struct iobuf *iobuf, char **save_path)
 	return (uint64_t)val;
 }
 
-#ifdef HAVE_LUTIMES
-static int do_lutimes(const char *path, struct stat *statp)
-{
-	struct timeval t[2];
-	t[0].tv_sec = statp->st_atime;
-	t[0].tv_usec = 0;
-	t[1].tv_sec = statp->st_mtime;
-	t[1].tv_usec = 0;
-	return lutimes(path, t);
-}
-#endif
-
 int attribs_set(struct asfd *asfd, const char *path,
 	struct stat *statp, uint64_t winattr, struct cntr *cntr)
 {
@@ -335,15 +328,8 @@ int attribs_set(struct asfd *asfd, const char *path,
 	   meta stuff on links. */
 	if(S_ISLNK(statp->st_mode))
 	{
-#ifdef HAVE_LUTIMES
-		if(do_lutimes(path, statp)) {
-			struct berrno be;
-			berrno_init(&be);
-			logw(asfd, cntr, "Unable to set lutimes %s: ERR=%s\n",
-				path, berrno_bstrerror(&be, errno));
+		if(attribs_set_file_times(asfd, path, statp, cntr))
 			return -1;
-		}
-#endif
 	}
 	else
 	{

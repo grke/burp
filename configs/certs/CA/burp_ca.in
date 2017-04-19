@@ -10,12 +10,28 @@
 LOCKDIR="/tmp/burp_ca.lockdir"
 PIDFILE="$LOCKDIR/pid"
 
+cleanup()
+{
+	# Perform program exit housekeeping
+	# Optionally accepts an exit status
+	rm -rf $LOCKDIR
+	trap - INT TERM EXIT
+	exit $1
+}
+
+error_exit()
+{
+	# Display error message and exit
+	[ -n "$2" ] && echo "$(basename $0): error $1 on executing $2" 1>&2
+	cleanup $1
+}
+
 lock()
 {
 	# Originally from http://wiki.bash-hackers.org/howto/mutex, and
 	# adjusted somewhat.
 	if mkdir "$LOCKDIR" 2>/dev/null ; then
-		trap 'rm -rf "$LOCKDIR"; exit $?' INT TERM EXIT
+		trap cleanup INT TERM EXIT
 		echo $$ > "$PIDFILE" || return 1
 		return 0
 	else
@@ -31,6 +47,8 @@ lock()
 	fi
 }
 
+set +e
+
 maxwait=60
 sleeptime=1
 slept=0
@@ -45,20 +63,19 @@ while ! lock; do
 	fi
 done
 
-# Solaris derivates don't support 'hostname -f' and, in fact,
+# Solaris derivates and AIX don't support 'hostname -f' and, in fact,
 # set the hostname to '-f' with that call.
 case "$(uname -s)" in
 	SunOS) name=$( (check-hostname | cut -d' ' -f7) 2>/dev/null ) ;;
+	AIX) name=$(host $(hostname) | awk '{ print $1}' 2>/dev/null ) ;;
 	*) name=$(hostname -f 2>/dev/null) ;;
 esac
 # Try NetBSD style.
 [ -n "$name" ] || name=$(hostname 2>/dev/null)
 if [ -z "$name" ] ; then
 	echo "Could not determine hostname" 1>&2
-	exit 1
+	error_exit 1 hostname
 fi
-
-set -e
 
 etc=@sysconfdir@
 dir=${etc}/CA
@@ -132,10 +149,8 @@ do
 done
 
 if [ -n "$dhfile" ] ; then
-	openssl dhparam -dsaparam -out "$dhfile" 2048
-	r=$?
-	chmod 600 "$dhfile"
-	exit $r
+	openssl dhparam -dsaparam -out "$dhfile" 2048 || error_exit $? openssl
+	chmod 600 "$dhfile" || error_exit $? chmod
 fi
 
 if [ -z "$ca" ]; then
@@ -151,11 +166,11 @@ if [ "$init" = "yes" ]; then
 	echo "Init... ${ca}"
 	if [ ! -f ${conf} ]; then
 		echo "$0: error - config ${conf} missing" 1>&2
-		exit 1
+		error_exit 1
 	fi
 	if [ -d ${dir} ]; then
 		echo "$0: error - ${dir} exists, ca initialized" 1>&2
-		exit 1
+		error_exit 1
 	fi
   
 	mkdir ${dir}
@@ -183,7 +198,7 @@ if [ "$init" = "yes" ]; then
 EOF
 	CA_DIR=${dir} openssl req -config ${TEMP} -new -x509 -days $ca_days \
 		-key ${dir}/CA_${ca}.key -out ${dir}/CA_${ca}.crt \
-		-extensions v3_ca
+		-extensions v3_ca || error_exit $? openssl
 	rm -f $TEMP
 
 	: > ${dir}/index.txt
@@ -197,7 +212,7 @@ fi
 if [ "$key" = "yes" ]; then
 	echo "generating key ${name}: ${keypath}"
 	umask ${sec_umask}
-	openssl genrsa -out "${keypath}" ${size}
+	openssl genrsa -out "${keypath}" ${size} || error_exit $? openssl
 	umask ${def_umask}
 fi
 
@@ -205,6 +220,7 @@ fi
 [ -z "$requestpath" ] && requestpath=${dir}/${name}.csr
 if [ "$request" = "yes" ]; then
 	echo "generating request ${name}"
+        [ -d $(dirname $requestpath) ] || mkdir $(dirname $requestpath)
 	TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
 	cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
@@ -223,7 +239,7 @@ if [ "$request" = "yes" ]; then
 
 EOF
 	openssl req -config ${TEMP} -new -key "${keypath}" \
-		-out "${requestpath}" -extensions v3_req
+		-out "${requestpath}" -extensions v3_req || error_exit $?  openssl
 	rm -f "$TEMP"
 fi
 
@@ -234,13 +250,13 @@ if [ "$sign" = "yes" ]; then
 	CA_DIR=${dir} openssl ca -config ${conf} -name ca \
 		-in ${dir}/${name}.csr -out $dir/${name}.crt ${days} \
 		-keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
-		${batch}
+		${batch} || error_exit $? openssl
 	[ -f ${dir}/newcerts/${serial}.pem ] || exit 0
-	mv ${dir}/newcerts/${serial}.pem ${dir}/certs/${serial}.pem
+	mv ${dir}/newcerts/${serial}.pem ${dir}/certs/${serial}.pem || error_exit $? mv
 	# rehash the certificates
 	for file in ${dir}/certs/*.pem; do
 		ln -s -f $file \
-			${dir}/certs/`openssl x509 -hash -noout -in $file`.0
+			${dir}/certs/`openssl x509 -hash -noout -in $file`.0 || error_exit $? ln
 	done
 fi
 

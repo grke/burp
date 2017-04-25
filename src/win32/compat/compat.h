@@ -137,7 +137,10 @@ struct dirent
 	uint64_t d_ino;
 	uint32_t d_off;
 	uint16_t d_reclen;
-	char d_name[MAX_PATH];
+	// MAX_PATH_UTF8 is MAX_PATH*4, but I have had problems trying to
+	// include winapi.h so that it is seen here. Do it manually here, and
+	// add a bit more just in case.
+	char d_name[(MAX_PATH*4)+16];
 };
 typedef void DIR;
 

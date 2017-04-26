@@ -111,9 +111,25 @@ static int async_io(struct async *as, int doread)
 					as->last_time=as->now;
 					return -1;
 				default:
+#ifdef _AIX
+					/* On AIX, for some weird reason,
+					 * writing the stats file makes the
+					 * socket show up in fse, despite
+					 * everything being fine. We ignore
+					 * it.
+					 */
+					if(strncmp(asfd->desc, "stats file",
+						sizeof("stats file")))
+					{
+						logp("%s: had an exception\n",
+							asfd->desc);
+						return asfd_problem(asfd);
+					}
+#else
 					logp("%s: had an exception\n",
 						asfd->desc);
 					return asfd_problem(asfd);
+#endif /* _AIX */
 			}
 		}
 

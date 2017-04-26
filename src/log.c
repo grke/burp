@@ -63,10 +63,18 @@ void logp(const char *fmt, ...)
 		{
 			if(json)
 			{
-				char *cp=NULL;
-				if((cp=strrchr(buf, '\n'))) *cp='\0';
+				char *cp;
 				// To help programs parsing the monitor output,
 				// log things with simple JSON.
+				// So do simple character substitution to have
+				// a better chance of valid JSON.
+				for(cp=buf; *cp; cp++)
+				{
+					if(*cp=='"')
+						*cp='\'';
+					else if(!isprint(*cp))
+						*cp='.';
+				}
 				fprintf(stdout, "{ \"logline\": \"%s\" }\n", buf);
 			}
 			else

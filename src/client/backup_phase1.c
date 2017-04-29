@@ -156,7 +156,7 @@ static int to_server(struct asfd *asfd, struct conf **confs, struct FF_PKT *ff,
 		ff, sb, cmd, get_int(confs[OPT_COMPRESSION]));
 }
 
-static int send_file(struct asfd *asfd, struct FF_PKT *ff, struct conf **confs)
+static int burp_send_file(struct asfd *asfd, struct FF_PKT *ff, struct conf **confs)
 {
 	static struct sbuf *sb=NULL;
 	struct cntr *cntr=get_cntr(confs);
@@ -239,7 +239,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs)
 		dirsymbol=CMD_DIRECTORY;
 #endif
 
-	if(!(ff=find_files_init(send_file))) goto end;
+	if(!(ff=find_files_init(burp_send_file))) goto end;
 	for(l=get_strlist(confs[OPT_STARTDIR]); l; l=l->next) if(l->flag)
 		if(find_files_begin(asfd, ff, confs, l->path)) goto end;
 	ret=0;

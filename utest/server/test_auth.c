@@ -31,12 +31,11 @@ static struct pdata p[] = {
 	// 1 is success, 0 is failure.
 	{ 1, "hiH9IOyyrrl4k", "ifpqgio" },
 	{ 0, "hiH9IOyyrrl4k", "ifpqgia" },
-#ifndef HAVE_NETBSD_OS
-#ifndef HAVE_DARWIN_OS
+	/* Salt format below is a GNU extension not present on other systems */
+#if !defined(HAVE_NETBSD_OS) && !defined(HAVE_DARWIN_OS) && !defined(_AIX)
 	{ 1, "$6$dYCzeXf3$Vue9VQ49lBLtK7d273FxKYsWrF1WGwr3Th2GBCghj0WG61o/bXxEal/11pCdvWqN/Y1iSiOblqZhitBsqAOVe1", "testuser" },
 	{ 0, "x6$dYCzeXf3$Vue9VQ49lBLtK7d273FxKYsWrF1WGwr3Th2GBCghj0WG61o/bXxEal/11pCdvWqN/Y1iSiOblqZhitBsqAOVe1", "testuser" },
 	{ 0, "x6$dYCzeXf3$Vue9VQ49lBLtK7d273FxKYsWrF1WGwr3Th2GBCghj0WG61o/bXxEal/11pCdvWqN/Y1iSiOblqZhitBsqAOVe1", NULL },
-#endif
 #endif
 	{ 0, NULL, "testuser" },
 	{ 0, "123", "testuser" }

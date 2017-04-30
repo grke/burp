@@ -45,10 +45,12 @@ static void check_dynamic_paths(struct sdirs *sdirs, enum protocol protocol,
 	char *rworking=NULL;
 	char *rmanifest=NULL;
 	char *treepath=NULL;
+	char *relink=NULL;
 
 	fail_unless(sdirs->rworking==NULL);
 	fail_unless(sdirs->rmanifest==NULL);
 	fail_unless(sdirs->treepath==NULL);
+	fail_unless(sdirs->relink==NULL);
 
 	fail_unless(sdirs_create_real_working(sdirs,
 		DEFAULT_TIMESTAMP_FORMAT)==0);
@@ -60,17 +62,22 @@ static void check_dynamic_paths(struct sdirs *sdirs, enum protocol protocol,
 	ck_assert_str_eq(sdirs->treepath, treepath);
 	rmanifest=prepend_s(rworking, manifest);
 	ck_assert_str_eq(sdirs->rmanifest, rmanifest);
+	relink=prepend_s(rworking, "relink");
+	ck_assert_str_eq(sdirs->relink, relink);
 
 	free_w(&sdirs->rworking);
 	free_w(&sdirs->treepath);
+	free_w(&sdirs->relink);
 
 	fail_unless(sdirs_get_real_working_from_symlink(sdirs)==0);
 	ck_assert_str_eq(sdirs->rworking, rworking);
 	ck_assert_str_eq(sdirs->treepath, treepath);
+	ck_assert_str_eq(sdirs->relink, relink);
 	
 	free_w(&rworking);
 	free_w(&rmanifest);
 	free_w(&treepath);
+	free_w(&relink);
 }
 
 #define CLIENT		BASE "/utestclient"

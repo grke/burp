@@ -8,6 +8,8 @@
 #include "../prepend.h"
 #include "timestamp.h"
 
+#define RELINK_DIR	"relink"
+
 struct sdirs *sdirs_alloc(void)
 {
 	return (struct sdirs *)calloc_w(1, sizeof(struct sdirs), __func__);
@@ -64,8 +66,9 @@ int sdirs_get_real_working_from_symlink(struct sdirs *sdirs)
 	}
 	if(free_prepend_s(&sdirs->rworking, sdirs->client, real)
 	  || free_prepend_s(&sdirs->treepath,
-		sdirs->rworking, DATA_DIR "/" TREE_DIR))
-			return -1;
+		sdirs->rworking, DATA_DIR "/" TREE_DIR)
+	  || free_prepend_s(&sdirs->relink, sdirs->rworking, RELINK_DIR))
+		return -1;
 	return 0;
 }
 
@@ -79,8 +82,9 @@ int sdirs_create_real_working(struct sdirs *sdirs, const char *timestamp_format)
 		tstmp, sizeof(tstmp), fname, sizeof(fname), timestamp_format)
 	  || free_prepend_s(&sdirs->rworking, sdirs->client, fname)
 	  || free_prepend_s(&sdirs->treepath,
-		sdirs->rworking, DATA_DIR "/" TREE_DIR))
-			return -1;
+		sdirs->rworking, DATA_DIR "/" TREE_DIR)
+	  || free_prepend_s(&sdirs->relink, sdirs->rworking, RELINK_DIR))
+		return -1;
 
 	// Add the working symlink before creating the directory.
 	// This is because bedup checks the working symlink before
@@ -152,6 +156,7 @@ static int do_protocol1_dirs(struct sdirs *sdirs, const char *cname,
 			return -1;
 	// sdirs->rworking gets set later.
 	// sdirs->treepath gets set later.
+	// sdirs->relink gets set later.
 	return 0;
 }
 
@@ -271,6 +276,7 @@ void sdirs_free_content(struct sdirs *sdirs)
 	free_w(&sdirs->deltmppath);
 	free_w(&sdirs->treepath);
 	free_w(&sdirs->ctreepath);
+	free_w(&sdirs->relink);
 }
 
 void sdirs_free(struct sdirs **sdirs)

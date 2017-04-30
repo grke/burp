@@ -353,6 +353,7 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 	char *newpath=NULL;
 	char *finpath=NULL;
 	char *deltafpath=NULL;
+	char *relinkpath=NULL;
 	const char *datapth=sb->protocol1->datapth.buf;
 
 	// If the previous backup was a hardlinked_archive, there will not be
@@ -450,12 +451,25 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		goto end;
 	}
 
+	if(!(relinkpath=prepend_s(sdirs->relink, datapth)))
+		goto end;
+	if(!lstat(relinkpath, &statp) && S_ISREG(statp.st_mode))
+	{
+		// Use the relinked path - something that used to be a hardlink
+		// but is now the original file because the file that we
+		// originally hardlinked to has been deleted.
+		logp("Using relinkpath\n");
+		ret=do_rename(relinkpath, finpath);
+		goto end;
+	}
+
 	logp("could not find: %s\n", oldpath);
 end:
 	free_w(&oldpath);
 	free_w(&newpath);
 	free_w(&finpath);
 	free_w(&deltafpath);
+	free_w(&relinkpath);
 	return ret;
 }
 
@@ -809,6 +823,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 	// This will have the effect of getting rid of unnecessary
 	// directories.
 	recursive_delete_dirs_only_no_warnings(fdirs->currentdupdata);
+	recursive_delete_dirs_only_no_warnings(sdirs->relink);
 
 	// Rename the old current to something that we know to delete.
 	if(previous_backup && !hardlinked_current)

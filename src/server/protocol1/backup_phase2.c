@@ -270,11 +270,25 @@ static enum processed_e process_unchanged_file(struct sbuf *p1b, struct sbuf *cb
 	return P_DONE_UNCHANGED;
 }
 
+static int open_previous_manifest(struct manio **manio, struct sdirs *sdirs)
+{
+	struct stat statp;
+	if(!lstat(sdirs->cmanifest, &statp)
+	  && !(*manio=manio_open(sdirs->cmanifest, "rb", PROTO_1)))
+	{
+		logp("could not open old manifest %s\n", sdirs->cmanifest);
+		return -1;
+	}
+	return 0;
+}
+
 static int get_hardlink_master_from_hmanio(
 	struct manio **hmanio,
+	struct sdirs *sdirs,
 	struct sbuf *cb,
 	struct sbuf *hb
 ) {
+	int passes=0;
 	while(1)
 	{
 		sbuf_free_content(hb);
@@ -284,6 +298,16 @@ static int get_hardlink_master_from_hmanio(
 				break;
 			case 1: // Finished OK.
 				manio_close(hmanio);
+				// Might have already been part way down the
+				// manifest when we started. If we get to the
+				// end, go back to the beginning once.
+				if(!passes)
+				{
+					if(open_previous_manifest(hmanio,
+						sdirs)) return -1;
+					passes++;
+					continue;
+				}
 				return 0;
 			default: // Error;
 				return -1;
@@ -313,7 +337,7 @@ static int relink_deleted_hardlink_master(
 	if(!(hb=sbuf_alloc(PROTO_1)))
 		goto end;
 
-	switch(get_hardlink_master_from_hmanio(hmanio, cb, hb))
+	switch(get_hardlink_master_from_hmanio(hmanio, sdirs, cb, hb))
 	{
 		case 0: // Did not find it.
 			return 0;
@@ -329,7 +353,7 @@ static int relink_deleted_hardlink_master(
 		return 0;
 
 	if(!(oldpath=prepend_s(sdirs->ctreepath, cb->link.buf))
-	  || !(newpath=prepend_s(sdirs->treepath, p1b->path.buf)))
+	  || !(newpath=prepend_s(sdirs->relink, p1b->path.buf)))
 		goto end;
 	if(lstat(oldpath, &statp) || !S_ISREG(statp.st_mode))
 	{
@@ -341,7 +365,17 @@ static int relink_deleted_hardlink_master(
 	if(do_link(oldpath, newpath, &statp, cconfs, /*overwrite*/0))
 		goto end;
 
-	iobuf_move(&cb->protocol1->datapth, &hb->protocol1->datapth);
+	iobuf_free_content(&cb->protocol1->datapth);
+
+	free_w(&newpath);
+	if(!(newpath=strdup_w(p1b->path.buf, __func__)))
+		goto end;
+	iobuf_from_str(&hb->protocol1->datapth, CMD_DATAPTH, newpath);
+	newpath=NULL;
+	if(!(newpath=strdup_w(p1b->path.buf, __func__)))
+		goto end;
+	iobuf_from_str(&cb->protocol1->datapth, CMD_DATAPTH, newpath);
+	newpath=NULL;
 	iobuf_move(&cb->endfile, &hb->endfile);
 
 	ret=1;
@@ -849,18 +883,6 @@ end:
 	confs_free(&oldconfs);
 	confs_free(&newconfs);
 	return ret;
-}
-
-static int open_previous_manifest(struct manio **manio, struct sdirs *sdirs)
-{
-	struct stat statp;
-	if(!lstat(sdirs->cmanifest, &statp)
-	  && !(*manio=manio_open(sdirs->cmanifest, "rb", PROTO_1)))
-	{
-		logp("could not open old manifest %s\n", sdirs->cmanifest);
-		return -1;
-	}
-	return 0;
 }
 
 // Maybe open the previous (current) manifest.

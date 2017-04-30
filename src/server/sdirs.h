@@ -50,6 +50,7 @@ struct sdirs
 	char *deltmppath;
 	char *treepath;
 	char *ctreepath;
+	char *relink;
 };
 
 extern struct sdirs *sdirs_alloc(void);

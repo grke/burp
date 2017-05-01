@@ -1,3 +1,13 @@
+2017-05-01 Changes in burp-2.1.8:
+ * Fix two bugs in relinking deleted hardlink master records.
+ * Fix status monitor failing if client password is not set.
+ * trustchk's AIX: Complete initial support.
+ * Increase size of d_name on windows.
+ * chrisv5179's fixes for error handling in burp_ca.
+ * moenoel's include_fs option.
+ * moenoel's partial fixes for strip_from_path().
+ * Fix for problems with truncating incexc file.
+
 2017-04-01 Changes in burp-2.1.6:
  * Fix for bug treating too many files as new (a problem since 2.1.2).
  * Fix for changed/same counters being reversed in the monitor.

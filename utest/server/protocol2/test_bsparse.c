@@ -251,6 +251,7 @@ Suite *suite_server_protocol2_bsparse(void)
 	s=suite_create("server_protocol1_bsparse");
 
 	tc_core=tcase_create("Core");
+	tcase_set_timeout(tc_core, 60);
 	tcase_add_test(tc_core, test_bsparse_not_enough_args);
 	tcase_add_test(tc_core, test_bsparse_usage1);
 	tcase_add_test(tc_core, test_bsparse_usage2);

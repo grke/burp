@@ -21,6 +21,7 @@ static void tear_down(struct async **as)
 static void checks(struct asfd *asfd,
 	enum asfd_streamtype streamtype,
 	int fd,
+	int port,
 	SSL *ssl,
 	const char *desc,
 	enum asfd_fdtype fdtype,
@@ -28,6 +29,7 @@ static void checks(struct asfd *asfd,
 {
 	fail_unless(asfd->streamtype==streamtype);
 	fail_unless(asfd->fd==fd);
+	fail_unless(asfd->port==port);
 	fail_unless(asfd->ssl==ssl);
 	fail_unless(!strcmp(asfd->desc, desc));
 	fail_unless(asfd->fdtype==fdtype);
@@ -49,7 +51,7 @@ START_TEST(test_setup_asfd_error)
 	struct asfd *asfd;
 	int fd=-1;
 	as=setup();
-	fail_unless((asfd=setup_asfd(as, "desc", &fd))==NULL);
+	fail_unless((asfd=setup_asfd(as, "desc", &fd, /*port*/-1))==NULL);
 	fail_unless(fd==-1);
 	tear_down(&as);
 }
@@ -70,7 +72,7 @@ START_TEST(test_setup_asfd_ssl)
 	ctx=(SSL_CTX *)SSL_CTX_new(meth);
 	ssl=SSL_new(ctx);
 	fail_unless((asfd=setup_asfd_ssl(as, desc, &fd, ssl))!=NULL);
-	checks(asfd, ASFD_STREAM_STANDARD, 100,
+	checks(asfd, ASFD_STREAM_STANDARD, 100, /*port*/-1,
 		ssl, "desc", ASFD_FD_UNSET, /*attempt_read*/1);
 	fail_unless(fd==-1);
 	tear_down(&as);
@@ -83,10 +85,11 @@ START_TEST(test_setup_asfd)
 	struct async *as;
 	struct asfd *asfd;
 	int fd=100;
+	int port=500;
 	const char *desc="desc";
 	as=setup();
-	fail_unless((asfd=setup_asfd(as, desc, &fd))!=NULL);
-	checks(asfd, ASFD_STREAM_STANDARD, 100,
+	fail_unless((asfd=setup_asfd(as, desc, &fd, port))!=NULL);
+	checks(asfd, ASFD_STREAM_STANDARD, 100, port,
 		/*ssl*/NULL, "desc", ASFD_FD_UNSET, /*attempt_read*/1);
 	fail_unless(fd==-1);
 	tear_down(&as);
@@ -101,7 +104,7 @@ START_TEST(test_setup_asfd_linebuf_read)
 	const char *desc="desc";
 	as=setup();
 	fail_unless((asfd=setup_asfd_linebuf_read(as, desc, &fd))!=NULL);
-	checks(asfd, ASFD_STREAM_LINEBUF, 100,
+	checks(asfd, ASFD_STREAM_LINEBUF, 100, /*port*/-1,
 		/*ssl*/NULL, "desc", ASFD_FD_UNSET, /*attempt_read*/1);
 	fail_unless(fd==-1);
 	tear_down(&as);
@@ -116,7 +119,7 @@ START_TEST(test_setup_asfd_linebuf_write)
 	const char *desc="desc";
 	as=setup();
 	fail_unless((asfd=setup_asfd_linebuf_write(as, desc, &fd))!=NULL);
-	checks(asfd, ASFD_STREAM_LINEBUF, 100,
+	checks(asfd, ASFD_STREAM_LINEBUF, 100, /*port*/-1,
 		/*ssl*/NULL, "desc", ASFD_FD_UNSET, /*attempt_read*/0);
 	fail_unless(fd==-1);
 	tear_down(&as);
@@ -129,7 +132,7 @@ START_TEST(test_setup_asfd_stdin)
 	struct asfd *asfd;
 	as=setup();
 	fail_unless((asfd=setup_asfd_stdin(as))!=NULL);
-	checks(asfd, ASFD_STREAM_LINEBUF, fileno(stdin),
+	checks(asfd, ASFD_STREAM_LINEBUF, fileno(stdin), /*port*/-1,
 		/*ssl*/NULL, "stdin", ASFD_FD_UNSET, /*attempt_read*/1);
 	tear_down(&as);
 }
@@ -141,7 +144,7 @@ START_TEST(test_setup_asfd_stdout)
 	struct asfd *asfd;
 	as=setup();
 	fail_unless((asfd=setup_asfd_stdout(as))!=NULL);
-	checks(asfd, ASFD_STREAM_LINEBUF, fileno(stdout),
+	checks(asfd, ASFD_STREAM_LINEBUF, fileno(stdout), /*port*/-1,
 		/*ssl*/NULL, "stdout", ASFD_FD_UNSET, /*attempt_read*/0);
 	tear_down(&as);
 }
@@ -153,7 +156,7 @@ START_TEST(test_setup_asfd_ncurses_stdin)
 	struct asfd *asfd;
 	as=setup();
 	fail_unless((asfd=setup_asfd_ncurses_stdin(as))!=NULL);
-	checks(asfd, ASFD_STREAM_NCURSES_STDIN, fileno(stdin),
+	checks(asfd, ASFD_STREAM_NCURSES_STDIN, fileno(stdin), /*port*/-1,
 		/*ssl*/NULL, "stdin", ASFD_FD_UNSET, /*attempt_read*/1);
 	tear_down(&as);
 }

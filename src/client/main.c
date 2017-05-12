@@ -204,7 +204,9 @@ static int s_server_session_id_context=1;
 static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 	enum action action, struct conf **confs)
 {
+	enum conf_opt port_opt;
 	BIO *sbio=NULL;
+	struct strlist *port=NULL;
 	ssl_load_globals();
 	if(!(*ctx=ssl_initialise_ctx(confs)))
 	{
@@ -216,10 +218,20 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 		(const uint8_t *)&s_server_session_id_context,
 		sizeof(s_server_session_id_context));
 
+	switch(action)
+	{
+		case ACTION_MONITOR:
+			port_opt=OPT_STATUS_PORT;
+			break;
+		default:
+			port_opt=OPT_PORT;
+			break;
+	}
+
+	port=get_strlist(confs[port_opt]);
 	if((*rfd=init_client_socket(get_string(confs[OPT_SERVER]),
-	  action==ACTION_MONITOR?
-	  get_string(confs[OPT_STATUS_PORT]):get_string(confs[OPT_PORT])))<0)
-		return -1;
+		port->path))<0)
+			return -1;
 
 	if(!(*ssl=SSL_new(*ctx))
 	  || !(sbio=BIO_new_socket(*rfd, BIO_NOCLOSE)))

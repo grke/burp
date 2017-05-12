@@ -31,7 +31,7 @@ int ssl_do_accept(SSL *ssl)
 		}
 	}
 error:
-	logp_ssl_err("SSL_accept\n");
+	logp_ssl_err("SSL_accept error\n");
 	return -1;
 }
 

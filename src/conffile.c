@@ -430,20 +430,13 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 	if(!get_string(c[OPT_STATUS_ADDRESS])
 	  && set_string(c[OPT_STATUS_ADDRESS], DEFAULT_ADDRESS_STATUS))
 			return -1;
-	if(!get_string(c[OPT_STATUS_PORT])) // carry on if not set.
+	if(!get_strlist(c[OPT_STATUS_PORT])) // carry on if not set.
 		logp("%s: status_port unset", path);
-	if(!get_int(c[OPT_MAX_CHILDREN]))
-		conf_problem(path, "max_children unset", r);
-	if(!get_int(c[OPT_MAX_STATUS_CHILDREN]))
-		conf_problem(path, "max_status_children unset", r);
 	if(!get_strlist(c[OPT_KEEP]))
 		conf_problem(path, "keep unset", r);
 	if(get_int(c[OPT_MAX_HARDLINKS])<2)
 		conf_problem(path, "max_hardlinks too low", r);
-	if(get_int(c[OPT_MAX_CHILDREN])<=0)
-		conf_problem(path, "max_children too low", r);
-	if(get_int(c[OPT_MAX_STATUS_CHILDREN])<=0)
-		conf_problem(path, "max_status_children too low", r);
+
 	if(get_int(c[OPT_MAX_STORAGE_SUBDIRS])<=1000)
 		conf_problem(path, "max_storage_subdirs too low", r);
 	if(!get_string(c[OPT_TIMESTAMP_FORMAT])
@@ -674,7 +667,7 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	}
 	if(!get_string(c[OPT_SERVER]))
 		conf_problem(path, "server unset", r);
-	if(!get_string(c[OPT_STATUS_PORT])) // carry on if not set.
+	if(!get_strlist(c[OPT_STATUS_PORT])) // carry on if not set.
 		logp("%s: status_port unset\n", path);
 	if(!get_string(c[OPT_SSL_PEER_CN]))
 	{
@@ -935,11 +928,53 @@ static int setup_script_arg_overrides(struct conf *c,
 	  || setup_script_arg_override(c, post_args);
 }
 
-#ifndef UTEST
-static
-#endif
-int conf_finalise(struct conf **c)
+static int finalise_server_ports(struct conf **c,
+	enum conf_opt port_opt, enum conf_opt max_children_opt)
 {
+	struct strlist *p;
+	struct strlist *mc;
+	long max_children=5;
+
+	for(p=get_strlist(c[port_opt]),
+	   mc=get_strlist(c[max_children_opt]); p; p=p->next)
+	{
+		if(mc)
+		{
+			if((max_children=atol(mc->path))<=0)
+			{
+				logp("%s too low for %s %s\n",
+					c[max_children_opt]->field,
+					c[port_opt]->field,
+					p->path);
+				return -1;
+			}
+			p->flag=max_children;
+	
+			mc=mc->next;
+		}
+		else
+		{
+			logp("%s %s defaulting to %s %lu\n",
+				c[port_opt]->field,
+				p->path,
+				c[max_children_opt]->field,
+				max_children);
+			p->flag=max_children;
+		}
+	}
+
+	if(mc)
+	{
+		logp("too many %s options\n", c[max_children_opt]->field);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int conf_finalise(struct conf **c)
+{
+	enum burp_mode burp_mode=get_e_burp_mode(c[OPT_BURP_MODE]);
 	int s_script_notify=0;
 	if(finalise_fstypes(c, OPT_EXCFS)) return -1;
 	if(finalise_fstypes(c, OPT_INCFS)) return -1;
@@ -951,13 +986,22 @@ int conf_finalise(struct conf **c)
 	set_max_ext(get_strlist(c[OPT_EXCEXT]));
 	set_max_ext(get_strlist(c[OPT_EXCOM]));
 
-	if(get_e_burp_mode(c[OPT_BURP_MODE])==BURP_MODE_CLIENT
+	if(burp_mode==BURP_MODE_CLIENT
 	  && finalise_glob(c)) return -1;
 
 	if(finalise_incexc_dirs(c)
 	  || finalise_start_dirs(c)) return -1;
 
 	if(finalise_keep_args(c)) return -1;
+
+	if(burp_mode==BURP_MODE_SERVER)
+	{
+		if(finalise_server_ports(c,
+			OPT_PORT, OPT_MAX_CHILDREN)
+		  || finalise_server_ports(c,
+			OPT_STATUS_PORT, OPT_MAX_STATUS_CHILDREN))
+				return -1;
+	}
 
 	if((s_script_notify=get_int(c[OPT_S_SCRIPT_NOTIFY])))
 	{
@@ -993,7 +1037,7 @@ static int conf_finalise_global_only(const char *conf_path, struct conf **confs)
 {
 	int r=0;
 
-	if(!get_string(confs[OPT_PORT]))
+	if(!get_strlist(confs[OPT_PORT]))
 		conf_problem(conf_path, "port unset", &r);
 
 	// Let the caller check the 'keep' value.

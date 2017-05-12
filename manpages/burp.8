@@ -223,13 +223,13 @@ Required to run in server mode.
 Defines the main TCP address that the server listens on. The default is either '::' or '0.0.0.0', dependent upon compile time options.
 .TP
 \fBport=[port number]\fR
-Defines the main TCP port that the server listens on.
+Defines the main TCP port that the server listens on. Specify multiple 'port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_children' value.
 .TP
 \fBstatus_address=[address]\fR
 Defines the main TCP address that the server listens on for status requests. The default is either '::1' or '127.0.0.1', dependent upon compile time options.
 .TP
 \fBstatus_port=[port number]\fR
-Defines the TCP port that the server listens on for status requests. Comment this out to have no status server.
+Defines the TCP port that the server listens on for status requests. Comment this out to have no status server. Specify multiple 'status_port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_status_children' value.
 .TP
 \fBcname_lowercase=[0|1]\fR
 Whether to force lowercase cname when looking-up in clientconfdir. This also affects the fqdn lookup on the client (see client configuration options for details). The default is 0. When set to 1 the name provided by the client while authenticating will be lowercased.
@@ -378,10 +378,10 @@ Choose the level of zlib compression over SSL. Setting 0 or zlib0 turns SSL comp
 Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-dsaparam \-out dhfile.pem 2048
 .TP
 \fBmax_children=[number]\fR
-Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5.
+Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5. Specify multiple 'max_children' entries on separate lines if you have configured multiple port entries.
 .TP
 \fBmax_status_children=[number]\fR
-Defines the number of status child processes to fork (the number of status clients that can simultaneously connect. The default is 5.
+Defines the number of status child processes to fork (the number of status clients that can simultaneously connect. The default is 5. Specify multiple 'max_status_children' entries on separate lines if you have configured multiple status_port entries.
 .TP
 \fBmax_storage_subdirs=[number]\fR
 Defines the number of subdirectories in the data storage areas. The maximum number of subdirectories that ext3 allows is 32000. If you do not set this option, it defaults to 30000.

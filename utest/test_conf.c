@@ -15,9 +15,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_LOCKFILE:
 		case OPT_PIDFILE:
 		case OPT_ADDRESS:
-		case OPT_PORT:
 		case OPT_STATUS_ADDRESS:
-		case OPT_STATUS_PORT:
 		case OPT_SSL_CERT_CA:
 		case OPT_SSL_CERT:
 		case OPT_SSL_KEY:
@@ -136,8 +134,6 @@ static void check_default(struct conf **c, enum conf_opt o)
 			fail_unless(get_int(c[o])==60*60*2);
 			break;
 		case OPT_SSL_COMPRESSION:
-		case OPT_MAX_CHILDREN:
-		case OPT_MAX_STATUS_CHILDREN:
 			fail_unless(get_int(c[o])==5);
 			break;
         	case OPT_COMPRESSION:
@@ -183,6 +179,10 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_FIFOS:
 		case OPT_BLOCKDEVS:
 		case OPT_LABEL:
+		case OPT_PORT:
+		case OPT_STATUS_PORT:
+		case OPT_MAX_CHILDREN:
+		case OPT_MAX_STATUS_CHILDREN:
 			fail_unless(get_strlist(c[o])==NULL);
 			break;
 		case OPT_PROTOCOL:

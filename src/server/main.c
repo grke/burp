@@ -46,16 +46,6 @@ static void usr2handler(__attribute__ ((unused)) int sig)
 	gentleshutdown_logged=0;
 }
 
-static void init_fds(int *fds)
-{
-	for(int i=0; i<LISTEN_SOCKETS; i++) fds[i]=-1;
-}
-
-static void close_fds(int *fds)
-{
-	for(int i=0; i<LISTEN_SOCKETS; i++) close_fd(&(fds[i]));
-}
-
 // Remove any exiting child pids from our list.
 static void chld_check_for_exiting(struct async *mainas)
 {
@@ -77,15 +67,38 @@ static void chld_check_for_exiting(struct async *mainas)
 	}
 }
 
-static int init_listen_socket(const char *address, const char *port, int *fds)
+static void *get_in_addr(struct sockaddr *sa)
+{
+#ifdef HAVE_IPV6
+	if(sa->sa_family==AF_INET6)
+		return &(((struct sockaddr_in6*)sa)->sin6_addr);
+#endif
+	return &(((struct sockaddr_in*)sa)->sin_addr);
+}
+
+static void log_listen_socket(const char *desc,
+	struct addrinfo *rp, struct strlist *port)
+{
+#ifdef HAVE_IPV6
+	char addr[INET6_ADDRSTRLEN]="";
+#else
+	char addr[INET_ADDRSTRLEN]="";
+#endif
+	inet_ntop(rp->ai_family, get_in_addr((struct sockaddr *)rp->ai_addr),
+		addr, sizeof(addr));
+	logp("%s %s:%s (max %d)\n",
+		desc, addr, port->path, (int)port->flag);
+}
+
+static int init_listen_socket(const char *address, struct strlist *port,
+	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
 {
 	int i;
+	int fd=-1;
 	int gai_ret;
 	struct addrinfo hints;
 	struct addrinfo *rp=NULL;
 	struct addrinfo *info=NULL;
-
-	close_fds(fds);
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family=AF_UNSPEC;
@@ -94,58 +107,59 @@ static int init_listen_socket(const char *address, const char *port, int *fds)
 	hints.ai_flags=AI_NUMERICHOST;
 	hints.ai_flags|=AI_PASSIVE;
 
-	if((gai_ret=getaddrinfo(address, port, &hints, &info)))
+	if((gai_ret=getaddrinfo(address, port->path, &hints, &info)))
 	{
 		logp("unable to getaddrinfo on port %s: %s\n",
-			port, gai_strerror(gai_ret));
+			port->path, gai_strerror(gai_ret));
 		return -1;
 	}
 
 	i=0;
 	for(rp=info; rp && i<LISTEN_SOCKETS; rp=rp->ai_next)
 	{
-		fds[i]=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if(fds[i]<0)
+                struct asfd *newfd;
+
+		close_fd(&fd);
+
+		fd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if(fd<0)
 		{
 			logp("unable to create socket on port %s: %s\n",
-				port, strerror(errno));
+				port->path, strerror(errno));
 			continue;
 		}
-		set_keepalive(fds[i], 1);
+		set_keepalive(fd, 1);
 #ifdef HAVE_IPV6
 		if(rp->ai_family==AF_INET6)
 		{
 			// Attempt to say that it should not listen on IPv6
 			// only.
 			int optval=0;
-			setsockopt(fds[i], IPPROTO_IPV6, IPV6_V6ONLY,
+			setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
 				&optval, sizeof(optval));
 		}
 #endif
-		reuseaddr(fds[i]);
-		if(bind(fds[i], rp->ai_addr, rp->ai_addrlen))
+		reuseaddr(fd);
+		if(bind(fd, rp->ai_addr, rp->ai_addrlen))
 		{
 			logp("unable to bind socket on port %s: %s\n",
-				port, strerror(errno));
-			close(fds[i]);
-			fds[i]=-1;
+				port->path, strerror(errno));
 			continue;
 		}
 
 		// Say that we are happy to accept connections.
-		if(listen(fds[i], 5)<0)
+		if(listen(fd, 5)<0)
 		{
-			close_fd(&(fds[i]));
-			logp("could not listen on main socket %s\n", port);
-			return -1;
+			logp("could not listen on %s: %s\n",
+				port->path, strerror(errno));
+			continue;
 		}
+		log_listen_socket(desc, rp, port);
+                if(!(newfd=setup_asfd(mainas, desc, &fd, atoi(port->path))))
+			continue;
+                newfd->fdtype=fdtype;
 
-#ifdef HAVE_WIN32
-		{
-			u_long ioctlArg=0;
-			ioctlsocket(fds[i], FIONBIO, &ioctlArg);
-		}
-#endif
+		fd=-1;
 		i++;
 	}
 
@@ -161,6 +175,18 @@ static int init_listen_socket(const char *address, const char *port, int *fds)
 		return -1;
 	}
 
+	return 0;
+}
+
+static int init_listen_sockets(const char *address, struct strlist *ports,
+	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
+{
+	struct strlist *p;
+	for(p=ports; p; p=p->next)
+	{
+		if(init_listen_socket(address, p, mainas, fdtype, desc))
+			return -1;
+	}
 	return 0;
 }
 
@@ -281,8 +307,9 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	if(status_rfd>=0)
 	{
 		is_status_server=1;
-		if(!setup_asfd(as, "status server parent socket", &status_rfd))
-			goto end;
+		if(!setup_asfd(as, "status server parent socket", &status_rfd,
+			/*port*/-1))
+				goto end;
 	}
 
 	ret=child(as, is_status_server, status_wfd, confs, cconfs);
@@ -306,42 +333,59 @@ end:
 	return ret;
 }
 
+static struct strlist *find_port_in_conf(struct conf **confs,
+	enum conf_opt port_opt, int port)
+{
+	struct strlist *p;
+	for(p=get_strlist(confs[port_opt]); p; p=p->next)
+		if(port==atoi(p->path))
+			return p;
+	logp("Could not find port %d in %s confs\n",
+		port, confs[port_opt]->field);
+	return NULL;
+}
+
 static int chld_check_counts(struct conf **confs, struct asfd *asfd)
 {
-	int c_count=0;
-	int sc_count=0;
+	long count=0;
 	struct asfd *a;
-
-	// Need to count status children separately from normal children.
-	for(a=asfd->as->asfd; a; a=a->next)
-	{
-		switch(a->fdtype)
-		{
-			case ASFD_FD_SERVER_PIPE_READ:
-				c_count++; break;
-			case ASFD_FD_SERVER_PIPE_WRITE:
-				sc_count++; break;
-			default:
-				break;
-		}
-	}
+	struct strlist *port;
+	enum conf_opt port_opt;
 
 	switch(asfd->fdtype)
 	{
 		case ASFD_FD_SERVER_LISTEN_MAIN:
-			if(c_count<get_int(confs[OPT_MAX_CHILDREN]))
-				break;
-			logp("Too many child processes.\n");
-			return -1;
+			port_opt=OPT_PORT;
+			if(!(port=find_port_in_conf(confs,
+				port_opt, asfd->port)))
+					return -1;
+			break;
 		case ASFD_FD_SERVER_LISTEN_STATUS:
-			if(sc_count<get_int(confs[OPT_MAX_STATUS_CHILDREN]))
-				break;
-			logp("Too many status child processes.\n");
-			return -1;
+			port_opt=OPT_STATUS_PORT;
+			if(!(port=find_port_in_conf(confs,
+				port_opt, asfd->port)))
+					return -1;
+			break;
 		default:
 			logp("Unexpected fdtype in %s: %d.\n",
 				__func__, asfd->fdtype);
 			return -1;
+	}
+
+	for(a=asfd->as->asfd; a; a=a->next)
+		if(a!=asfd
+		  && asfd->port==a->port)
+			count++;
+
+	logp("%d/%d child processes running on %s %d\n",
+		(int)count, (int)port->flag,
+		confs[port_opt]->field, asfd->port);
+	if(count<port->flag)
+		logp("Child %d available\n", (int)count+1);
+	else
+	{
+		logp("No spare children available.\n");
+		return -1;
 	}
 
 	return 0;
@@ -349,12 +393,12 @@ static int chld_check_counts(struct conf **confs, struct asfd *asfd)
 
 static struct asfd *setup_parent_child_pipe(struct async *as,
 	const char *desc,
-	int *fd_to_use, int *fd_to_close, pid_t childpid,
+	int *fd_to_use, int *fd_to_close, pid_t childpid, int port,
 	enum asfd_fdtype fdtype)
 {
 	struct asfd *newfd;
 	close_fd(fd_to_close);
-	if(!(newfd=setup_asfd(as, desc, fd_to_use)))
+	if(!(newfd=setup_asfd(as, desc, fd_to_use, port)))
 		return NULL;
 	newfd->pid=childpid;
 	newfd->fdtype=fdtype;
@@ -369,18 +413,20 @@ static int setup_parent_child_pipes(struct asfd *asfd,
 	switch(asfd->fdtype)
 	{
 		case ASFD_FD_SERVER_LISTEN_MAIN:
-			logp("forked child: %d\n", childpid);
+			logp("forked child on port %d: %d\n",
+				asfd->port, childpid);
 			if(!(newfd=setup_parent_child_pipe(as,
 				"pipe from child",
-				rfd, wfd, childpid,
+				rfd, wfd, childpid, asfd->port,
 				ASFD_FD_SERVER_PIPE_READ)))
 					return -1;
 			return 0;
 		case ASFD_FD_SERVER_LISTEN_STATUS:
-			logp("forked status server child: %d\n", childpid);
+			logp("forked status child on port %d: %d\n",
+				asfd->port, childpid);
 			if(!(newfd=setup_parent_child_pipe(as,
 				"pipe to status child",
-				wfd, rfd, childpid,
+				wfd, rfd, childpid, asfd->port,
 				ASFD_FD_SERVER_PIPE_WRITE)))
 					return -1;
 			newfd->attempt_reads=0;
@@ -565,19 +611,17 @@ static int relock(struct lock *lock)
 	return -1;
 }
 
-static int run_server(struct conf **confs, const char *conffile,
-	int *rfds, int *sfds)
+static int run_server(struct conf **confs, const char *conffile)
 {
-	int i=0;
 	int ret=-1;
 	SSL_CTX *ctx=NULL;
 	int found_normal_child=0;
 	struct asfd *asfd=NULL;
 	struct asfd *scfd=NULL;
 	struct async *mainas=NULL;
-	const char *port=get_string(confs[OPT_PORT]);
+	struct strlist *ports=get_strlist(confs[OPT_PORT]);
 	const char *address=get_string(confs[OPT_ADDRESS]);
-	const char *status_port=get_string(confs[OPT_STATUS_PORT]);
+	struct strlist *status_ports=get_strlist(confs[OPT_STATUS_PORT]);
 	const char *status_address=get_string(confs[OPT_STATUS_ADDRESS]);
 
 	if(!(ctx=ssl_initialise_ctx(confs)))
@@ -591,30 +635,15 @@ static int run_server(struct conf **confs, const char *conffile,
 		goto end;
 	}
 
-	if(init_listen_socket(address, port, rfds)
-	  || init_listen_socket(status_address, status_port, sfds))
-		goto end;
-
 	if(!(mainas=async_alloc())
 	  || mainas->init(mainas, 0))
 		goto end;
 
-	for(i=0; i<LISTEN_SOCKETS && rfds[i]!=-1; i++)
-	{
-		struct asfd *newfd;
-		if(!(newfd=setup_asfd(mainas,
-			"main server socket", &rfds[i])))
-				goto end;
-		newfd->fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
-	}
-	for(i=0; i<LISTEN_SOCKETS && sfds[i]!=-1; i++)
-	{
-		struct asfd *newfd;
-		if(!(newfd=setup_asfd(mainas,
-			"main server status socket", &sfds[i])))
-				goto end;
-		newfd->fdtype=ASFD_FD_SERVER_LISTEN_STATUS;
-	}
+	if(init_listen_sockets(address, ports, mainas,
+		ASFD_FD_SERVER_LISTEN_MAIN, "server")
+	  || init_listen_sockets(status_address, status_ports, mainas,
+		ASFD_FD_SERVER_LISTEN_STATUS, "server status"))
+			goto end;
 
 	while(!hupreload)
 	{
@@ -735,13 +764,8 @@ int server(struct conf **confs, const char *conffile,
 	struct lock *lock, int generate_ca_only)
 {
 	enum serret ret=SERVER_ERROR;
-	int rfds[LISTEN_SOCKETS]; // Sockets for clients to connect to.
-	int sfds[LISTEN_SOCKETS]; // Status server sockets.
 
 	//return champ_test(confs);
-
-	init_fds(rfds);
-	init_fds(sfds);
 
 	if(ca_server_setup(confs)) goto error;
 	if(generate_ca_only)
@@ -759,7 +783,7 @@ int server(struct conf **confs, const char *conffile,
 
 	while(!gentleshutdown)
 	{
-		if(run_server(confs, conffile, rfds, sfds))
+		if(run_server(confs, conffile))
 			goto error;
 
 		if(hupreload && !gentleshutdown)
@@ -775,8 +799,6 @@ int server(struct conf **confs, const char *conffile,
 end:
 	ret=SERVER_OK;
 error:
-	close_fds(rfds);
-	close_fds(sfds);
 
 // FIX THIS: Have an enum for a return value, so that it is more obvious what
 // is happening, like client.c does.

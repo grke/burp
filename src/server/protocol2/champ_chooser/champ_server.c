@@ -38,7 +38,7 @@ static int champ_chooser_new_client(struct async *as, struct conf **confs)
 	}
 
 	if(!(blist=blist_alloc())
-	  || !(newfd=setup_asfd(as, "(unknown)", &fd)))
+	  || !(newfd=setup_asfd(as, "(unknown)", &fd, /*port*/-1)))
 		goto error;
 	newfd->blist=blist;
 	newfd->set_timeout(newfd, get_int(confs[OPT_NETWORK_TIMEOUT]));
@@ -262,8 +262,9 @@ int champ_chooser_server(struct sdirs *sdirs, struct conf **confs,
 
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
-	  || !(asfd=setup_asfd(as, "champ chooser main socket", &s)))
-		goto end;
+	  || !(asfd=setup_asfd(as, "champ chooser main socket", &s,
+		/*port*/-1)))
+			goto end;
 	asfd->fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
 
 	// I think that this is probably the best point at which to run a

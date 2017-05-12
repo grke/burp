@@ -429,17 +429,17 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_ADDRESS:
 	  return sc_str(c[o], 0, 0, "address");
 	case OPT_PORT:
-	  return sc_str(c[o], 0, 0, "port");
+	  return sc_lst(c[o], 0, 0, "port");
 	case OPT_STATUS_ADDRESS:
 	  return sc_str(c[o], 0, 0, "status_address");
 	case OPT_STATUS_PORT:
-	  return sc_str(c[o], 0, 0, "status_port");
+	  return sc_lst(c[o], 0, 0, "status_port");
 	case OPT_SSL_DHFILE:
 	  return sc_str(c[o], 0, 0, "ssl_dhfile");
 	case OPT_MAX_CHILDREN:
-	  return sc_int(c[o], 5, 0, "max_children");
+	  return sc_lst(c[o], 0, 0, "max_children");
 	case OPT_MAX_STATUS_CHILDREN:
-	  return sc_int(c[o], 5, 0, "max_status_children");
+	  return sc_lst(c[o], 0, 0, "max_status_children");
 	case OPT_CLIENT_LOCKDIR:
 	  return sc_str(c[o], 0, 0, "client_lockdir");
 	case OPT_UMASK:

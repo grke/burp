@@ -82,6 +82,29 @@ START_TEST(test_conf_get_pair)
 }
 END_TEST
 
+static void assert_strlist(struct strlist **s, const char *path, int flag)
+{
+	if(!path)
+	{
+		fail_unless(*s==NULL);
+		return;
+	}
+	ck_assert_str_eq((*s)->path, path);
+	fail_unless((*s)->flag==flag);
+	*s=(*s)->next;
+}
+
+static void check_ports(struct conf **confs,
+	const char *port, int max_children,
+	const char *status_port, int max_status_children)
+{
+	struct strlist *s;
+	s=get_strlist(confs[OPT_PORT]);
+	assert_strlist(&s, port, max_children);
+	s=get_strlist(confs[OPT_STATUS_PORT]);
+	assert_strlist(&s, status_port, max_status_children);
+}
+
 START_TEST(test_client_conf)
 {
 	struct conf **confs=NULL;
@@ -90,8 +113,7 @@ START_TEST(test_client_conf)
 	fail_unless(!conf_load_global_only(CONFFILE, confs));
 	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_CLIENT);
 	ck_assert_str_eq(get_string(confs[OPT_SERVER]), "4.5.6.7");
-	ck_assert_str_eq(get_string(confs[OPT_PORT]), "1234");
-	ck_assert_str_eq(get_string(confs[OPT_STATUS_PORT]), "12345");
+	check_ports(confs, "1234", 0, "12345", 0);
 	ck_assert_str_eq(get_string(confs[OPT_LOCKFILE]), "/lockfile/path");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT]), "/ssl/cert/path");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT_CA]), "/cert_ca/path");
@@ -118,18 +140,6 @@ START_TEST(test_client_conf_ca_conf_problems)
 	tear_down(NULL, &confs);
 }
 END_TEST
-
-static void assert_strlist(struct strlist **s, const char *path, int flag)
-{
-	if(!path)
-	{
-		fail_unless(*s==NULL);
-		return;
-	}
-	ck_assert_str_eq((*s)->path, path);
-	fail_unless((*s)->flag==flag);
-	*s=(*s)->next;
-}
 
 static void assert_include(struct strlist **s, const char *path)
 {
@@ -259,8 +269,7 @@ START_TEST(test_server_conf)
 	build_file(CONFFILE, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(CONFFILE, confs));
 	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER);
-	ck_assert_str_eq(get_string(confs[OPT_PORT]), "1234");
-	ck_assert_str_eq(get_string(confs[OPT_STATUS_PORT]), "12345");
+	check_ports(confs, "1234", 5, "12345", 5);
 	ck_assert_str_eq(get_string(confs[OPT_LOCKFILE]), "/lockfile/path");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT]), "/ssl/cert/path");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT_CA]), "/cert_ca/path");
@@ -271,6 +280,89 @@ START_TEST(test_server_conf)
 	s=get_strlist(confs[OPT_KEEP]);
 	assert_strlist(&s, "10", 10);
 	assert_include(&s, NULL);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_server_port_conf_one_max_child)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
+		"port=1234\n"
+		"status_port=12345\n"
+		"max_children=12\n"
+		"max_status_children=21\n");
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+	check_ports(confs, "1234", 12, "12345", 21);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_server_port_conf_too_many_max_child)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
+		"port=1234\n"
+		"max_children=12\n"
+		"max_children=21\n");
+	fail_unless(conf_load_global_only(CONFFILE, confs)==-1);
+	fail_unless(get_strlist(confs[OPT_STATUS_PORT])==NULL);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_server_port_conf_few_max_child)
+{
+	struct strlist *s;
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
+		"port=1234\n"
+		"port=2345\n"
+		"port=3456\n"
+		"max_children=12\n"
+		"max_children=21\n");
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+
+	s=get_strlist(confs[OPT_PORT]);
+	assert_strlist(&s, "1234", 12);
+	assert_strlist(&s, "2345", 21);
+	assert_strlist(&s, "3456", 21); // takes the previous as default
+	fail_unless(get_strlist(confs[OPT_STATUS_PORT])==NULL);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_server_port_conf_complex)
+{
+	struct strlist *s;
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
+		"port=1234\n"
+		"port=2345\n"
+		"port=3456\n"
+		"max_children=12\n"
+		"max_children=21\n"
+		"max_children=37\n"
+		"status_port=987\n"
+		"status_port=654\n"
+		"status_port=321\n"
+		"max_status_children=4\n"
+		"max_status_children=5\n"
+		"max_status_children=6\n");
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+
+	s=get_strlist(confs[OPT_PORT]);
+	assert_strlist(&s, "1234", 12);
+	assert_strlist(&s, "2345", 21);
+	assert_strlist(&s, "3456", 37);
+	s=get_strlist(confs[OPT_STATUS_PORT]);
+	assert_strlist(&s, "987", 4);
+	assert_strlist(&s, "654", 5);
+	assert_strlist(&s, "321", 6);
 	tear_down(NULL, &confs);
 }
 END_TEST
@@ -717,6 +809,10 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_client_include_failures);
 	tcase_add_test(tc_core, test_client_include_glob);
 	tcase_add_test(tc_core, test_server_conf);
+	tcase_add_test(tc_core, test_server_port_conf_one_max_child);
+	tcase_add_test(tc_core, test_server_port_conf_too_many_max_child);
+	tcase_add_test(tc_core, test_server_port_conf_few_max_child);
+	tcase_add_test(tc_core, test_server_port_conf_complex);
 	tcase_add_test(tc_core, test_server_script_pre_post);
 	tcase_add_test(tc_core, test_server_script);
 	tcase_add_test(tc_core, test_backup_script_pre_post);

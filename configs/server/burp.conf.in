@@ -6,11 +6,20 @@ mode = server
 # They may be overridden here.
 #address = 0.0.0.0
 port = 4971
+max_children = 5
+# Optionally configure additional ports.
+# port = 5971
+# max_children = 6
+
 # Think carefully before changing the status port address, as it can be used
 # to view the contents of backups.
 #status_address = 127.0.0.1
 # If you do not wish to run a status server at all, comment status_port out.
 status_port = 4972
+max_status_children = 5
+# Optionally configure additional status_ports.
+# status_port = 5972
+# max_status_children = 6
 
 directory = @localstatedir@/spool/burp
 dedup_group = global
@@ -25,8 +34,6 @@ clientconfdir = @sysconfdir@/clientconfdir
 pidfile = @runstatedir@/burp.server.pid
 hardlinked_archive = 0
 working_dir_recovery_method = delete
-max_children = 5
-max_status_children = 5
 umask = 0022
 syslog = 1
 stdout = 0

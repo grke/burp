@@ -292,6 +292,8 @@ int init_client_socket(const char *host, const char *port)
 	hints.ai_flags = 0;
 	hints.ai_protocol = 0;
 
+	logp("Connecting to %s:%s\n", host?host:"loopback", port);
+
 	if((gai_ret=getaddrinfo(host, port, &hints, &result)))
 	{
 		logp("getaddrinfo: %s\n", gai_strerror(gai_ret));

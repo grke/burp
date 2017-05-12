@@ -135,8 +135,9 @@ int child(struct async *as, int is_status_server,
 	// parent socket to write status to.
 	if(status_wfd>0)
 	{
-		if(!(wasfd=setup_asfd(as, "child status pipe", &status_wfd)))
-			goto end;
+		if(!(wasfd=setup_asfd(as, "child status pipe", &status_wfd,
+			/*port*/-1)))
+				goto end;
 		wasfd->attempt_reads=0;
 	}
 

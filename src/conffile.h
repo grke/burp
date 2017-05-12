@@ -23,7 +23,6 @@ extern char *config_default_path(void);
 
 #ifdef UTEST
 extern int conf_load_lines_from_buf(const char *buf, struct conf **c);
-extern int conf_finalise(struct conf **c);
 extern int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
 	const char *path);
 #endif

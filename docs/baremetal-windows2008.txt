@@ -7,3 +7,14 @@ at the point of making the new disk bootable.
 
 TODO: Have another go at this. Perhaps I need to create a different version
 of the WinPE disk.
+
+
+However, burp user Dave Ludlow reports success with burp 2.0.54 and Server 2008
+R2 using the Windows 7 and 8 instructions:
+
+"The only catch is that I restored to a Virtual Machine and had to handle the
+change of hardware causing 0x7B BSODs on boot.
+
+I used a registry patch from http://www.andysblog.de/windows-mergeide-v3-0 to do
+it.  It adds support for the basic IDE/SCSI drivers in just a couple of
+keystrokes during the WinPE portion of the restore."

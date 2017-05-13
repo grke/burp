@@ -458,7 +458,6 @@ static int jiggle(struct sdirs *sdirs, struct fdirs *fdirs, struct sbuf *sb,
 		// Use the relinked path - something that used to be a hardlink
 		// but is now the original file because the file that we
 		// originally hardlinked to has been deleted.
-		logp("Using relinkpath\n");
 		ret=do_rename(relinkpath, finpath);
 		goto end;
 	}

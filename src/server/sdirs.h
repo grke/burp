@@ -49,7 +49,6 @@ struct sdirs
 	char *cincexc;
 	char *deltmppath;
 	char *treepath;
-	char *ctreepath;
 	char *relink;
 };
 

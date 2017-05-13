@@ -62,8 +62,7 @@ static int treedata(struct sbuf *sb, struct conf **cconfs)
 	return !path_too_long(&sb->path, cconfs);
 }
 
-static char *set_new_datapth(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf **cconfs,
+static char *set_new_datapth(struct sdirs *sdirs, struct conf **cconfs,
 	struct sbuf *sb, struct dpth *dpth, int *istreedata)
 {
 	char *tmp=NULL;
@@ -77,7 +76,7 @@ static char *set_new_datapth(struct asfd *asfd,
 		// the directory structure on the original client.
 		if(!(tmp=prepend_s(TREE_DIR, sb->path.buf)))
 		{
-			log_and_send_oom(asfd);
+			log_out_of_memory(__func__);
 			return NULL;
 		}
 	}
@@ -90,7 +89,7 @@ static char *set_new_datapth(struct asfd *asfd,
 	if(build_path(sdirs->datadirtmp,
 		sb->protocol1->datapth.buf, &rpath, sdirs->datadirtmp))
 	{
-		log_and_send(asfd, "build path failed");
+		logp("build path failed");
 		return NULL;
 	}
 	return rpath;
@@ -106,10 +105,9 @@ static int start_to_receive_new_file(struct asfd *asfd,
 
 //logp("start to receive: %s\n", sb->path.buf);
 
-	if(!(rpath=set_new_datapth(asfd,
-		sdirs, cconfs, sb, dpth, &istreedata)))
-			goto end;
-	
+	if(!(rpath=set_new_datapth(sdirs, cconfs, sb, dpth, &istreedata)))
+		goto end;
+
 	if(!(sb->protocol1->fzp=fzp_open(rpath, "wb")))
 	{
 		log_and_send(asfd, "make file failed");
@@ -315,13 +313,15 @@ static int get_hardlink_master_from_hmanio(
 		if(hb->path.cmd!=CMD_FILE
 		  && hb->path.cmd!=CMD_ENC_FILE)
 			continue;
-		if(!strcmp(hb->path.buf, cb->link.buf))
+		if(!strcmp(hb->path.buf, cb->link.buf)
+		  && hb->protocol1->datapth.buf)
 			return 1; // Found it.
 	}
 	return -1;
 }
 
 static int relink_deleted_hardlink_master(
+	struct dpth *dpth,
 	struct manio **hmanio,
 	struct sdirs *sdirs,
 	struct sbuf *p1b,
@@ -329,10 +329,13 @@ static int relink_deleted_hardlink_master(
 	struct conf **cconfs
 ) {
 	int ret=-1;
-	char *oldpath=NULL;
-	char *newpath=NULL;
+	char *newdatapth_full=NULL;
+	char *olddatapth_full=NULL;
+	char *newdatapth=NULL;
+	char *relinkpath_full=NULL;
 	struct stat statp;
 	struct sbuf *hb=NULL;
+	int istreedata=0;
 
 	if(!(hb=sbuf_alloc(PROTO_1)))
 		goto end;
@@ -352,41 +355,60 @@ static int relink_deleted_hardlink_master(
 	if(p1b->path.cmd!=hb->path.cmd)
 		return 0;
 
-	if(!(oldpath=prepend_s(sdirs->ctreepath, cb->link.buf))
-	  || !(newpath=prepend_s(sdirs->relink, p1b->path.buf)))
+	if(!(newdatapth_full=set_new_datapth(sdirs,
+		cconfs, p1b, dpth, &istreedata)))
+			goto end;
+	if(!istreedata) dpth_incr(dpth);
+	if(!(relinkpath_full=prepend_s(sdirs->relink,
+		p1b->protocol1->datapth.buf)))
+			goto end;
+	if(!(newdatapth=strdup_w(p1b->protocol1->datapth.buf, __func__)))
 		goto end;
-	if(lstat(oldpath, &statp) || !S_ISREG(statp.st_mode))
+/*
+printf("newdatapth_full: %s\n", newdatapth_full);
+printf("relinkpath_full: %s\n", relinkpath_full);
+printf("newdatapth: %s\n", newdatapth);
+printf("hbdatapth: %s\n", hb->protocol1->datapth.buf);
+printf("sdirs->currentdata: %s\n", sdirs->currentdata);
+*/
+
+	if(!(olddatapth_full=prepend_s(sdirs->currentdata,
+		hb->protocol1->datapth.buf)))
+			goto end;
+	if(lstat(olddatapth_full, &statp) || !S_ISREG(statp.st_mode))
 	{
+		logw(NULL, get_cntr(cconfs),
+			"Did not find path for relink: %s\n", olddatapth_full);
 		ret=0;
 		goto end;
 	}
-	if(build_path_w(newpath))
+	if(build_path_w(relinkpath_full))
 		goto end;
-	if(do_link(oldpath, newpath, &statp, cconfs, /*overwrite*/0))
-		goto end;
+	if(do_link(olddatapth_full, relinkpath_full,
+		&statp, cconfs, /*overwrite*/0))
+			goto end;
 
 	iobuf_free_content(&cb->protocol1->datapth);
 
-	free_w(&newpath);
-	if(!(newpath=strdup_w(p1b->path.buf, __func__)))
-		goto end;
-	iobuf_from_str(&hb->protocol1->datapth, CMD_DATAPTH, newpath);
-	newpath=NULL;
-	if(!(newpath=strdup_w(p1b->path.buf, __func__)))
-		goto end;
-	iobuf_from_str(&cb->protocol1->datapth, CMD_DATAPTH, newpath);
-	newpath=NULL;
+	iobuf_from_str(&hb->protocol1->datapth, CMD_DATAPTH,
+		p1b->protocol1->datapth.buf);
+	p1b->protocol1->datapth.buf=NULL;
+	iobuf_from_str(&cb->protocol1->datapth, CMD_DATAPTH, newdatapth);
+	newdatapth=NULL;
 	iobuf_move(&cb->endfile, &hb->endfile);
 
 	ret=1;
 end:
-	free_w(&oldpath);
-	free_w(&newpath);
+	free_w(&newdatapth_full);
+	free_w(&olddatapth_full);
+	free_w(&newdatapth);
+	free_w(&relinkpath_full);
 	sbuf_free(&hb);
 	return ret;
 }
 
 static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
+	struct dpth *dpth,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
 	struct manio *ucmanio, struct manio **hmanio, struct conf **cconfs)
 {
@@ -412,7 +434,7 @@ static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 			  && p1statp->st_mtime==cstatp->st_mtime)
 			{
 				switch(relink_deleted_hardlink_master(
-					hmanio, sdirs,
+					dpth, hmanio, sdirs,
 					p1b, cb, cconfs))
 				{
 					case 0:
@@ -509,6 +531,7 @@ static enum processed_e process_deleted_file(struct sbuf *cb,
 
 // return 1 to say that a file was processed
 static enum processed_e maybe_process_file(struct asfd *asfd,
+	struct dpth *dpth,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
 	struct manio *ucmanio, struct manio **hmanio, struct conf **cconfs)
 {
@@ -516,7 +539,7 @@ static enum processed_e maybe_process_file(struct asfd *asfd,
 	if(p1b)
 	{
 		if(!(pcmp=sbuf_pathcmp(cb, p1b)))
-			return maybe_do_delta_stuff(asfd, sdirs, cb, p1b,
+			return maybe_do_delta_stuff(asfd, dpth,sdirs, cb, p1b,
 				ucmanio, hmanio, cconfs);
 		else if(pcmp>0)
 		{
@@ -899,6 +922,7 @@ static int maybe_open_previous_manifest(struct manio **manio,
 }
 
 static int process_next_file_from_manios(struct asfd *asfd,
+	struct dpth *dpth,
 	struct sdirs *sdirs,
 	struct manio **p1manio,
 	struct manio **cmanio,
@@ -945,7 +969,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 	// manifest.
 	if(cb->path.buf)
 	{
-		switch(maybe_process_file(asfd,
+		switch(maybe_process_file(asfd, dpth,
 			sdirs, cb, *p1b, ucmanio, hmanio, cconfs))
 		{
 			case P_NEW:
@@ -989,7 +1013,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 				return 0;
 			case -1: goto error;
 		}
-		switch(maybe_process_file(asfd, sdirs,
+		switch(maybe_process_file(asfd, dpth, sdirs,
 			cb, *p1b, ucmanio, hmanio, cconfs))
 		{
 			case P_NEW:
@@ -1165,7 +1189,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		}
 
 		if(p1manio
-		 && process_next_file_from_manios(asfd, sdirs,
+		 && process_next_file_from_manios(asfd, dpth, sdirs,
 			&p1manio, &cmanio, ucmanio, &hmanio, &p1b, cb, cconfs))
 					goto error;
 	}

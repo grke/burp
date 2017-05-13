@@ -150,9 +150,7 @@ static int do_protocol1_dirs(struct sdirs *sdirs, const char *cname,
 	  || !(sdirs->datadirtmp=prepend_s(sdirs->working, "data.tmp"))
 	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest.gz"))
 	  || !(sdirs->cincexc=prepend_s(sdirs->current, "incexc"))
-	  || !(sdirs->deltmppath=prepend_s(sdirs->working, "deltmppath"))
-	  || !(sdirs->ctreepath=prepend_s(sdirs->current,
-		DATA_DIR "/" TREE_DIR)))
+	  || !(sdirs->deltmppath=prepend_s(sdirs->working, "deltmppath")))
 			return -1;
 	// sdirs->rworking gets set later.
 	// sdirs->treepath gets set later.
@@ -275,7 +273,6 @@ void sdirs_free_content(struct sdirs *sdirs)
 	free_w(&sdirs->cincexc);
 	free_w(&sdirs->deltmppath);
 	free_w(&sdirs->treepath);
-	free_w(&sdirs->ctreepath);
 	free_w(&sdirs->relink);
 }
 

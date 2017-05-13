@@ -20,6 +20,7 @@
 #include "rubble.h"
 #include "sdirs.h"
 #include "run_action.h"
+#include "timestamp.h"
 
 // FIX THIS: Somewhat haphazard.
 /* Return 0 for everything OK. -1 for error, or 1 to mean that there was
@@ -396,6 +397,23 @@ static const char *buf_to_notify_str(struct iobuf *rbuf)
 	else return "unknown";
 }
 
+static int maybe_write_first_created_file(struct sdirs *sdirs)
+{
+	char tstmp[32]="";
+	if(is_reg_lstat(sdirs->created)>0
+	  || is_lnk_lstat(sdirs->current)>0
+	  || is_lnk_lstat(sdirs->working)>0
+	  || is_lnk_lstat(sdirs->finishing)>0)
+		return 0;
+
+	if(timestamp_get_new(sdirs, /*index*/0,
+		tstmp, sizeof(tstmp),
+		/*bufforfile*/NULL, /*bs*/0,
+		/*format*/NULL))
+			return -1;
+	return timestamp_write(sdirs->created, tstmp);
+}
+
 static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int srestore, int *timer_ret, struct conf **cconfs)
 {
@@ -412,6 +430,9 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 		log_and_send(as->asfd, msg);
 		return -1;
 	}
+
+	if(maybe_write_first_created_file(sdirs))
+		return -1;
 
 	if(rbuf->cmd!=CMD_GEN)
 		return unknown_command(as->asfd);

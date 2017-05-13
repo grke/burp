@@ -96,6 +96,7 @@ static void protocol1_tests(struct sdirs *sdirs)
 	fail_unless(sdirs->data==NULL);
 	ck_assert_str_eq(sdirs->clients, BASE);
 	ck_assert_str_eq(sdirs->client, CLIENT);
+	ck_assert_str_eq(sdirs->created, CLIENT "/.created");
 	ck_assert_str_eq(sdirs->working, WORKING);
 	ck_assert_str_eq(sdirs->finishing, CLIENT "/finishing");
 	ck_assert_str_eq(sdirs->current, CLIENT "/current");
@@ -136,6 +137,7 @@ static void protocol2_tests(struct sdirs *sdirs)
 	ck_assert_str_eq(sdirs->data, DATA);
 	ck_assert_str_eq(sdirs->clients, CLIENTS);
 	ck_assert_str_eq(sdirs->client, CLIENT2);
+	ck_assert_str_eq(sdirs->created, CLIENT2 "/.created");
 	ck_assert_str_eq(sdirs->working, WORKING2);
 	ck_assert_str_eq(sdirs->finishing, CLIENT2 "/finishing");
 	ck_assert_str_eq(sdirs->current, CLIENT2 "/current");

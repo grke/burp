@@ -24,18 +24,26 @@ void close_fd(int *fd)
 
 int is_dir_lstat(const char *path)
 {
-        struct stat buf;
-        if(lstat(path, &buf))
+	struct stat buf;
+	if(lstat(path, &buf))
 		return -1;
-        return S_ISDIR(buf.st_mode);
+	return S_ISDIR(buf.st_mode);
 }
 
 int is_reg_lstat(const char *path)
 {
-        struct stat buf;
-        if(lstat(path, &buf))
+	struct stat buf;
+	if(lstat(path, &buf))
 		return -1;
-        return S_ISREG(buf.st_mode);
+	return S_ISREG(buf.st_mode);
+}
+
+int is_lnk_lstat(const char *path)
+{
+	struct stat buf;
+	if(lstat(path, &buf))
+		return -1;
+	return S_ISLNK(buf.st_mode);
 }
 
 int is_dir(const char *path, struct dirent *d)
@@ -421,9 +429,9 @@ static int entries_in_directory(const char *path, char ***nl,
 
 	if(!fs_name_max)
 	{
-        	// Get system path and filename maximum lengths.
-        	// FIX THIS: maybe this should be done every time a file system
-        	// is crossed?
+		// Get system path and filename maximum lengths.
+		// FIX THIS: maybe this should be done every time a file system
+		// is crossed?
 		if(init_fs_max(path)) return -1;
 	}
 #if defined(O_DIRECTORY) && defined(O_NOATIME)
@@ -440,7 +448,7 @@ static int entries_in_directory(const char *path, char ***nl,
 		close_fd(&dfd);
 #endif
 		ret=1;
-        }
+	}
 	else
 	{
 		if(do_get_entries_in_directory(directory, nl, count,

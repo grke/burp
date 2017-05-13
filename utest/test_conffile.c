@@ -124,6 +124,86 @@ START_TEST(test_client_conf)
 }
 END_TEST
 
+static void check_client_ports(struct conf **confs,
+	int p_backup, int p_restore, int p_verify, int p_list, int p_delete)
+{
+	fail_unless(get_int(confs[OPT_PORT_BACKUP])==p_backup);
+	fail_unless(get_int(confs[OPT_PORT_RESTORE])==p_restore);
+	fail_unless(get_int(confs[OPT_PORT_VERIFY])==p_verify);
+	fail_unless(get_int(confs[OPT_PORT_LIST])==p_list);
+	fail_unless(get_int(confs[OPT_PORT_DELETE])==p_delete);
+}
+
+START_TEST(test_client_conf_ports_opt_port_only)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_CLIENT_CONF);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+	check_client_ports(confs, 1234, 1234, 1234, 1234, 1234);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_client_conf_ports_opt_port_and_restore)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_CLIENT_CONF_NO_PORTS
+		"port=1234\n"
+		"port_restore=5555\n"
+	);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+	check_client_ports(confs, 1234, 5555, 5555, 1234, 1234);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_client_conf_ports_opt_port_and_all)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_CLIENT_CONF_NO_PORTS
+		"port=1234\n"
+		"port_backup=2345\n"
+		"port_restore=3456\n"
+		"port_verify=4567\n"
+		"port_list=5678\n"
+		"port_delete=6789\n"
+	);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+	check_client_ports(confs, 2345, 3456, 4567, 5678, 6789);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_client_conf_ports_no_opt_port_and_all)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_CLIENT_CONF_NO_PORTS
+		"port_backup=2345\n"
+		"port_restore=3456\n"
+		"port_verify=4567\n"
+		"port_list=5678\n"
+		"port_delete=6789\n"
+	);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+	check_client_ports(confs, 2345, 3456, 4567, 5678, 6789);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
+START_TEST(test_client_conf_ports_none)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_CLIENT_CONF_NO_PORTS);
+	fail_unless(conf_load_global_only(CONFFILE, confs)==-1);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
 START_TEST(test_client_conf_ca_conf_problems)
 {
 	const char *buf="mode=client\n"
@@ -808,6 +888,11 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_client_includes_excludes);
 	tcase_add_test(tc_core, test_client_include_failures);
 	tcase_add_test(tc_core, test_client_include_glob);
+	tcase_add_test(tc_core, test_client_conf_ports_opt_port_only);
+	tcase_add_test(tc_core, test_client_conf_ports_opt_port_and_restore);
+	tcase_add_test(tc_core, test_client_conf_ports_opt_port_and_all);
+	tcase_add_test(tc_core, test_client_conf_ports_no_opt_port_and_all);
+	tcase_add_test(tc_core, test_client_conf_ports_none);
 	tcase_add_test(tc_core, test_server_conf);
 	tcase_add_test(tc_core, test_server_port_conf_one_max_child);
 	tcase_add_test(tc_core, test_server_port_conf_too_many_max_child);

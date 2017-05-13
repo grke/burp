@@ -24,17 +24,20 @@
 	"port=1234\n"				\
 	"status_port=12345\n"			\
 
-#define MIN_CLIENT_CONF				\
+#define MIN_CLIENT_CONF_NO_PORTS		\
 	"mode=client\n"				\
 	"server=4.5.6.7\n"			\
-	"port=1234\n"				\
-	"status_port=12345\n"			\
 	"lockfile=/lockfile/path\n"		\
 	"ssl_cert=/ssl/cert/path\n"		\
 	"ssl_cert_ca=/cert_ca/path\n"		\
 	"ssl_peer_cn=my_cn\n"			\
 	"ca_csr_dir=/csr/dir\n"			\
 	"ssl_key=/ssl/key/path\n"		\
+
+#define MIN_CLIENT_CONF				\
+	MIN_CLIENT_CONF_NO_PORTS		\
+	"port=1234\n"				\
+	"status_port=12345\n"			\
 
 struct iobuf;
 struct sbuf;

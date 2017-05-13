@@ -204,9 +204,9 @@ static int s_server_session_id_context=1;
 static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 	enum action action, struct conf **confs)
 {
-	enum conf_opt port_opt;
+	int port=-1;
+	char portstr[8]="";
 	BIO *sbio=NULL;
-	struct strlist *port=NULL;
 	ssl_load_globals();
 	if(!(*ctx=ssl_initialise_ctx(confs)))
 	{
@@ -220,18 +220,50 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 
 	switch(action)
 	{
+		case ACTION_BACKUP:
+		case ACTION_BACKUP_TIMED:
+		case ACTION_TIMER_CHECK:
+			port=get_int(confs[OPT_PORT_BACKUP]);
+			break;
+		case ACTION_RESTORE:
+			port=get_int(confs[OPT_PORT_RESTORE]);
+			break;
+		case ACTION_VERIFY:
+			port=get_int(confs[OPT_PORT_VERIFY]);
+			break;
+		case ACTION_LIST:
+		case ACTION_LIST_LONG:
+		case ACTION_DIFF:
+		case ACTION_DIFF_LONG:
+			port=get_int(confs[OPT_PORT_LIST]);
+			break;
+		case ACTION_DELETE:
+			port=get_int(confs[OPT_PORT_DELETE]);
+			break;
 		case ACTION_MONITOR:
-			port_opt=OPT_STATUS_PORT;
+		{
+			struct strlist *s;
+			if(!(s=get_strlist(confs[OPT_STATUS_PORT])))
+			{
+				logp("%s not set\n",
+					confs[OPT_STATUS_PORT]->field);
+				return -1;
+			}
+			port=atoi(s->path);
 			break;
-		default:
-			port_opt=OPT_PORT;
-			break;
+		}
+		case ACTION_CHAMP_CHOOSER:
+		case ACTION_ESTIMATE:
+		case ACTION_STATUS:
+		case ACTION_STATUS_SNAPSHOT:
+			logp("Unexpected action in %s: %d\n",
+				__func__, action);
+			return -1;
 	}
 
-	port=get_strlist(confs[port_opt]);
-	if((*rfd=init_client_socket(get_string(confs[OPT_SERVER]),
-		port->path))<0)
-			return -1;
+	snprintf(portstr, sizeof(portstr), "%d", port);
+	if((*rfd=init_client_socket(get_string(confs[OPT_SERVER]), portstr))<0)
+		return -1;
 
 	if(!(*ssl=SSL_new(*ctx))
 	  || !(sbio=BIO_new_socket(*rfd, BIO_NOCLOSE)))

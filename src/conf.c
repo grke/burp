@@ -430,6 +430,16 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "address");
 	case OPT_PORT:
 	  return sc_lst(c[o], 0, 0, "port");
+	case OPT_PORT_BACKUP:
+	  return sc_int(c[o], 0, 0, "port_backup");
+	case OPT_PORT_RESTORE:
+	  return sc_int(c[o], 0, 0, "port_restore");
+	case OPT_PORT_VERIFY:
+	  return sc_int(c[o], 0, 0, "port_verify");
+	case OPT_PORT_LIST:
+	  return sc_int(c[o], 0, 0, "port_list");
+	case OPT_PORT_DELETE:
+	  return sc_int(c[o], 0, 0, "port_delete");
 	case OPT_STATUS_ADDRESS:
 	  return sc_str(c[o], 0, 0, "status_address");
 	case OPT_STATUS_PORT:

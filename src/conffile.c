@@ -410,6 +410,9 @@ static void conf_problem(const char *conf_path, const char *msg, int *r)
 
 static int server_conf_checks(struct conf **c, const char *path, int *r)
 {
+	if(!get_strlist(c[OPT_PORT]))
+		conf_problem(path, "port unset", r);
+
 	// FIX THIS: Most of this could be done by flags.
 	if(!get_string(c[OPT_ADDRESS])
 	  && set_string(c[OPT_ADDRESS], DEFAULT_ADDRESS_MAIN))
@@ -647,6 +650,18 @@ static int general_conf_checks(struct conf **c, const char *path, int *r)
 static int client_conf_checks(struct conf **c, const char *path, int *r)
 {
 	const char *autoupgrade_os=get_string(c[OPT_AUTOUPGRADE_OS]);
+
+	if(!get_int(c[OPT_PORT_BACKUP]))
+		conf_problem(path, "port_backup unset", r);
+	if(!get_int(c[OPT_PORT_RESTORE]))
+		conf_problem(path, "port_restore unset", r);
+	if(!get_int(c[OPT_PORT_VERIFY]))
+		conf_problem(path, "port_verify unset", r);
+	if(!get_int(c[OPT_PORT_LIST]))
+		conf_problem(path, "port_list unset", r);
+	if(!get_int(c[OPT_PORT_DELETE]))
+		conf_problem(path, "port_delete unset", r);
+
 	if(!get_string(c[OPT_CNAME]))
 	{
 		if(get_cname_from_ssl_cert(c)) return -1;
@@ -972,6 +987,30 @@ static int finalise_server_ports(struct conf **c,
 	return 0;
 }
 
+static int finalise_client_ports(struct conf **c)
+{
+	int port=0;
+	struct strlist *p;
+
+	for(p=get_strlist(c[OPT_PORT]); p; p=p->next)
+		port=atoi(p->path);
+	if(!port)
+		return 0;
+
+	if(!get_int(c[OPT_PORT_BACKUP]))
+		set_int(c[OPT_PORT_BACKUP], port);
+	if(!get_int(c[OPT_PORT_RESTORE]))
+		set_int(c[OPT_PORT_RESTORE], port);
+	if(!get_int(c[OPT_PORT_VERIFY]))
+		set_int(c[OPT_PORT_VERIFY], get_int(c[OPT_PORT_RESTORE]));
+	if(!get_int(c[OPT_PORT_LIST]))
+		set_int(c[OPT_PORT_LIST], port);
+	if(!get_int(c[OPT_PORT_DELETE]))
+		set_int(c[OPT_PORT_DELETE], port);
+
+	return 0;
+}
+
 static int conf_finalise(struct conf **c)
 {
 	enum burp_mode burp_mode=get_e_burp_mode(c[OPT_BURP_MODE]);
@@ -1001,6 +1040,11 @@ static int conf_finalise(struct conf **c)
 		  || finalise_server_ports(c,
 			OPT_STATUS_PORT, OPT_MAX_STATUS_CHILDREN))
 				return -1;
+	}
+	if(burp_mode==BURP_MODE_CLIENT)
+	{
+		if(finalise_client_ports(c))
+			return -1;
 	}
 
 	if((s_script_notify=get_int(c[OPT_S_SCRIPT_NOTIFY])))
@@ -1036,9 +1080,6 @@ static int conf_finalise(struct conf **c)
 static int conf_finalise_global_only(const char *conf_path, struct conf **confs)
 {
 	int r=0;
-
-	if(!get_strlist(confs[OPT_PORT]))
-		conf_problem(conf_path, "port unset", &r);
 
 	// Let the caller check the 'keep' value.
 

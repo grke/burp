@@ -486,7 +486,25 @@ Required to run in client mode.
 Defines the server to connect to.
 .TP
 \fBport=[port number]\fR
-Defines the TCP port that the server is listening on.
+Defines the TCP port on the server that we will send requests to. If this option is set, it is the default for these options, which can be overridden individually: port_backup, port_restore, port_verify, port_list, port_delete. If this option is not set, you will need to set all of the port options separately.
+.TP
+\fBport_backup=[port number]\fR
+Defines the TCP port on the server that we will send backup requests to. If not set, it defaults to the port option.
+.TP
+\fBport_restore=[port number]\fR
+Defines the TCP port on the server that we will send restore requests to. If not set, it defaults to the port option.
+.TP
+\fBport_verify=[port number]\fR
+Defines the TCP port on the server that we will send verify requests to. If not set, it defaults to the port_restore option.
+.TP
+\fBport_list=[port number]\fR
+Defines the TCP port on the server that we will send list requests to. If not set, it defaults to the port option.
+.TP
+\fBport_delete=[port number]\fR
+Defines the TCP port on the server that we will send delete requests to. If not set, it defaults to the port option.
+.TP
+\fBstatus_port=[port number]\fR
+Defines the TCP port that the server is listening on for status requests.
 .TP
 \fBcname=[password]\fR
 Defines the client name to identify as to the server.

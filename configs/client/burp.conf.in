@@ -2,6 +2,8 @@
 
 mode = client
 port = 4971
+# A different port to use for restores - see the man page for more options.
+#port_restore = 5971
 status_port = 4972
 server = @server_address@
 password = abcdefgh

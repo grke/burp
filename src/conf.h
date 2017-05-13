@@ -132,6 +132,11 @@ enum conf_opt
 
 	// Client options.
 	OPT_CNAME, // set on the server when client connects
+	OPT_PORT_BACKUP,
+	OPT_PORT_RESTORE,
+	OPT_PORT_VERIFY,
+	OPT_PORT_LIST,
+	OPT_PORT_DELETE,
 	OPT_PASSWORD, // also a clientconfdir option
 	OPT_PASSWD, // also a clientconfdir option
 	OPT_ENABLED, // also a clientconfdir option

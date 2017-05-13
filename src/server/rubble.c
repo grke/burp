@@ -12,6 +12,26 @@
 #include "protocol2/backup_phase4.h"
 #include "sdirs.h"
 #include "rubble.h"
+#include "timestamp.h"
+
+int append_to_resume_file(const char *path)
+{
+	int ret=-1;
+	char tstmp[32]="";
+	char *resume_path=NULL;
+
+	if(timestamp_get_new(/*index*/0,
+		tstmp, sizeof(tstmp),
+		/*bufforfile*/NULL, /*bs*/0,
+		/*format*/NULL))
+			goto end;
+	if(!(resume_path=prepend_s(path, "resumed")))
+		goto end;
+	ret=timestamp_write(resume_path, tstmp);
+end:
+	free_w(&resume_path);
+	return ret;
+}
 
 static int incexc_matches(const char *fullrealwork, const char *incexc)
 {
@@ -116,6 +136,9 @@ static int recover_finishing(struct async *as,
 	char msg[128]="";
 	struct asfd *asfd=as->asfd;
 	logp("Found finishing symlink - attempting to complete prior backup!\n");
+
+	if(append_to_resume_file(sdirs->finishing))
+		return -1;
 
 	snprintf(msg, sizeof(msg),
 		"Now finalising previous backup of client. "
@@ -240,6 +263,8 @@ static int recover_currenttmp(struct sdirs *sdirs)
 		case 0:
 			logp("But currenttmp is not pointing at something valid.\n");
 			logp("Deleting it.\n");
+			if(append_to_resume_file(sdirs->currenttmp))
+				return -1;
 			return unlink_w(sdirs->currenttmp, __func__);
 		case -1:
 			return -1;
@@ -258,6 +283,9 @@ static int recover_currenttmp(struct sdirs *sdirs)
 				case 0:
 					logp("But current symlink is not pointing at something valid.\n");
 					logp("Replacing current with currenttmp.\n");
+					if(append_to_resume_file(
+						sdirs->currenttmp))
+							return -1;
 					return do_rename(sdirs->currenttmp,
 						sdirs->current);
 				case 1:
@@ -269,6 +297,8 @@ static int recover_currenttmp(struct sdirs *sdirs)
 			}
 		default:
 			logp("Renaming currenttmp to current\n");
+			if(append_to_resume_file(sdirs->currenttmp))
+				return -1;
 			return do_rename(sdirs->currenttmp, sdirs->current);
 	}
 }

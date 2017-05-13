@@ -406,7 +406,7 @@ static int maybe_write_first_created_file(struct sdirs *sdirs)
 	  || is_lnk_lstat(sdirs->finishing)>0)
 		return 0;
 
-	if(timestamp_get_new(sdirs, /*index*/0,
+	if(timestamp_get_new(/*index*/0,
 		tstmp, sizeof(tstmp),
 		/*bufforfile*/NULL, /*bs*/0,
 		/*format*/NULL))

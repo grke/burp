@@ -27,7 +27,7 @@ int timestamp_read(const char *path, char buf[], size_t len)
 int timestamp_write(const char *path, const char *tstmp)
 {
 	struct fzp *fzp=NULL;
-	if(!(fzp=fzp_open(path, "wb"))) return -1;
+	if(!(fzp=fzp_open(path, "ab"))) return -1;
 	fzp_printf(fzp, "%s\n", tstmp);
 	fzp_close(&fzp);
 	return 0;
@@ -43,7 +43,7 @@ static void timestamp_write_to_buf(char *buf, size_t s,
 	snprintf(buf, s, "%07" PRIu64 " %s", index, tmpbuf);
 }
 
-int timestamp_get_new(struct sdirs *sdirs, uint64_t index,
+int timestamp_get_new(uint64_t index,
 	char *buf, size_t s, char *bufforfile, size_t bs, const char *format)
 {
 	time_t t=0;

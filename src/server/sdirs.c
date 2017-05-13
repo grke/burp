@@ -104,7 +104,7 @@ int sdirs_create_real_working(struct sdirs *sdirs, const char *timestamp_format)
 	if(build_path_w(sdirs->working))
 		return -1;
 	index=get_new_index(sdirs);
-	if(timestamp_get_new(sdirs, index,
+	if(timestamp_get_new(index,
 		tstmp, sizeof(tstmp), fname, sizeof(fname), timestamp_format)
 	  || free_prepend_s(&sdirs->rworking, sdirs->client, fname)
 	  || free_prepend_s(&sdirs->treepath,

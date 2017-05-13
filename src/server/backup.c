@@ -22,6 +22,7 @@
 #include "protocol2/backup_phase2.h"
 #include "protocol2/backup_phase4.h"
 #include "backup.h"
+#include "rubble.h"
 
 static int open_log(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs)
@@ -161,6 +162,9 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		if(sdirs_get_real_working_from_symlink(sdirs)
 		  || sdirs_get_real_manifest(sdirs, protocol)
 		  || open_log(asfd, sdirs, cconfs))
+			goto error;
+
+		if(append_to_resume_file(sdirs->working))
 			goto error;
 	}
 	else

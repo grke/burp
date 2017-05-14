@@ -423,7 +423,7 @@ static void test_cstat_set_run_status_not_permitted(enum protocol protocol)
 {
 	struct cstat *cstat;
 	cstat=set_run_status_setup(protocol, 0 /*not permitted*/);
-	cstat_set_run_status(cstat);
+	cstat_set_run_status(cstat, RUN_STATUS_RUNNING);
 	fail_unless(cstat->run_status==RUN_STATUS_UNSET);
 	tear_down(&cstat);
 }
@@ -432,76 +432,17 @@ static void test_cstat_set_run_status_idle(enum protocol protocol)
 {
 	struct cstat *cstat;
 	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
-	cstat_set_run_status(cstat);
+	cstat_set_run_status(cstat, RUN_STATUS_IDLE);
 	fail_unless(cstat->run_status==RUN_STATUS_IDLE);
-	tear_down(&cstat);
-}
-
-static struct sd sd1w[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_WORKING }
-};
-
-static void test_cstat_set_run_status_client_crashed(enum protocol protocol)
-{
-	struct cstat *cstat;
-	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
-	fail_unless(recursive_delete(BASE)==0);
-	build_storage_dirs((struct sdirs *)cstat->sdirs,
-		sd1w, ARR_LEN(sd1w));
-	cstat_set_run_status(cstat);
-	fail_unless(cstat->run_status==RUN_STATUS_CLIENT_CRASHED);
-	tear_down(&cstat);
-}
-
-static void test_cstat_set_run_status_server_crashed(enum protocol protocol)
-{
-	struct cstat *cstat;
-	struct sdirs *sdirs;
-	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
-	fail_unless(recursive_delete(BASE)==0);
-	build_storage_dirs((struct sdirs *)cstat->sdirs,
-		sd1w, ARR_LEN(sd1w));
-	sdirs=(struct sdirs *)cstat->sdirs;
-	build_file(sdirs->lock->path, NULL);
-	cstat_set_run_status(cstat);
-	fail_unless(cstat->run_status==RUN_STATUS_SERVER_CRASHED);
 	tear_down(&cstat);
 }
 
 static void test_cstat_set_run_status_running(enum protocol protocol)
 {
-	int waitstat;
 	struct cstat *cstat;
-	struct sdirs *sdirs;
-	struct lock *lock;
 	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
-	clean();
-	build_storage_dirs((struct sdirs *)cstat->sdirs,
-		sd1w, ARR_LEN(sd1w));
-	sdirs=(struct sdirs *)cstat->sdirs;
-	lock=sdirs->lock;
-
-        switch(fork())
-	{
-		case -1: fail_unless(0==1);
-			 break;
-		case 0: // Child.
-		{
-			lock_get_quick(lock);
-			sleep(2);
-			lock_release(lock);
-			exit(0);
-		}
-		default: break;
-	}
-        // Parent.
-
-	sleep(1);
-	lock_get(lock);
-	fail_unless(lock->status==GET_LOCK_NOT_GOT);
-	cstat_set_run_status(cstat);
+	cstat_set_run_status(cstat, RUN_STATUS_RUNNING);
 	fail_unless(cstat->run_status==RUN_STATUS_RUNNING);
-	wait(&waitstat);
 	tear_down(&cstat);
 }
 
@@ -511,10 +452,6 @@ START_TEST(test_cstat_set_run_status)
 	test_cstat_set_run_status_not_permitted(PROTO_2);
 	test_cstat_set_run_status_idle(PROTO_1);
 	test_cstat_set_run_status_idle(PROTO_2);
-	test_cstat_set_run_status_client_crashed(PROTO_1);
-	test_cstat_set_run_status_client_crashed(PROTO_2);
-	test_cstat_set_run_status_server_crashed(PROTO_1);
-	test_cstat_set_run_status_server_crashed(PROTO_2);
 	test_cstat_set_run_status_running(PROTO_1);
 	test_cstat_set_run_status_running(PROTO_2);
 }
@@ -533,8 +470,6 @@ static void do_test_cstat_reload_from_client_confs(enum protocol protocol)
 
 	// First time, nothing is reloaded.
 	fail_unless(reload_from_clientdir(&clist)==0);
-	fail_unless(c1->run_status==RUN_STATUS_IDLE);
-	fail_unless(c2->run_status==RUN_STATUS_UNSET);
 	fail_unless(c1->bu==NULL);
 	fail_unless(c2->bu==NULL);
 
@@ -542,17 +477,11 @@ static void do_test_cstat_reload_from_client_confs(enum protocol protocol)
 	build_storage_dirs((struct sdirs *)c1->sdirs,
 		sd123, ARR_LEN(sd123));
 	fail_unless(reload_from_clientdir(&clist)==1);
-	fail_unless(c1->run_status==RUN_STATUS_IDLE);
-	fail_unless(c2->run_status==RUN_STATUS_UNSET);
 	fail_unless(c1->bu!=NULL);
 	fail_unless(c2->bu==NULL);
 
 	// Go again, nothing should be reloaded.
 	fail_unless(reload_from_clientdir(&clist)==0);
-
-	// Get a lock.
-	lock_get_quick(((struct sdirs *)c1->sdirs)->lock);
-	fail_unless(reload_from_clientdir(&clist)==1);
 
 	sdirs_free((struct sdirs **)&c1->sdirs);
 	sdirs_free((struct sdirs **)&c2->sdirs);

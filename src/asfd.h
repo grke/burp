@@ -85,6 +85,7 @@ struct asfd
 	// For the main server process.
 	pid_t pid;
 	enum asfd_fdtype fdtype;
+	char *client;
 
 	// Counters
 	uint64_t sent;

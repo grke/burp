@@ -270,7 +270,7 @@ static int recover_currenttmp(struct sdirs *sdirs)
 			return -1;
 	}
 
-	switch(is_lnk(sdirs->current))
+	switch(is_lnk_lstat(sdirs->current))
 	{
 		case 0:
 			logp("But current already exists and is not a symlink!\n");
@@ -303,14 +303,21 @@ static int recover_currenttmp(struct sdirs *sdirs)
 	}
 }
 
+int check_for_rubble(struct sdirs *sdirs)
+{
+	return is_lnk_lstat(sdirs->finishing)>0
+	  || is_lnk_lstat(sdirs->working)>0
+	  || is_lnk_lstat(sdirs->currenttmp)>0;
+}
+
 // Return 1 if the backup is now finalising.
-int check_for_rubble(struct async *as,
+int check_for_rubble_and_clean(struct async *as,
 	struct sdirs *sdirs, const char *incexc,
 	int *resume, struct conf **cconfs)
 {
 	struct asfd *asfd=as->asfd;
 
-	switch(is_lnk(sdirs->finishing))
+	switch(is_lnk_lstat(sdirs->finishing))
 	{
 		case 1:
 			if(recover_finishing(as, sdirs, cconfs))
@@ -322,7 +329,7 @@ int check_for_rubble(struct async *as,
 			return -1;
 	}
 
-	switch(is_lnk(sdirs->working))
+	switch(is_lnk_lstat(sdirs->working))
 	{
 		case 1:
 			return recover_working(as,
@@ -333,7 +340,7 @@ int check_for_rubble(struct async *as,
 			return -1;
 	}
 
-	switch(is_lnk(sdirs->currenttmp))
+	switch(is_lnk_lstat(sdirs->currenttmp))
 	{
 		case 1:
 			return recover_currenttmp(sdirs);

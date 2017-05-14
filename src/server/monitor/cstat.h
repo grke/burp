@@ -3,7 +3,8 @@
 
 extern int cstat_load_data_from_disk(struct cstat **clist,
 	struct conf **globalcs, struct conf **cconfs);
-extern void cstat_set_run_status(struct cstat *cstat);
+extern void cstat_set_run_status(struct cstat *cstat,
+	enum run_status run_status);
 extern int cstat_set_backup_list(struct cstat *cstat);
 
 #ifdef UTEST

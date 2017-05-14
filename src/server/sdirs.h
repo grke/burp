@@ -42,7 +42,9 @@ struct sdirs
 	char *phase1data;
 
 	char *lockdir;
-	struct lock *lock;
+	// For backup/delete, lock all storage directories for other
+	// backups/deletes.
+	struct lock *lock_storage_for_write;
 
 	// Protocol1 directories.
 	char *currentdata;

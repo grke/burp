@@ -36,7 +36,7 @@ static int do_lock_dirs(struct sdirs *sdirs,
 			goto end;
 	}
 	if(!(lockfile=prepend_s(lockbase, "lockfile"))
-	  || !(sdirs->lock=lock_alloc_and_init(lockfile)))
+	  || !(sdirs->lock_storage_for_write=lock_alloc_and_init(lockfile)))
 		goto end;
 	ret=0;
 end:
@@ -293,7 +293,7 @@ void sdirs_free_content(struct sdirs *sdirs)
 	free_w(&sdirs->phase1data);
 
 	free_w(&sdirs->lockdir);
-	lock_free(&sdirs->lock);
+	lock_free(&sdirs->lock_storage_for_write);
 
 	// Protocol1 directories.
 	free_w(&sdirs->currentdata);

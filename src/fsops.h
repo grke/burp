@@ -11,7 +11,6 @@ extern void close_fd(int *fd);
 extern int is_dir(const char *path, struct dirent *d);
 extern int is_dir_lstat(const char *path);
 extern int is_reg_lstat(const char *path);
-extern int is_lnk_lstat(const char *path);
 extern int mkpath(char **rpath, const char *limit);
 extern int build_path(const char *datadir, const char *fname,
         char **rpath, const char *limit);
@@ -34,7 +33,7 @@ extern int filter_dot(const struct dirent *d);
 #ifndef HAVE_WIN32
 extern int mksock(const char *path);
 
-extern int is_lnk(const char *path);
+extern int is_lnk_lstat(const char *path);
 extern int is_lnk_valid(const char *path);
 extern int do_symlink(const char *oldpath, const char *newpath);
 extern int readlink_w(const char *path, char buf[], size_t buflen);

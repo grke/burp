@@ -7,6 +7,7 @@
 #include "../cntr.h"
 #include "../handy.h"
 #include "../linkhash.h"
+#include "../lock.h"
 #include "../log.h"
 #include "../pathcmp.h"
 #include "../prepend.h"
@@ -23,6 +24,7 @@
 #include "protocol2/rblk.h"
 #include "protocol2/restore.h"
 #include "../protocol2/rabin/rabin.h"
+#include "rubble.h"
 #include "sdirs.h"
 
 static enum asl_ret restore_end_func(struct asfd *asfd,
@@ -592,13 +594,26 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	char *logpathz=NULL;
 	enum protocol protocol;
 	enum cntr_status cntr_status;
+	struct lock *lock=NULL;
+	char *lockfile=NULL;
 	static int manifest_count=0;
 
 	protocol=get_protocol(cconfs);
-
 	if(protocol==PROTO_2
 	  && blks_generate_init())
 		goto end;
+
+	if(!(lockfile=prepend_s(bu->path, "lockfile.read"))
+	  || !(lock=lock_alloc_and_init(lockfile)))
+		goto end;
+	lock_get(lock);
+	if(lock->status!=GET_LOCK_GOT)
+	{
+		char msg[256]="";
+		snprintf(msg, sizeof(msg), "Another process is restoring or verifying backup %s.\n", bu->timestamp);
+		asfd->write_str(asfd, CMD_ERROR, msg);
+		goto end;
+	}
 
 	// For sending status information up to the server.
 	cntr_status=CNTR_STATUS_RESTORING;
@@ -650,6 +665,11 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 			goto end;
 	}
 
+	if(lock_test(sdirs->lock_storage_for_write->path))
+		logm(asfd, cconfs, "Another process is currently backing up or deleting for this client.\n");
+	else if(check_for_rubble(sdirs))
+		logw(asfd, get_cntr(cconfs), "The latest backup needs recovery, but continuing anyway.\n");
+
 	// Now, do the actual restore.
 	ret=actual_restore(asfd, bu, manifest,
 		  regex, srestore, act, sdirs, cntr_status, cconfs);
@@ -661,6 +681,9 @@ end:
 	free_w(&logpathz);
 	if(protocol==PROTO_2)
 		blks_generate_free();
+	free_w(&lockfile);
+	lock_release(lock);
+	lock_free(&lock);
 	manifest_count++;
 	return ret;
 }

@@ -227,8 +227,8 @@ static int process_data_dir_file(struct asfd *asfd,
 	struct cntr *cntr=NULL;
 	if(cconfs) cntr=get_cntr(cconfs);
 
-	if((!tmppath1 && !(tmppath1=prepend_s(sdirs->client, "tmp1")))
-	  || (!tmppath2 && !(tmppath2=prepend_s(sdirs->client, "tmp2"))))
+	if((!tmppath1 && !(tmppath1=prepend_s(bu->path, "tmp1")))
+	  || (!tmppath2 && !(tmppath2=prepend_s(bu->path, "tmp2"))))
 		goto end;
 
 	best=path;
@@ -295,6 +295,8 @@ static int process_data_dir_file(struct asfd *asfd,
 	ret=0;
 end:
 	free_w(&dpath);
+	if(tmppath1) unlink(tmppath1);
+	if(tmppath2) unlink(tmppath2);
 	free_w(&tmppath1);
 	free_w(&tmppath2);
 	return ret;

@@ -606,6 +606,7 @@ static void asfd_free_content(struct asfd *asfd)
 	free_w(&asfd->readbuf);
 	free_w(&asfd->writebuf);
 	free_w(&asfd->desc);
+	free_w(&asfd->client);
 	incoming_free(&asfd->in);
 	blist_free(&asfd->blist);
 }

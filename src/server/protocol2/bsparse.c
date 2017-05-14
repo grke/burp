@@ -40,7 +40,7 @@ static void release_locks(void)
 	{
 		s=(struct sdirs *)c->sdirs;
 		if(!s) continue;
-		lock_release(s->lock);
+		lock_release(s->lock_storage_for_write);
 		logp("released: %s\n", c->name);
 	}
 	lock_release(sparse_lock);
@@ -126,14 +126,14 @@ static int get_client_locks(void)
 	for(c=clist; c; c=c->next)
 	{
 		s=(struct sdirs *)c->sdirs;
-		if(mkpath(&s->lock->path, s->lockdir))
+		if(mkpath(&s->lock_storage_for_write->path, s->lockdir))
 		{
 			logp("problem with lock directory: %s\n", s->lockdir);
 			return -1;
 		}
 
-		lock_get(s->lock);
-		switch(s->lock->status)
+		lock_get(s->lock_storage_for_write);
+		switch(s->lock_storage_for_write->status)
 		{
 			case GET_LOCK_GOT:
 				logp("locked: %s\n", c->name);
@@ -145,7 +145,7 @@ static int get_client_locks(void)
 			case GET_LOCK_ERROR:
 			default:
 				logp("Problem with lock file: %s\n",
-					s->lock->path);
+					s->lock_storage_for_write->path);
 				return -1;
 		}
 	}

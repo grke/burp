@@ -70,7 +70,7 @@ static size_t calc_max_str_len(struct cntr *cntr, const char *cname)
 	// See cntr_to_str().
 	// First section - name/version/status
 	slen+=strlen(cname);
-	slen+=16; // More than enough space.
+	slen+=32; // More than enough space.
 
 	// Second section.
 	snprintf(ullmax, sizeof(ullmax),
@@ -662,8 +662,8 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=time(NULL);
 
-	snprintf(str, cntr->str_max_len-1, "%s\t%d\t%d\t",
-		cntr->cname, CNTR_VERSION, cntr->cntr_status);
+	snprintf(str, cntr->str_max_len-1, "cntr\t%s.%d\t%d\t%d\t",
+		cntr->cname, getpid(), CNTR_VERSION, cntr->cntr_status);
 
 	for(e=cntr->list; e; e=e->next)
 	{
@@ -804,7 +804,14 @@ int str_to_cntr(const char *str, struct cstat *cstat, char **path)
 	if((tok=strtok(copy, "\t\n")))
 	{
 		char *tmp=NULL;
-		// First token is the client name. Do not need that here.
+		// First token is 'cntr'.
+		// Second is client name. Do not need that here.
+		if(!(tmp=strtok(NULL, "\t\n")))
+		{
+			logp("Parsing problem in %s: null client\n",
+				__func__);
+			goto end;
+		}
 		// Second is the cntr version.
 		if(!(tmp=strtok(NULL, "\t\n")))
 		{

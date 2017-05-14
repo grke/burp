@@ -25,19 +25,19 @@
 // FIX THIS: Somewhat haphazard.
 /* Return 0 for everything OK. -1 for error, or 1 to mean that there was
    another process that has the lock. */
-static int get_lock_sdirs(struct asfd *asfd, struct sdirs *sdirs)
+static int get_lock_sdirs_for_write(struct asfd *asfd, struct sdirs *sdirs)
 {
 	struct stat statp;
 
 	// Make sure the lock directory exists.
-	if(mkpath(&sdirs->lock->path, sdirs->lockdir))
+	if(mkpath(&sdirs->lock_storage_for_write->path, sdirs->lockdir))
 	{
 		asfd->write_str(asfd, CMD_ERROR, "problem with lock directory");
 		goto error;
 	}
 
-	lock_get(sdirs->lock);
-	switch(sdirs->lock->status)
+	lock_get(sdirs->lock_storage_for_write);
+	switch(sdirs->lock_storage_for_write->status)
 	{
 		case GET_LOCK_GOT: break;
 		case GET_LOCK_NOT_GOT:
@@ -60,7 +60,7 @@ static int get_lock_sdirs(struct asfd *asfd, struct sdirs *sdirs)
 		case GET_LOCK_ERROR:
 		default:
 			logp("Problem with lock file on server: %s\n",
-				sdirs->lock->path);
+				sdirs->lock_storage_for_write->path);
 			asfd->write_str(asfd, CMD_ERROR,
 				"problem with lock file on server");
 			goto error;
@@ -250,6 +250,7 @@ static int run_restore(struct asfd *asfd,
 
 	if(asfd->write_str(asfd, CMD_GEN, "ok"))
 		goto end;
+
 	ret=do_restore_server(asfd, sdirs, act,
 		srestore, &dir_for_notify, cconfs);
 	if(dir_for_notify)
@@ -402,6 +403,7 @@ static int maybe_write_first_created_file(struct sdirs *sdirs)
 	char tstmp[32]="";
 	if(is_reg_lstat(sdirs->created)>0
 	  || is_lnk_lstat(sdirs->current)>0
+	  || is_lnk_lstat(sdirs->currenttmp)>0
 	  || is_lnk_lstat(sdirs->working)>0
 	  || is_lnk_lstat(sdirs->finishing)>0)
 		return 0;
@@ -437,55 +439,14 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	if(rbuf->cmd!=CMD_GEN)
 		return unknown_command(as->asfd);
 
-	// List and diff should work even while backups are running.
+	// List and diff should work well enough without needing to lock
+	// anything.
 	if(!strncmp_w(rbuf->buf, "list ")
 	  || !strncmp_w(rbuf->buf, "listb "))
 		return run_list(as->asfd, sdirs, cconfs);
 
 	if(!strncmp_w(rbuf->buf, "diff "))
 		return run_diff(as->asfd, sdirs, cconfs);
-
-	switch((ret=get_lock_sdirs(as->asfd, sdirs)))
-	{
-		case 0: break; // OK.
-		case 1: return 1; // Locked out.
-		default: // Error.
-			maybe_do_notification(as->asfd, ret,
-				"", "error in get_lock_sdirs()",
-				"", buf_to_notify_str(rbuf), cconfs);
-			return -1;
-	}
-
-	switch((ret=check_for_rubble(as, sdirs, incexc, &resume, cconfs)))
-	{
-		case 0: break; // OK.
-		case 1: return 1; // Now finalising.
-		default: // Error.
-			maybe_do_notification(as->asfd, ret,
-				"", "error in check_for_rubble()",
-				"", buf_to_notify_str(rbuf), cconfs);
-			return -1;
-	}
-
-	if(!strncmp_w(rbuf->buf, "backup"))
-	{
-		ret=run_backup(as, sdirs, cconfs, incexc, timer_ret, resume);
-		if(*timer_ret<0)
-			maybe_do_notification(as->asfd, ret, "",
-				"error running timer script",
-				"", "backup", cconfs);
-		else if(!*timer_ret)
-			maybe_do_notification(as->asfd, ret, sdirs->client,
-				sdirs->current, "log", "backup", cconfs);
-		return ret;
-	}
-
-	if(!strncmp_w(rbuf->buf, "restore ")
-	  || !strncmp_w(rbuf->buf, "verify "))
-		return run_restore(as->asfd, sdirs, cconfs, srestore);
-
-	if(!strncmp_w(rbuf->buf, "Delete "))
-		return run_delete(as->asfd, sdirs, cconfs);
 
 	// Old clients will send 'delete', possibly accidentally due to the
 	// user trying to use the new diff/long diff options.
@@ -499,7 +460,57 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 		return -1;
 	}
 
-	return unknown_command(as->asfd);
+	// Restore and verify should work well enough by locking only the
+	// backup directory they are interested in.
+	if(!strncmp_w(rbuf->buf, "restore ")
+	  || !strncmp_w(rbuf->buf, "verify "))
+		return run_restore(as->asfd, sdirs, cconfs, srestore);
+
+	if(strncmp_w(rbuf->buf, "backup")
+	  && strncmp_w(rbuf->buf, "Delete "))
+		return unknown_command(as->asfd);
+
+	// Beyond this point, only need to deal with backup and delete.
+	// These require locking out all other backups and deletes.
+
+	switch((ret=get_lock_sdirs_for_write(as->asfd, sdirs)))
+	{
+		case 0: break; // OK.
+		case 1: return 1; // Locked out.
+		default: // Error.
+			maybe_do_notification(as->asfd, ret,
+				"", "error in get_lock_sdirs()",
+				"", buf_to_notify_str(rbuf), cconfs);
+			return -1;
+	}
+
+	switch((ret=check_for_rubble_and_clean(as, sdirs,
+		incexc, &resume, cconfs)))
+	{
+		case 0: break; // OK.
+		case 1: return 1; // Now finalising.
+		default: // Error.
+			maybe_do_notification(as->asfd, ret,
+				"", "error in check_for_rubble()",
+				"", buf_to_notify_str(rbuf), cconfs);
+			return -1;
+	}
+
+	if(!strncmp_w(rbuf->buf, "Delete "))
+		return run_delete(as->asfd, sdirs, cconfs);
+
+	// Only backup action left to deal with.
+	ret=run_backup(as, sdirs,
+		cconfs, incexc, timer_ret, resume);
+	if(*timer_ret<0)
+		maybe_do_notification(as->asfd, ret,
+			"", "error running timer script",
+			"", "backup", cconfs);
+	else if(!*timer_ret)
+		maybe_do_notification(as->asfd, ret,
+			sdirs->client, sdirs->current,
+			"log", "backup", cconfs);
+	return ret;
 }
 
 int run_action_server(struct async *as,
@@ -511,7 +522,7 @@ int run_action_server(struct async *as,
           && !sdirs_init_from_confs(sdirs, cconfs))
 		ret=run_action_server_do(as,
 			sdirs, incexc, srestore, timer_ret, cconfs);
-        if(sdirs) lock_release(sdirs->lock);
+        if(sdirs) lock_release(sdirs->lock_storage_for_write);
         sdirs_free(&sdirs);
 	return ret;
 }

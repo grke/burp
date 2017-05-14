@@ -11,32 +11,59 @@
 #include "json_output.h"
 #include "status_server.h"
 
-static int parse_parent_data(struct asfd *asfd, struct cstat *clist)
+#ifndef UTEST
+static
+#endif
+int extract_client_and_pid(char *buf, char **cname, int *pid)
+{
+	char *cp=NULL;
+	char *pp=NULL;
+
+	// Extract the client name.
+	if((cp=strchr(buf, '\t')))
+		*cp='\0';
+	if(!(*cname=strdup_w(buf, __func__)))
+		return -1;
+	if(cp)
+		*cp='\t';
+
+	// Extract the pid.
+	if((pp=strrchr(*cname, '.')))
+	{
+		*pp='\0';
+		*pid=atoi(pp+1);
+	}
+	return 0;
+}
+
+static int parse_cntr_data(const char *buf, struct cstat *clist)
 {
 	int ret=-1;
-	char *cp=NULL;
 	char *cname=NULL;
 	struct cstat *c=NULL;
 	char *path=NULL;
-//printf("got parent data: '%s'\n", asfd->rbuf->buf);
+	char *dp=NULL;
+	int pid=-1;
 
-	// Extract the client name.
-	if(!(cp=strchr(asfd->rbuf->buf, '\t')))
+	// Skip the type.
+	if(!(dp=strchr(buf, '\t')))
 		return 0;
-	*cp='\0';
-	if(!(cname=strdup_w(asfd->rbuf->buf, __func__))) goto end;
-	*cp='\t';
+	dp++;
+
+	if(extract_client_and_pid(dp, &cname, &pid))
+		return -1;
+	if(!cname)
+		return 0;
 
 	// Find the array entry for this client,
 	// and add the detail from the parent to it.
 	for(c=clist; c; c=c->next)
 	{
-		if(!strcmp(c->name, cname))
-		{
-			//printf("parse for client %s\n", c->name);
-			if(str_to_cntr(asfd->rbuf->buf, c, &path))
-				goto end;
-		}
+		if(strcmp(c->name, cname))
+			continue;
+		cstat_set_run_status(c, RUN_STATUS_RUNNING);
+		if(str_to_cntr(buf, c, &path))
+			goto end;
 	}
 
 // FIX THIS: Do something with path.
@@ -46,6 +73,59 @@ end:
 	free_w(&cname);
 	free_w(&path);
 	return ret;
+}
+
+static int parse_clients_list(char *buf, struct cstat *clist)
+{
+	char *tok=NULL;
+	struct cstat *c;
+
+	// Do not need the first token.
+	if(!(tok=strtok(buf, "\t\n")))
+		return 0;
+	for(c=clist; c; c=c->next)
+		cstat_set_run_status(c, RUN_STATUS_IDLE);
+
+	while((tok=strtok(NULL, "\t\n")))
+	{
+		int pid=-1;
+		char *cname=NULL;
+		if(extract_client_and_pid(tok, &cname, &pid))
+			return -1;
+		for(c=clist; c; c=c->next)
+		{
+			if(strcmp(c->name, cname))
+				continue;
+			cstat_set_run_status(c, RUN_STATUS_RUNNING);
+			break;
+		}
+		free_w(&cname);
+	}
+
+	return 0;
+}
+
+#ifndef UTEST
+static
+#endif
+int parse_parent_data(char *buf, struct cstat *clist)
+{
+	if(!buf || !*buf)
+		return 0;
+//printf("got parent data: '%s'\n", buf);
+
+	if(!strncmp(buf, "cntr", strlen("cntr")))
+	{
+		if(parse_cntr_data(buf, clist))
+			return -1;
+	}
+	else if(!strncmp(buf, "clients", strlen("clients")))
+	{
+		if(parse_clients_list(buf, clist))
+			return -1;
+	}
+
+	return 0;
 }
 
 static char *get_str(const char **buf, const char *pre, int last)
@@ -192,17 +272,6 @@ static int parse_client_data(struct asfd *srfd,
 	printf("logfile: %s\n", logfile?:"");
 */
 
-	if(cstat)
-	{
-		if(!cstat->run_status)
-			cstat_set_run_status(cstat);
-	}
-	else for(cstat=clist; cstat; cstat=cstat->next)
-	{
-		if(!cstat->run_status)
-			cstat_set_run_status(cstat);
-	}
-
 	if(json_send(srfd, clist, cstat, bu, logfile, browse,
 		get_int(confs[OPT_MONITOR_BROWSE_CACHE])))
 			goto error;
@@ -222,7 +291,7 @@ static int parse_data(struct asfd *asfd, struct cstat *clist,
 	struct asfd *cfd, struct conf **confs)
 {
 	if(asfd==cfd) return parse_client_data(asfd, clist, confs);
-	return parse_parent_data(asfd, clist);
+	return parse_parent_data(asfd->rbuf->buf, clist);
 }
 
 static int have_data_for_running_clients(struct cstat *clist)
@@ -235,22 +304,34 @@ static int have_data_for_running_clients(struct cstat *clist)
 	return 1;
 }
 
+static int have_run_statuses(struct cstat *clist)
+{
+	struct cstat *c;
+	for(c=clist; c; c=c->next)
+		if(c->permitted && c->run_status==RUN_STATUS_UNSET)
+			return 0;
+	return 1;
+}
+
 static int get_initial_data(struct async *as,
 	struct cstat **clist,
 	struct conf **confs, struct conf **cconfs)
 {
-	int x=5;
+	int x=10;
 	struct asfd *asfd=NULL;
 
 	if(cstat_load_data_from_disk(clist, confs, cconfs))
 		return -1;
 
-	// Try to get the initial data for running clients, but do not
-	// wait forever.
-	while(x--)
+	// Try to get the initial data.
+	while(x)
 	{
-		if(have_data_for_running_clients(*clist))
+		// Do not wait forever for running clients.
+		if(!have_data_for_running_clients(*clist))
+			x--;
+		else if(have_run_statuses(*clist))
 			return 0;
+
 		if(as->read_write(as))
 		{
 			logp("Exiting main status server loop\n");

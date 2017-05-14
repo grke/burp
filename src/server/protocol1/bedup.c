@@ -462,7 +462,7 @@ static int looks_like_protocol1(const char *basedir)
 	}
 	// If there is a 'current' symlink here, we think it looks like a
 	// protocol 1 backup.
-	if(is_lnk(tmp)>0)
+	if(is_lnk_lstat(tmp)>0)
 	{
 		ret=1;
 		goto end;

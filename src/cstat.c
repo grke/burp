@@ -40,7 +40,6 @@ static void cstat_free_content(struct cstat *c)
 	cntr_free(&c->cntr);
 	if(c->sdirs) logp("%s() called without freeing sdirs\n", __func__);
 	c->clientdir_mtime=0;
-	c->lockfile_mtime=0;
 }
 
 void cstat_free(struct cstat **cstat)
@@ -104,25 +103,19 @@ const char *run_status_to_str(struct cstat *cstat)
 	{
 		case RUN_STATUS_IDLE:
 			return RUN_STATUS_STR_IDLE;
-		case RUN_STATUS_CLIENT_CRASHED:
-			return RUN_STATUS_STR_CLIENT_CRASHED;
-		case RUN_STATUS_SERVER_CRASHED:
-			return RUN_STATUS_STR_SERVER_CRASHED;
 		case RUN_STATUS_RUNNING:
 			return RUN_STATUS_STR_RUNNING;
-		default: return "unknown";
+		default:
+			return "unknown";
 	}
 }
 
 enum run_status run_str_to_status(const char *str)
 {
-	if(!strcmp(str, RUN_STATUS_STR_IDLE)) return RUN_STATUS_IDLE;
-	else if(!strcmp(str, RUN_STATUS_STR_RUNNING)) return RUN_STATUS_RUNNING;
-	else if(!strcmp(str, RUN_STATUS_STR_CLIENT_CRASHED))
-		return RUN_STATUS_CLIENT_CRASHED;
-	else if(!strcmp(str, RUN_STATUS_STR_SERVER_CRASHED))
-		return RUN_STATUS_CLIENT_CRASHED;
-	else if(!strcmp(str, RUN_STATUS_STR_RUNNING)) return RUN_STATUS_RUNNING;
+	if(!strcmp(str, RUN_STATUS_STR_IDLE))
+		return RUN_STATUS_IDLE;
+	else if(!strcmp(str, RUN_STATUS_STR_RUNNING))
+		return RUN_STATUS_RUNNING;
 	return RUN_STATUS_UNSET;
 }
 

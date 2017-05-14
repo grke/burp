@@ -611,13 +611,122 @@ static int relock(struct lock *lock)
 	return -1;
 }
 
+static int extract_client_name(struct asfd *asfd)
+{
+	size_t l;
+	const char *cp=NULL;
+	const char *dp=NULL;
+
+	if(asfd->client)
+		return 0;
+	if(!(dp=strchr(asfd->rbuf->buf, '\t')))
+		return 0;
+	dp++;
+	if(!(cp=strchr(dp, '\t')))
+		return 0;
+	cp++;
+	l=cp-dp;
+	if(!(asfd->client=malloc_w(l+1, __func__)))
+		return -1;
+	snprintf(asfd->client, l, "%s", dp);
+	return 0;
+}
+
+static int write_to_status_children(struct async *mainas, struct iobuf *iobuf)
+{
+	size_t wlen;
+	struct asfd *scfd=NULL;
+
+	// One of the child processes is giving us information.
+	// Try to append it to any of the status child pipes.
+	for(scfd=mainas->asfd; scfd; scfd=scfd->next)
+	{
+		if(scfd->fdtype!=ASFD_FD_SERVER_PIPE_WRITE)
+			continue;
+		wlen=iobuf->len;
+		switch(scfd->append_all_to_write_buffer(scfd, iobuf))
+		{
+			case APPEND_OK:
+				// Hack - the append function
+				// will set the length to zero
+				// on success. Set it back for
+				// the next status child pipe.
+				iobuf->len=wlen;
+				break;
+			case APPEND_BLOCKED:
+				break;
+			default:
+				return -1;
+		}
+	}
+	// Free the information, even if we did not manage to append it. That
+	// should be OK, more will be along soon.
+	iobuf_free_content(iobuf);
+	return 0;
+}
+
+static int update_status_child_client_lists(struct async *mainas)
+{
+	int ret=-1;
+	char *buf=NULL;
+	struct asfd *a=NULL;
+	struct iobuf wbuf;
+
+	if(!(buf=strdup_w("clients", __func__)))
+		goto end;
+	for(a=mainas->asfd; a; a=a->next)
+	{
+		if(a->fdtype!=ASFD_FD_SERVER_PIPE_READ
+		  || !a->client)
+			continue;
+		if(astrcat(&buf, "\t", __func__))
+			goto end;
+		if(astrcat(&buf, a->client, __func__))
+			goto end;
+	}
+
+	iobuf_set(&wbuf, CMD_GEN, buf, strlen(buf));
+
+	ret=write_to_status_children(mainas, &wbuf);
+end:
+	return ret;
+}
+
+static int maybe_update_status_child_client_lists(struct async *mainas)
+{
+	time_t now=0;
+	time_t diff=0;
+	static time_t lasttime=0;
+	struct asfd *asfd=NULL;
+
+	// If we have no status server child processes, do not bother.
+	for(asfd=mainas->asfd; asfd; asfd=asfd->next)
+		if(asfd->fdtype==ASFD_FD_SERVER_PIPE_WRITE)
+			break;
+	if(!asfd)
+		return 0;
+
+	// Only update every 5 seconds.
+	now=time(NULL);
+	diff=now-lasttime;
+	if(diff<5)
+	{
+		// Might as well do this in case they fiddled their
+		// clock back in time.
+		if(diff<0) lasttime=now;
+		return 0;
+	}
+	lasttime=now;
+
+	return update_status_child_client_lists(mainas);
+}
+
 static int run_server(struct conf **confs, const char *conffile)
 {
 	int ret=-1;
 	SSL_CTX *ctx=NULL;
 	int found_normal_child=0;
 	struct asfd *asfd=NULL;
-	struct asfd *scfd=NULL;
 	struct async *mainas=NULL;
 	struct strlist *ports=get_strlist(confs[OPT_PORT]);
 	const char *address=get_string(confs[OPT_ADDRESS]);
@@ -698,37 +807,20 @@ static int run_server(struct conf **confs, const char *conffile)
 
 		for(asfd=mainas->asfd; asfd; asfd=asfd->next)
 		{
-			size_t wlen;
 			if(asfd->fdtype!=ASFD_FD_SERVER_PIPE_READ
-			  || !asfd->rbuf->buf) continue;
-			wlen=asfd->rbuf->len;
-			// One of the child processes is giving us information.
-			// Try to append it to any of the status child pipes.
-			for(scfd=mainas->asfd; scfd; scfd=scfd->next)
-			{
-				if(scfd->fdtype!=ASFD_FD_SERVER_PIPE_WRITE)
-					continue;
-				switch(scfd->append_all_to_write_buffer(scfd,
-					asfd->rbuf))
-				{
-					case APPEND_OK:
-						// Hack - the append function
-						// will set the length to zero
-						// on success. Set it back for
-						// the next status child pipe.
-						asfd->rbuf->len=wlen;
-						break;
-					case APPEND_BLOCKED:
-						break;
-					default:
-						goto end;
-				}
-			}
-			// Free the information, even if we did not manage
-			// to append it. That should be OK, more will be along
-			// soon.
-			iobuf_free_content(asfd->rbuf);
+			  || !asfd->rbuf->buf)
+				continue;
+
+//printf("got info from child: %s\n", asfd->rbuf->buf);
+			if(extract_client_name(asfd))
+				goto end;
+
+			if(write_to_status_children(mainas, asfd->rbuf))
+				goto end;
 		}
+
+		if(maybe_update_status_child_client_lists(mainas))
+			goto end;
 
 		chld_check_for_exiting(mainas);
 

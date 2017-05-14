@@ -5,18 +5,13 @@
 #include "cntr.h"
 
 #define RUN_STATUS_STR_IDLE		"idle"
-#define RUN_STATUS_STR_CLIENT_CRASHED	"c crashed"
-#define RUN_STATUS_STR_SERVER_CRASHED	"s crashed"
 #define RUN_STATUS_STR_RUNNING		"running"
 
 enum run_status
 {
 	RUN_STATUS_UNSET=0,
-
 	RUN_STATUS_IDLE,
 	RUN_STATUS_RUNNING,
-	RUN_STATUS_CLIENT_CRASHED,
-	RUN_STATUS_SERVER_CRASHED
 };
 
 struct cstat
@@ -36,7 +31,6 @@ struct cstat
 	// client and server. Server side will have to cast it.
 	void *sdirs;
 	time_t clientdir_mtime;
-	time_t lockfile_mtime;
 
 	struct bu *bu; // Backup list.
 	enum protocol protocol;

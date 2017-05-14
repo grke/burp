@@ -38,14 +38,6 @@ int is_reg_lstat(const char *path)
 	return S_ISREG(buf.st_mode);
 }
 
-int is_lnk_lstat(const char *path)
-{
-	struct stat buf;
-	if(lstat(path, &buf))
-		return -1;
-	return S_ISLNK(buf.st_mode);
-}
-
 int is_dir(const char *path, struct dirent *d)
 {
 #ifdef _DIRENT_HAVE_D_TYPE
@@ -497,6 +489,22 @@ end:
 	return ret;
 }
 
+int is_lnk_lstat(const char *path)
+{
+	struct stat buf;
+	if(lstat(path, &buf))
+		return -1;
+	return S_ISLNK(buf.st_mode);
+}
+
+int is_lnk_valid(const char *path)
+{
+	struct stat buf;
+	if(stat(path, &buf))
+		return 0;
+	return 1;
+}
+
 int do_symlink(const char *oldpath, const char *newpath)
 {
 	if(!symlink(oldpath, newpath))
@@ -536,19 +544,4 @@ int readlink_w_in_dir(const char *dir, const char *lnk,
 	return 0;
 }
 
-int is_lnk(const char *path)
-{
-	struct stat buf;
-	if(lstat(path, &buf))
-		return -1;
-	return S_ISLNK(buf.st_mode);
-}
-
-int is_lnk_valid(const char *path)
-{
-	struct stat buf;
-	if(stat(path, &buf))
-		return 0;
-	return 1;
-}
 #endif

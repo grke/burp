@@ -130,8 +130,6 @@ static void client_summary(struct cstat *cstat,
 			}
 			// Else fall through.
 		case RUN_STATUS_IDLE:
-		case RUN_STATUS_SERVER_CRASHED:
-		case RUN_STATUS_CLIENT_CRASHED:
 		default:
 			snprintf(msg, sizeof(msg), fmt,
 				cstat->name,

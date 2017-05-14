@@ -233,6 +233,32 @@ end:
 	return ret;
 }
 
+static struct lock *get_prog_lock(struct conf **confs)
+{
+	struct lock *lock=NULL;
+	const char *lockfile=confs_get_lockfile(confs);
+	if(!(lock=lock_alloc_and_init(lockfile)))
+		goto error;
+	lock_get(lock);
+	switch(lock->status)
+	{
+		case GET_LOCK_GOT:
+			return lock;
+		case GET_LOCK_NOT_GOT:
+			logp("Could not get lockfile.\n");
+			logp("Another process is probably running.\n");
+			goto error;
+		case GET_LOCK_ERROR:
+		default:
+			logp("Could not get lockfile.\n");
+			logp("Maybe you do not have permissions to write to %s.\n", lockfile);
+			goto error;
+	}
+error:
+	lock_free(&lock);
+	return NULL;
+}
+
 #ifdef HAVE_WIN32
 #define main BurpMain
 #endif
@@ -429,40 +455,32 @@ int real_main(int argc, char *argv[])
 	  && (act==ACTION_BACKUP_TIMED || act==ACTION_TIMER_CHECK))
 		random_delay(confs);
 
-	if(mode==BURP_MODE_SERVER
-	  && act==ACTION_CHAMP_CHOOSER)
+	if(mode==BURP_MODE_SERVER)
 	{
-		// These server modes need to run without getting the lock.
-	}
-	else if(mode==BURP_MODE_CLIENT
-	  && (act==ACTION_LIST
-		|| act==ACTION_LIST_LONG
-		|| act==ACTION_DIFF
-		|| act==ACTION_DIFF_LONG
-		|| act==ACTION_STATUS
-		|| act==ACTION_STATUS_SNAPSHOT
-		|| act==ACTION_MONITOR))
-	{
-		// These client modes need to run without getting the lock.
-	}
-	else
-	{
-		const char *lockfile=confs_get_lockfile(confs);
-		if(!(lock=lock_alloc_and_init(lockfile)))
-			goto end;
-		lock_get(lock);
-		switch(lock->status)
+		switch(act)
 		{
-			case GET_LOCK_GOT: break;
-			case GET_LOCK_NOT_GOT:
-				logp("Could not get lockfile.\n");
-				logp("Another process is probably running,\n");
-				goto end;
-			case GET_LOCK_ERROR:
+			case ACTION_CHAMP_CHOOSER:
+				// Need to run without getting the lock.
+				break;
 			default:
-				logp("Could not get lockfile.\n");
-				logp("Maybe you do not have permissions to write to %s.\n", lockfile);
-				goto end;
+				if(!(lock=get_prog_lock(confs)))
+					goto end;
+				break;
+		}
+	}
+	else if(mode==BURP_MODE_CLIENT)
+	{
+		switch(act)
+		{
+			case ACTION_BACKUP:
+			case ACTION_BACKUP_TIMED:
+			case ACTION_TIMER_CHECK:
+				// Need to get the lock.
+				if(!(lock=get_prog_lock(confs)))
+					goto end;
+				break;
+			default:
+				break;
 		}
 	}
 

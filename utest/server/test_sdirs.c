@@ -109,7 +109,8 @@ static void protocol1_tests(struct sdirs *sdirs)
 	ck_assert_str_eq(sdirs->cmanifest, CURRENT "/manifest.gz");
 	ck_assert_str_eq(sdirs->phase1data, WORKING "/phase1.gz");
 	ck_assert_str_eq(sdirs->lockdir, CLIENT);
-	ck_assert_str_eq(sdirs->lock->path, CLIENT "/lockfile");
+	ck_assert_str_eq(sdirs->lock_storage_for_write->path,
+		CLIENT "/lockfile");
 	ck_assert_str_eq(sdirs->currentdata, CURRENT "/" DATA_DIR);
 	ck_assert_str_eq(sdirs->datadirtmp, WORKING "/data.tmp");
 	ck_assert_str_eq(sdirs->cincexc, CURRENT "/incexc");
@@ -154,7 +155,8 @@ static void protocol2_tests(struct sdirs *sdirs)
 	ck_assert_str_eq(sdirs->cmanifest, CURRENT2 "/manifest");
 	ck_assert_str_eq(sdirs->phase1data, WORKING2 "/phase1.gz");
 	ck_assert_str_eq(sdirs->lockdir, CLIENT2);
-	ck_assert_str_eq(sdirs->lock->path, CLIENT2 "/lockfile");
+	ck_assert_str_eq(sdirs->lock_storage_for_write->path,
+		CLIENT2 "/lockfile");
 	fail_unless(sdirs->currentdata==NULL);
 	fail_unless(sdirs->datadirtmp==NULL);
 	fail_unless(sdirs->cincexc==NULL);
@@ -181,7 +183,7 @@ START_TEST(test_lockdirs)
 	struct sdirs *sdirs;
 	sdirs=setup();
 	do_sdirs_init(sdirs, PROTO_2, "/some/other/dir" /* client_lockdir */);
-	ck_assert_str_eq(sdirs->lock->path,
+	ck_assert_str_eq(sdirs->lock_storage_for_write->path,
 		"/some/other/dir/utestclient/lockfile");
 
 	tear_down(&sdirs);

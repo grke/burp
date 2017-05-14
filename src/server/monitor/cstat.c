@@ -214,28 +214,11 @@ int cstat_reload_from_client_confs(struct cstat **clist,
 	return reloaded;
 }
 
-void cstat_set_run_status(struct cstat *cstat)
+void cstat_set_run_status(struct cstat *cstat, enum run_status run_status)
 {
-	struct stat statp;
-	struct sdirs *sdirs=(struct sdirs *)cstat->sdirs;
-	if(!cstat->permitted) return;
-
-	if(lstat(sdirs->lock->path, &statp))
-	{
-		if(lstat(sdirs->working, &statp))
-			cstat->run_status=RUN_STATUS_IDLE;
-		else
-			cstat->run_status=RUN_STATUS_CLIENT_CRASHED;
-	}
-	else
-	{
-		if(!lock_test(sdirs->lock->path)) // Could have got lock.
-			cstat->run_status=RUN_STATUS_SERVER_CRASHED;
-		else
-			cstat->run_status=RUN_STATUS_RUNNING;
-	}
-
-	return;
+	if(!cstat->permitted)
+		return;
+	cstat->run_status=run_status;
 }
 
 // Return -1 on error, or the number of reloaded clients.
@@ -248,9 +231,7 @@ int reload_from_clientdir(struct cstat **clist)
 	struct cstat *c;
 	for(c=*clist; c; c=c->next)
 	{
-		time_t ltime=0;
 		struct stat statp;
-		struct stat lstatp;
 		struct sdirs *sdirs;
 
 		if(!c->permitted) continue;
@@ -258,25 +239,14 @@ int reload_from_clientdir(struct cstat **clist)
 		sdirs=(struct sdirs *)c->sdirs;
 		if(!sdirs || !sdirs->client) continue;
 		if(stat(sdirs->client, &statp))
-		{
-			// No clientdir.
-			if(!c->run_status)
-				cstat_set_run_status(c);
 			continue;
-		}
-		if(!lstat(sdirs->lock->path, &lstatp))
-			ltime=lstatp.st_mtime;
-		if(statp.st_mtime==c->clientdir_mtime
-		  && ltime==c->lockfile_mtime
-		  && c->run_status!=RUN_STATUS_SERVER_CRASHED)
-		  //&& !c->cntr)
+
+		if(statp.st_mtime==c->clientdir_mtime)
 		{
 			// clientdir has not changed - no need to do anything.
 			continue;
 		}
 		c->clientdir_mtime=statp.st_mtime;
-		c->lockfile_mtime=ltime;
-		cstat_set_run_status(c);
 
 		bu_list_free(&c->bu);
 // FIX THIS: should probably not load everything each time.

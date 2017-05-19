@@ -7,6 +7,7 @@
 #include "../../../src/cstat.h"
 #include "../../../src/iobuf.h"
 #include "../../../src/client/monitor/json_input.h"
+#include "../../../src/client/monitor/lline.h"
 #include "../../../src/client/monitor/sel.h"
 #include "../../../src/client/monitor/status_client_ncurses.h"
 #include "../../builders/build_asfd_mock.h"
@@ -30,7 +31,7 @@ END_TEST
 
 #define CHUNK_SIZE	10
 
-static void do_read_in_file(const char *path, struct sel *sel)
+static void do_read_in_file(const char *path, struct sel *sel, int expected_ret)
 {
 	int lastret=-1;
 	struct fzp *fzp;
@@ -50,23 +51,24 @@ static void do_read_in_file(const char *path, struct sel *sel)
 		switch((lastret=json_input(asfd, sel)))
 		{
 			case 0: continue;
-			case 1: break;
+			case 1:
+			case 2: break;
 			default: break;
 		}
 	}
-	fail_unless(lastret==1);
+	fail_unless(lastret==expected_ret);
 	fzp_close(&fzp);
 	asfd->rbuf->buf=NULL;
 	asfd_free(&asfd);
 }
 
-static struct sel *read_in_file(const char *path, int times)
+static struct sel *read_in_file(const char *path, int times, int expected_ret)
 {
 	int i;
 	struct sel *sel;
 	fail_unless((sel=sel_alloc())!=NULL);
 	for(i=0; i<times; i++)
-		do_read_in_file(path, sel);
+		do_read_in_file(path, sel, expected_ret);
 	json_input_free();
 	return sel;
 }
@@ -80,7 +82,10 @@ static void tear_down(struct sel **sel)
 static void do_test_json_warning(int times)
 {
 	struct sel *sel;
-	fail_unless((sel=read_in_file(SRC_DIR "/warning", times))!=NULL);
+	fail_unless((sel=read_in_file(SRC_DIR "/warning", times,
+		/*expected_ret*/2))!=NULL);
+	fail_unless(json_input_get_warnings()!=NULL);
+	json_input_clear_warnings();
 	tear_down(&sel);
 }
 
@@ -94,7 +99,8 @@ END_TEST
 static void do_test_json_empty(int times)
 {
 	struct sel *sel;
-	fail_unless((sel=read_in_file(SRC_DIR "/empty", times))!=NULL);
+	fail_unless((sel=read_in_file(SRC_DIR "/empty", times,
+		/*expected_ret*/1))!=NULL);
 	fail_unless(sel->clist==NULL);
 	tear_down(&sel);
 }
@@ -110,7 +116,8 @@ static void do_test_json_clients(int times)
 {
 	struct sel *sel;
 	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
-	fail_unless((sel=read_in_file(SRC_DIR "/clients", times))!=NULL);
+	fail_unless((sel=read_in_file(SRC_DIR "/clients", times,
+		/*expected_ret*/1))!=NULL);
 	fail_unless(sel->clist!=NULL);
 	assert_cstat_list(sel->clist, cnames);
 	tear_down(&sel);
@@ -144,7 +151,8 @@ static void do_test_json_clients_with_backup(const char *path,
 	struct cstat *c;
 	struct sel *sel;
 	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
-	fail_unless((sel=read_in_file(path, times))!=NULL);
+	fail_unless((sel=read_in_file(path, times,
+		/*expected_ret*/1))!=NULL);
 	fail_unless(sel->clist!=NULL);
 	assert_cstat_list(sel->clist, cnames);
 	for(c=sel->clist; c; c=c->next)
@@ -216,7 +224,8 @@ static void do_test_json_client_specific(const char *path,
 	struct sel *sel;
 	struct bu *bu;
 	const char *cnames[] ={"cli2", NULL};
-	fail_unless((sel=read_in_file(path, times))!=NULL);
+	fail_unless((sel=read_in_file(path, times,
+		/*expected_ret*/1))!=NULL);
 	fail_unless(sel->clist!=NULL);
 	assert_cstat_list(sel->clist, cnames);
 

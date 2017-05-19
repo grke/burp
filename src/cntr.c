@@ -916,7 +916,8 @@ static enum asl_ret cntr_recv_func(struct asfd *asfd,
 	switch(json_input(asfd, sel))
 	{
 		case 0: return ASL_CONTINUE;
-		case 1: return ASL_END_OK;
+		case 1:
+		case 2: return ASL_END_OK;
 		default: return ASL_END_ERROR;
 	}
 }

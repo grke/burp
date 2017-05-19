@@ -39,6 +39,8 @@ static struct lline *ll_list=NULL;
 static struct lline **sllines=NULL;
 // For recording 'loglines' in json input.
 static struct lline *jsll_list=NULL;
+// For recording warnings in json input.
+static struct lline *warning_list=NULL;
 
 static int is_wrap(const char *val, const char *key, uint16_t bit)
 {
@@ -204,6 +206,7 @@ static int input_string(__attribute__ ((unused)) void *ctx,
 	{
 		if(lline_add(&jsll_list, str))
 			goto error;
+		free_w(&str);
 		goto end;
 	}
 	else if(!strcmp(lastkey, "backup")
@@ -216,10 +219,14 @@ static int input_string(__attribute__ ((unused)) void *ctx,
 		// Log file contents.
 		if(lline_add(&ll_list, str))
 			goto error;
+		free_w(&str);
 		goto end;
 	}
 	else if(!strcmp(lastkey, "warning")) 
 	{
+		if(lline_add(&warning_list, str))
+			goto error;
+		free_w(&str);
 		goto end;
 	}
 error:
@@ -500,16 +507,34 @@ struct lline *json_input_get_loglines(void)
 	return jsll_list;
 }
 
+struct lline *json_input_get_warnings(void)
+{
+	return warning_list;
+}
+
+void json_input_clear_loglines(void)
+{
+	llines_free(&jsll_list);
+}
+
+void json_input_clear_warnings(void)
+{
+	llines_free(&warning_list);
+}
+
 // Client records will be coming through in alphabetical order.
 // FIX THIS: If a client is deleted on the server, it is not deleted from
 // clist.
+// return 0 for OK, -1 on error, 1 for json complete, 2 for json complete with
+// warnings.
 int json_input(struct asfd *asfd, struct sel *sel)
 {
 	cslist=&sel->clist;
 	sselbu=&sel->backup;
 	sllines=&sel->llines;
 
-	if(!yajl && json_input_init()) goto error;
+	if(!yajl && json_input_init())
+		goto error;
 
 	if(yajl_parse(yajl, (const unsigned char *)asfd->rbuf->buf,
 		asfd->rbuf->len)!=yajl_status_ok)
@@ -527,6 +552,8 @@ int json_input(struct asfd *asfd, struct sel *sel)
 			goto error;
 		}
 		json_input_free();
+		if(warning_list)
+			return 2;
 		return 1;
 	}
 

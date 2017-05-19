@@ -1300,9 +1300,16 @@ static int parse_data(struct asfd *asfd, struct sel *sel)
 	{
 		// 0 means carry on.
 		// 1 means it got to the end of the JSON statement.
+		// 2 means it got to the end but had warnings.
 		// Anything else means an error.
 		case 0: return 0;
 		case 1: return 0;
+		case 2:
+		{
+			// If we had a warning exit straight away. For example,
+			// if they specified '-C non-existent-client'.
+			return -1;
+		}
 		default: return -1;
 	}
 }
@@ -1350,7 +1357,7 @@ int status_client_ncurses_main_loop(struct async *as,
 				else if(sel->client)
 					req=sel->client->name;
 			}
-			if(request_status(sfd, req, sel))
+			if(request_status(sfd, req?req:"", sel))
 				goto error;
 
 			// We only want to start on the client the user gave to
@@ -1483,11 +1490,11 @@ int status_client_ncurses_init(enum action act)
 	return 0;
 }
 
-static void show_loglines(struct lline *llines)
+static void show_loglines(struct lline *llines, const char *prefix)
 {
 	struct lline *l;
 	for(l=llines; l; l=l->next)
-		logp("%s\n", l->line);
+		logp("%s%s\n", prefix, l->line);
 }
 
 int status_client_ncurses(struct conf **confs)
@@ -1501,6 +1508,7 @@ int status_client_ncurses(struct conf **confs)
 	struct asfd *so_asfd=NULL;
 	struct sel *sel=NULL;
 	struct lline *llines=NULL;
+	struct lline *wlines=NULL;
 
 	if(json_input_init())
 		goto end;
@@ -1546,12 +1554,15 @@ end:
 		ncurses_free();
 #endif
 	llines=json_input_get_loglines();
+	wlines=json_input_get_warnings();
 	if(ret)
 	{
-		show_loglines(llines);
+		show_loglines(llines, "");
+		show_loglines(wlines, "WARNING: ");
 		logp("%s exiting with error: %d\n", __func__, ret);
 	}
-	llines_free(&llines);
+	json_input_clear_loglines();
+	json_input_clear_warnings();
 	json_input_free();
 	fzp_close(&lfzp);
 	async_asfd_free_all(&as);

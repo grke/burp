@@ -90,7 +90,7 @@ static int parse_client_data(struct asfd *srfd,
 	const char *cp=NULL;
 	struct cstat *cstat=NULL;
         struct bu *bu=NULL;
-//printf("got client data: '%s'\n", srfd->rbuf->buf);
+//logp("got client data: '%s'\n", srfd->rbuf->buf);
 
 	cp=srfd->rbuf->buf;
 
@@ -136,7 +136,10 @@ static int parse_client_data(struct asfd *srfd,
 	{
 		if(!(cstat=cstat_get_by_name(clist, client)))
 		{
-			if(json_send_warn(srfd, "Could not find client"))
+			char msg[256]="";
+			snprintf(msg, sizeof(msg),
+				"Could not find client: %s", client);
+			if(json_send_warn(srfd, msg))
 				goto error;
 			goto end;
 		}

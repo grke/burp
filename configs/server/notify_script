@@ -69,7 +69,8 @@ elif [ -z "$log" ] ; then
   echo "$headers" && echo && echo "No log found to send in email" | $sendmail
 else
   # The normal case.
-  (echo "$headers" && echo && echo "$id" && echo && echo "$log:" && echo && ($catcmd "$log" 2>/dev/null || cat "$log")) | $sendmail
+  maximum_line_count=1000
+  (echo "$headers" && echo && echo "$id" && echo && echo "Last $maximum_line_count lines of $log:" && echo && ($catcmd "$log" 2>/dev/null || cat "$log") | tail -n "$maximum_line_count") | $sendmail
 fi
 
 exit 0

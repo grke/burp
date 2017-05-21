@@ -48,7 +48,7 @@ void logp(const char *fmt, ...)
 {
 #ifndef UTEST
 	int pid;
-	char buf[512]="";
+	char buf[512+MAX_PATH_UTF8]="";
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
@@ -228,7 +228,7 @@ void log_restore_settings(struct conf **cconfs, int srestore)
 int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 {
 	int r=0;
-	char buf[512]="";
+	char buf[512+MAX_PATH_UTF8]="";
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);
@@ -248,7 +248,7 @@ int logm(struct asfd *asfd, struct conf **confs, const char *fmt, ...)
 int logw(struct asfd *asfd, struct cntr *cntr, const char *fmt, ...)
 {
 	int r=0;
-	char buf[512]="";
+	char buf[512+MAX_PATH_UTF8]="";
 	va_list ap;
 	va_start(ap, fmt);
 	vsnprintf(buf, sizeof(buf), fmt, ap);

@@ -41,8 +41,6 @@
 #include "mem_pool.h"
 #include "berrno.h"
 
-#define MAX_PATHLENGTH  1024
-
 /* UTF-8 to UCS2 path conversion is expensive,
    so we cache the conversion. During backup the
    conversion is called 3 times (lstat, attribs, open),
@@ -1206,6 +1204,7 @@ err:
 
 int closedir(DIR *dirp)
 {
+	if(!dirp) return 0;
 	_dir *dp=(_dir *)dirp;
 	FindClose(dp->dirh);
 	_dir_free(dp);
@@ -1215,7 +1214,7 @@ int closedir(DIR *dirp)
 static void copyin(struct dirent *entry, const char *fname)
 {
 	char *cp=entry->d_name;
-	while(*fname)
+	while( *fname && entry->d_reclen < (MAX_PATH_UTF8-1) )
 	{
 		*cp++=*fname++;
 		entry->d_reclen++;
@@ -1312,9 +1311,9 @@ long pathconf(const char *path, int name)
 	{
 		case _PC_PATH_MAX:
 			if(!strncmp(path, "\\\\?\\", 4))
-				return 32767;
+				return MAX_PATH_W;
 		case _PC_NAME_MAX:
-			return 255;
+			return MAX_PATH;
 	}
 	return system_error();
 }
@@ -1783,7 +1782,7 @@ const char * getArgv0(const char *cmdline)
 
 static int dwAltNameLength_ok(DWORD dwAltNameLength)
 {
-	return dwAltNameLength>0 && dwAltNameLength<MAX_PATHLENGTH;
+	return dwAltNameLength>0 && dwAltNameLength<MAX_PATH_UTF8;
 }
 
 /* Extracts the executable or script name from the first string in 
@@ -1883,11 +1882,11 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 	DWORD dwBasePathLength=pExeEnd-pExeStart;
 
 	DWORD dwAltNameLength=0;
-	char *pPathname=(char *)alloca(MAX_PATHLENGTH+1);
-	char *pAltPathname=(char *)alloca(MAX_PATHLENGTH+1);
+	char *pPathname=(char *)alloca(MAX_PATH_UTF8+1);
+	char *pAltPathname=(char *)alloca(MAX_PATH_UTF8+1);
 
-	pPathname[MAX_PATHLENGTH]='\0';
-	pAltPathname[MAX_PATHLENGTH]='\0';
+	pPathname[MAX_PATH_UTF8]='\0';
+	pAltPathname[MAX_PATH_UTF8]='\0';
 
 	memcpy(pPathname, pExeStart, dwBasePathLength);
 	pPathname[dwBasePathLength]='\0';
@@ -1904,7 +1903,7 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 				// There are no path separators, search in the
 				// standard locations
 				dwAltNameLength=SearchPath(NULL, pPathname,
-				  ExtensionList[index], MAX_PATHLENGTH,
+				  ExtensionList[index], MAX_PATH_UTF8,
 				  pAltPathname, NULL);
 				if(dwAltNameLength_ok(dwAltNameLength))
 				{
@@ -1917,7 +1916,7 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 			else
 			{
 				snprintf(&pPathname[dwBasePathLength],
-					MAX_PATHLENGTH-dwBasePathLength,
+					MAX_PATH_UTF8-dwBasePathLength,
 					"%s", ExtensionList[index]);
 				if(GetFileAttributes(pPathname)
 				  !=INVALID_FILE_ATTRIBUTES)
@@ -1931,7 +1930,7 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 		// There are no path separators, search in the standard
 		// locations.
 		dwAltNameLength=SearchPath(NULL, pPathname,
-			NULL, MAX_PATHLENGTH, pAltPathname, NULL);
+			NULL, MAX_PATH_UTF8, pAltPathname, NULL);
 		if(dwAltNameLength_ok(dwAltNameLength))
 		{
 			memcpy(pPathname, pAltPathname, dwAltNameLength);
@@ -1942,7 +1941,7 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 	if(strchr(pPathname, ' '))
 	{
 		dwAltNameLength=GetShortPathName(pPathname,
-			pAltPathname, MAX_PATHLENGTH);
+			pAltPathname, MAX_PATH_UTF8);
 
 		if(dwAltNameLength_ok(dwAltNameLength))
 		{

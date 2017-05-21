@@ -6,7 +6,17 @@
 
 #define ASSERT(x)
 
-#ifdef HAVE_WIN32
+// MAX_PATH is Windows constatnt, usually 260, maybe changed in some Win10 update.
+// PATH_MAX is Posix constant
+// right method - it to call pathconf(), but such case lead to reworking lots of code;
+// and some buffers are better to allocate on stack, not on heap
+#ifndef MAX_PATH
+    #ifdef PATH_MAX
+        #define MAX_PATH           PATH_MAX
+    #else
+        #define MAX_PATH           260
+    #endif
+#endif
 
 // unicode enabling of win 32 needs some defines and functions
 
@@ -24,6 +34,7 @@
 // "\\?\" to the path. For more information, see Naming a File.
 #define MAX_PATH_W 32767
 
+#ifdef HAVE_WIN32
 
 	#define WIN32_REPARSE_POINT  1 // Any odd dir except the next two.
 	#define WIN32_MOUNT_POINT    2 // Directory link to Volume.

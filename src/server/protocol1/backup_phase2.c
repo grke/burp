@@ -46,7 +46,7 @@ static int path_too_long(struct iobuf *path, struct conf **cconfs)
 		return path_length_warn(path, cconfs);
 	}
 	// We have to check every part in the path to ensure it less then fs_name_max
-	// minimum windows case is c:/a, nix case is /a
+	// minimum windows case is c:/a, nix case is /
 	// usual: c:/users, /home
 	cp = strchr(path->buf, '/');
 	if( !cp ) // very strange
@@ -942,6 +942,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 			sdirs, cb, *p1b, ucmanio, hmanio, cconfs))
 		{
 			case P_NEW:
+				return 0;
 			case P_CHANGED:
 				// Free cb content for things like encrypted
 				// files, which we only pretend are new.
@@ -985,6 +986,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 			cb, *p1b, ucmanio, hmanio, cconfs))
 		{
 			case P_NEW:
+				return 0;
 			case P_CHANGED:
 				// Free cb content for things like encrypted
 				// files, which we only pretend are new.

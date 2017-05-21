@@ -28,6 +28,7 @@ int write_status(enum cntr_status cntr_status,
 	static struct iobuf *wbuf=NULL;
 
 	if(!wasfd) return 0;
+	if(!cntr || !cntr->bno) return 0;
 
 	// Only update every 2 seconds.
 	now=time(NULL);

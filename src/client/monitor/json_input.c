@@ -4,6 +4,7 @@
 #include "../../async.h"
 #include "../../bu.h"
 #include "../../cstat.h"
+#include "../../cntr.h"
 #include "../../handy.h"
 #include "../../iobuf.h"
 #include "../../log.h"
@@ -41,6 +42,9 @@ static struct lline **sllines=NULL;
 static struct lline *jsll_list=NULL;
 // For recording warnings in json input.
 static struct lline *warning_list=NULL;
+static pid_t pid=-1;
+static int bno=0;
+static enum cntr_status phase=CNTR_STATUS_UNSET;
 
 static int is_wrap(const char *val, const char *key, uint16_t bit)
 {
@@ -54,7 +58,17 @@ static int is_wrap(const char *val, const char *key, uint16_t bit)
 
 static int input_integer(__attribute__ ((unused)) void *ctx, long long val)
 {
-	if(in_counters)
+	if(!strcmp(lastkey, "pid"))
+	{
+		pid=(pid_t)val;
+		return 1;
+	}
+	else if(!strcmp(lastkey, "backup"))
+	{
+		bno=(int)val;
+		return 1;
+	}
+	else if(in_counters)
 	{
 		if(!strcmp(lastkey, "count"))
 		{
@@ -135,8 +149,8 @@ static int input_string(__attribute__ ((unused)) void *ctx,
 		}
 		else if(!strcmp(lastkey, "type"))
 		{
-			if(!current) goto error;
-			cntr_ent=current->cntr->ent[(uint8_t)*str];
+			if(!current || !current->cntrs) goto error;
+			cntr_ent=current->cntrs->ent[(uint8_t)*str];
 		}
 		else
 		{
@@ -147,10 +161,14 @@ static int input_string(__attribute__ ((unused)) void *ctx,
 	else if(!strcmp(lastkey, "name"))
 	{
 		if(cnew) goto error;
-		if(!(current=cstat_get_by_name(*cslist, str)))
+		if((current=cstat_get_by_name(*cslist, str)))
+		{
+			cntrs_free(&current->cntrs);
+		}
+		else
 		{
 			if(!(cnew=cstat_alloc())
-			  || cstat_init_with_cntr(cnew, str, NULL))
+			  || cstat_init(cnew, str, NULL))
 				goto error;
 			current=cnew;
 		}
@@ -167,10 +185,15 @@ static int input_string(__attribute__ ((unused)) void *ctx,
 		current->run_status=run_str_to_status(str);
 		goto end;
 	}
+	else if(!strcmp(lastkey, "action"))
+	{
+		// Ignore for now.
+		goto end;
+	}
 	else if(!strcmp(lastkey, "phase"))
 	{
 		if(!current) goto error;
-		current->cntr->cntr_status=cntr_str_to_status(str);
+		phase=cntr_str_to_status((const char *)str);
 		goto end;
 	}
 	else if(!strcmp(lastkey, "flags"))
@@ -309,6 +332,19 @@ static int input_start_array(__attribute__ ((unused)) void *ctx)
 	}
 	else if(!strcmp(lastkey, "counters"))
 	{
+		struct cntr *cntr;
+		for(cntr=current->cntrs; cntr; cntr=cntr->next)
+			if(cntr->pid==pid)
+				break;
+		if(!cntr)
+		{
+			if(!(cntr=cntr_alloc())
+			  || cntr_init(cntr, current->name, pid))
+				return 0;
+			cstat_add_cntr_to_list(current, cntr);
+		}
+		cntr->bno=bno;
+		cntr->cntr_status=phase;
 		in_counters=1;
 	}
 	else if(!strcmp(lastkey, "list"))
@@ -421,17 +457,32 @@ static void merge_bu_lists(void)
 	}
 }
 
+static void update_live_counter_flag(void)
+{
+	struct bu *bu;
+	if(!current)
+		return;
+	for(bu=current->bu; bu; bu=bu->next)
+	{
+		struct cntr *cntr;
+		for(cntr=current->cntrs; cntr; cntr=cntr->next)
+			if(bu->bno==(uint64_t)cntr->bno)
+				bu->flags|=BU_LIVE_COUNTERS;
+	}
+}
+
 static int input_end_array(__attribute__ ((unused)) void *ctx)
 {
 	if(in_backups && !in_flags && !in_counters && !in_logslist)
 	{
 		in_backups=0;
 		if(add_to_bu_list()) return 0;
-		// Now may have two lists. Want to keep the old one is intact
+		// Now may have two lists. Want to keep the old one as intact
 		// as possible, so that we can keep a pointer to its entries
 		// in the ncurses stuff.
 		// Merge the new list into the old.
 		merge_bu_lists();
+		update_live_counter_flag();
 		bu_list=NULL;
 		if(cnew)
 		{
@@ -535,6 +586,8 @@ int json_input(struct asfd *asfd, struct sel *sel)
 
 	if(!yajl && json_input_init())
 		goto error;
+
+//printf("parse: '%s\n'", asfd->rbuf->buf);
 
 	if(yajl_parse(yajl, (const unsigned char *)asfd->rbuf->buf,
 		asfd->rbuf->len)!=yajl_status_ok)

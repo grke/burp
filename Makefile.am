@@ -355,6 +355,7 @@ runner_SOURCES = \
 	utest/test_attribs.c \
 	utest/test_base64.c \
 	utest/test_cmd.c \
+	utest/test_cntr.c \
 	utest/test_conf.c \
 	utest/test_conffile.c \
 	utest/test_fzp.c \

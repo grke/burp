@@ -80,7 +80,7 @@ int want_to_restore(int srestore, struct sbuf *sb,
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
-	regex_t *regex, int srestore, struct conf **cconfs)
+	regex_t *regex, int srestore, struct conf **cconfs, struct bu *bu)
 {
 	int ars=0;
 	int ret=-1;
@@ -90,6 +90,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 
 	cntr=get_cntr(cconfs);
 	if(!cntr) return 0;
+	cntr->bno=(int)bu->bno;
 
 // FIX THIS: this is only trying to work for protocol1.
 	if(get_protocol(cconfs)!=PROTO_1) return 0;
@@ -612,7 +613,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Another process is restoring or verifying backup %s.\n", bu->timestamp);
-		asfd->write_str(asfd, CMD_ERROR, msg);
+		log_and_send(asfd, msg);
 		goto end;
 	}
 
@@ -651,7 +652,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	// This is the equivalent of a phase1 scan during backup.
 
 	if(setup_cntr(asfd, manifest,
-		regex, srestore, cconfs))
+		regex, srestore, cconfs, bu))
 			goto end;
 
 	if(!manifest_count)
@@ -662,7 +663,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		// This means that the client side 'expected' counter will be
 		// confusing in that case. Live with it for now.
 		// However, the server side log will be OK.
-		if(cntr_send_bu(asfd, bu, cconfs))
+		if(cntr_send_bu(asfd, bu, cconfs, cntr_status))
 			goto end;
 	}
 
@@ -676,7 +677,9 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		  regex, srestore, act, sdirs, cntr_status, cconfs);
 end:
 	log_fzp_set(NULL, cconfs);
-	compress_file(logpath, logpathz, get_int(cconfs[OPT_COMPRESSION]));
+	if(logpath && logpathz)
+		compress_file(logpath, logpathz,
+			get_int(cconfs[OPT_COMPRESSION]));
 	free_w(&manifest);
 	free_w(&logpath);
 	free_w(&logpathz);

@@ -79,11 +79,18 @@ struct cntr
 	enum cntr_status cntr_status;
 
 	char *cname;
+	// For list management in status server.
+	int pid;
+	int found;
+	int bno;
+
+	struct cntr *next;
 };
 
 extern struct cntr *cntr_alloc(void);
-extern int cntr_init(struct cntr *cntr, const char *cname);
+extern int cntr_init(struct cntr *cntr, const char *cname, pid_t pid);
 extern void cntr_free(struct cntr **cntr);
+extern void cntrs_free(struct cntr **cntrs);
 
 extern const char *bytes_to_human(uint64_t counter);
 extern void cntr_print(struct cntr *cntr, enum action act, struct asfd *asfd);
@@ -110,15 +117,21 @@ extern void cntr_add_changed_val(struct cntr *c,
 #ifndef HAVE_WIN32
 extern size_t cntr_to_str(struct cntr *cntr, const char *path);
 extern int cntr_send_bu(struct asfd *asfd,
-	struct bu *bu, struct conf **confs);
+	struct bu *bu, struct conf **confs,
+	enum cntr_status cntr_status);
 extern int cntr_send_sdirs(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf **confs);
+	struct sdirs *sdirs, struct conf **confs,
+	enum cntr_status cntr_status);
 #endif
 
-extern int str_to_cntr(const char *str, struct cstat *cstat, char **path);
+extern int str_to_cntr(const char *str, struct cntr *cntr, char **path);
 extern int cntr_recv(struct asfd *asfd, struct conf **conf);
 
 extern const char *cntr_status_to_str(struct cntr *cntr);
 extern enum cntr_status cntr_str_to_status(const char *str);
+extern const char *cntr_status_to_action_str(struct cntr *cntr);
+
+extern int extract_client_pid_bno(char *buf,
+	char **cname, pid_t *pid, int *bno);
 
 #endif

@@ -9,6 +9,7 @@
 #include "../../../src/cstat.h"
 #include "../../../src/fsops.h"
 #include "../../../src/fzp.h"
+#include "../../../src/handy.h"
 #include "../../../src/iobuf.h"
 #include "../../../src/prepend.h"
 #include "../../../src/server/monitor/cstat.h"
@@ -62,7 +63,8 @@ START_TEST(test_json_send_empty)
 {
 	struct asfd *asfd;
 	asfd=asfd_setup(BASE "/empty");
-	fail_unless(!json_send(asfd, NULL, NULL, NULL, NULL, NULL, 0/*cache*/));
+	fail_unless(!json_send(asfd, NULL, NULL, NULL, NULL, NULL, 0/*cache*/,
+		version_to_long(VERSION)));
 	tear_down(&asfd);
 }
 END_TEST
@@ -96,7 +98,8 @@ START_TEST(test_json_send_clients)
 	assert_cstat_list(clist, cnames);
 	for(c=clist; c; c=c->next) c->permitted=1;
 	asfd=asfd_setup(BASE "/clients");
-	fail_unless(!json_send(asfd, clist, NULL, NULL, NULL, NULL, 0/*cache*/));
+	fail_unless(!json_send(asfd, clist, NULL, NULL, NULL, NULL, 0/*cache*/,
+		version_to_long(VERSION)));
 	for(c=clist; c; c=c->next)
 		sdirs_free((struct sdirs **)&c->sdirs);
 	cstat_list_free(&clist);
@@ -150,9 +153,6 @@ static void do_test_json_send_clients_with_backup(const char *path,
 		build_storage_dirs((struct sdirs *)c->sdirs, sd, s);
 		fail_unless(!cstat_set_backup_list(c));
 		fail_unless(c->bu!=NULL);
-		// Hack the cntr timestamps so that they are always the same.
-		c->cntr->ent[(uint8_t)CMD_TIMESTAMP]->count=200;
-		c->cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=400;
 
 	}
 	asfd=asfd_setup(path);
@@ -161,7 +161,8 @@ static void do_test_json_send_clients_with_backup(const char *path,
 	if(specific_client)
 	  fail_unless((c=cstat_get_by_name(clist, specific_client))!=NULL);
 
-	fail_unless(!json_send(asfd, clist, c, NULL, NULL, NULL, 0/*cache*/));
+	fail_unless(!json_send(asfd, clist, c, NULL, NULL, NULL, 0/*cache*/,
+		version_to_long(VERSION)));
 	cstat_list_free_sdirs(clist);
 	cstat_list_free(&clist);
 	fail_unless(!recursive_delete(SDIRS));
@@ -344,8 +345,8 @@ Suite *suite_server_monitor_json_output(void)
 	tcase_add_test(tc_core, test_json_send_clients);
 	tcase_add_test(tc_core, test_json_send_clients_with_backup);
 	tcase_add_test(tc_core, test_json_send_clients_with_backups);
-	tcase_add_test(tc_core, test_json_send_clients_with_backups_working);
 	tcase_add_test(tc_core, test_json_send_clients_with_backups_finishing);
+	tcase_add_test(tc_core, test_json_send_clients_with_backups_working);
 	tcase_add_test(tc_core, test_json_send_client_specific);
 	tcase_add_test(tc_core, test_json_matching_output);
 	tcase_add_test(tc_core, cleanup);

@@ -80,6 +80,7 @@ Suite *suite_client_protocol2_rabin_read(void);
 Suite *suite_client_restore(void);
 Suite *suite_client_xattr(void);
 Suite *suite_cmd(void);
+Suite *suite_cntr(void);
 Suite *suite_conf(void);
 Suite *suite_conffile(void);
 Suite *suite_fzp(void);

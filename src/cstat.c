@@ -20,16 +20,6 @@ int cstat_init(struct cstat *cstat,
 	return 0;
 }
 
-int cstat_init_with_cntr(struct cstat *cstat,
-	const char *name, const char *clientconfdir)
-{
-	if(cstat_init(cstat, name, clientconfdir)
-	  || !(cstat->cntr=cntr_alloc())
-	  || cntr_init(cstat->cntr, name))
-		return -1;
-	return 0;
-}
-
 static void cstat_free_content(struct cstat *c)
 {
 	if(!c) return;
@@ -37,9 +27,35 @@ static void cstat_free_content(struct cstat *c)
 	free_w(&c->name);
 	free_w(&c->conffile);
 	strlists_free(&c->labels);
-	cntr_free(&c->cntr);
+	cntrs_free(&c->cntrs);
 	if(c->sdirs) logp("%s() called without freeing sdirs\n", __func__);
 	c->clientdir_mtime=0;
+}
+
+void cstat_add_cntr_to_list(struct cstat *c, struct cntr *cntr)
+{
+	cntr->next=c->cntrs;
+	c->cntrs=cntr;
+}
+
+void cstat_remove_cntr_from_list(struct cstat *c, struct cntr *cntr)
+{
+	struct cntr *x;
+	if(!c || !cntr)
+		return;
+	if(c->cntrs==cntr)
+	{
+		c->cntrs=cntr->next;
+		return;
+	}
+	for(x=c->cntrs; x; x=x->next)
+	{
+		if(x->next==cntr)
+		{
+			x->next=cntr->next;
+			return;
+		}
+	}
 }
 
 void cstat_free(struct cstat **cstat)

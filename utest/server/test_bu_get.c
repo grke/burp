@@ -247,7 +247,7 @@ static void assert_bu_list_with_working(struct sdirs *sdirs,
 	memset(&cstat, 0, sizeof(cstat));
 	memset(&cntr, 0, sizeof(cntr));
 	cstat.run_status=run_status;
-	cstat.cntr=&cntr;
+	cstat.cntrs=&cntr;
 	cntr.cntr_status=cntr_status;
 	fail_unless(!bu_get_list_with_working(sdirs, &bu_list, &cstat));
 	do_assert_bu_list(bu_list, s, len);
@@ -314,19 +314,19 @@ START_TEST(test_bu_get_with_working_proto_2)
 END_TEST
 
 static struct sd rn1[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_STATS_BACKUP|BU_DELETABLE },
-	{ "0000003 1970-01-03 00:00:00", 3, 2, BU_STATS_BACKUP },
-	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_STATS_BACKUP|BU_CURRENT }
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE },
+	{ "0000003 1970-01-03 00:00:00", 3, 2, },
+	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_CURRENT }
 };
 static struct sd rn2[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_STATS_RESTORE|BU_DELETABLE },
-	{ "0000003 1970-01-03 00:00:00", 3, 2, BU_STATS_RESTORE },
-	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_STATS_RESTORE|BU_CURRENT }
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE },
+	{ "0000003 1970-01-03 00:00:00", 3, 2, },
+	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_CURRENT }
 };
 static struct sd rn3[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_STATS_VERIFY|BU_DELETABLE },
-	{ "0000003 1970-01-03 00:00:00", 3, 2, BU_STATS_VERIFY },
-	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_STATS_VERIFY|BU_CURRENT }
+	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE },
+	{ "0000003 1970-01-03 00:00:00", 3, 2, },
+	{ "0000005 1970-01-05 00:00:00", 5, 3, BU_CURRENT }
 };
 
 static void do_tests_with_running(enum protocol p)

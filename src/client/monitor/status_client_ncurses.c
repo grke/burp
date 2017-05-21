@@ -31,10 +31,6 @@ static enum action actg=ACTION_STATUS;
 
 static struct fzp *lfzp=NULL;
 
-// For switching between seeing 'last backup' and counter summary on the front
-// screen.
-static uint8_t toggle=0;
-
 #ifdef HAVE_NCURSES
 static void print_line_ncurses(const char *string, int row, int col)
 {
@@ -95,49 +91,8 @@ static void client_summary(struct cstat *cstat,
 	// Find the current backup.
 	cbu=bu_find_current(cstat->bu);
 
-	switch(cstat->run_status)
-	{
-		case RUN_STATUS_RUNNING:
-			if(toggle)
-			{
-				char f[64]="";
-				char b[64]="";
-				uint64_t p=0;
-				uint64_t t=0;
-				struct cntr *cntr=cstat->cntr;
-				struct cntr_ent *ent_gtotal=
-					cntr->ent[(uint8_t)CMD_GRAND_TOTAL];
-
-				t=ent_gtotal->count
-					+ent_gtotal->same
-					+ent_gtotal->changed;
-				if(ent_gtotal->phase1)
-					p=(t*100)/ent_gtotal->phase1;
-				snprintf(f, sizeof(f),
-					" %" PRIu64
-					"/%" PRIu64
-					" %" PRIu64
-					"%%",
-					t, ent_gtotal->phase1, p);
-				if(cntr->byte)
-					snprintf(b, sizeof(b), "%s",
-						bytes_to_human(cntr->byte));
-				snprintf(msg, sizeof(msg), fmt,
-					cstat->name,
-					run_status_to_str(cstat),
-					f, b);
-				break;
-			}
-			// Else fall through.
-		case RUN_STATUS_IDLE:
-		default:
-			snprintf(msg, sizeof(msg), fmt,
-				cstat->name,
-				run_status_to_str(cstat),
-				" last backup: ",
-				get_bu_str(cbu));
-			break;
-	}
+	snprintf(msg, sizeof(msg), fmt, cstat->name, run_status_to_str(cstat),
+		" last backup: ", get_bu_str(cbu));
 
 	if(*msg) print_line(msg, row, col);
 }
@@ -464,6 +419,7 @@ static const char *logop_to_text(uint16_t logop)
 		case BU_STATS_BACKUP:	return "Backup stats";
 		case BU_STATS_RESTORE:	return "Restore stats";
 		case BU_STATS_VERIFY:	return "Verify stats";
+		case BU_LIVE_COUNTERS:	return "Live counters";
 		default: return "";
 	}
 }
@@ -483,13 +439,19 @@ static void print_logs_list_line(struct sel *sel,
 #endif
 }
 
-static void client_and_status(struct sel *sel, int *x, int col)
+static void print_client(struct sel *sel, int *x, int col)
 {
-	char msg[1024];
+	char msg[1024]="";
 	snprintf(msg, sizeof(msg), "Client: %s", sel->client->name);
 //		sel->client->cntr->ent[CMD_FILE]->phase1,
 //		sel->client->cntr->ent[CMD_FILE]->count);
 	print_line(msg, (*x)++, col);
+}
+
+static void client_and_status(struct sel *sel, int *x, int col)
+{
+	char msg[1024]="";
+	print_client(sel, x, col);
 	snprintf(msg, sizeof(msg),
 		"Status: %s", run_status_to_str(sel->client));
 	print_line(msg, (*x)++, col);
@@ -552,6 +514,7 @@ static int selindex_from_lline(struct sel *sel)
 
 static void print_logs_list(struct sel *sel, int *x, int col)
 {
+	print_logs_list_line(sel, BU_LIVE_COUNTERS, x, col);
 	print_logs_list_line(sel, BU_MANIFEST, x, col);
 	print_logs_list_line(sel, BU_LOG_BACKUP, x, col);
 	print_logs_list_line(sel, BU_LOG_RESTORE, x, col);
@@ -603,7 +566,43 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 	if(!star_printed) sel->client=sel->clist;
 }
 
-static void update_screen_backups(struct sel *sel, int *x, int col,
+static char *get_extradesc(struct bu *b, struct cntr *cntrs)
+{
+	char *extradesc=NULL;
+	struct cntr *cntr=NULL;
+	if(b->flags & BU_CURRENT)
+	{
+		extradesc=strdup_w(" (current)", __func__);
+	}
+	else if(b->flags & BU_WORKING)
+	{
+		extradesc=strdup_w(" (working)", __func__);
+	}
+	else if(b->flags & BU_FINISHING)
+	{
+		extradesc=strdup_w(" (finishing)", __func__);
+	}
+	else
+	{
+		extradesc=strdup_w("", __func__);
+	}
+
+	for(cntr=cntrs; cntr; cntr=cntr->next)
+	{
+		char phase[32]="";
+		if(cntr->bno==b->bno)
+		{
+			snprintf(phase, sizeof(phase),
+				" %s, pid: %d",
+				cntr_status_to_str(cntr), cntr->pid);
+			if(astrcat(&extradesc, phase, __func__))
+				return NULL;
+		}
+	}
+	return extradesc;
+}
+
+static int update_screen_backups(struct sel *sel, int *x, int col,
 	int winmin, int winmax)
 {
 #ifdef HAVE_NCURSES
@@ -612,9 +611,9 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 	struct bu *b;
 	char msg[1024]="";
 	int star_printed=0;
-	const char *extradesc=NULL;
 	for(b=sel->client->bu; b; b=b->next)
 	{
+		char *extradesc=NULL;
 #ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS)
 		{
@@ -624,19 +623,15 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 		}
 #endif
 
-		if(b->flags & BU_CURRENT)
-			extradesc=" (current)";
-		else if(b->flags & BU_WORKING)
-			extradesc=" (working)";
-		else if(b->flags & BU_FINISHING)
-			extradesc=" (finishing)";
-		else extradesc="";
+		if(!(extradesc=get_extradesc(b, sel->client->cntrs)))
+			return -1;
 
 		snprintf(msg, sizeof(msg), "%s %s%s",
 				b==sel->client->bu?"Backup list:":
 				"            ",
 				get_bu_str(b),
 				extradesc);
+		free_w(&extradesc);
 		print_line(msg, (*x)++, col);
 #ifdef HAVE_NCURSES
 		if(actg==ACTION_STATUS && sel->backup==b)
@@ -647,6 +642,7 @@ static void update_screen_backups(struct sel *sel, int *x, int col,
 #endif
 	}
 	if(!star_printed) sel->backup=sel->client->bu;
+	return 0;
 }
 
 static void update_screen_live_counter_table(struct cntr_ent *e,
@@ -688,16 +684,18 @@ static void update_screen_live_counter_single(struct cntr_ent *e,
 	print_line(msg, (*x)++, col);
 }
 
-static void update_screen_live_counters(struct cstat *client, int *x, int col)
+static void update_screen_live_counters(struct cntr *cntr, int *x, int col)
 {
 	char msg[128]="";
 	struct cntr_ent *e;
-	struct cntr *cntr=client->cntr;
 	time_t start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
 	time_t end=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count;
 	struct cntr_ent *gtotal=cntr->ent[(uint8_t)CMD_GRAND_TOTAL];
 
 	print_line("", (*x)++, col);
+	snprintf(msg, sizeof(msg), "       PID: %d (%s)",
+		cntr->pid, cntr_status_to_str(cntr));
+	print_line(msg, (*x)++, col);
 	snprintf(msg, sizeof(msg), "Start time: %s", getdatestr(start));
 	print_line(msg, (*x)++, col);
 	snprintf(msg, sizeof(msg), "  End time: %s", getdatestr(end));
@@ -705,15 +703,32 @@ static void update_screen_live_counters(struct cstat *client, int *x, int col)
 	snprintf(msg, sizeof(msg), "Time taken: %s", time_taken(end-start));
 	print_line(msg, (*x)++, col);
 	table_header(x, col);
-	for(e=client->cntr->list; e; e=e->next)
+	for(e=cntr->list; e; e=e->next)
 		update_screen_live_counter_table(e, x, col);
 	print_line("", (*x)++, col);
-	snprintf(msg, sizeof(msg), "%19s: %" PRIu64 "%%", "Percentage complete",
-	  ((gtotal->count+gtotal->same+gtotal->changed)*100)/gtotal->phase1);
-	print_line(msg, (*x)++, col);
+
+	if(gtotal->phase1)
+	{
+		snprintf(msg, sizeof(msg),
+			"%19s: %" PRIu64 "%%", "Percentage complete",
+			((gtotal->count+gtotal->same+gtotal->changed)*100)/gtotal->phase1);
+		print_line(msg, (*x)++, col);
+	}
 	print_line("", (*x)++, col);
-	for(e=client->cntr->list; e; e=e->next)
+	for(e=cntr->list; e; e=e->next)
 		update_screen_live_counter_single(e, x, col);
+}
+
+static void update_screen_live_counters_w(struct sel *sel, int *x, int col)
+{
+	struct cstat *client=sel->client;
+	struct cntr *cntr=NULL;
+	for(cntr=client->cntrs; cntr; cntr=cntr->next)
+	{
+		if(sel->backup
+		  && sel->backup->bno==cntr->bno)
+			update_screen_live_counters(cntr, x, col);
+	}
 }
 
 static void update_screen_view_log(struct sel *sel, int *x, int col,
@@ -729,9 +744,8 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 
 	if(sel->client
 	  && sel->backup
-	  && (sel->backup->flags & (BU_WORKING|BU_FINISHING))
-	  && (sel->logop & BU_STATS_BACKUP))
-		return update_screen_live_counters(sel->client, x, col);
+	  && (sel->logop & BU_LIVE_COUNTERS))
+		return update_screen_live_counters_w(sel, x, col);
 
 	for(l=sel->llines; l; l=l->next)
 	{
@@ -868,7 +882,8 @@ static int update_screen(struct sel *sel)
 			update_screen_clients(sel, &x, col, winmin, winmax);
 			break;
 		case PAGE_BACKUP_LIST:
-			update_screen_backups(sel, &x, col, winmin, winmax);
+			if(update_screen_backups(sel, &x, col, winmin, winmax))
+				return -1;
 			break;
 		case PAGE_BACKUP_LOGS:
 			print_logs_list(sel, &x, col);
@@ -919,32 +934,27 @@ static int request_status(struct asfd *asfd,
 				lname="verify";
 			else if(sel->logop & BU_MANIFEST)
 				lname="manifest";
-			else if(sel->logop & BU_STATS_BACKUP)
-			{
-			// Hack so that it does not request the logs for live
-			// counters.
-			// FIX THIS: need to do something similar for
-			// restore/verify.
-				if(!sel->backup) break;
-				if(sel->client
-				  && sel->client->run_status==RUN_STATUS_RUNNING
-				  && sel->backup->flags
-					& (BU_WORKING|BU_FINISHING))
-				{
-					// Make sure a request is sent, so that
-					// the counters update.
-					snprintf(buf, sizeof(buf),
-						"c:%s:b:%" PRIu64 "\n",
-						client, sel->backup->bno);
-					break;
-				}
-				else
-					lname="backup_stats";
-			}
 			else if(sel->logop & BU_STATS_RESTORE)
 				lname="restore_stats";
 			else if(sel->logop & BU_STATS_VERIFY)
 				lname="verify_stats";
+			else if(sel->logop & BU_STATS_BACKUP)
+				lname="backup_stats";
+			else if(sel->logop & BU_LIVE_COUNTERS)
+			{
+				// Hack so that it does not request the logs
+				// for live counters.
+				if(!sel->backup
+				  || !sel->client
+				  || !sel->client->cntrs)
+					break;
+				// Make sure a request is sent, so that the
+				// counters update.
+				snprintf(buf, sizeof(buf),
+					"c:%s:b:%" PRIu64 "\n",
+					client, sel->backup->bno);
+				break;
+			}
 
 			if(sel->backup && lname)
 				snprintf(buf, sizeof(buf),
@@ -1072,7 +1082,7 @@ static void up_logs(struct sel *sel)
 {
 	int i=0;
 	uint16_t sh=sel->logop;
-	for(i=0; sh>BU_MANIFEST && i<16; i++)
+	for(i=0; sh>BU_LIVE_COUNTERS && i<16; i++)
 	{
 		sh=sh>>1;
 		if(sh & sel->backup->flags)
@@ -1245,11 +1255,6 @@ static int parse_stdin_data(struct asfd *asfd, struct sel *sel)
 		case 'q':
 		case 'Q':
 			return 1;
-		case 't':
-		case 'T':
-			if(toggle) toggle=0;
-			else toggle=1;
-			break;
 		case KEY_UP:
 		case 'k':
 		case 'K':

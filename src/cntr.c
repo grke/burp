@@ -93,7 +93,7 @@ static size_t calc_max_str_len(struct cntr *cntr, const char *cname)
 	return slen;
 }
 
-int cntr_init(struct cntr *cntr, const char *cname)
+int cntr_init(struct cntr *cntr, const char *cname, pid_t pid)
 {
 	if(!cname)
 	{
@@ -163,6 +163,7 @@ int cntr_init(struct cntr *cntr, const char *cname)
 	if(!(cntr->str=(char *)calloc_w(1, cntr->str_max_len, __func__))
 	  || !(cntr->cname=strdup_w(cname, __func__)))
 		return -1;
+	cntr->pid=pid;
 
 	return 0;
 }
@@ -186,6 +187,21 @@ void cntr_free(struct cntr **cntr)
 	if(!cntr || !*cntr) return;
 	cntr_free_content(*cntr);
 	free_v((void **)cntr);
+}
+
+void cntrs_free(struct cntr **cntrs)
+{
+	struct cntr *c;
+	struct cntr *chead;
+	if(!cntrs || !*cntrs) return;
+	chead=*cntrs;
+	while(chead)
+	{
+		c=chead;
+		chead=chead->next;
+		cntr_free(&c);
+	}
+	*cntrs=NULL;
 }
 
 const char *bytes_to_human(uint64_t counter)
@@ -662,8 +678,9 @@ size_t cntr_to_str(struct cntr *cntr, const char *path)
 
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=time(NULL);
 
-	snprintf(str, cntr->str_max_len-1, "cntr\t%s.%d\t%d\t%d\t",
-		cntr->cname, getpid(), CNTR_VERSION, cntr->cntr_status);
+	snprintf(str, cntr->str_max_len-1, "cntr\t%s.%d.%d\t%d\t%d\t",
+		cntr->cname, cntr->pid, cntr->bno,
+		CNTR_VERSION, cntr->cntr_status);
 
 	for(e=cntr->list; e; e=e->next)
 	{
@@ -768,10 +785,9 @@ static int add_to_backup_list(struct strlist **backups, const char *tok)
 }
 */
 
-static int extract_cntrs(struct cstat *cstat, char **path)
+static int extract_cntrs(struct cntr *cntr, char **path)
 {
 	char *tok;
-	struct cntr *cntr=cstat->cntr;
 	while((tok=strtok(NULL, "\t\n")))
 	{
 		switch(tok[0])
@@ -792,7 +808,35 @@ static int extract_cntrs(struct cstat *cstat, char **path)
 	return 0;
 }
 
-int str_to_cntr(const char *str, struct cstat *cstat, char **path)
+int extract_client_pid_bno(char *buf, char **cname, pid_t *pid, int *bno)
+{
+	char *cp=NULL;
+	char *pp=NULL;
+
+	// Extract the client name.
+	if((cp=strchr(buf, '\t')))
+		*cp='\0';
+	if(!(*cname=strdup_w(buf, __func__)))
+		return -1;
+	if(cp)
+		*cp='\t';
+
+	// Extract the bno.
+	if((pp=strrchr(*cname, '.')))
+	{
+		*pp='\0';
+		*bno=(int)atoi(pp+1);
+		// Extract the pid.
+		if((pp=strrchr(*cname, '.')))
+		{
+			*pp='\0';
+			*pid=(pid_t)atoi(pp+1);
+		}
+	}
+	return 0;
+}
+
+int str_to_cntr(const char *str, struct cntr *cntr, char **path)
 {
 	int ret=-1;
 	char *tok=NULL;
@@ -803,16 +847,24 @@ int str_to_cntr(const char *str, struct cstat *cstat, char **path)
 
 	if((tok=strtok(copy, "\t\n")))
 	{
+		int bno=0;
+		pid_t pid=-1;
 		char *tmp=NULL;
+		char *cname=NULL;
 		// First token is 'cntr'.
-		// Second is client name. Do not need that here.
+		// Second is client name/pid/bno.
 		if(!(tmp=strtok(NULL, "\t\n")))
 		{
 			logp("Parsing problem in %s: null client\n",
 				__func__);
 			goto end;
 		}
-		// Second is the cntr version.
+		if(extract_client_pid_bno(tmp, &cname, &pid, &bno))
+			goto end;
+		free_w(&cname);
+		cntr->pid=pid;
+		cntr->bno=bno;
+		// Third is the cntr version.
 		if(!(tmp=strtok(NULL, "\t\n")))
 		{
 			logp("Parsing problem in %s: null version\n",
@@ -824,16 +876,16 @@ int str_to_cntr(const char *str, struct cstat *cstat, char **path)
 			ret=0;
 			goto end;
 		}
-		// Third is cstat_status.
+		// Fourth is cntr_status.
 		if(!(tmp=strtok(NULL, "\t\n")))
 		{
-			logp("Parsing problem in %s: null cstat_status\n",
+			logp("Parsing problem in %s: null cntr_status\n",
 				__func__);
 			goto end;
 		}
-		cstat->cntr->cntr_status=(enum cntr_status)atoi(tmp);
+		cntr->cntr_status=(enum cntr_status)atoi(tmp);
 
-		if(extract_cntrs(cstat, path)) goto end;
+		if(extract_cntrs(cntr, path)) goto end;
 	}
 
 	ret=0;
@@ -843,7 +895,8 @@ end:
 }
 
 #ifndef HAVE_WIN32
-int cntr_send_bu(struct asfd *asfd, struct bu *bu, struct conf **confs)
+int cntr_send_bu(struct asfd *asfd, struct bu *bu, struct conf **confs,
+	enum cntr_status cntr_status)
 {
 	int ret=-1;
 	uint16_t flags;
@@ -862,7 +915,10 @@ int cntr_send_bu(struct asfd *asfd, struct bu *bu, struct conf **confs)
 	  || cstat_init(cstat,
 		get_string(confs[OPT_CNAME]), NULL/*clientconfdir*/))
 			goto end;
-	cstat->cntr=get_cntr(confs);
+	cstat->cntrs=get_cntr(confs);
+	cstat->protocol=get_protocol(confs);
+	cstat->cntrs->cntr_status=cntr_status;
+	cstat->run_status=RUN_STATUS_RUNNING;
 
 	// Hacky provocation to get the json stuff to send counters in the
 	// case where we are actually doing a restore.
@@ -877,17 +933,18 @@ int cntr_send_bu(struct asfd *asfd, struct bu *bu, struct conf **confs)
 		bu,
 		NULL /* logfile */,
 		NULL /* browse */,
-		0 /* use_cache */);
+		0 /* use_cache */,
+		version_to_long(get_string(confs[OPT_PEER_VERSION])));
 end:
 	cstat->bu=NULL; // 'bu' was not ours to mess with.
-	cstat->cntr=NULL; // 'cntr' was not ours to mess with.
+	cstat->cntrs=NULL; // 'cntrs' was not ours to mess with.
 	bu->flags=flags; // Set flags back to what the were before.
 	cstat_free(&cstat);
 	return ret;
 }
 
 int cntr_send_sdirs(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf **confs)
+	struct sdirs *sdirs, struct conf **confs, enum cntr_status cntr_status)
 {
 	int ret=-1;
 	struct bu *bu=NULL;
@@ -908,7 +965,7 @@ int cntr_send_sdirs(struct asfd *asfd,
 			__func__);
 		goto end;
 	}
-	ret=cntr_send_bu(asfd, bu, confs);
+	ret=cntr_send_bu(asfd, bu, confs, cntr_status);
 end:
 	bu_list_free(&bu_list);
 	return ret;
@@ -943,9 +1000,9 @@ int cntr_recv(struct asfd *asfd, struct conf **confs)
 	if(json_input_init())
 		goto end;
 	if(asfd->simple_loop(asfd, confs, sel, __func__, cntr_recv_func)
-	  || !sel->clist || !sel->clist->cntr)
+	  || !sel->clist || !sel->clist->cntrs)
 		goto end;
-	for(e=sel->clist->cntr->list; e; e=e->next)
+	for(e=sel->clist->cntrs->list; e; e=e->next)
 	{
 		set_count_val(cntr, e->cmd, e->count);
 		set_changed_val(cntr, e->cmd, e->changed);
@@ -999,4 +1056,28 @@ enum cntr_status cntr_str_to_status(const char *str)
 	else if(!strcmp(str, CNTR_STATUS_STR_DIFFING))
 		return CNTR_STATUS_DIFFING;
 	return CNTR_STATUS_UNSET;
+}
+
+const char *cntr_status_to_action_str(struct cntr *cntr)
+{
+	switch(cntr->cntr_status)
+	{
+		case CNTR_STATUS_SCANNING:
+		case CNTR_STATUS_BACKUP:
+		case CNTR_STATUS_MERGING:
+		case CNTR_STATUS_SHUFFLING:
+			return "backup";
+		case CNTR_STATUS_LISTING:
+			return "list";
+		case CNTR_STATUS_RESTORING:
+			return "restore";
+		case CNTR_STATUS_VERIFYING:
+			return "verify";
+		case CNTR_STATUS_DELETING:
+			return "delete";
+		case CNTR_STATUS_DIFFING:
+			return "diff";
+		default:
+			return "unknown";
+	}
 }

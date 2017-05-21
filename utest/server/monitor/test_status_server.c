@@ -114,29 +114,6 @@ START_TEST(test_parse_parent_data)
 }
 END_TEST
 
-static void do_test_extract_client_and_pid(char *buf,
-	const char *expected_cname, int expected_pid)
-{
-	int pid=-1;
-	char b[32]="";
-	char *cname=NULL;
-	snprintf(b, sizeof(b), "%s", buf);
-	fail_unless(!extract_client_and_pid(b, &cname, &pid));
-	fail_unless(!strcmp(cname, expected_cname));
-	fail_unless(pid==expected_pid);
-	free_w(&cname);
-	alloc_check();
-}
-
-START_TEST(test_extract_client_and_pid)
-{
-	do_test_extract_client_and_pid("", "", -1);
-	do_test_extract_client_and_pid("cliX.12345", "cliX", 12345);
-	do_test_extract_client_and_pid("cliX.12345\tblah", "cliX", 12345);
-	do_test_extract_client_and_pid("cliX", "cliX", -1);
-}
-END_TEST
-
 Suite *suite_server_monitor_status_server(void)
 {
 	Suite *s;
@@ -149,7 +126,6 @@ Suite *suite_server_monitor_status_server(void)
 
 	tcase_add_test(tc_core, test_parse_parent_data_weird);
 	tcase_add_test(tc_core, test_parse_parent_data);
-	tcase_add_test(tc_core, test_extract_client_and_pid);
 
 	suite_add_tcase(s, tc_core);
 

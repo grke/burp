@@ -86,7 +86,7 @@ static struct cntr *setup_cntr(void)
 {
 	struct cntr *cntr;
 	fail_unless((cntr=cntr_alloc())!=NULL);
-	fail_unless(!cntr_init(cntr, "testclient"));
+	fail_unless(!cntr_init(cntr, "testclient", getpid()));
 	return cntr;
 }
 

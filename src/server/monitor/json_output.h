@@ -4,10 +4,10 @@
 struct bu;
 struct cstat;
 
-extern int json_send(struct asfd *asfd, 
+extern int json_send(struct asfd *asfd,
 	struct cstat *clist, struct cstat *cstat,
         struct bu *bu, const char *logfile, const char *browse,
-	int use_cache);
+	int use_cache, long peer_version);
 extern int json_from_entry(const char *path, const char *link, struct stat *statp);
 extern int json_cntr(struct asfd *asfd, struct cntr *cntr);
 

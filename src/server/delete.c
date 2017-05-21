@@ -231,8 +231,7 @@ int do_delete_server(struct asfd *asfd,
 
 	logp("in do_delete\n");
 
-	if(bu_get_list(sdirs, &bu_list)
-	  || write_status(CNTR_STATUS_DELETING, NULL, cntr))
+	if(bu_get_list(sdirs, &bu_list))
 		goto end;
 
 	if(backup && *backup) bno=strtoul(backup, NULL, 10);
@@ -247,6 +246,11 @@ int do_delete_server(struct asfd *asfd,
 			if(bu->flags & BU_DELETABLE)
 			{
 				found=1;
+				if(cntr)
+					cntr->bno=(int)bu->bno;
+				if(write_status(CNTR_STATUS_DELETING,
+					NULL, cntr))
+						goto end;
 				if(asfd->write_str(asfd, CMD_GEN, "ok")
 				  || delete_backup(sdirs, cname, bu,
 					manual_delete))

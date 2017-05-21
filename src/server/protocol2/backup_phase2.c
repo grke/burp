@@ -913,7 +913,7 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 	{
 		if(!(p1pos=do_resume(sdirs, dpth, confs)))
 			goto end;
-		if(cntr_send_sdirs(asfd, sdirs, confs))
+		if(cntr_send_sdirs(asfd, sdirs, confs, CNTR_STATUS_BACKUP))
 			goto end;
 	}
 

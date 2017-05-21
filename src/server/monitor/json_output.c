@@ -6,6 +6,7 @@
 #include "../../cmd.h"
 #include "../../cstat.h"
 #include "../../fzp.h"
+#include "../../handy.h"
 #include "../../iobuf.h"
 #include "../../prepend.h"
 #include "../../strlist.h"
@@ -14,6 +15,7 @@
 #include "json_output.h"
 
 static int pretty_print=1;
+static long version_2_1_8=0;
 
 void json_set_pretty_print(int value)
 {
@@ -56,6 +58,8 @@ static int json_start(void)
 		if(!(yajl=yajl_gen_alloc(NULL)))
 			return -1;
 		yajl_gen_config(yajl, yajl_gen_beautify, pretty_print);
+		if(!version_2_1_8)
+			version_2_1_8=version_to_long("2.1.8");
 	}
 	if(yajl_map_open_w()) return -1;
 	return 0;
@@ -247,7 +251,7 @@ static int do_counters(struct cntr *cntr)
 
 static int json_send_backup(struct cstat *cstat, struct bu *bu,
 	int print_flags, const char *logfile, const char *browse,
-	int use_cache)
+	int use_cache, long peer_version)
 {
 	long long bno=0;
 	long long timestamp=0;
@@ -270,7 +274,11 @@ static int json_send_backup(struct cstat *cstat, struct bu *bu,
 		return -1;
 	if(bu->flags & (BU_WORKING|BU_FINISHING))
 	{
-		if(do_counters(cstat->cntr)) return -1;
+		if(peer_version<=version_2_1_8)
+		{
+			if(do_counters(cstat->cntrs))
+				return -1;
+		}
 	}
 	if(print_flags
 	  && (bu->flags & (BU_LOG_BACKUP|BU_LOG_RESTORE|BU_LOG_VERIFY
@@ -341,7 +349,31 @@ static int str_array(const char *field, struct cstat *cstat)
 	return 0;
 }
 
-static int json_send_client_start(struct cstat *cstat)
+static int do_children(struct cntr *cntrs)
+{
+	struct cntr *c;
+	if(yajl_gen_str_w("children")
+	  || yajl_array_open_w())
+		return -1;
+	for(c=cntrs; c; c=c->next)
+	{
+		if(yajl_map_open_w()
+		  || yajl_gen_int_pair_w("pid", c->pid)
+		  || yajl_gen_int_pair_w("backup", c->bno)
+		  || yajl_gen_str_pair_w("action", cntr_status_to_action_str(c))
+		  || yajl_gen_str_pair_w("phase", cntr_status_to_str(c)))
+			return -1;
+		if(do_counters(c))
+			return -1;
+		if(yajl_map_close_w())
+			return -1;
+	}
+	if(yajl_array_close_w())
+		return -1;
+	return 0;
+}
+
+static int json_send_client_start(struct cstat *cstat, long peer_version)
 {
 	const char *run_status=run_status_to_str(cstat);
 
@@ -354,10 +386,18 @@ static int json_send_client_start(struct cstat *cstat)
 		return -1;
 	if(yajl_gen_int_pair_w("protocol", cstat->protocol))
 		return -1;
-	if(cstat->run_status==RUN_STATUS_RUNNING)
+	if(peer_version>version_2_1_8)
 	{
+		if(cstat->cntrs
+		  && do_children(cstat->cntrs))
+			return -1;
+	}
+	else if(cstat->cntrs)
+	{
+		// Best effort.
 		if(yajl_gen_str_pair_w("phase",
-			cntr_status_to_str(cstat->cntr))) return -1;
+			cntr_status_to_str(cstat->cntrs)))
+				return -1;
 	}
 	if(yajl_gen_str_w("backups")
 	  || yajl_array_open_w())
@@ -374,30 +414,35 @@ static int json_send_client_end(void)
 }
 
 static int json_send_client_backup(struct cstat *cstat, struct bu *bu1,
-	struct bu *bu2, const char *logfile, const char *browse, int use_cache)
+	struct bu *bu2, const char *logfile, const char *browse, int use_cache,
+	long peer_version)
 {
 	int ret=-1;
-	if(json_send_client_start(cstat)) return -1;
+	if(json_send_client_start(cstat, peer_version))
+		return -1;
 	if((ret=json_send_backup(cstat, bu1,
-		1 /* print flags */, logfile, browse, use_cache)))
+		1 /* print flags */, logfile, browse, use_cache, peer_version)))
 			goto end;
 	if((ret=json_send_backup(cstat, bu2,
-		1 /* print flags */, logfile, browse, use_cache)))
+		1 /* print flags */, logfile, browse, use_cache, peer_version)))
 			goto end;
 end:
 	if(json_send_client_end()) ret=-1;
 	return ret;
 }
 
-static int json_send_client_backup_list(struct cstat *cstat, int use_cache)
+static int json_send_client_backup_list(struct cstat *cstat, int use_cache,
+	long peer_version)
 {
 	int ret=-1;
 	struct bu *bu;
-	if(json_send_client_start(cstat)) return -1;
+	if(json_send_client_start(cstat, peer_version))
+		return -1;
 	for(bu=cstat->bu; bu; bu=bu->prev)
 	{
 		if(json_send_backup(cstat, bu,
-			1 /* print flags */, NULL, NULL, use_cache))
+			1 /* print flags */, NULL, NULL,
+			use_cache, peer_version))
 				goto end;
 	}
 	ret=0;
@@ -408,7 +453,7 @@ end:
 
 int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	struct bu *bu, const char *logfile, const char *browse,
-	int use_cache)
+	int use_cache, long peer_version)
 {
 	int ret=-1;
 	struct cstat *c;
@@ -420,12 +465,14 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 	if(cstat && bu)
 	{
 		if(json_send_client_backup(cstat, bu, NULL,
-			logfile, browse, use_cache)) goto end;
+			logfile, browse, use_cache, peer_version))
+				goto end;
 	}
 	else if(cstat)
 	{
-		if(json_send_client_backup_list(cstat, use_cache))
-			goto end;
+		if(json_send_client_backup_list(cstat,
+			use_cache, peer_version))
+				goto end;
 	}
 	else for(c=clist; c; c=c->next)
 	{
@@ -433,7 +480,7 @@ int json_send(struct asfd *asfd, struct cstat *clist, struct cstat *cstat,
 		if(json_send_client_backup(c,
 			bu_find_current(c->bu),
 			bu_find_working_or_finishing(c->bu),
-			NULL, NULL, use_cache))
+			NULL, NULL, use_cache, peer_version))
 				goto end;
 	}
 

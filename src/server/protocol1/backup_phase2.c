@@ -1126,7 +1126,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	{
 		if(!(p1pos=do_resume(sdirs, dpth, cconfs)))
 			goto error;
-		if(cntr_send_sdirs(asfd, sdirs, cconfs))
+		if(cntr_send_sdirs(asfd, sdirs, cconfs, CNTR_STATUS_BACKUP))
 			goto error;
 	}
 

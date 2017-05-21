@@ -273,7 +273,7 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 
 	// Set up counters. Have to wait until here to get cname.
 	if(!(cntr=cntr_alloc())
-	  || cntr_init(cntr, cname))
+	  || cntr_init(cntr, cname, getpid()))
 		goto end;
 	set_cntr(confs[OPT_CNTR], cntr);
 	set_cntr(cconfs[OPT_CNTR], cntr);
@@ -304,7 +304,6 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		log_and_send(as->asfd, "check cert failed on server");
 		goto end;
 	}
-
 	if(status_rfd>=0)
 	{
 		is_status_server=1;

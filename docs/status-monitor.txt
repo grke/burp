@@ -110,18 +110,12 @@ burp -a s
 
 You should see a list of clients along with their current status and the time
 of their most recent backup.
-If you have any 'running' processes, pressing 't' will toggle between seeing
-the time of the most recent backup and a brief summary of the currently
-running task.
 
 The cursor can be moved with the arrow keys.
 Hitting enter or the right arrow key will give you a list of backups for the
 selected client.
-Choosing a backup will give you the options to browse the backup, or view
-logs.
-Choosing a backup that is currently in progress will also give you the option
-to see live statistics.
-
+Choosing a backup will give you the options to browse the backup, view logs,
+or look at live statistics.
 
 Snapshot:
 
@@ -180,6 +174,9 @@ j:pretty-print-on
 j:pretty-print-off
   - Turn JSON response pretty printing off.
 
+j:peer_version=<burp version>
+  - Override the peer version to get alternative JSON formats.
+
 
 Response format
 ---------------
@@ -197,6 +194,7 @@ Response:
         {
             "name": "testclient",
             "run_status": "idle",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 3,
@@ -238,6 +236,7 @@ Response:
         {
             "name": "testclient",
             "run_status": "idle",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 3,
@@ -295,6 +294,7 @@ Response:
         {
             "name": "testclient",
             "run_status": "idle",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 2,
@@ -331,6 +331,7 @@ Response:
         {
             "name": "testclient",
             "run_status": "idle",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 2,
@@ -396,6 +397,7 @@ Response:
         {
             "name": "testclient",
             "run_status": "idle",
+            "protocol": 1,
             "backups": [
                 {
                     "number": 2,
@@ -465,7 +467,58 @@ Response:
         {
             "name": "testclient",
             "run_status": "running",
-            "phase": "scanning",
+            "protocol": 1,
+            "children": [
+                {
+                    "pid": 3943,
+                    "backup": 4,
+                    "phase": "backup",
+                    "counters": [
+                        {
+                            "name": "files",
+                            "type": "f",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 16
+                        },
+                        {
+                            "name": "directories",
+                            "type": "d",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 1
+                        },
+                        {
+                            "name": "grand_total",
+                            "type": "Z",
+                            "count": 0,
+                            "changed": 0,
+                            "same": 0,
+                            "deleted": 0,
+                            "scanned": 17
+                        },
+                        {
+                            "name": "bytes_estimated",
+                            "type": "G",
+                            "count": 420151988
+                        },
+                        {
+                            "name": "time_start",
+                            "type": "b",
+                            "count": 1495345509
+                        },
+                        {
+                            "name": "time_end",
+                            "type": "E",
+                            "count": 1495345510
+                        }
+                    ]
+                }
+            ],
             "backups": [
                 {
                     "number": 3,
@@ -486,73 +539,6 @@ Response:
                     "timestamp": 1421272639,
                     "flags": [
                         "working"
-                    ],
-                    "counters": [
-                        {
-                            "name": "files",
-                            "type": "f",
-                            "count": 0,
-                            "changed": 0,
-                            "same": 0,
-                            "deleted": 0,
-                            "scanned": 1419
-                        },
-                        {
-                            "name": "directories",
-                            "type": "d",
-                            "count": 0,
-                            "changed": 0,
-                            "same": 0,
-                            "deleted": 0,
-                            "scanned": 318
-                        },
-                        {
-                            "name": "soft_links",
-                            "type": "L",
-                            "count": 0,
-                            "changed": 0,
-                            "same": 0,
-                            "deleted": 0,
-                            "scanned": 6
-                        },
-                        {
-                            "name": "hard_links",
-                            "type": "l",
-                            "count": 0,
-                            "changed": 0,
-                            "same": 0,
-                            "deleted": 0,
-                            "scanned": 1100
-                        },
-                        {
-                            "name": "grand_total",
-                            "type": "Z",
-                            "count": 0,
-                            "changed": 0,
-                            "same": 0,
-                            "deleted": 0,
-                            "scanned": 2843
-                        },
-                        {
-                            "name": "warnings",
-                            "type": "w",
-                            "count": 2
-                        },
-                        {
-                            "name": "bytes_estimated",
-                            "type": "G",
-                            "count": 28264778
-                        },
-                        {
-                            "name": "time_start",
-                            "type": "b",
-                            "count": 1421271834
-                        },
-                        {
-                            "name": "time_end",
-                            "type": "E",
-                            "count": 1421272641
-                        }
                     ],
                     "logs": {
                         "list": [

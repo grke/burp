@@ -380,9 +380,9 @@ end:
 	return ret;
 }
 
-static int unknown_command(struct asfd *asfd)
+static int unknown_command(struct asfd *asfd, const char *func)
 {
-	iobuf_log_unexpected(asfd->rbuf, __func__);
+	iobuf_log_unexpected(asfd->rbuf, func);
 	asfd->write_str(asfd, CMD_ERROR, "unknown command");
 	return -1;
 }
@@ -437,7 +437,7 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 		return -1;
 
 	if(rbuf->cmd!=CMD_GEN)
-		return unknown_command(as->asfd);
+		return unknown_command(as->asfd, __func__);
 
 	// List and diff should work well enough without needing to lock
 	// anything.
@@ -468,7 +468,7 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 
 	if(strncmp_w(rbuf->buf, "backup")
 	  && strncmp_w(rbuf->buf, "Delete "))
-		return unknown_command(as->asfd);
+		return unknown_command(as->asfd, __func__);
 
 	// Beyond this point, only need to deal with backup and delete.
 	// These require locking out all other backups and deletes.

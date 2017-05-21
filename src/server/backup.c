@@ -144,6 +144,15 @@ static void log_rshash(struct conf **confs)
 		rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
 }
 
+static void set_cntr_bno(struct cntr *cntr, struct sdirs *sdirs)
+{
+	char *cp=NULL;
+	// Should be easier than this.
+	if(!(cp=strrchr(sdirs->rworking, '/')))
+		return;
+	cntr->bno=atoi(cp+1);
+}
+
 static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	struct conf **cconfs, const char *incexc, int resume)
 {
@@ -188,6 +197,8 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 			goto error;
 		}
 	}
+
+	set_cntr_bno(cntr, sdirs);
 
 	if(resume)
 	{

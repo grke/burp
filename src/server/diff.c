@@ -163,12 +163,13 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
 
 	//printf("in do_diff_server\n");
 
-	if(bu_get_list(sdirs, &bu_list)
-	  || write_status(CNTR_STATUS_DIFFING, NULL, cntr))
+	if(bu_get_list(sdirs, &bu_list))
 		goto end;
 
-	if(backup1 && *backup1) bno1=strtoul(backup1, NULL, 10);
-	if(backup2 && *backup2) bno2=strtoul(backup2, NULL, 10);
+	if(backup2 && *backup2)
+		bno2=strtoul(backup2, NULL, 10);
+	if(backup1 && *backup1)
+		bno1=strtoul(backup1, NULL, 10);
 
 	if(!bno1 || !bno2 || bno1==bno2)
 	{
@@ -190,6 +191,10 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
 
 	if(send_backup_name_to_client(asfd, bu1)
 	  || send_backup_name_to_client(asfd, bu2))
+		goto end;
+
+	cntr->bno=(int)bu2->bno;
+	if(write_status(CNTR_STATUS_DIFFING, NULL, cntr))
 		goto end;
 
 	if(diff_manifests(asfd, bu1->path, bu2->path, protocol))

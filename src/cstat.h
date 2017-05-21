@@ -20,7 +20,7 @@ struct cstat
 	char *conffile;
 	struct strlist *labels;
 	time_t conf_mtime;
-	struct cntr *cntr; // Set from the parent process.
+	struct cntr *cntrs; // Set from the parent process.
 	enum run_status run_status;
 	// From the perspective of the server child, whether the connected
 	// client is allowed to view this client.
@@ -42,11 +42,11 @@ struct cstat
 extern struct cstat *cstat_alloc(void);
 extern int cstat_init(struct cstat *cstat,
         const char *name, const char *clientconfdir);
-extern int cstat_init_with_cntr(struct cstat *cstat,
-        const char *name, const char *clientconfdir);
 extern void cstat_free(struct cstat **cstat);
 extern void cstat_list_free(struct cstat **clist);
 extern void cstat_add_to_list(struct cstat **clist, struct cstat *cnew);
+extern void cstat_add_cntr_to_list(struct cstat *c, struct cntr *cntr);
+extern void cstat_remove_cntr_from_list(struct cstat *c, struct cntr *cntr);
 
 extern const char *run_status_to_str(struct cstat *cstat);
 extern enum run_status run_str_to_status(const char *str);

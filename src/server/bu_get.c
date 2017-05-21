@@ -83,27 +83,6 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 		have_backup_file_name_w(bu, "log", BU_LOG_BACKUP);
 		have_backup_file_name_w(bu, "restorelog", BU_LOG_RESTORE);
 		have_backup_file_name_w(bu, "verifylog", BU_LOG_VERIFY);
-		// Hack to include option for live counters.
-		if(cstat && cstat->run_status==RUN_STATUS_RUNNING)
-		{
-			switch(cstat->cntr->cntr_status)
-			{
-				case CNTR_STATUS_SCANNING:
-				case CNTR_STATUS_BACKUP:
-				case CNTR_STATUS_MERGING:
-				case CNTR_STATUS_SHUFFLING:
-					bu->flags|=BU_STATS_BACKUP;
-					break;
-				case CNTR_STATUS_VERIFYING:
-					bu->flags|=BU_STATS_VERIFY;
-					break;
-				case CNTR_STATUS_RESTORING:
-					bu->flags|=BU_STATS_RESTORE;
-					break;
-				default:
-					break;
-			}
-		}
 		if(!(bu->flags & BU_STATS_BACKUP))
 		  have_backup_file_name(bu, "backup_stats", BU_STATS_BACKUP);
 		if(!(bu->flags & BU_STATS_RESTORE))

@@ -11,46 +11,22 @@
 #include "json_output.h"
 #include "status_server.h"
 
-#ifndef UTEST
-static
-#endif
-int extract_client_and_pid(char *buf, char **cname, int *pid)
-{
-	char *cp=NULL;
-	char *pp=NULL;
-
-	// Extract the client name.
-	if((cp=strchr(buf, '\t')))
-		*cp='\0';
-	if(!(*cname=strdup_w(buf, __func__)))
-		return -1;
-	if(cp)
-		*cp='\t';
-
-	// Extract the pid.
-	if((pp=strrchr(*cname, '.')))
-	{
-		*pp='\0';
-		*pid=atoi(pp+1);
-	}
-	return 0;
-}
-
 static int parse_cntr_data(const char *buf, struct cstat *clist)
 {
+	int bno=0;
 	int ret=-1;
 	char *cname=NULL;
 	struct cstat *c=NULL;
 	char *path=NULL;
 	char *dp=NULL;
-	int pid=-1;
+	pid_t pid=-1;
 
 	// Skip the type.
 	if(!(dp=strchr(buf, '\t')))
 		return 0;
 	dp++;
 
-	if(extract_client_and_pid(dp, &cname, &pid))
+	if(extract_client_pid_bno(dp, &cname, &pid, &bno))
 		return -1;
 	if(!cname)
 		return 0;
@@ -59,10 +35,24 @@ static int parse_cntr_data(const char *buf, struct cstat *clist)
 	// and add the detail from the parent to it.
 	for(c=clist; c; c=c->next)
 	{
+		struct cntr *cntr=NULL;
 		if(strcmp(c->name, cname))
 			continue;
 		cstat_set_run_status(c, RUN_STATUS_RUNNING);
-		if(str_to_cntr(buf, c, &path))
+
+		// Find the cntr entry for this client/pid.
+		for(cntr=c->cntrs; cntr; cntr=cntr->next)
+			if(cntr->pid==pid)
+				break;
+		if(!cntr)
+		{
+			// Need to allocate a new cntr.
+			if(!(cntr=cntr_alloc())
+			  || cntr_init(cntr, cname, pid))
+				goto end;
+			cstat_add_cntr_to_list(c, cntr);
+		}
+		if(str_to_cntr(buf, cntr, &path))
 			goto end;
 	}
 
@@ -75,32 +65,73 @@ end:
 	return ret;
 }
 
+static void clean_up_cntrs(struct cstat *clist)
+{
+	struct cstat *c;
+	for(c=clist; c; c=c->next)
+	{
+		struct cntr *cntr=NULL;
+		for(cntr=c->cntrs; cntr; )
+		{
+			if(cntr->found)
+			{
+				cntr=cntr->next;
+				continue;
+			}
+			cstat_remove_cntr_from_list(c, cntr);
+			cntr_free(&cntr);
+			if(c->cntrs)
+				cntr=c->cntrs;
+		}
+	}
+}
+
 static int parse_clients_list(char *buf, struct cstat *clist)
 {
 	char *tok=NULL;
 	struct cstat *c;
 
+	if(!clist)
+		return 0;
+
 	// Do not need the first token.
 	if(!(tok=strtok(buf, "\t\n")))
 		return 0;
 	for(c=clist; c; c=c->next)
+	{
+		struct cntr *cntr;
+		for(cntr=c->cntrs; cntr; cntr=cntr->next)
+			cntr->found=0;
 		cstat_set_run_status(c, RUN_STATUS_IDLE);
+	}
 
 	while((tok=strtok(NULL, "\t\n")))
 	{
-		int pid=-1;
+		int bno=0;
+		pid_t pid=-1;
 		char *cname=NULL;
-		if(extract_client_and_pid(tok, &cname, &pid))
+		if(extract_client_pid_bno(tok, &cname, &pid, &bno))
 			return -1;
 		for(c=clist; c; c=c->next)
 		{
+			struct cntr *cntr;
 			if(strcmp(c->name, cname))
 				continue;
 			cstat_set_run_status(c, RUN_STATUS_RUNNING);
+			for(cntr=c->cntrs; cntr; cntr=cntr->next)
+				if(cntr->pid==pid)
+					break;
+			if(cntr)
+			{
+				cntr->found=1;
+				cntr->bno=bno;
+			}
 			break;
 		}
 		free_w(&cname);
 	}
+
+	clean_up_cntrs(clist);
 
 	return 0;
 }
@@ -112,7 +143,6 @@ int parse_parent_data(char *buf, struct cstat *clist)
 {
 	if(!buf || !*buf)
 		return 0;
-//printf("got parent data: '%s'\n", buf);
 
 	if(!strncmp(buf, "cntr", strlen("cntr")))
 	{
@@ -159,7 +189,7 @@ void dump_cbno(struct cstat *clist, const char *msg)
 */
 
 static int parse_client_data(struct asfd *srfd,
-	struct cstat *clist, struct conf **confs)
+	struct cstat *clist, struct conf **confs, long *peer_version)
 {
 	int ret=0;
 	char *command=NULL;
@@ -182,6 +212,9 @@ static int parse_client_data(struct asfd *srfd,
 
 	if(command)
 	{
+		size_t l;
+		char peer_version_str[32]="peer_version=";
+		l=strlen(peer_version_str);
 		if(!strcmp(command, "pretty-print-on"))
 		{
 			json_set_pretty_print(1);
@@ -192,6 +225,11 @@ static int parse_client_data(struct asfd *srfd,
 		{
 			json_set_pretty_print(0);
 			if(json_send_warn(srfd, "Pretty print off"))
+				goto error;
+		}
+		else if(!strncmp(command, peer_version_str, l))
+		{
+			if(!(*peer_version=version_to_long(command+l)))
 				goto error;
 		}
 		else
@@ -273,7 +311,7 @@ static int parse_client_data(struct asfd *srfd,
 */
 
 	if(json_send(srfd, clist, cstat, bu, logfile, browse,
-		get_int(confs[OPT_MONITOR_BROWSE_CACHE])))
+		get_int(confs[OPT_MONITOR_BROWSE_CACHE]), *peer_version))
 			goto error;
 
 	goto end;
@@ -288,9 +326,10 @@ end:
 }
 
 static int parse_data(struct asfd *asfd, struct cstat *clist,
-	struct asfd *cfd, struct conf **confs)
+	struct asfd *cfd, struct conf **confs, long *peer_version)
 {
-	if(asfd==cfd) return parse_client_data(asfd, clist, confs);
+	if(asfd==cfd)
+		return parse_client_data(asfd, clist, confs, peer_version);
 	return parse_parent_data(asfd->rbuf->buf, clist);
 }
 
@@ -298,9 +337,14 @@ static int have_data_for_running_clients(struct cstat *clist)
 {
 	struct cstat *c;
 	for(c=clist; c; c=c->next)
-		if(c->run_status==RUN_STATUS_RUNNING
-		  && c->cntr->cntr_status==CNTR_STATUS_UNSET)
-			return 0;
+	{
+		if(c->run_status==RUN_STATUS_RUNNING)
+		{
+			if(!c->cntrs
+			  || c->cntrs->cntr_status==CNTR_STATUS_UNSET)
+				return 0;
+		}
+	}
 	return 1;
 }
 
@@ -315,7 +359,7 @@ static int have_run_statuses(struct cstat *clist)
 
 static int get_initial_data(struct async *as,
 	struct cstat **clist,
-	struct conf **confs, struct conf **cconfs)
+	struct conf **confs, struct conf **cconfs, long *peer_version)
 {
 	int x=10;
 	struct asfd *asfd=NULL;
@@ -340,7 +384,7 @@ static int get_initial_data(struct async *as,
 		asfd=as->asfd->next;
 		if(asfd->rbuf->buf)
 		{
-			if(parse_data(asfd, *clist, NULL, confs))
+			if(parse_data(asfd, *clist, NULL, confs, peer_version))
 			{
 				iobuf_free_content(asfd->rbuf);
 				return -1;
@@ -359,11 +403,12 @@ int status_server(struct async *as, struct conf **confs)
 	struct cstat *clist=NULL;
 	struct asfd *cfd=as->asfd; // Client.
 	struct conf **cconfs=NULL;
+	long peer_version=version_to_long(get_string(confs[OPT_PEER_VERSION]));
 
 	if(!(cconfs=confs_alloc()))
 		goto end;
 
-	if(get_initial_data(as, &clist, confs, cconfs))
+	if(get_initial_data(as, &clist, confs, cconfs, &peer_version))
 		goto end;
 
 	while(1)
@@ -382,7 +427,7 @@ int status_server(struct async *as, struct conf **confs)
 			while(asfd->rbuf->buf)
 		{
 			gotdata=1;
-			if(parse_data(asfd, clist, cfd, confs)
+			if(parse_data(asfd, clist, cfd, confs, &peer_version)
 			  || asfd->parse_readbuf(asfd))
 				goto end;
 			iobuf_free_content(asfd->rbuf);

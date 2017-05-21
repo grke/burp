@@ -431,7 +431,8 @@ static enum cliret do_client(struct conf **confs,
 	}
 
 	if(!(cntr=cntr_alloc())
-	  || cntr_init(cntr, get_string(confs[OPT_CNAME]))) goto error;
+	  || cntr_init(cntr, get_string(confs[OPT_CNAME]), getpid()))
+		goto error;
 	set_cntr(confs[OPT_CNTR], cntr);
 
 	if(act!=ACTION_ESTIMATE)

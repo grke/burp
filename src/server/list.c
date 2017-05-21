@@ -262,6 +262,8 @@ static int list_contents_one(
 		  || bu->bno==bno
 		  || (*backup=='c' && (bu->flags & BU_CURRENT)))
 		{
+			if(cntr)
+				cntr->bno=bu->bno;
 			if(send_backup_name_to_client(bu)
 			  || list_server_callback(bu->path))
 				return -1;
@@ -279,6 +281,8 @@ static int list_contents_many(
 	for(bu=bu_list; bu; bu=bu->next)
 	{
 		found=1;
+		if(cntr)
+			cntr->bno=bu->bno;
 		if(send_backup_name_to_client(bu)
 		  || list_server_callback(bu->path))
 			return -1;

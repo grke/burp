@@ -18,18 +18,6 @@
                     "timestamp": 31708800,
                     "flags": [
                         "working"
-                    ],
-                    "counters": [
-                        {
-                            "name": "time_start",
-                            "type": "b",
-                            "count": 200
-                        },
-                        {
-                            "name": "time_end",
-                            "type": "E",
-                            "count": 400
-                        }
                     ]
                 }
             ]
@@ -52,18 +40,6 @@
                     "timestamp": 31708800,
                     "flags": [
                         "working"
-                    ],
-                    "counters": [
-                        {
-                            "name": "time_start",
-                            "type": "b",
-                            "count": 200
-                        },
-                        {
-                            "name": "time_end",
-                            "type": "E",
-                            "count": 400
-                        }
                     ]
                 }
             ]
@@ -86,18 +62,6 @@
                     "timestamp": 31708800,
                     "flags": [
                         "working"
-                    ],
-                    "counters": [
-                        {
-                            "name": "time_start",
-                            "type": "b",
-                            "count": 200
-                        },
-                        {
-                            "name": "time_end",
-                            "type": "E",
-                            "count": 400
-                        }
                     ]
                 }
             ]

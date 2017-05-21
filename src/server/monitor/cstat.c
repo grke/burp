@@ -90,7 +90,7 @@ int cstat_get_client_names(struct cstat **clist, const char *clientconfdir)
 
 		// We do not have this client yet. Add it.
 		if(!(cnew=cstat_alloc())
-		  || cstat_init_with_cntr(cnew, dir[i]->d_name, clientconfdir))
+		  || cstat_init(cnew, dir[i]->d_name, clientconfdir))
 			goto end;
 		cstat_add_to_list(clist, cnew);
 	}

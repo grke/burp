@@ -5,6 +5,7 @@
 #include "../../cmd.h"
 #include "../../cntr.h"
 #include "../../conf.h"
+#include "../../cstat.h"
 #include "../../fsops.h"
 #include "../../fzp.h"
 #include "../../handy.h"

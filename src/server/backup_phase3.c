@@ -2,6 +2,7 @@
 #include "../alloc.h"
 #include "../cntr.h"
 #include "../conf.h"
+#include "../cstat.h"
 #include "../fsops.h"
 #include "../handy.h"
 #include "../log.h"

@@ -6,6 +6,7 @@
 #include "../bu.h"
 #include "../cmd.h"
 #include "../cntr.h"
+#include "../cstat.h"
 #include "../log.h"
 #include "../prepend.h"
 #include "../regexp.h"

@@ -5,6 +5,7 @@
 #include "../bu.h"
 #include "../cmd.h"
 #include "../cntr.h"
+#include "../cstat.h"
 #include "../handy.h"
 #include "../linkhash.h"
 #include "../lock.h"

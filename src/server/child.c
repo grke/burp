@@ -5,6 +5,7 @@
 #include "../cmd.h"
 #include "../cntr.h"
 #include "../conf.h"
+#include "../cstat.h"
 #include "../handy.h"
 #include "../iobuf.h"
 #include "../log.h"

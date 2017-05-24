@@ -55,7 +55,6 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 		*metalen=sentbytes;
 		// skip setting cntr, as we do not actually
 		// restore until a bit later
-		goto end;
 	}
 	else
 	{
@@ -71,15 +70,12 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 		{
 			logp("error closing %s in %s\n",
 				fname, __FUNCTION__);
-			goto end;
+			ret=-1;
 		}
 #endif
 		if(!ret) attribs_set(asfd, rpath,
 			&sb->statp, sb->winattr, cntr);
 	}
-
-	ret=0;
-end:
 	if(ret)
 	{
 		char msg[256]="";
@@ -87,6 +83,7 @@ end:
 			"Could not transfer file in: %s", rpath);
 		if(restore_interrupt(asfd, sb, msg, cntr, PROTO_1))
 			ret=-1;
+		ret=0;
 	}
 	return ret;
 }

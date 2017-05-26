@@ -472,6 +472,7 @@ Response:
                 {
                     "pid": 3943,
                     "backup": 4,
+                    "action": "backup"
                     "phase": "backup",
                     "counters": [
                         {
@@ -557,6 +558,14 @@ Response:
         }
     ]
 }
+
+The "children" section lists each of the child processes that the server is
+running for a client.
+The "action" section may be one of:
+"backup", "list", "restore", "verify", "delete", or "diff".
+The "phase" section breaks that down slightly further to one of:
+"scanning", "backup", "merging", "shuffling", "listing", "restoring",
+"verifying", "deleting", or "diffing"
 
 
 Example 7. Problem with request.

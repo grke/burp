@@ -38,7 +38,7 @@ static int maybe_add_ent(const char *dir, const char *d_name,
 	int include_working)
 {
 	int ret=-1;
-	char buf[32]="";
+	char buf[38]="";
 	struct stat statp;
 	char *fullpath=NULL;
 	char *timestamp=NULL;
@@ -154,9 +154,9 @@ static int do_bu_get_list(struct sdirs *sdirs,
 	int i=0;
 	int n=0;
 	int ret=-1;
-	char realwork[32]="";
-	char realfinishing[32]="";
-	char realcurrent[32]="";
+	char realwork[38]="";
+	char realfinishing[38]="";
+	char realcurrent[38]="";
 	struct dirent **dp=NULL;
 	const char *dir=NULL;
 	uint16_t flags=0;
@@ -234,7 +234,7 @@ int bu_get_list_with_working(struct sdirs *sdirs, struct bu **bu_list,
 
 int bu_get_current(struct sdirs *sdirs, struct bu **bu_list)
 {
-	char real[32]="";
+	char real[38]="";
 	// FIX THIS: should not need to specify "current".
 	if(get_link(sdirs->client, "current", real, sizeof(real)))
 		return -1;

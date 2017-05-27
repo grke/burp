@@ -7,6 +7,7 @@
 #include "iobuf.h"
 #include "log.h"
 #include "strlist.h"
+#include "times.h"
 
 const char *prog="unknown";
 const char *prog_long="unknown";
@@ -28,22 +29,6 @@ void log_init(char *progname)
 	else prog=progname;
 }
 
-#ifndef UTEST
-static char *gettm(void)
-{
-        time_t t=0;
-        const struct tm *ctm=NULL;
-        static char tmbuf[32]="";
-
-        time(&t);
-        ctm=localtime(&t);
-	// Windows does not like the %T strftime format option - you get
-	// complaints under gdb.
-        strftime(tmbuf, sizeof(tmbuf), "%Y-%m-%d %H:%M:%S", ctm);
-	return tmbuf;
-}
-#endif
-
 void logp(const char *fmt, ...)
 {
 #ifndef UTEST
@@ -54,7 +39,8 @@ void logp(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	pid=(int)getpid();
 	if(logfzp)
-		fzp_printf(logfzp, "%s: %s[%d] %s", gettm(), prog, pid, buf);
+		fzp_printf(logfzp, "%s: %s[%d] %s",
+			gettimenow(), prog, pid, buf);
 	else
 	{
 		if(do_syslog)
@@ -79,7 +65,7 @@ void logp(const char *fmt, ...)
 			}
 			else
 				fprintf(stdout, "%s: %s[%d] %s",
-					gettm(), prog, pid, buf);
+					gettimenow(), prog, pid, buf);
 		}
 	}
 	va_end(ap);

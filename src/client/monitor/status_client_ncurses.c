@@ -12,6 +12,7 @@
 #include "../../handy.h"
 #include "../../iobuf.h"
 #include "../../log.h"
+#include "../../times.h"
 #include "json_input.h"
 #include "lline.h"
 #include "sel.h"
@@ -71,7 +72,7 @@ static void print_line(const char *string, int row, int col)
 
 static char *get_bu_str(struct bu *bu)
 {
-	static char ret[32];
+	static char ret[38];
 	if(!bu) snprintf(ret, sizeof(ret), "never");
 	else if(!bu->bno) snprintf(ret, sizeof(ret), "%s", bu->timestamp);
 	else snprintf(ret, sizeof(ret), "%07" PRIu64 " %s",
@@ -372,8 +373,7 @@ static void screen_header(int col)
 #ifdef UTEST
 	date="1977-10-02 00:10:20";
 #else
-	time_t t=time(NULL);
-	date=getlocaldatestr(t);
+	date=gettimenow();
 #endif
 	l=strlen(date);
 #ifdef HAVE_NCURSES
@@ -532,7 +532,7 @@ static void update_screen_clients(struct sel *sel, int *x, int col,
 #endif
 	struct cstat *c;
 	int star_printed=0;
-	int max_cname=28*((float)col/100);
+	int max_cname=23*((float)col/100);
 #ifdef HAVE_NCURSES
 	if(actg==ACTION_STATUS_SNAPSHOT)
 #endif

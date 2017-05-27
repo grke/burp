@@ -14,6 +14,7 @@
 #include "../../protocol2/blist.h"
 #include "../../protocol2/rabin/rabin.h"
 #include "../../slist.h"
+#include "../child.h"
 #include "../manios.h"
 #include "../resume.h"
 #include "champ_chooser/champ_client.h"
@@ -927,6 +928,10 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 	memset(&wbuf, 0, sizeof(struct iobuf));
 	while(!(end_flags&END_BACKUP))
 	{
+		if(write_status(CNTR_STATUS_BACKUP,
+			csb && csb->path.buf?csb->path.buf:"", cntr))
+				goto end;
+
 		if(maybe_add_from_scan(manios, slist, chfd, &csb, cntr))
 			goto end;
 

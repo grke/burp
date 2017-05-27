@@ -8,6 +8,7 @@
 #include "../../handy.h"
 #include "../../iobuf.h"
 #include "../../log.h"
+#include "../../times.h"
 #include "json_input.h"
 #include "lline.h"
 #include "sel.h"

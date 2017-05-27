@@ -14,7 +14,8 @@
 #define BASE		"utest_server_run_action"
 #define CLIENTCONFDIR   "clientconfdir"
 #define GLOBAL_CONF	BASE "/burp-server.conf"
-#define CCONFFILE	CLIENTCONFDIR "/utestclient"
+#define CLIENTNAME	"utestclient"
+#define CCONFFILE	CLIENTCONFDIR "/" CLIENTNAME
 
 struct parsedata
 {
@@ -94,6 +95,14 @@ static struct async *setup_async(void)
 	return as;
 }
 
+static struct cntr *setup_cntr(void)
+{
+	struct cntr *cntr;
+	fail_unless((cntr=cntr_alloc())!=NULL);
+	fail_unless(!cntr_init(cntr, CLIENTNAME, /*pid*/1234));
+	return cntr;
+}
+
 static void clean(void)
 {
 	fail_unless(!recursive_delete(BASE));
@@ -101,12 +110,13 @@ static void clean(void)
 }
 
 static void setup(struct async **as,
-	struct conf ***confs, struct conf ***cconfs)
+	struct conf ***confs, struct conf ***cconfs, struct cntr **cntr)
 {
 	clean();
 	*as=setup_async();
 	*confs=setup_conf();
 	*cconfs=setup_conf();
+	*cntr=setup_cntr();
 }
 
 static void tear_down(struct async **as, struct asfd **asfd,
@@ -233,9 +243,11 @@ static void run_test(
 	struct asfd *asfd;
 	struct conf **confs;
 	struct conf **cconfs;
+	struct cntr *cntr;
 	int timer_ret=0;
 
-	setup(&as, &confs, &cconfs);
+	setup(&as, &confs, &cconfs, &cntr);
+	set_cntr(cconfs[OPT_CNTR], cntr);
 	asfd=asfd_mock_setup(&reads, &writes);
 	as->asfd_add(as, asfd);
 	as->read_write=async_rw_simple;

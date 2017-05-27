@@ -25,9 +25,6 @@ extern int set_keepalive(int fd, int value);
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
 extern int chuser_and_or_chgrp(const char *user, const char *group);
-extern const char *getdatestr(time_t t);
-extern const char *getlocaldatestr(time_t t);
-extern const char *time_taken(time_t d);
 extern int dpth_protocol1_is_compressed(int compressed, const char *datapath);
 #ifndef HAVE_WIN32
 extern void setup_signal(int sig, void handler(int sig));
@@ -64,7 +61,5 @@ extern int breakpoint(int breaking, const char *func);
 #ifdef HAVE_WIN32
 extern void convert_backslashes(char **path);
 #endif
-
-extern char *encode_time(time_t utime, char *buf);
 
 #endif

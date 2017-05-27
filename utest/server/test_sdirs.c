@@ -8,6 +8,7 @@
 #include "../../src/server/protocol1/fdirs.h"
 #include "../../src/server/sdirs.h"
 #include "../../src/server/timestamp.h"
+#include "../../src/times.h"
 
 #define BASE		"utest_sdirs"
 

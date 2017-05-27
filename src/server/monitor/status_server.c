@@ -309,7 +309,6 @@ static int parse_client_data(struct asfd *srfd,
 	printf("backup: %s\n", backup?:"");
 	printf("logfile: %s\n", logfile?:"");
 */
-
 	if(json_send(srfd, clist, cstat, bu, logfile, browse,
 		get_int(confs[OPT_MONITOR_BROWSE_CACHE]), *peer_version))
 			goto error;

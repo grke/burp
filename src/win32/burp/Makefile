@@ -94,6 +94,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/slist.o \
 	$(OBJDIR)/ssl.o \
 	$(OBJDIR)/strlist.o \
+	$(OBJDIR)/times.o \
 	$(OBJDIR)/vss.o \
 	$(OBJDIR)/vss_XP.o \
 	$(OBJDIR)/vss_W2K3.o \

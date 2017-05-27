@@ -165,6 +165,7 @@ burp_SOURCES = \
 	src/slist.c src/slist.h \
 	src/ssl.c src/ssl.h \
 	src/strlist.c src/strlist.h \
+	src/times.c src/times.h \
 	src/yajl_gen_w.c src/yajl_gen_w.h \
 	src/client/acl.c src/client/acl.h \
 	src/client/auth.c src/client/auth.h \

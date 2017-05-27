@@ -6,6 +6,7 @@
 #include "../cmd.h"
 #include "../handy.h"
 #include "../log.h"
+#include "../times.h"
 #include "list.h"
 
 /* Note: The chars in this function are not the same as in the CMD_ set.

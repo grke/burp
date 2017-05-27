@@ -24,11 +24,32 @@
 
 static struct fzp *output=NULL;
 
-static void tear_down(struct asfd **asfd)
+static char *setup_tz(void)
+{
+	char *tz;
+	if((tz=getenv("TZ")))
+		fail_unless((tz=strdup_w(tz, __func__))!=NULL);
+	setenv("TZ", "UTC-10", 1);
+	return tz;
+}
+
+static void tear_down_tz(char **tz)
+{
+	if(tz && *tz)
+	{
+		setenv("TZ", *tz, 1);
+		free_w(tz);
+	}
+	else
+		unsetenv("TZ");
+}
+
+static void tear_down(struct asfd **asfd, char **tz)
 {
 	asfd_free(asfd);
 	fail_unless(!fzp_close(&output));
 	fail_unless(!recursive_delete(CLIENTCONFDIR));
+	tear_down_tz(tz);
 	alloc_check();
 }
 
@@ -52,20 +73,24 @@ static struct asfd *asfd_setup(const char *outputpath)
 
 START_TEST(test_json_send_warn)
 {
+	char *tz;
 	struct asfd *asfd;
+	tz=setup_tz();
 	asfd=asfd_setup(BASE "/warning");
 	fail_unless(!json_send_warn(asfd, "this is my warning"));
-	tear_down(&asfd);
+	tear_down(&asfd, &tz);
 }
 END_TEST
 
 START_TEST(test_json_send_empty)
 {
+	char *tz;
 	struct asfd *asfd;
+	tz=setup_tz();
 	asfd=asfd_setup(BASE "/empty");
 	fail_unless(!json_send(asfd, NULL, NULL, NULL, NULL, NULL, 0/*cache*/,
 		version_to_long(VERSION)));
-	tear_down(&asfd);
+	tear_down(&asfd, &tz);
 }
 END_TEST
 
@@ -79,6 +104,7 @@ static struct conf **setup_conf(void)
 
 START_TEST(test_json_send_clients)
 {
+	char *tz;
 	struct asfd *asfd;
 	struct cstat *c=NULL;
 	struct cstat *clist=NULL;
@@ -86,6 +112,7 @@ START_TEST(test_json_send_clients)
 	struct conf **cconfs=NULL;
 	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
 
+	tz=setup_tz();
 	globalcs=setup_conf();
 	cconfs=setup_conf();
 
@@ -105,12 +132,12 @@ START_TEST(test_json_send_clients)
 	cstat_list_free(&clist);
 	confs_free(&globalcs);
 	confs_free(&cconfs);
-	tear_down(&asfd);
+	tear_down(&asfd, &tz);
 }
 END_TEST
 
 static struct sd sd1[] = {
-	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_CURRENT },
+	{ "0000001 1971-01-01 10:00:00 +1000", 1, 1, BU_DELETABLE|BU_CURRENT },
 };
 
 static struct sdirs *setup_sdirs(enum protocol protocol, const char *cname)
@@ -137,10 +164,12 @@ static void cstat_list_free_sdirs(struct cstat *clist)
 static void do_test_json_send_clients_with_backup(const char *path,
 	struct sd *sd, int s, const char *specific_client)
 {
+	char *tz;
 	struct asfd *asfd;
 	struct cstat *c=NULL;
 	struct cstat *clist=NULL;
 	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
+	tz=setup_tz();
 	fail_unless(recursive_delete(CLIENTCONFDIR)==0);
 	build_clientconfdir_files(cnames, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
@@ -166,7 +195,7 @@ static void do_test_json_send_clients_with_backup(const char *path,
 	cstat_list_free_sdirs(clist);
 	cstat_list_free(&clist);
 	fail_unless(!recursive_delete(SDIRS));
-	tear_down(&asfd);
+	tear_down(&asfd, &tz);
 }
 
 START_TEST(test_json_send_clients_with_backup)
@@ -178,11 +207,11 @@ START_TEST(test_json_send_clients_with_backup)
 END_TEST
 
 static struct sd sd12345[] = {
-	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
-	{ "0000002 1971-01-02 00:00:00", 2, 2, 0 },
-	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_HARDLINKED },
-	{ "0000004 1971-01-04 00:00:00", 4, 4, BU_DELETABLE },
-	{ "0000005 1971-01-05 00:00:00", 5, 5, BU_CURRENT|BU_MANIFEST }
+	{ "0000001 1971-01-01 10:00:00 +1000", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1971-01-02 10:00:00 +1000", 2, 2, 0 },
+	{ "0000003 1971-01-03 10:00:00 +1000", 3, 3, BU_HARDLINKED },
+	{ "0000004 1971-01-04 10:00:00 +1000", 4, 4, BU_DELETABLE },
+	{ "0000005 1971-01-05 10:00:00 +1000", 5, 5, BU_CURRENT|BU_MANIFEST }
 };
 
 START_TEST(test_json_send_clients_with_backups)
@@ -194,9 +223,9 @@ START_TEST(test_json_send_clients_with_backups)
 END_TEST
 
 static struct sd sd123w[] = {
-	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
-	{ "0000002 1971-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
-	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_WORKING },
+	{ "0000001 1971-01-01 10:00:00 +1000", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1971-01-02 10:00:00 +1000", 2, 2, BU_CURRENT|BU_MANIFEST },
+	{ "0000003 1971-01-03 10:00:00 +1000", 3, 3, BU_WORKING },
 };
 
 START_TEST(test_json_send_clients_with_backups_working)
@@ -208,9 +237,9 @@ START_TEST(test_json_send_clients_with_backups_working)
 END_TEST
 
 static struct sd sd123f[] = {
-	{ "0000001 1971-01-01 00:00:00", 1, 1, BU_DELETABLE|BU_MANIFEST },
-	{ "0000002 1971-01-02 00:00:00", 2, 2, BU_CURRENT|BU_MANIFEST },
-	{ "0000003 1971-01-03 00:00:00", 3, 3, BU_FINISHING },
+	{ "0000001 1971-01-01 10:00:00 +1000", 1, 1, BU_DELETABLE|BU_MANIFEST },
+	{ "0000002 1971-01-02 10:00:00 +1000", 2, 2, BU_CURRENT|BU_MANIFEST },
+	{ "0000003 1971-01-03 10:00:00 +1000", 3, 3, BU_FINISHING },
 };
 
 START_TEST(test_json_send_clients_with_backups_finishing)

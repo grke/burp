@@ -11,6 +11,7 @@
 #include "../../prepend.h"
 #include "../../strlist.h"
 #include "../../yajl_gen_w.h"
+#include "../timestamp.h"
 #include "browse.h"
 #include "json_output.h"
 
@@ -89,41 +90,6 @@ end:
 	yajl_gen_free(yajl);
 	yajl=NULL;
 	return ret;
-}
-
-// Portable timegm, copied from 'man timegm'.
-static time_t my_timegm(struct tm *tm)
-{
-	time_t ret;
-	char *tz;
-
-	if((tz=getenv("TZ")))
-	{
-		if(!(tz=strdup_w(tz, __func__)))
-			return -1;
-	}
-	setenv("TZ", "UTC0", 1);
-	tzset();
-	ret=mktime(tm);
-	if(tz)
-	{
-		setenv("TZ", tz, 1);
-		free_w(&tz);
-	}
-	else
-		unsetenv("TZ");
-	tzset();
-	return ret;
-}
-
-static long timestamp_to_long(const char *buf)
-{
-	struct tm tm;
-	const char *b=NULL;
-	if(!(b=strchr(buf, ' '))) return 0;
-	memset(&tm, 0, sizeof(struct tm));
-	if(!strptime(b, " %Y-%m-%d %H:%M:%S", &tm)) return 0;
-	return (long)my_timegm(&tm);
 }
 
 static int flag_matches(struct bu *bu, uint16_t flag)

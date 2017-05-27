@@ -9,7 +9,7 @@
 #include "pathcmp.h"
 #include "prepend.h"
 #include "strlist.h"
-#include "server/timestamp.h"
+#include "times.h"
 #include "client/glob_windows.h"
 #include "conffile.h"
 

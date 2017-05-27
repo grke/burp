@@ -605,7 +605,7 @@ static int process_dir(const char *oldpath, const char *newpath,
 	}
 	ret=0;
 end:
-	closedir(dirp);
+	if(dirp) closedir(dirp);
 	free_w(&newfile.path);
 	free_w(&path);
 	return ret;

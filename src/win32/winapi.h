@@ -41,19 +41,9 @@
 
 // unicode enabling of win 32 needs some defines and functions
 
-// using an average of 3 bytes per character is probably fine in
-// practice but I believe that Windows actually uses UTF-16 encoding
-// as opposed to UCS2 which means characters 0x10000-0x10ffff are
-// valid and result in 4 byte UTF-8 encodings.
-#define MAX_PATH_UTF8    MAX_PATH*4  // strict upper bound on UTF-16 to UTF-8 conversion
-
-// from
-// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/fileio/fs/getfileattributesex.asp
-// In the ANSI version of this function, the name is limited to
-// MAX_PATH characters. To extend this limit to 32,767 wide
-// characters, call the Unicode version of the function and prepend
-// "\\?\" to the path. For more information, see Naming a File.
-#define MAX_PATH_W 32767
+// MAX_PATH_UTF8 moved to burpconfig.h
+// winapi.h used only in burp.h just after using burpconfig.h
+#include "burpconfig.h"
 
 int wchar_2_UTF8(char *pszUTF, const WCHAR *pszUCS, int cchChar = MAX_PATH_UTF8);
 int UTF8_2_wchar(char **pszUCS, const char *pszUTF);

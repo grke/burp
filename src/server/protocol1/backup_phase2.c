@@ -32,7 +32,10 @@ static int path_length_warn(struct iobuf *path, struct conf **cconfs)
 
 static int path_too_long(struct iobuf *path, struct conf **cconfs)
 {
-	static const char *cp;
+	const char *cp;
+	const char *cp1;
+	size_t len;
+
 	if(treepathlen+path->len+1>fs_full_path_max)
 	{
 		// FIX THIS:
@@ -43,9 +46,21 @@ static int path_too_long(struct iobuf *path, struct conf **cconfs)
 		// to be able to fix it.
 		return path_length_warn(path, cconfs);
 	}
-	if((cp=strrchr(path->buf, '/'))) cp++;
-	else cp=path->buf;
-	if(strlen(cp)>fs_name_max) return path_length_warn(path, cconfs);
+	// We have to check every part in the path to ensure it less then fs_name_max
+	// minimum windows case is c:/a, nix case is /
+	// usual: c:/users, /home
+	cp = strchr(path->buf, '/');
+	if( !cp ) // very strange
+	    return strlen(path->buf) > fs_name_max ?  path_length_warn(path, cconfs):0;
+	while(cp && *cp)
+	{
+	    cp++;
+	    cp1 = strchr(cp, '/');
+	    len = cp1? cp1-cp : strlen(cp);
+	    if( len > fs_name_max )
+		return path_length_warn(path, cconfs);
+	    cp = cp1;
+	}
 	return 0;
 }
 

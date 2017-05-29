@@ -1,7 +1,6 @@
 #ifndef _CHILD_H
 #define _CHILD_H
 
-#include "cstat.h"
 #include "monitor/cstat.h"
 
 struct async;

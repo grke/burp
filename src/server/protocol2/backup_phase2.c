@@ -6,6 +6,7 @@
 #include "../../base64.h"
 #include "../../cmd.h"
 #include "../../cntr.h"
+#include "../../cstat.h"
 #include "../../handy.h"
 #include "../../hexmap.h"
 #include "../../iobuf.h"

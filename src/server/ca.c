@@ -20,6 +20,7 @@ static char *get_ca_dir(const char *ca_conf)
 	struct fzp *fzp=NULL;
 	char buf[4096]="";
 	char *ca_dir=NULL;
+	int r=0;
 
 	if(!(fzp=fzp_open(ca_conf, "r")))
 		goto end;
@@ -27,7 +28,7 @@ static char *get_ca_dir(const char *ca_conf)
 	{
 		char *field=NULL;
 		char *value=NULL;
-		if(conf_get_pair(buf, &field, &value)
+		if(conf_get_pair(buf, &field, &value, &r)
 		  || !field || !value) continue;
 
 		if(!strcasecmp(field, "CA_DIR"))

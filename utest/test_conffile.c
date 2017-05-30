@@ -41,24 +41,26 @@ struct data
 	const char *str;
 	const char *field;
 	const char *value;
+	int reset;
 };
 
 static struct data d[] = {
-	{ "a=b", "a", "b" },
-	{ "a=b\n", "a", "b" },
-	{ "a = b", "a", "b" },
-	{ "   a  =    b ", "a", "b" },
-	{ "   a  =    b \n", "a", "b" },
-	{ "#a=b", NULL, NULL },
-	{ "  #a=b", NULL, NULL },
-	{ "a='b'", "a", "b" },
-	{ "a='b", "a", "b" },
-	{ "a=b'", "a", "b'" },
-	{ "a=\"b\"", "a", "b" },
-	{ "a=b\"", "a", "b\"" },
-	{ "a=\"b", "a", "b" },
-	{ "a=b # comment", "a", "b # comment" }, // Maybe fix this.
-	{ "field=longvalue with spaces", "field", "longvalue with spaces" },
+	{ "a=b", "a", "b", 0 },
+	{ "a=b\n", "a", "b", 0 },
+	{ "a = b", "a", "b", 0 },
+	{ "   a  =    b ", "a", "b", 0 },
+	{ "   a  =    b \n", "a", "b", 0 },
+	{ "#a=b", NULL, NULL, 0 },
+	{ "  #a=b", NULL, NULL, 0 },
+	{ "a='b'", "a", "b", 0 },
+	{ "a='b", "a", "b", 0 },
+	{ "a=b'", "a", "b'", 0 },
+	{ "a=\"b\"", "a", "b", 0 },
+	{ "a=b\"", "a", "b\"", 0 },
+	{ "a=\"b", "a", "b", 0 },
+	{ "a=b # comment", "a", "b # comment", 0 }, // Maybe fix this.
+	{ "field=longvalue with spaces", "field", "longvalue with spaces", 0 },
+	{ "test:=reset", "test", "reset", 1 },
 };
 
 START_TEST(test_conf_get_pair)
@@ -68,7 +70,8 @@ START_TEST(test_conf_get_pair)
 		char *field=NULL;
 		char *value=NULL;
 		char *str=strdup(d[i].str);
-		conf_get_pair(str, &field, &value);
+		int reset=0;
+		conf_get_pair(str, &field, &value, &reset);
 		if(!field || !d[i].field)
 			fail_unless(field==d[i].field);
 		else
@@ -77,6 +80,7 @@ START_TEST(test_conf_get_pair)
 			fail_unless(value==d[i].value);
 		else
 			fail_unless(!strcmp(value, d[i].value));
+		fail_unless(d[i].reset==reset);
 		free(str);
 	}
 }
@@ -805,6 +809,27 @@ START_TEST(test_clientconfdir_extra)
 }
 END_TEST
 
+START_TEST(test_strlist_reset)
+{
+	struct strlist *s;
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
+		"port=1234\n"
+		"timer_arg = /ignored/timer/arg1\n"
+		"timer_arg = /ignored/timer/arg2\n"
+		"timer_arg := /timer/arg3\n"
+		"timer_arg = /timer/arg4\n");
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+
+	s=get_strlist(confs[OPT_TIMER_ARG]);
+	assert_strlist(&s, "/timer/arg3", 0);
+	assert_strlist(&s, "/timer/arg4", 0);
+	assert_include(&s, NULL);
+	tear_down(NULL, &confs);
+}
+END_TEST
+
 START_TEST(test_clientconfdir_server_script)
 {
 	struct conf **globalcs=NULL;
@@ -906,6 +931,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_restore_script);
 	tcase_add_test(tc_core, test_clientconfdir_conf);
 	tcase_add_test(tc_core, test_clientconfdir_extra);
+	tcase_add_test(tc_core, test_strlist_reset);
 	tcase_add_test(tc_core, test_clientconfdir_server_script);
 	tcase_add_test(tc_core, test_conf_switch_to_orig_client_fail);
 	tcase_add_test(tc_core, test_conf_switch_to_orig_client_ok);

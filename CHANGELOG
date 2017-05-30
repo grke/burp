@@ -1,3 +1,22 @@
+2017-06-01 Changes in burp-2.1.10:
+ * Sponsored features:
+   + Ability to listen on multiple port/status_port numbers, individually
+   configurable with additional max_children/max_status_children.
+   + Add the ability for the client to connect to different server ports
+   according to whether it is doing backup/restore/verify/list/delete.
+   + Allow restore during a backup.
+   + JSON output/input supports multiple actions on the same client.
+ * Fix for restore interrupt on transfer_gzfile_inl() failing.
+ * More UTF-8 in paths, from Alexey Kovalenko.
+ * Add offsets to timestamps.
+ * Take note of warnings from the status server.
+ * Log timestamps of resumes in a file called 'resumed' inside the
+   backup directory that was resumed.
+ * Write '.created' when client directory is initially created.
+ * qm2k's patch to limit notify_script to 1000 lines of log.
+ * Fix two more bugs in relinking deleted hardlink master records.
+ * Add Dave Ludlow's comments to the Windows2008 bare metal file.
+
 2017-05-01 Changes in burp-2.1.8:
  * Fix two bugs in relinking deleted hardlink master records.
  * Fix status monitor failing if client password is not set.

@@ -28,6 +28,7 @@ A. They are:
 <li>librsync
 <li>openssl
 <li>zlib (>=1.2.5 is recommended)
+<li>uthash
 </ul>
 </FONT>
 </P>

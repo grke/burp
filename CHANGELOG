@@ -1,5 +1,5 @@
 2017-06-01 Changes in burp-2.1.10:
- * Sponsored features:
+ * Features sponsored by VSHN (https://vshn.ch/):
    + Ability to listen on multiple port/status_port numbers, individually
    configurable with additional max_children/max_status_children.
    + Add the ability for the client to connect to different server ports

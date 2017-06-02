@@ -351,6 +351,8 @@ static int deal_with_dot_inclusion(const char *conf_path,
 	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
 		if((ret=conf_load_lines_from_file(globbuf.gl_pathv[i], confs)))
 			goto end;
+
+	globfree(&globbuf);
 #else
 	ret=conf_load_lines_from_file(*extrafile, confs);
 #endif

@@ -838,8 +838,8 @@ static int check_for_missing_work_in_slist(struct slist *slist)
 	{
 		if(!(sb->flags & SBUF_END_WRITTEN_TO_MANIFEST))
 		{
-			logp("ERROR: finishing but still waiting for: %c:%s\n",
-				slist->head->path.cmd, slist->head->path.buf);
+			logp("ERROR: finishing but still waiting for: %s\n",
+				iobuf_to_printable(&slist->head->path));
 			return -1;
 		}
 	}

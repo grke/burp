@@ -368,8 +368,8 @@ int restore_sbuf_protocol1(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		if(!sb->protocol1->datapth.buf)
 		{
 			logw(asfd, get_cntr(cconfs),
-				"Got filedata entry with no datapth: %c:%s\n",
-					sb->path.cmd, sb->path.buf);
+				"Got filedata entry with no datapth: %s\n",
+					iobuf_to_printable(&sb->path));
 			return 0;
 		}
 		return restore_file(asfd, bu, sb, act, sdirs, cconfs);

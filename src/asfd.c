@@ -380,7 +380,7 @@ static enum append_ret asfd_append_all_to_write_buffer(struct asfd *asfd,
 			return APPEND_ERROR;
 	}
 	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
-//printf("append %d: %c:%s\n", wbuf->len, wbuf->cmd, wbuf->buf);
+//printf("append %d: %s\n", wbuf->len, iobuf_to_printable(wbuf));
 	wbuf->len=0;
 	return APPEND_OK;
 }
@@ -415,9 +415,9 @@ int asfd_read_expect(struct asfd *asfd, enum cmd cmd, const char *expect)
 	if(asfd->read(asfd)) return -1;
 	if(asfd->rbuf->cmd!=cmd || strcmp(asfd->rbuf->buf, expect))
 	{
-		logp("%s: expected '%c:%s', got '%c:%s'\n",
+		logp("%s: expected '%c:%s', got '%s'\n",
 			asfd->desc, cmd, expect,
-			asfd->rbuf->cmd, asfd->rbuf->buf);
+			iobuf_to_printable(asfd->rbuf));
 		ret=-1;
 	}
 	iobuf_free_content(asfd->rbuf);
@@ -473,7 +473,7 @@ int asfd_simple_loop(struct asfd *asfd,
 			}
 			else
 			{
-				logp("%s: unexpected command in %s(), called from %s(): %c:%s\n", asfd->desc, __func__, caller, rbuf->cmd, rbuf->buf);
+				logp("%s: unexpected command in %s(), called from %s(): %s\n", asfd->desc, __func__, caller, iobuf_to_printable(rbuf));
 				goto error;
 			}
 			continue;

@@ -95,7 +95,7 @@ int transfer_gzfile_in(struct asfd *asfd, struct BFILE *bfd,
 		if(asfd->read(asfd)) goto end_inflate;
 		(*rcvd)+=rbuf->len;
 
-		//logp("transfer in: %c:%s\n", rbuf->cmd, rbuf->buf);
+		//logp("transfer in: %s\n", iobuf_to_printable(rbuf));
 		switch(rbuf->cmd)
 		{
 			case CMD_APPEND: // append

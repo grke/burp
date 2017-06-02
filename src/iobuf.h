@@ -37,4 +37,6 @@ extern int iobuf_is_estimatable(struct iobuf *iobuf);
 extern int iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp);
 extern int iobuf_fill_from_fzp_data(struct iobuf *iobuf, struct fzp *fzp);
 
+extern const char *iobuf_to_printable(struct iobuf *iobuf);
+
 #endif

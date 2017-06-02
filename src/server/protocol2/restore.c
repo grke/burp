@@ -41,14 +41,14 @@ static int send_data(struct asfd *asfd, struct blk *blk,
 					break; // All OK.
 				case 0:
 				{
-					logw(asfd, cntr, "Checksum mismatch in block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, uint64_to_savepathstr_with_sig(blk->savepath));
+					logw(asfd, cntr, "Checksum mismatch in block for %s:%s\n", iobuf_to_printable(&need_data->path), uint64_to_savepathstr_with_sig(blk->savepath));
 					break;
 		
 				}
 				default:
 				{
 					char msg[256];
-					snprintf(msg, sizeof(msg), "Error when attempting to verify block for %c:%s:%s\n", need_data->path.cmd, need_data->path.buf, uint64_to_savepathstr_with_sig(blk->savepath));
+					snprintf(msg, sizeof(msg), "Error when attempting to verify block for %s:%s\n", iobuf_to_printable(&need_data->path), uint64_to_savepathstr_with_sig(blk->savepath));
 					return -1;
 				}
 			}

@@ -43,8 +43,8 @@ void iobuf_free(struct iobuf **iobuf)
 
 void iobuf_log_unexpected(struct iobuf *iobuf, const char *func)
 {
-	logp("unexpected command in %s(): %c:%s\n",
-		func, iobuf->cmd, iobuf->buf);
+	logp("unexpected command in %s(): %s\n",
+		func, iobuf_to_printable(iobuf));
 }
 
 void iobuf_copy(struct iobuf *dst, struct iobuf *src)
@@ -174,4 +174,25 @@ int iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp)
 int iobuf_fill_from_fzp_data(struct iobuf *iobuf, struct fzp *fzp)
 {
 	return do_iobuf_fill_from_fzp(iobuf, fzp, 0 /*no newline*/);
+}
+
+static int is_printable(struct iobuf *iobuf)
+{
+	size_t l;
+	for(l=0; l<iobuf->len; l++)
+		if(!isprint(iobuf->buf[l]))
+			return 0;
+	return 1;
+}
+
+const char *iobuf_to_printable(struct iobuf *iobuf)
+{
+	static char str[256]="";
+	if(is_printable(iobuf))
+		snprintf(str, sizeof(str),
+			"%c:%04X:%s", iobuf->cmd, (int)iobuf->len, iobuf->buf);
+	else
+		snprintf(str, sizeof(str),
+			"%c:%04X:(binary data)", iobuf->cmd, (int)iobuf->len);
+	return str;
 }

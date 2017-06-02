@@ -191,13 +191,13 @@ static int size_checks(struct asfd *asfd, struct sbuf *sb, struct conf **confs)
 	if(get_uint64_t(confs[OPT_MIN_FILE_SIZE])
 	  && (uint64_t)sb->statp.st_size<get_uint64_t(confs[OPT_MIN_FILE_SIZE]))
 	{
-		logw(asfd, get_cntr(confs), "File size decreased below min_file_size after initial scan: %c:%s\n", sb->path.cmd, sb->path.buf);
+		logw(asfd, get_cntr(confs), "File size decreased below min_file_size after initial scan: %s\n", iobuf_to_printable(&sb->path));
 		return -1;
 	}
 	if(get_uint64_t(confs[OPT_MAX_FILE_SIZE])
 	  && (uint64_t)sb->statp.st_size>get_uint64_t(confs[OPT_MAX_FILE_SIZE]))
 	{
-		logw(asfd, get_cntr(confs), "File size increased above max_file_size after initial scan: %c:%s\n", sb->path.cmd, sb->path.buf);
+		logw(asfd, get_cntr(confs), "File size increased above max_file_size after initial scan: %s\n", iobuf_to_printable(&sb->path));
 		return -1;
 	}
 	return 0;
@@ -345,7 +345,6 @@ static int parse_rbuf(struct asfd *asfd, struct sbuf *sb,
 {
 	static struct iobuf *rbuf;
 	rbuf=asfd->rbuf;
-	//printf("now %d: %c:%s\n", rbuf->len, rbuf->cmd, rbuf->buf);
 	if(rbuf->cmd==CMD_DATAPTH)
 	{
 		iobuf_move(&(sb->protocol1->datapth), rbuf);

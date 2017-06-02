@@ -54,14 +54,14 @@ int extra_comms_client(struct async *as, struct conf **confs,
 		logp("Problem reading response to extra_comms_begin\n");
 		goto end;
 	}
-	feat=rbuf->buf;
-	rbuf->buf=NULL;
 	if(rbuf->cmd!=CMD_GEN
-	  || strncmp_w(feat, "extra_comms_begin ok"))
+	  || strncmp_w(rbuf->buf, "extra_comms_begin ok"))
 	{
 		iobuf_log_unexpected(rbuf, __func__);
 		goto end;
 	}
+	feat=rbuf->buf;
+	rbuf->buf=NULL;
 	logp("%s\n", feat);
 	iobuf_init(rbuf);
 

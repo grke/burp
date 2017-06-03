@@ -237,7 +237,6 @@ int transfer_gzfile_inl(struct asfd *asfd,
 		}
 		(*rcvd)+=rbuf->len;
 
-		//logp("transfer in: %c:%s\n", rbuf->cmd, rbuf->buf);
 		switch(rbuf->cmd)
 		{
 			case CMD_APPEND: // append

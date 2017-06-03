@@ -185,8 +185,8 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 			if(asfd->read(asfd)
 			  || rbuf->cmd!=sb->path.cmd)
 			{
-				logp("could not get link %c:%s\n",
-					sb->path.cmd, sb->path.buf);
+				logp("could not get link %s\n",
+					iobuf_to_printable(&sb->path));
 				goto end;
 			}
 			iobuf_copy(&sb->link, rbuf);
@@ -195,8 +195,7 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 		}
 		else
 		{
-			logp("unlistable %c:%s\n",
-				sb->path.cmd, sb->path.buf?sb->path.buf:"");
+			logp("unlistable %s\n", iobuf_to_printable(&sb->path));
 		}
 	}
 

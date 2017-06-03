@@ -87,8 +87,8 @@ int slist_del_sbuf(struct slist *slist, struct sbuf *sb)
 	  || sb->protocol2->bend
 	  || sb->protocol2->bsighead)
 	{
-		logp("Cannot delete sbuf with blk markers: %c:%s\n",
-			sb->path.cmd, sb->path.buf);
+		logp("Cannot delete sbuf with blk markers: %s\n",
+			iobuf_to_printable(&sb->path));
 		return -1;
 	}
 

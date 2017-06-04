@@ -27,7 +27,8 @@ END_TEST
 START_TEST(test_send_whole_filel)
 {
 	uint64_t bytes=0;
-	send_whole_filel(
+	enum send_e result;
+	result=send_whole_filel(
 		NULL, // asfd
 #ifdef HAVE_WIN32
 		CMD_FILE,
@@ -40,6 +41,7 @@ START_TEST(test_send_whole_filel)
 		NULL, // extrameta
 		0 // elen
 	);
+	fail_unless(result==SEND_FATAL);
 }
 END_TEST
 

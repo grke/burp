@@ -227,7 +227,7 @@ struct bsid {
 
 static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 {
-	size_t got=0;
+	ssize_t got=0;
 	size_t offset=0;
 	while((got=bfd->read(bfd, buf+offset, s-offset))>0)
 	{

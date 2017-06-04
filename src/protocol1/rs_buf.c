@@ -190,7 +190,8 @@ rs_result rs_infilebuf_fill(__attribute__ ((unused)) rs_job_t *job,
 		}
 		else if(len<0)
 		{
-			logp("rs_infilebuf_fill: error in bread\n");
+			logp("rs_infilebuf_fill: error in bread: %s\n",
+				strerror(errno));
 			return RS_IO_ERROR;
 		}
 		//logp("bread: ok: %d\n", len);

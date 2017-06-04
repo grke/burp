@@ -72,20 +72,20 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 static int burp_send_file(struct asfd *asfd, struct sbuf *sb,
 	int patches, const char *best, struct cntr *cntr)
 {
-	int ret=-1;
+	enum send_e ret=SEND_FATAL;
 	struct BFILE bfd;
 	uint64_t bytes=0; // Unused.
 
 	bfile_init(&bfd, 0, cntr);
 	if(bfd.open_for_send(&bfd, asfd, best, sb->winattr,
-		1 /* no O_NOATIME */, cntr, PROTO_1)) return -1;
-	//logp("sending: %s\n", best);
+		1 /* no O_NOATIME */, cntr, PROTO_1))
+			return SEND_FATAL;
 	if(asfd->write(asfd, &sb->path))
-		ret=-1;
+		ret=SEND_FATAL;
 	else if(patches)
 	{
 		// If we did some patches, the resulting file
-		// is not gzipped. Gzip it during the send. 
+		// is not gzipped. Gzip it during the send.
 		ret=send_whole_file_gzl(asfd, sb->protocol1->datapth.buf,
 			1, &bytes, NULL, cntr, 9, &bfd, NULL, 0);
 	}
@@ -126,7 +126,16 @@ static int burp_send_file(struct asfd *asfd, struct sbuf *sb,
 		}
 	}
 	bfd.close(&bfd, asfd);
-	return ret;
+
+	switch(ret)
+	{
+		case SEND_OK:
+		case SEND_ERROR: // Carry on.
+			return 0;
+		case SEND_FATAL:
+		default:
+			return -1;
+	}
 }
 
 #ifndef UTEST

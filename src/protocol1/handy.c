@@ -113,12 +113,12 @@ int write_endfile(struct asfd *asfd, uint64_t bytes, uint8_t *checksum)
    Encryption off and compression off uses send_whole_file().
    Perhaps a separate function is needed for encryption on compression off.
 */
-int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
+enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	int quick_read, uint64_t *bytes, const char *encpassword,
 	struct cntr *cntr, int compression, struct BFILE *bfd,
 	const char *extrameta, size_t elen)
 {
-	int ret=0;
+	enum send_e ret=SEND_OK;
 	int zret=0;
 	MD5_CTX md5;
 	size_t metalen=0;
@@ -130,6 +130,7 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	int flush=Z_NO_FLUSH;
 	uint8_t in[ZCHUNK];
 	uint8_t out[ZCHUNK];
+	ssize_t r;
 
 	int eoutlen;
 	uint8_t eoutbuf[ZCHUNK+EVP_MAX_BLOCK_LENGTH];
@@ -142,12 +143,12 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 #endif
 
 	if(encpassword && !(enc_ctx=enc_setup(1, encpassword)))
-		return -1;
+		return SEND_FATAL;
 
 	if(!MD5_Init(&md5))
 	{
 		logp("MD5_Init() failed\n");
-		return -1;
+		return SEND_FATAL;
 	}
 
 //logp("send_whole_file_gz: %s%s\n", fname, extrameta?" (meta)":"");
@@ -163,10 +164,7 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	strm.opaque = Z_NULL;
 	if((zret=deflateInit2(&strm, compression, Z_DEFLATED, (15+16),
 		8, Z_DEFAULT_STRATEGY))!=Z_OK)
-
-	{
-		return -1;
-	}
+			return SEND_FATAL;
 
 	do
 	{
@@ -187,18 +185,32 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 #ifdef HAVE_WIN32
 			if(do_known_byte_count)
 			{
-				if(datalen<=0) strm.avail_in=0;
-				else strm.avail_in=
-					(uint32_t)bfd->read(bfd, in,
+				if(datalen<=0)
+					r=0;
+				else
+				{
+					r=bfd->read(bfd, in,
 						min((size_t)ZCHUNK, datalen));
-				datalen-=strm.avail_in;
+					if(r>0)
+						datalen-=r;
+				}
 			}
 			else
 #endif
-				strm.avail_in=
-					(uint32_t)bfd->read(bfd, in, ZCHUNK);
+				r=bfd->read(bfd, in, ZCHUNK);
+
+			if(r<0)
+			{
+				logw(asfd, cntr,
+					"Error when reading %s in %s: %s\n",
+					bfd->path, __func__, strerror(errno));
+				ret=SEND_ERROR;
+				break;
+			}
+			strm.avail_in=(uint32_t)r;
 		}
-		if(!compression && !strm.avail_in) break;
+		if(!compression && !strm.avail_in)
+			break;
 
 		*bytes+=strm.avail_in;
 
@@ -208,13 +220,14 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 			if(!MD5_Update(&md5, in, strm.avail_in))
 			{
 				logp("MD5_Update() failed\n");
-				ret=-1;
+				ret=SEND_FATAL;
 				break;
 			}
 		}
 
 #ifdef HAVE_WIN32
-		if(do_known_byte_count && datalen<=0) flush=Z_FINISH;
+		if(do_known_byte_count && datalen<=0)
+			flush=Z_FINISH;
 		else
 #endif
 		if(strm.avail_in) flush=Z_NO_FLUSH;
@@ -233,8 +246,8 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 				zret = deflate(&strm, flush); /* no bad return value */
 				if(zret==Z_STREAM_ERROR) /* state not clobbered */
 				{
-					logp("z_stream_error\n");
-					ret=-1;
+					logw(asfd, cntr, "z_stream_error when reading %s in %s\n", bfd->path, __func__);
+					ret=SEND_ERROR;
 					break;
 				}
 				have = ZCHUNK-strm.avail_out;
@@ -250,7 +263,7 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 				if(do_encryption(asfd, enc_ctx, out, have,
 					eoutbuf, &eoutlen, &md5))
 				{
-					ret=-1;
+					ret=SEND_FATAL;
 					break;
 				}
 			}
@@ -259,7 +272,7 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 				iobuf_set(&wbuf, CMD_APPEND, (char *)out, have);
 				if(asfd->write(asfd, &wbuf))
 				{
-					ret=-1;
+					ret=SEND_FATAL;
 					break;
 				}
 			}
@@ -268,7 +281,7 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 				int qr;
 				if((qr=do_quick_read(asfd, datapth, cntr))<0)
 				{
-					ret=-1;
+					ret=SEND_FATAL;
 					break;
 				}
 				if(qr) // client wants to interrupt
@@ -279,43 +292,43 @@ int send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 			if(!compression) break;
 		} while (!strm.avail_out);
 
-		if(ret) break;
+		if(ret!=SEND_OK) break;
 
 		if(!compression) continue;
 
 		if(strm.avail_in) /* all input will be used */
 		{
-			ret=-1;
+			ret=SEND_FATAL;
 			logp("strm.avail_in=%d\n", strm.avail_in);
 			break;
 		}
 	} while(flush!=Z_FINISH);
 
-	if(!ret)
+	if(ret==SEND_OK)
 	{
 		if(compression && zret!=Z_STREAM_END)
 		{
 			logp("ret OK, but zstream not finished: %d\n", zret);
-			ret=-1;
+			ret=SEND_FATAL;
 		}
 		else if(enc_ctx)
 		{
 			if(!EVP_CipherFinal_ex(enc_ctx, eoutbuf, &eoutlen))
 			{
 				logp("Encryption failure at the end\n");
-				ret=-1;
+				ret=SEND_FATAL;
 			}
 			else if(eoutlen>0)
 			{
-			  iobuf_set(&wbuf, CMD_APPEND,
-				(char *)eoutbuf, (size_t)eoutlen);
-			  if(asfd->write(asfd, &wbuf))
-				ret=-1;
-			  else if(!MD5_Update(&md5, eoutbuf, eoutlen))
-			  {
-				logp("MD5_Update() failed\n");
-				ret=-1;
-			  }
+				iobuf_set(&wbuf, CMD_APPEND,
+					(char *)eoutbuf, (size_t)eoutlen);
+				if(asfd->write(asfd, &wbuf))
+					ret=SEND_FATAL;
+				else if(!MD5_Update(&md5, eoutbuf, eoutlen))
+				{
+					logp("MD5_Update() failed\n");
+					ret=SEND_FATAL;
+				}
 			}
 		}
 	}
@@ -330,18 +343,17 @@ cleanup:
 		enc_ctx=NULL;
 	}
 
-	if(!ret)
+	if(ret!=SEND_FATAL)
 	{
 		uint8_t checksum[MD5_DIGEST_LENGTH];
 		if(!MD5_Final(checksum, &md5))
 		{
 			logp("MD5_Final() failed\n");
-			return -1;
+			return SEND_FATAL;
 		}
-
-		return write_endfile(asfd, *bytes, checksum);
+		if(write_endfile(asfd, *bytes, checksum))
+			return SEND_FATAL;
 	}
-//logp("end of send\n");
 	return ret;
 }
 
@@ -385,7 +397,7 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 }
 #endif
 
-int send_whole_filel(struct asfd *asfd,
+enum send_e send_whole_filel(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	enum cmd cmd,
 #endif
@@ -393,8 +405,8 @@ int send_whole_filel(struct asfd *asfd,
 	int quick_read, uint64_t *bytes, struct cntr *cntr,
 	struct BFILE *bfd, const char *extrameta, size_t elen)
 {
-	int ret=0;
-	size_t s=0;
+	enum send_e ret=SEND_OK;
+	ssize_t s=0;
 	MD5_CTX md5;
 	char buf[4096]="";
 	struct iobuf wbuf;
@@ -402,13 +414,13 @@ int send_whole_filel(struct asfd *asfd,
 	if(!bfd)
 	{
 		logp("No bfd in %s()\n", __func__);
-		return -1;
+		return SEND_FATAL;
 	}
 
 	if(!MD5_Init(&md5))
 	{
 		logp("MD5_Init() failed\n");
-		return -1;
+		return SEND_FATAL;
 	}
 
 	if(extrameta)
@@ -428,13 +440,11 @@ int send_whole_filel(struct asfd *asfd,
 			if(!MD5_Update(&md5, metadata, s))
 			{
 				logp("MD5_Update() failed\n");
-				ret=-1;
+				ret=SEND_FATAL;
 			}
 			iobuf_set(&wbuf, CMD_APPEND, (char *)metadata, s);
 			if(asfd->write(asfd, &wbuf))
-			{
-				ret=-1;
-			}
+				ret=SEND_FATAL;
 
 			metadata+=s;
 			metalen-=s;
@@ -445,7 +455,7 @@ int send_whole_filel(struct asfd *asfd,
 	else
 	{
 #ifdef HAVE_WIN32
-		if(!ret && cmd==CMD_EFS_FILE)
+		if(ret==SEND_OK && cmd==CMD_EFS_FILE)
 		{
 			struct winbuf mybuf;
 			mybuf.md5=&md5;
@@ -468,7 +478,7 @@ int send_whole_filel(struct asfd *asfd,
 		else
 #endif
 
-		if(!ret)
+		if(ret==SEND_OK)
 		{
 #ifdef HAVE_WIN32
 		  int do_known_byte_count=0;
@@ -480,30 +490,40 @@ int send_whole_filel(struct asfd *asfd,
 #ifdef HAVE_WIN32
 			if(do_known_byte_count)
 			{
-				s=(uint32_t)bfd->read(bfd,
+				s=bfd->read(bfd,
 					buf, min((size_t)4096, datalen));
-				datalen-=s;
+				if(s>0)
+					datalen-=s;
 			}
 			else
 			{
 #endif
-				s=(uint32_t)bfd->read(bfd, buf, 4096);
+				s=bfd->read(bfd, buf, 4096);
 #ifdef HAVE_WIN32
 			}
 #endif
-			if(s<=0) break;
+			if(!s)
+				break;
+			else if(s<0)
+			{
+				logw(asfd, cntr,
+					"Error when reading %s in %s: %s\n",
+					bfd->path, __func__, strerror(errno));
+				ret=SEND_ERROR;
+				break;
+			}
 
 			*bytes+=s;
 			if(!MD5_Update(&md5, buf, s))
 			{
 				logp("MD5_Update() failed\n");
-				ret=-1;
+				ret=SEND_FATAL;
 				break;
 			}
 			iobuf_set(&wbuf, CMD_APPEND, buf, s);
 			if(asfd->write(asfd, &wbuf))
 			{
-				ret=-1;
+				ret=SEND_FATAL;
 				break;
 			}
 			if(quick_read)
@@ -511,7 +531,7 @@ int send_whole_filel(struct asfd *asfd,
 				int qr;
 				if((qr=do_quick_read(asfd, datapth, cntr))<0)
 				{
-					ret=-1;
+					ret=SEND_FATAL;
 					break;
 				}
 				if(qr)
@@ -528,15 +548,16 @@ int send_whole_filel(struct asfd *asfd,
 		  }
 		}
 	}
-	if(!ret)
+	if(ret!=SEND_FATAL)
 	{
 		uint8_t checksum[MD5_DIGEST_LENGTH];
 		if(!MD5_Final(checksum, &md5))
 		{
 			logp("MD5_Final() failed\n");
-			return -1;
+			return SEND_FATAL;
 		}
-		return write_endfile(asfd, *bytes, checksum);
+		if(write_endfile(asfd, *bytes, checksum))
+			return SEND_FATAL;
 	}
 	return ret;
 }

@@ -145,7 +145,7 @@ end:
 	return ret;
 }
 
-static int send_whole_file_w(struct asfd *asfd,
+static enum send_e send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, uint64_t *bytes, const char *encpassword,
 	struct cntr *cntr, int compression, struct BFILE *bfd,
@@ -312,13 +312,22 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		//logp("need to send whole file: %s\n", sb.path);
 		// send the whole file.
 
-		if((asfd->write(asfd, &sb->attr)
+		if(asfd->write(asfd, &sb->attr)
 		  || asfd->write(asfd, &sb->path))
-		  || send_whole_file_w(asfd, sb, NULL, 0, &bytes,
+			goto end;
+
+		switch(send_whole_file_w(asfd, sb, NULL, 0, &bytes,
 			get_string(confs[OPT_ENCRYPTION_PASSWORD]),
 			cntr, sb->compression,
 			bfd, extrameta, elen))
-				goto end;
+		{
+			case SEND_OK:
+			case SEND_ERROR: // Carry on.
+				break;
+			case SEND_FATAL:
+			default:
+				goto error;
+		}
 		cntr_add(cntr, sb->path.cmd, 1);
 	}
 	cntr_add_bytes(cntr, bytes);

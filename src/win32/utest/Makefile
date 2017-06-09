@@ -135,6 +135,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/utest/test_hexmap.o \
 	$(OBJDIR)/utest/test_pathcmp.o \
 	$(OBJDIR)/utest/test_slist.o \
+	$(OBJDIR)/utest/test_times.o \
 
 ALL_OBJS = $(CLIENT_OBJS)
 

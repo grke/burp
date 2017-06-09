@@ -364,6 +364,7 @@ runner_SOURCES = \
 	utest/test_lock.c \
 	utest/test_pathcmp.c \
 	utest/test_slist.c \
+	utest/test_times.c \
 	utest/test.h
 
 runner_SOURCES+= $(burp_SOURCES)

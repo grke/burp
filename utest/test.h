@@ -130,5 +130,6 @@ Suite *suite_server_protocol2_champ_chooser_scores(void);
 Suite *suite_server_protocol2_champ_chooser_sparse(void);
 Suite *suite_server_protocol2_dpth(void);
 Suite *suite_slist(void);
+Suite *suite_times(void);
 
 #endif

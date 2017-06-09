@@ -17,7 +17,7 @@
 int append_to_resume_file(const char *path)
 {
 	int ret=-1;
-	char tstmp[32]="";
+	char tstmp[48]="";
 	char *resume_path=NULL;
 
 	if(timestamp_get_new(/*index*/0,

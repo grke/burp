@@ -45,6 +45,7 @@ int main(void)
 	srunner_add_suite(sr, suite_protocol2_rabin_win());
 	srunner_add_suite(sr, suite_protocol2_sbuf_protocol2());
 	srunner_add_suite(sr, suite_slist());
+	srunner_add_suite(sr, suite_times());
 
 #ifndef HAVE_WIN32
 	// These do not compile for Windows.

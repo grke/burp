@@ -132,7 +132,7 @@ static int entry_changed(struct sbuf *sb,
 		return 1;
 	}
 
-	if((*csb)->path.buf)
+	if(*csb && (*csb)->path.buf)
 	{
 		// Already have an entry.
 	}

@@ -77,10 +77,11 @@ static int rewrite_client_conf(struct conf **confs)
 		char *copy=NULL;
 		char *field=NULL;
 		char *value=NULL;
+		int r=0;
 
 		if(!(copy=strdup_w(buf, __func__)))
 			goto end;
-		if(conf_get_pair(buf, &field, &value)
+		if(conf_get_pair(buf, &field, &value, &r)
 		  || !field || !value
 		  || strcmp(field, "ssl_peer_cn"))
 		{

@@ -62,7 +62,7 @@ static int remove_quotes(const char *f, char **v, char quote)
 }
 
 // Get field and value pair.
-int conf_get_pair(char buf[], char **f, char **v)
+int conf_get_pair(char buf[], char **f, char **v, int *r)
 {
 	char *cp=NULL;
 	char *eq=NULL;
@@ -80,7 +80,11 @@ int conf_get_pair(char buf[], char **f, char **v)
 	*eq='\0';
 
 	// Strip white space from before the equals sign.
-	for(cp=eq-1; *cp && isspace(*cp); cp--) *cp='\0';
+	for(cp=eq-1; *cp && (isspace(*cp) || *cp == ':'); cp--)
+	{
+		if(*cp == ':') *r=1;
+		*cp='\0';
+	}
 	// Skip white space after the equals sign.
 	for(cp=eq+1; *cp && isspace(*cp); cp++) { }
 	*v=cp;
@@ -233,6 +237,7 @@ static int get_compression(const char *v)
 static int load_conf_field_and_value(struct conf **c,
 	const char *f, // field
 	const char *v, // value
+	int reset, // reset flag
 	const char *conf_path,
 	int line)
 {
@@ -297,6 +302,7 @@ static int load_conf_field_and_value(struct conf **c,
 					return set_e_recovery_method(c[i],
 						str_to_recovery_method(v));
 				case CT_STRLIST:
+					if (reset) set_strlist(c[i], 0);
 					return add_to_strlist(c[i], v,
 					  !strcmp(c[i]->field, "include"));
 				case CT_E_RSHASH:
@@ -366,6 +372,7 @@ static int conf_parse_line(struct conf **confs, const char *conf_path,
 	char buf[], int line)
 {
 	int ret=-1;
+	int r=0;
 	char *f=NULL; // field
 	char *v=NULL; // value
 	char *extrafile=NULL;
@@ -384,9 +391,9 @@ static int conf_parse_line(struct conf **confs, const char *conf_path,
 		goto end;
 	}
 
-	if(conf_get_pair(buf, &f, &v)) goto end;
+	if(conf_get_pair(buf, &f, &v, &r)) goto end;
 	if(f && v
-	  && load_conf_field_and_value(confs, f, v, conf_path, line))
+	  && load_conf_field_and_value(confs, f, v, r, conf_path, line))
 		goto end;
 	ret=0;
 end:

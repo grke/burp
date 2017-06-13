@@ -27,6 +27,12 @@ For Mac users, burp is available in Homebrew. See the
 <a href="docs/quickstart.html">quick start</a> page for more information.
 </p>
 
+<p>
+For automated deploy with ansible, please see:
+<br>
+<a href="https://github.com/grke/burp/wiki/automated-deploy-and-maintenance">https://github.com/grke/burp/wiki/automated-deploy-and-maintenance</a>
+</p>
+
 <P>
 Finally, burp is developed using git. Here is the repository:
 <pre>

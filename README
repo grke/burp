@@ -115,4 +115,11 @@ to something like:
 include = /Users
 
 
+Automated deploy with ansible
+-----------------------------
+
+For ansible roles to manage burp, please see:
+https://github.com/grke/burp/wiki/automated-deploy-and-maintenance
+
+
 For more help, see the man page - type 'man burp'.

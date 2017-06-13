@@ -52,7 +52,6 @@ START_TEST(test_getdatestr)
 		const char *str;
 		tz=setup_tz(ds[i].tz);
 		str=getdatestr(ds[i].t);
-printf("'%s' '%s'\n", ds[i].str, str?str:"");
 		fail_unless(!strcmp(ds[i].str, str));
 		tear_down_tz(&tz);
 		alloc_check();

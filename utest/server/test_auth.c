@@ -11,8 +11,8 @@
 #define BASE		"utest_server_auth"
 #define CONFFILE	BASE "/burp.conf"
 
-int CNAME_LOWERCASE=0;
-int CNAME_FQDN=1;
+static int CNAME_LOWERCASE=0;
+static int CNAME_FQDN=1;
 
 static void clean(void)
 {

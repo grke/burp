@@ -68,6 +68,7 @@ int main(void)
 
 	// These are server side only, so do not want to run them on Windows.
 	srunner_add_suite(sr, suite_server_auth());
+	srunner_add_suite(sr, suite_server_autoupgrade());
 	srunner_add_suite(sr, suite_server_ca());
 	srunner_add_suite(sr, suite_server_backup_phase3());
 	srunner_add_suite(sr, suite_server_bu_get());

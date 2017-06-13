@@ -8,7 +8,7 @@
 #include "autoupgrade.h"
 
 // Return -1 on error or success, 0 to continue normally.
-int autoupgrade_server(struct async *as,
+int autoupgrade_server(struct asfd *asfd,
 	long ser_ver, long cli_ver, const char *os, struct cntr *cntr,
 	const char *autoupgrade_dir)
 {
@@ -21,8 +21,6 @@ int autoupgrade_server(struct async *as,
 	char *script_path_specific=NULL;
 	struct stat stats;
 	struct stat statp;
-	struct asfd *asfd;
-	asfd=as->asfd;
 
 	if(!autoupgrade_dir)
 	{
@@ -104,7 +102,6 @@ int autoupgrade_server(struct async *as,
 		goto end;
 	/* Clients currently exit after forking, so exit ourselves. */
 	logp("Expecting client to upgrade - now exiting\n");
-	asfd_free(&as->asfd);
 	exit(0);
 end:
 	free_w(&path);

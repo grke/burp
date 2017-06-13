@@ -188,6 +188,29 @@ end:
 	return ret;
 }
 
+static int do_autoupgrade(struct asfd *asfd, struct vers *vers,
+	struct conf **globalcs)
+{
+	int ret=-1;
+	char *os=NULL;
+	struct iobuf *rbuf=asfd->rbuf;
+	const char *autoupgrade_dir=get_string(globalcs[OPT_AUTOUPGRADE_DIR]);
+
+	if(!(os=strdup_w(rbuf->buf+strlen("autoupgrade:"), __func__)))
+		goto end;
+	iobuf_free_content(rbuf);
+	ret=0;
+	if(os && *os)
+	{
+		ret=autoupgrade_server(asfd, vers->ser,
+			vers->cli, os, get_cntr(globalcs),
+			autoupgrade_dir);
+	}
+end:
+	free_w(&os);
+	return ret;
+}
+
 static int extra_comms_read(struct async *as,
 	struct vers *vers, int *srestore,
 	char **incexc, struct conf **globalcs, struct conf **cconfs)
@@ -217,15 +240,8 @@ static int extra_comms_read(struct async *as,
 		}
 		else if(!strncmp_w(rbuf->buf, "autoupgrade:"))
 		{
-			char *os=NULL;
-			const char *autoupgrade_dir=
-				get_string(globalcs[OPT_AUTOUPGRADE_DIR]);
-			os=rbuf->buf+strlen("autoupgrade:");
-			iobuf_free_content(rbuf);
-			if(os && *os && autoupgrade_server(as, vers->ser,
-				vers->cli, os, get_cntr(globalcs),
-				autoupgrade_dir))
-					goto end;
+			if(do_autoupgrade(asfd, vers, globalcs))
+				goto end;
 		}
 		else if(!strcmp(rbuf->buf, "srestore ok"))
 		{

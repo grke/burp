@@ -96,6 +96,7 @@ Suite *suite_protocol2_rabin_rconf(void);
 Suite *suite_protocol2_rabin_win(void);
 Suite *suite_protocol2_sbuf_protocol2(void);
 Suite *suite_server_auth(void);
+Suite *suite_server_autoupgrade(void);
 Suite *suite_server_ca(void);
 Suite *suite_server_backup_phase3(void);
 Suite *suite_server_bu_get(void);

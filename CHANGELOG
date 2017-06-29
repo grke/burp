@@ -1,3 +1,19 @@
+2017-07-01 Changes in burp-2.1.12:
+ * From moenoel:
+   - Fix segfault when sb->link.buf is NULL.
+ * Respond correctly to bfd->read returning an error - fixes client side
+   segfault.
+ * Fix for server side autoupgrade path corruption.
+ * Add README link to the ansible wiki.
+ * From ziirish:
+   - Add the ability to reset strlists through the special ':=' syntax.
+   - Fix missing globfree.
+ * Fix a possible segfault in server protocol2 backup phase2.
+ * Fix missing Windows log timestamps. Fix 'resumed' timestamps.
+ * Minor typo in man page, for include_fs.
+ * Make sure iobuf buffer is printable before trying to log it.
+   Also, print the length.
+
 2017-06-01 Changes in burp-2.1.10:
  * Features sponsored by VSHN (https://vshn.ch/):
    + Ability to listen on multiple port/status_port numbers, individually

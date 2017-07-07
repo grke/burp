@@ -9,7 +9,7 @@ static void tear_down(void)
 
 START_TEST(test_enc_setup_no_password)
 {
-	fail_unless(enc_setup(1 /*encrypt*/, NULL)==NULL);
+	fail_unless(enc_setup(1 /*encrypt*/, NULL, 1)==NULL);
 	tear_down();
 }
 END_TEST
@@ -17,7 +17,7 @@ END_TEST
 START_TEST(test_enc_setup_ok)
 {
 	EVP_CIPHER_CTX *ctx;
-	fail_unless((ctx=enc_setup(1 /*encrypt*/, "somepass"))!=NULL);
+	fail_unless((ctx=enc_setup(1 /*encrypt*/, "somepass", 1))!=NULL);
 	EVP_CIPHER_CTX_cleanup(ctx);
 	EVP_CIPHER_CTX_free(ctx);
 	tear_down();

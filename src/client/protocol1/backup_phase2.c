@@ -149,11 +149,12 @@ static enum send_e send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, uint64_t *bytes, const char *encpassword,
 	struct cntr *cntr, int compression, struct BFILE *bfd,
-	const char *extrameta, size_t elen)
+	const char *extrameta, size_t elen, int key_deriv)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 		return send_whole_file_gzl(asfd, datapth, quick_read, bytes,
-		  encpassword, cntr, compression, bfd, extrameta, elen);
+		  encpassword, cntr, compression, bfd, extrameta, elen,
+		  key_deriv);
 	else
 		return send_whole_filel(asfd,
 #ifdef HAVE_WIN32
@@ -319,7 +320,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		switch(send_whole_file_w(asfd, sb, NULL, 0, &bytes,
 			get_string(confs[OPT_ENCRYPTION_PASSWORD]),
 			cntr, sb->compression,
-			bfd, extrameta, elen))
+			bfd, extrameta, elen, get_int(confs[OPT_KEY_DERIVATION])))
 		{
 			case SEND_OK:
 			case SEND_ERROR: // Carry on.

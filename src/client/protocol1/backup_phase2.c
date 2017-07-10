@@ -149,12 +149,16 @@ static enum send_e send_whole_file_w(struct asfd *asfd,
 	struct sbuf *sb, const char *datapth,
 	int quick_read, uint64_t *bytes, const char *encpassword,
 	struct cntr *cntr, int compression, struct BFILE *bfd,
-	const char *extrameta, size_t elen, int key_deriv)
+	const char *extrameta, size_t elen)
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
+	{
+		int key_deriv=sb->encryption==ENCRYPTION_KEY_DERIVED;
+
 		return send_whole_file_gzl(asfd, datapth, quick_read, bytes,
 		  encpassword, cntr, compression, bfd, extrameta, elen,
-		  key_deriv);
+		  key_deriv, sb->protocol1->salt);
+	}
 	else
 		return send_whole_filel(asfd,
 #ifdef HAVE_WIN32
@@ -214,8 +218,18 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	uint64_t bytes=0;
 	int conf_compression=get_int(confs[OPT_COMPRESSION]);
 	struct cntr *cntr=get_cntr(confs);
+	const char *enc_password=get_string(confs[OPT_ENCRYPTION_PASSWORD]);
 
 	sb->compression=conf_compression;
+	if(enc_password)
+	{
+		sb->encryption=ENCRYPTION_KEY_DERIVED;
+		if(!RAND_bytes((uint8_t *)&sb->protocol1->salt, 8))
+		{
+			logp("RAND_bytes() failed\n");
+			return -1;
+		}
+	}
 
 	iobuf_copy(&sb->path, asfd->rbuf);
 	iobuf_init(asfd->rbuf);
@@ -318,9 +332,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 			goto end;
 
 		switch(send_whole_file_w(asfd, sb, NULL, 0, &bytes,
-			get_string(confs[OPT_ENCRYPTION_PASSWORD]),
+			enc_password,
 			cntr, sb->compression,
-			bfd, extrameta, elen, get_int(confs[OPT_KEY_DERIVATION])))
+			bfd, extrameta, elen))
 		{
 			case SEND_OK:
 			case SEND_ERROR: // Carry on.

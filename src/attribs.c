@@ -66,11 +66,10 @@ int attribs_encode(struct sbuf *sb)
 		// Protocol1 does not have this field.
 		p += to_base64(sb->protocol2->index, p);
 		*p++ = ' ';
-		// Protocol2 puts compression near the beginning.
+		// Protocol2 puts compression/encryption near the beginning.
 		p += to_base64(sb->compression, p);
 		*p++ = ' ';
-		// Protocol1 does not have this field.
-		p += to_base64(sb->protocol2->encryption, p);
+		p += to_base64(sb->encryption, p);
 		*p++ = ' ';
 	}
 	p += to_base64(statp->st_dev, p);
@@ -118,9 +117,13 @@ int attribs_encode(struct sbuf *sb)
 
 	if(sb->protocol1)
 	{
-		// Protocol1 puts compression at the end.
+		// Protocol1 puts compression/encryption at the end.
 		*p++ = ' ';
 		p += to_base64(sb->compression, p);
+		*p++ = ' ';
+		p += to_base64(sb->encryption, p);
+		*p++ = ' ';
+		p += to_base64(sb->protocol1->salt, p);
 	}
 
 	*p = 0;
@@ -153,9 +156,9 @@ void attribs_decode(struct sbuf *sb)
 		p += from_base64(&val, p);
 		sb->compression=val;
 		p++;
-		// Protocol1 does not have this field.
+		// Encryption for protocol2.
 		p += from_base64(&val, p);
-		sb->protocol2->encryption=val;
+		sb->encryption=val;
 		p++;
 	}
 	p += from_base64(&val, p);
@@ -220,18 +223,20 @@ void attribs_decode(struct sbuf *sb)
 	}
 
 	// Look for winattr.
+	sb->winattr=0;
 	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
 	{
 		p++;
 		p += from_base64(&val, p);
+		sb->winattr=val;
 	}
-	else
-		val = 0;
-	sb->winattr=val;
 
-	// Compression for protocol1.
 	if(sb->protocol1)
 	{
+		sb->compression=-1;
+		sb->encryption=ENCRYPTION_UNSET;
+
+		// Compression for protocol1.
 		if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
 		{
 			p++;
@@ -239,8 +244,24 @@ void attribs_decode(struct sbuf *sb)
 			p += from_base64(&val, p);
 			sb->compression=val;
 		}
-		else
-			sb->compression=-1;
+
+		// Encryption for protocol1.
+		if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
+		{
+			p++;
+			if(!*p) return;
+			p += from_base64(&val, p);
+			sb->encryption=val;
+		}
+
+		// Salt for protocol1.
+		if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
+		{
+			p++;
+			if(!*p) return;
+			p += from_base64(&val, p);
+			sb->protocol1->salt=val;
+		}
 	}
 }
 

@@ -46,6 +46,7 @@
 #include "find.h"
 #include "backup_phase1.h"
 
+static int encryption=ENCRYPTION_NONE;
 static enum cmd filesymbol=CMD_FILE;
 static enum cmd dirsymbol=CMD_DIRECTORY;
 #ifdef HAVE_WIN32
@@ -116,6 +117,7 @@ static int do_to_server(struct asfd *asfd,
 #endif
 	struct cntr *cntr=get_cntr(confs);
 	sb->compression=compression;
+	sb->encryption=encryption;
 	sb->statp=ff->statp;
 	attribs_encode(sb);
 
@@ -225,6 +227,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs)
 	if(get_protocol(confs)==PROTO_1
 	  && get_string(confs[OPT_ENCRYPTION_PASSWORD]))
 	{
+		encryption=ENCRYPTION_KEY_DERIVED;
 		filesymbol=CMD_ENC_FILE;
 		metasymbol=CMD_ENC_METADATA;
 #ifdef HAVE_WIN32

@@ -31,6 +31,9 @@
 #define SBUF_RECV_DELTA			0x1000
 #define SBUF_CLIENT_RESTORE_HACK	0x2000
 
+#define ENCRYPTION_UNSET	-1 // Also legacy
+#define ENCRYPTION_NONE		0
+#define ENCRYPTION_KEY_DERIVED	1
 
 typedef struct sbuf sbuf_t;
 
@@ -44,6 +47,7 @@ struct sbuf
 	struct stat statp;
 	uint64_t winattr;
 	int32_t compression;
+	int32_t encryption;
 
 	uint16_t flags;
 

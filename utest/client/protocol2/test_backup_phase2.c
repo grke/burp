@@ -231,7 +231,7 @@ static void build_file_and_assert_writes(struct sbuf *s,
 	fail_unless(!lstat(s->path.buf, &s->statp));
 	s->winattr=0;
 	s->compression=0;
-	s->protocol2->encryption=0;
+	s->encryption=ENCRYPTION_NONE;
 	attribs_encode(s);
 	s->attr.cmd=CMD_ATTRIBS_SIGS;
 	asfd_assert_write_iobuf(asfd, w, 0, &s->attr);

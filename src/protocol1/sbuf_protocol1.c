@@ -28,5 +28,6 @@ void sbuf_protocol1_free_content(struct protocol1 *protocol1)
 	rs_filebuf_free(&protocol1->outfb);
 	fzp_close(&protocol1->sigfzp);
 	fzp_close(&protocol1->fzp);
+	protocol1->salt=0;
 	sbuf_protocol1_init(protocol1);
 }

@@ -9,8 +9,9 @@ extern int transfer_gzfile_inl(struct asfd *asfd,
 	struct sbuf *sb,
 #endif
 	struct BFILE *bfd,
-	uint64_t *rcvd, uint64_t *sent, const char *encpassword,
-	int enccompressed, struct cntr *cntr, char **metadata,
-	int key_deriv);
+	uint64_t *rcvd, uint64_t *sent,
+	const char *encpassword, int enccompressed,
+	struct cntr *cntr, char **metadata,
+	int key_deriv, uint64_t salt);
 
 #endif

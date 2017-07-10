@@ -26,6 +26,7 @@ void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol)
 	fail_unless(!memcmp(&a->statp, &b->statp, sizeof(struct stat)));
 	fail_unless(a->winattr==b->winattr);
 	fail_unless(a->compression==b->compression);
+	fail_unless(a->encryption==b->encryption);
 	if(protocol==PROTO_1)
 	{
 		fail_unless(a->protocol1 && b->protocol1);
@@ -36,7 +37,6 @@ void assert_sbuf(struct sbuf *a, struct sbuf *b, enum protocol protocol)
 	else if(protocol==PROTO_2)
 	{
 		fail_unless(a->protocol2 && b->protocol2);
-		fail_unless(a->protocol2->encryption==b->protocol2->encryption);
 		// In protocol2, the first component (index) gets stripped off
 		// of the attributes, so it is not preserved.
 		//fail_unless(a->protocol2->index==b->protocol2->index);

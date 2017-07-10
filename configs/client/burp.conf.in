@@ -42,10 +42,6 @@ server_can_restore = 0
 # Note that this will mean that network deltas will not be possible. Each time
 # a file changes, the whole file will be transferred on the next backup.
 # encryption_password = My^$pAsswIrD%@
-# By default, legacy encryption is enabled (hard-coded IV, passphrase
-# used directly as key).  Unless your backups are already encrypted
-# with the old method, it is recommended you uncomment this line.
-# key_derivation = 1
 
 # More configuration files can be read, using syntax like the following
 # (without the leading '# ').

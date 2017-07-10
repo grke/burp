@@ -46,8 +46,8 @@ static struct sbuf *do_build_attribs(enum protocol protocol)
 	{
 		memcpy_a(&sbuf->protocol2->index,
 			sizeof(sbuf->protocol2->index));
-		memcpy_a(&sbuf->protocol2->encryption,
-			sizeof(sbuf->protocol2->encryption));
+		memcpy_a(&sbuf->encryption,
+			sizeof(sbuf->encryption));
 	}
 	return sbuf;
 }

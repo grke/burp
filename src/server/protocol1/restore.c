@@ -70,7 +70,7 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 }
 
 static int burp_send_file(struct asfd *asfd, struct sbuf *sb,
-	int patches, const char *best, struct cntr *cntr, int key_deriv)
+	int patches, const char *best, struct cntr *cntr)
 {
 	enum send_e ret=SEND_FATAL;
 	struct BFILE bfd;
@@ -86,8 +86,20 @@ static int burp_send_file(struct asfd *asfd, struct sbuf *sb,
 	{
 		// If we did some patches, the resulting file
 		// is not gzipped. Gzip it during the send.
-		ret=send_whole_file_gzl(asfd, sb->protocol1->datapth.buf,
-			1, &bytes, NULL, cntr, 9, &bfd, NULL, 0, key_deriv);
+		ret=send_whole_file_gzl(
+			asfd,
+			sb->protocol1->datapth.buf,
+			/*quick_read*/1,
+			&bytes,
+			/*encpassword*/NULL,
+			cntr,
+			/*compression*/9,
+			&bfd,
+			/*extrameta*/NULL,
+			/*elen*/0,
+			/*key_deriv*/ENCRYPTION_UNSET,
+			/*salt*/0
+		);
 	}
 	else
 	{
@@ -109,9 +121,20 @@ static int burp_send_file(struct asfd *asfd, struct sbuf *sb,
 		else if(!dpth_protocol1_is_compressed(sb->compression,
 			sb->protocol1->datapth.buf))
 		{
-			ret=send_whole_file_gzl(asfd,
-				sb->protocol1->datapth.buf, 1, &bytes,
-				NULL, cntr, 9, &bfd, NULL, 0, key_deriv);
+			ret=send_whole_file_gzl(
+				asfd,
+				sb->protocol1->datapth.buf,
+				/*quick_read*/1,
+				&bytes,
+				/*encpassword*/NULL,
+				cntr,
+				/*compression*/9,
+				&bfd,
+				/*extrameta*/NULL,
+				/*elen*/0,
+				/*key_deriv*/ENCRYPTION_UNSET,
+				/*salt*/0
+			);
 		}
 		else
 		{
@@ -287,8 +310,7 @@ static int process_data_dir_file(struct asfd *asfd,
 	switch(act)
 	{
 		case ACTION_RESTORE:
-			if(burp_send_file(asfd, sb, patches, best, cntr,
-					  get_int(cconfs[OPT_KEY_DERIVATION])))
+			if(burp_send_file(asfd, sb, patches, best, cntr))
 				goto end;
 			break;
 		case ACTION_VERIFY:

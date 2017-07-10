@@ -142,7 +142,6 @@ enum conf_opt
 	OPT_ENABLED, // also a clientconfdir option
 	OPT_SERVER,
 	OPT_ENCRYPTION_PASSWORD,
-	OPT_KEY_DERIVATION,
 	OPT_AUTOUPGRADE_OS,
 	OPT_AUTOUPGRADE_DIR, // also a server option
 	OPT_CA_CSR_DIR,

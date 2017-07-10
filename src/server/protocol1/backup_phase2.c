@@ -268,7 +268,9 @@ static enum processed_e process_unchanged_file(struct sbuf *p1b, struct sbuf *cb
 	// other bits and pieces that are recorded on cb.
 	iobuf_move(&p1b->protocol1->datapth, &cb->protocol1->datapth);
 	iobuf_move(&p1b->endfile, &cb->endfile);
+	p1b->protocol1->salt=cb->protocol1->salt;
 	p1b->compression=cb->compression;
+	p1b->encryption=cb->encryption;
 	// Why is winattr not getting sent in phase1?
 	p1b->winattr=cb->winattr;
 	// Need to free attr so that it is reallocated, because it may get

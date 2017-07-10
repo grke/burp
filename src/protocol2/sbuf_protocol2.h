@@ -10,7 +10,6 @@ struct protocol2
 	ssize_t bytes_read;
 
 	uint64_t index;
-	uint32_t encryption;
 
 	struct BFILE bfd;
 

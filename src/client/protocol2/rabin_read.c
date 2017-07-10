@@ -72,7 +72,8 @@ int rabin_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
 	}
 	sb->compression=get_int(confs[OPT_COMPRESSION]);
 	// Encryption not yet implemented in protocol2.
-	//sb->protocol2->encryption=conf->protocol2->encryption_password?1:0;
+	//sb->encryption=conf->protocol2->encryption_password?1:0;
+	sb->encryption=ENCRYPTION_NONE;
 	if(attribs_encode(sb)) return -1;
 	if(sbuf_is_metadata(sb))
 		return rabin_open_file_extrameta(sb, asfd, cntr);

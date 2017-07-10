@@ -174,7 +174,8 @@ int transfer_gzfile_inl(struct asfd *asfd,
 	struct BFILE *bfd,
 	uint64_t *rcvd, uint64_t *sent,
 	const char *encpassword, int enccompressed,
-	struct cntr *cntr, char **metadata, int key_deriv)
+	struct cntr *cntr, char **metadata,
+	int key_deriv, uint64_t salt)
 {
 	int quit=0;
 	int ret=-1;
@@ -215,7 +216,8 @@ int transfer_gzfile_inl(struct asfd *asfd,
 		return -1;
 	}
 
-	if(encpassword && !(enc_ctx=enc_setup(0, encpassword, key_deriv)))
+	if(encpassword
+	  && !(enc_ctx=enc_setup(0, encpassword, key_deriv, salt)))
 	{
 		inflateEnd(&zstrm);
 		return -1;

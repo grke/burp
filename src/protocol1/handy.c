@@ -36,13 +36,11 @@ static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 }
 
 EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
-			  int key_deriv)
+	int key_deriv, uint64_t salt)
 {
+	uint8_t enc_iv[9];
+	uint8_t enc_key[256];
 	EVP_CIPHER_CTX *ctx=NULL;
-
-	// BytesToKey only uses 16 bytes for the key; blowfish can use
-	// up to 256 (legacy passphrase)
-	uint8_t enc_iv[9], enc_key[256];
 	
 	if(!encryption_password)
 	{
@@ -52,21 +50,26 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
 
 	if(key_deriv)
 	{
-		EVP_BytesToKey(EVP_bf_cbc(), EVP_sha256(), NULL,
-			       (const unsigned char*) encryption_password,
+		// New, good way.
+		uint64_t be_salt=htobe64(salt);
+		EVP_BytesToKey(EVP_bf_cbc(), EVP_sha256(), (uint8_t *)&be_salt,
+			       (const unsigned char *)encryption_password,
 			       strlen(encryption_password),
 			       100, enc_key, enc_iv);
 	}
 	else
 	{
-		// Declare enc_iv with individual characters so that the weird last
-		// character can be specified as a hex number in order to prevent
-		// compilation warnings on Macs.
-		uint8_t new_enc[]={'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'};
+		// Old, bad way.
+		// Declare enc_iv with individual characters so that the weird
+		// last character can be specified as a hex number in order to
+		// prevent compilation warnings on Macs.
+		uint8_t new_enc[]={
+			'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'
+		};
 		memcpy(enc_iv, new_enc, 9);
-		strcpy((char*) enc_key, encryption_password);
+		strcpy((char*)enc_key, encryption_password);
 	}
-	
+
 	if(!(ctx=(EVP_CIPHER_CTX *)EVP_CIPHER_CTX_new()))
 		goto error;
 
@@ -133,7 +136,7 @@ int write_endfile(struct asfd *asfd, uint64_t bytes, uint8_t *checksum)
 enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	int quick_read, uint64_t *bytes, const char *encpassword,
 	struct cntr *cntr, int compression, struct BFILE *bfd,
-	const char *extrameta, size_t elen, int key_deriv)
+	const char *extrameta, size_t elen, int key_deriv, uint64_t salt)
 {
 	enum send_e ret=SEND_OK;
 	int zret=0;
@@ -159,7 +162,8 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	if(datalen>0) do_known_byte_count=1;
 #endif
 
-	if(encpassword && !(enc_ctx=enc_setup(1, encpassword, key_deriv)))
+	if(encpassword
+	  && !(enc_ctx=enc_setup(1, encpassword, key_deriv, salt)))
 		return SEND_FATAL;
 
 	if(!MD5_Init(&md5))

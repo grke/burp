@@ -547,17 +547,12 @@ static int found_directory(struct asfd *asfd,
 	}
 
 	/* Build a canonical directory name with a trailing slash in link var */
-	len=strlen(fname);
+	len=path_bare_length(fname);
 	link_len=len+200;
 	if(!(link=(char *)malloc_w(link_len+2, __func__)))
 		goto end;
-	snprintf(link, link_len, "%s", fname);
-
-	/* Strip all trailing slashes */
-	while(len >= 1 && IsPathSeparator(link[len - 1])) len--;
-	/* add back one */
-	link[len++]='/';
-	link[len]=0;
+	memcpy(link, fname, len);
+	strcpy(link + len++, "/");
 
 	ff_pkt->link=link;
 	ff_pkt->type=FT_DIR;

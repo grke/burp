@@ -356,6 +356,14 @@ static int found_soft_link(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf
 	return burp_send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
+// Replaces all occurences of char `from` with `to` in `string`
+// (auxiliary function currently only used in fstype_matches).
+static void str_replace_char(char *string, int from, int to)
+{
+	for(char *ptr = strchr(string, from); ptr; ptr = strchr(ptr, from))
+		*ptr++ = to;
+}
+
 static int fstype_matches(struct asfd *asfd,
 	struct conf **confs, const char *fname, int inex)
 {
@@ -380,6 +388,33 @@ static int fstype_matches(struct asfd *asfd,
 #elif defined(HAVE_SUN_OS)
 		if(strcmp(l->path,buf.f_basetype)==0)
 #endif
+			return -1;
+#elif defined(HAVE_WIN32)
+	const size_t fname_bare_length = path_bare_length(fname);
+	char windows_style_fname[fname_bare_length + sizeof("/")];
+	memcpy(windows_style_fname, fname, fname_bare_length);
+	strcpy(windows_style_fname + fname_bare_length, "/");
+	str_replace_char(windows_style_fname, '/', '\\');
+
+	char filesystem_name[MAX_PATH + 1];
+	if (!GetVolumeInformation(
+		windows_style_fname /* lpRootPathName */,
+		NULL /* lpVolumeNameBuffer */,
+		0 /* nVolumeNameSize */,
+		NULL /* lpVolumeSerialNumber */,
+		NULL /* lpMaximumComponentLength */,
+		NULL /* lpFileSystemFlags */,
+		filesystem_name /* lpFileSystemNameBuffer */,
+		sizeof(filesystem_name) /* nFileSystemNameSize */
+	))
+	{
+		logw(asfd, get_cntr(confs), "Could not GetVolumeInformation %s: %lu\n",
+			windows_style_fname, GetLastError());
+		return -1;
+	}
+
+	for(strlist *l=get_strlist(confs[inex]); l; l=l->next)
+		if(strcmp(l->path,filesystem_name)==0)
 			return -1;
 #endif
 	return 0;
@@ -512,17 +547,12 @@ static int found_directory(struct asfd *asfd,
 	}
 
 	/* Build a canonical directory name with a trailing slash in link var */
-	len=strlen(fname);
+	len=path_bare_length(fname);
 	link_len=len+200;
 	if(!(link=(char *)malloc_w(link_len+2, __func__)))
 		goto end;
-	snprintf(link, link_len, "%s", fname);
-
-	/* Strip all trailing slashes */
-	while(len >= 1 && IsPathSeparator(link[len - 1])) len--;
-	/* add back one */
-	link[len++]='/';
-	link[len]=0;
+	memcpy(link, fname, len);
+	strcpy(link + len++, "/");
 
 	ff_pkt->link=link;
 	ff_pkt->type=FT_DIR;

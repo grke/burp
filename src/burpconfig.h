@@ -66,4 +66,13 @@ static inline uint8_t IsPathSeparator(int ch)
 	ch == '/';
 }
 
+// Returns length of path string without any trailing slashes.
+static inline size_t path_bare_length(const char *path)
+{
+	size_t length = strlen(path);
+	while(length && IsPathSeparator(path[length - 1]))
+		--length;
+	return length;
+}
+
 #endif

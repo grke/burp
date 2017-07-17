@@ -285,7 +285,19 @@ m4_ifdef([PKG_CHECK_MODULES],
        CFLAGS="$CFLAGS $ncurses_CFLAGS -DHAVE_NCURSES_H=1"
        AC_DEFINE([HAVE_NCURSES], [1], [Set to 1 if we have ncurses])
       ],
-      []
+      [
+       AC_CHECK_HEADERS([ncurses.h ncurses/ncurses.h],
+         [
+           AC_CHECK_LIB([ncurses], [curs_set],
+             [
+               NCURSES_LIBS="-lncurses"
+               have_ncurses=yes
+               AC_DEFINE([HAVE_NCURSES], [1], [Set to 1 if we have ncurses])
+             ]
+           )
+         ]
+       )
+      ]
     )
   ]
 )

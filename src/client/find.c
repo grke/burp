@@ -381,6 +381,13 @@ static int fstype_matches(struct asfd *asfd,
 		if(strcmp(l->path,buf.f_basetype)==0)
 #endif
 			return -1;
+#elif defined(HAVE_WIN32)
+	char filesystem_name[MAX_PATH_UTF8 + 1];
+	if (win32_getfsname(fname, filesystem_name, sizeof(filesystem_name)))
+		return -1;
+	for(strlist *l=get_strlist(confs[inex]); l; l=l->next)
+		if(strcmp(l->path,filesystem_name)==0)
+			return -1;
 #endif
 	return 0;
 }

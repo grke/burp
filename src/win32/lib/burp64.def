@@ -60,6 +60,7 @@ umask
 utime
 _Z9forkchildPP3fzpS1_S1_PKcPKPc
 _Z17forkchild_no_waitPP3fzpS1_S1_PKcPKPc
+_Z15win32_getfsnamePKcPcy
  
 ; print.o
 _Z10__vsprintfPcPKcS_

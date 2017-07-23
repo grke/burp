@@ -276,13 +276,27 @@ dnl Check whether libncurses is available
 dnl -----------------------------------------------------------
 
 have_ncurses=no
-AC_CHECK_HEADERS([ncurses.h ncurses/ncurses.h],
+m4_ifdef([PKG_CHECK_MODULES],
   [
-    AC_CHECK_LIB([ncurses], [curs_set],
+    PKG_CHECK_MODULES([ncurses], [ncurses],
       [
-        NCURSES_LIBS="-lncurses"
-        have_ncurses=yes
-        AC_DEFINE([HAVE_NCURSES], [1], [Set to 1 if we have ncurses])
+       have_ncurses=yes
+       NCURSES_LIBS="$ncurses_LIBS"
+       CFLAGS="$CFLAGS $ncurses_CFLAGS -DHAVE_NCURSES_H=1"
+       AC_DEFINE([HAVE_NCURSES], [1], [Set to 1 if we have ncurses])
+      ],
+      [
+       AC_CHECK_HEADERS([ncurses.h ncurses/ncurses.h],
+         [
+           AC_CHECK_LIB([ncurses], [curs_set],
+             [
+               NCURSES_LIBS="-lncurses"
+               have_ncurses=yes
+               AC_DEFINE([HAVE_NCURSES], [1], [Set to 1 if we have ncurses])
+             ]
+           )
+         ]
+       )
       ]
     )
   ]

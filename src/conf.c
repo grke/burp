@@ -488,6 +488,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "server");
 	case OPT_ENCRYPTION_PASSWORD:
 	  return sc_str(c[o], 0, 0, "encryption_password");
+	case OPT_KEY_DERIVATION:
+	  return sc_int(c[o], 0, 0, "key_derivation");
 	case OPT_AUTOUPGRADE_OS:
 	  return sc_str(c[o], 0, 0, "autoupgrade_os");
 	case OPT_AUTOUPGRADE_DIR:

@@ -739,7 +739,8 @@ int do_restore_client(struct asfd *asfd,
 		else
 		{
 			if(restore_switch_protocol1(asfd, sb, fullpath, act,
-				bfd, vss_restore, cntr, encryption_password))
+				bfd, vss_restore, cntr, encryption_password,
+				get_int(confs[OPT_KEY_DERIVATION])))
 					goto error;
 		}
 	}

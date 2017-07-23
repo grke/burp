@@ -35,20 +35,38 @@ static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	return 0;
 }
 
-EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
+EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
+			  int key_deriv)
 {
 	EVP_CIPHER_CTX *ctx=NULL;
-	// Declare enc_iv with individual characters so that the weird last
-	// character can be specified as a hex number in order to prevent
-	// compilation warnings on Macs.
-	uint8_t enc_iv[]={'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'};
 
+	// BytesToKey only uses 16 bytes for the key; blowfish can use
+	// up to 256 (legacy passphrase)
+	uint8_t enc_iv[9], enc_key[256];
+	
 	if(!encryption_password)
 	{
 		logp("No encryption password in %s()\n", __func__);
 		goto error;
 	}
 
+	if(key_deriv)
+	{
+		EVP_BytesToKey(EVP_bf_cbc(), EVP_sha256(), NULL,
+			       (const unsigned char*) encryption_password,
+			       strlen(encryption_password),
+			       100, enc_key, enc_iv);
+	}
+	else
+	{
+		// Declare enc_iv with individual characters so that the weird last
+		// character can be specified as a hex number in order to prevent
+		// compilation warnings on Macs.
+		uint8_t new_enc[]={'[', 'l', 'k', 'd', '.', '$', 'G', 0xa3, '\0'};
+		memcpy(enc_iv, new_enc, 9);
+		strcpy((char*) enc_key, encryption_password);
+	}
+	
 	if(!(ctx=(EVP_CIPHER_CTX *)EVP_CIPHER_CTX_new()))
 		goto error;
 
@@ -63,8 +81,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password)
 	// We finished modifying parameters so now we can set key and IV
 
 	if(!EVP_CipherInit_ex(ctx, NULL, NULL,
-		(uint8_t *)encryption_password,
-		enc_iv, encrypt))
+		enc_key, enc_iv, encrypt))
 	{
 		logp("Second EVP_CipherInit_ex failed\n");
 		goto error;
@@ -116,7 +133,7 @@ int write_endfile(struct asfd *asfd, uint64_t bytes, uint8_t *checksum)
 enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	int quick_read, uint64_t *bytes, const char *encpassword,
 	struct cntr *cntr, int compression, struct BFILE *bfd,
-	const char *extrameta, size_t elen)
+	const char *extrameta, size_t elen, int key_deriv)
 {
 	enum send_e ret=SEND_OK;
 	int zret=0;
@@ -142,7 +159,7 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	if(datalen>0) do_known_byte_count=1;
 #endif
 
-	if(encpassword && !(enc_ctx=enc_setup(1, encpassword)))
+	if(encpassword && !(enc_ctx=enc_setup(1, encpassword, key_deriv)))
 		return SEND_FATAL;
 
 	if(!MD5_Init(&md5))

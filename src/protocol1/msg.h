@@ -10,6 +10,7 @@ extern int transfer_gzfile_inl(struct asfd *asfd,
 #endif
 	struct BFILE *bfd,
 	uint64_t *rcvd, uint64_t *sent, const char *encpassword,
-	int enccompressed, struct cntr *cntr, char **metadata);
+	int enccompressed, struct cntr *cntr, char **metadata,
+	int key_deriv);
 
 #endif

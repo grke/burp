@@ -3,7 +3,7 @@ Description=Burp backup server
 After=network.target
 
 [Service]
-Type=notify
+Type=forking
 ExecStart=/usr/sbin/burp -c /etc/burp/burp-server.conf
 
 [Install]

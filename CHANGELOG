@@ -1,3 +1,13 @@
+2017-08-01 Changes in burp-2.1.14:
+  * From Marek Szuba:
+    - Use pkg-config to detect ncurses.
+  * From deajan:
+    - Fix burp service file for RHEL / CentOS 7 - should be 'forking'.
+  * From Xaltonon:
+    - Add proper key-derivation (and IV) for client encryption.
+  * Make key derived encryption transparent, and add salt.
+  * Upgrade Windows depkgs to openssl-1.1.0f.
+
 2017-07-01 Changes in burp-2.1.12:
  * From moenoel:
    - Fix segfault when sb->link.buf is NULL.

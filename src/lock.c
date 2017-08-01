@@ -62,7 +62,8 @@ void lock_get_quick(struct lock *lock)
 	snprintf(text, sizeof(text), "%d\n%s\n", (int)getpid(), progname());
 	if(write(lock->fd, text, strlen(text))!=(ssize_t)strlen(text))
 	{
-		logp("Could not write pid/progname to %s\n", lock->path);
+		logp("Could not write pid/progname to %s: %s\n",
+			lock->path, strerror(errno));
 		goto error;
 	}
 	lock->status=GET_LOCK_GOT;

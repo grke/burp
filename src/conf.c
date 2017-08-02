@@ -467,7 +467,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_CA_SERVER_NAME:
 	  return sc_str(c[o], 0, 0, "ca_server_name");
 	case OPT_CA_BURP_CA:
-	  return sc_str(c[o], 0, 0, "ca_burp_ca");
+	  return sc_str(c[o], 0, 0, "ca_" PACKAGE_TARNAME "_ca");
         case OPT_CA_CRL:
           return sc_str(c[o], 0, 0, "ca_crl");
         case OPT_CA_CRL_CHECK:

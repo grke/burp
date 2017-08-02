@@ -17,7 +17,7 @@
 static void usage_server(void)
 {
 #ifndef HAVE_WIN32
-	printf("\nThe configuration file specifies whether burp runs in server or client mode.\n");
+	printf("\nThe configuration file specifies whether %s runs in server or client mode.\n", PACKAGE_TARNAME);
 	printf("\nServer usage: %s [options]\n", progname());
 	printf("\n");
 	printf(" Options:\n");
@@ -82,10 +82,12 @@ static void usage_client(void)
 #endif
 	printf("\n");
 #ifndef HAVE_WIN32
-	printf(" See http://burp.grke.net/ or the man page ('man burp') for usage examples\n");
+	printf(" See %s or the man page ('man %s') for usage examples\n",
+		PACKAGE_URL, PACKAGE_TARNAME);
 	printf(" and additional configuration options.\n\n");
 #else
-	printf(" See http://burp.grke.net/ for usage examples and additional configuration\n");
+	printf(" See %s for usage examples and additional configuration\n",
+		PACKAGE_TARNAME);
 	printf(" options.\n\n");
 #endif
 }

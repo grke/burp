@@ -69,7 +69,7 @@ static int inflate_or_link_oldfile(struct asfd *asfd, const char *oldpath,
 	return ret;
 }
 
-static int burp_send_file(struct asfd *asfd, struct sbuf *sb,
+static int do_send_file(struct asfd *asfd, struct sbuf *sb,
 	int patches, const char *best, struct cntr *cntr)
 {
 	enum send_e ret=SEND_FATAL;
@@ -310,7 +310,7 @@ static int process_data_dir_file(struct asfd *asfd,
 	switch(act)
 	{
 		case ACTION_RESTORE:
-			if(burp_send_file(asfd, sb, patches, best, cntr))
+			if(do_send_file(asfd, sb, patches, best, cntr))
 				goto end;
 			break;
 		case ACTION_VERIFY:

@@ -51,11 +51,11 @@ dist_man8_MANS = \
 	manpages/bedup.8 \
 	manpages/bsigs.8 \
 	manpages/bsparse.8 \
-	manpages/burp.8 \
-	manpages/burp_ca.8 \
+	manpages/$(PACKAGE_TARNAME).8 \
+	manpages/$(PACKAGE_TARNAME)_ca.8 \
 	manpages/vss_strip.8
 
-configs = burp.conf burp-server.conf CA.cnf
+configs = $(PACKAGE_TARNAME).conf $(PACKAGE_TARNAME)-server.conf CA.cnf
 
 CLEANFILES+= $(configs)
 
@@ -64,9 +64,9 @@ install-all: install install-configs
 LN_S = ln -s -f
 
 install-exec-hook:
-	$(AM_V_at)$(LN_S) burp $(DESTDIR)$(sbindir)/bedup
-	$(AM_V_at)$(LN_S) burp $(DESTDIR)$(sbindir)/bsigs
-	$(AM_V_at)$(LN_S) burp $(DESTDIR)$(sbindir)/bsparse
+	$(AM_V_at)$(LN_S) $(PACKAGE_TARNAME) $(DESTDIR)$(sbindir)/bedup
+	$(AM_V_at)$(LN_S) $(PACKAGE_TARNAME) $(DESTDIR)$(sbindir)/bsigs
+	$(AM_V_at)$(LN_S) $(PACKAGE_TARNAME) $(DESTDIR)$(sbindir)/bsparse
 
 install-configs: $(configs) install-clientconfdir
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(sysconfdir)/CA-client
@@ -85,11 +85,13 @@ install-clientconfdir:
 	$(INSTALL_DATA) configs/server/clientconfdir/testclient "$(DESTDIR)$(clientconfdir)"
 	$(INSTALL_DATA) configs/server/clientconfdir/incexc/example "$(DESTDIR)$(incexcdir)"
 
+EXTRA_PROGRAMS = main
+
 bin_PROGRAMS = vss_strip
 
-sbin_PROGRAMS = burp
+sbin_PROGRAMS = $(PACKAGE_TARNAME)
 
-sbin_SCRIPTS = burp_ca
+sbin_SCRIPTS = $(PACKAGE_TARNAME)_ca
 
 dist_script_SCRIPTS = \
 	configs/server/timer_script \
@@ -108,7 +110,7 @@ vss_strip_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	$(OPENSSL_INC)
 
-burp_LDADD = \
+main_LDADD = \
 	$(ACL_LIBS) \
 	$(CRYPT_LIBS) \
 	$(NCURSES_LIBS) \
@@ -116,16 +118,16 @@ burp_LDADD = \
 	$(RSYNC_LIBS) \
 	$(ZLIBS)
 
-burp_CPPFLAGS = \
+main_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	$(OPENSSL_INC)
 
-burp_LDFLAGS = \
+main_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(OPENSSL_LDFLAGS)
 
-burp_SOURCES = \
+main_SOURCES = \
 	src/action.h \
 	src/alloc.c src/alloc.h \
 	src/asfd.c src/asfd.h \
@@ -368,7 +370,7 @@ runner_SOURCES = \
 	utest/test_times.c \
 	utest/test.h
 
-runner_SOURCES+= $(burp_SOURCES)
+runner_SOURCES+= $(main_SOURCES)
 
 runner_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
@@ -414,7 +416,7 @@ endif
 .PHONY: coverage
 
 install-data-local:
-	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(localstatedir)/spool/burp
+	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(localstatedir)/spool/$(PACKAGE_TARNAME)
 	$(AM_V_at)$(MKDIR_P) $(DESTDIR)$(runstatedir)
 
 clean-local: clean-local-check
@@ -436,11 +438,14 @@ clean-local-check:
 
 $(configs): Makefile
 
-burp.conf: $(srcdir)/configs/client/burp.conf.in
+$(PACKAGE_TARNAME): main
+	$(AM_V_at)mv -v main $(PACKAGE_TARNAME)
+
+$(PACKAGE_TARNAME).conf: $(srcdir)/configs/client/burp.conf.in
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/client/burp.conf.in >$@
 
-burp-server.conf: $(srcdir)/configs/server/burp.conf.in
+$(PACKAGE_TARNAME)-server.conf: $(srcdir)/configs/server/burp.conf.in
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/burp.conf.in >$@
 
@@ -448,13 +453,37 @@ CA.cnf: $(srcdir)/configs/certs/CA/CA.cnf.in
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/CA.cnf.in >$@
 
-burp_ca: $(srcdir)/configs/certs/CA/burp_ca.in
+$(PACKAGE_TARNAME)_ca: $(srcdir)/configs/certs/CA/burp_ca.in
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/burp_ca.in >$@
 
 summary_script: $(srcdir)/configs/server/summary_script.in
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/summary_script.in >$@
+
+manpages/bedup.8: $(srcdir)/manpages/bedup.8.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bedup.8.in >$@
+
+manpages/bsigs.8: $(srcdir)/manpages/bsigs.8.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bsigs.8.in >$@
+
+manpages/bsparse.8: $(srcdir)/manpages/bsparse.8.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bsparse.8.in >$@
+
+manpages/$(PACKAGE_TARNAME).8: $(srcdir)/manpages/burp.8.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/burp.8.in >$@
+
+manpages/$(PACKAGE_TARNAME)_ca.8: $(srcdir)/manpages/burp_ca.8.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/burp_ca.8.in >$@
+
+manpages/vss_strip.8: $(srcdir)/manpages/vss_strip.8.in
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/vss_strip.8.in >$@
 
 do_subst = ( sed \
   -e 's,[@]localstatedir[@],$(localstatedir),g' \
@@ -463,5 +492,8 @@ do_subst = ( sed \
   -e 's,[@]scriptdir[@],$(scriptdir),g' \
   -e 's,[@]server_address[@],::1,g' \
   -e 's,[@]sysconfdir[@],$(sysconfdir),g' \
+  -e 's,[@]name[@],$(PACKAGE_TARNAME),g' \
+  -e 's,[@]package_url[@],$(PACKAGE_URL),g' \
+  -e 's,[@]human_name[@],$(PACKAGE_NAME),g' \
   | $(SHELL) ./config.status --file=- \
   )

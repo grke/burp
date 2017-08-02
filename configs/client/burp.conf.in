@@ -1,4 +1,4 @@
-# This is an example config file for the burp client.
+# This is an example config file for the @name@ client.
 
 mode = client
 port = 4971
@@ -13,7 +13,7 @@ cname = testclient
 # with a pseudo mirrored storage on the server and optional rsync). 2 forces
 # protocol2 mode (inline deduplication with variable length blocks).
 # protocol = 0
-pidfile = @runstatedir@/burp.client.pid
+pidfile = @runstatedir@/@name@.client.pid
 syslog = 0
 stdout = 1
 progress_counter = 1
@@ -56,7 +56,7 @@ cross_all_filesystems=0
 
 # Uncomment the following lines to automatically generate a certificate signing
 # request and send it to the server.
-ca_burp_ca = @sbindir@/burp_ca
+ca_@name@_ca = @sbindir@/@name@_ca
 ca_csr_dir = @sysconfdir@/CA-client
 
 # SSL certificate authority - same file on both server and client
@@ -78,7 +78,7 @@ ssl_key = @sysconfdir@/ssl_cert-client.key
 #ssl_key_password = password
 
 # Common name in the certificate that the server gives us
-ssl_peer_cn = burpserver
+ssl_peer_cn = @name@server
 
 # Example syntax for pre/post scripts
 #backup_script_pre=/path/to/a/script
@@ -110,7 +110,7 @@ exclude_fs = tmpfs
 # The content of directories containing a filesystem entry named like this
 # will not be backed up.
 nobackup = .nobackup
-# By default, burp backups up the fifos themselves, rather than reading from
+# By default, @name@ backups up the fifos themselves, rather than reading from
 # them. These two options let you choose a particular fifo to read, or read
 # from all fifos.
 #read_fifo=/path/to/a/fifo

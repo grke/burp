@@ -407,6 +407,15 @@ static void conf_problem(const char *conf_path, const char *msg, int *r)
 	(*r)--;
 }
 
+static void burp_ca_conf_problem(const char *conf_path,
+	const char *field, int *r)
+{
+	char msg[128]="";
+	snprintf(msg, sizeof(msg), "ca_%s_ca set, but %s not set\n",
+		PACKAGE_TARNAME, field);
+	conf_problem(conf_path, msg, r);
+}
+
 #ifdef HAVE_IPV6
 // These should work for IPv4 connections too.
 #define DEFAULT_ADDRESS_MAIN	"::"
@@ -469,7 +478,8 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 		}
 		if(!get_string(c[OPT_CA_BURP_CA]))
 		{
-			logp("ca_conf set, but ca_burp_ca not set\n");
+			logp("ca_conf set, but ca_%s_ca not set\n",
+				PACKAGE_TARNAME);
 			ca_err++;
 		}
 		if(!get_string(c[OPT_SSL_DHFILE]))
@@ -711,17 +721,13 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	if(get_string(c[OPT_CA_BURP_CA]))
 	{
 		if(!get_string(c[OPT_CA_CSR_DIR]))
-			conf_problem(path,
-				"ca_burp_ca set, but ca_csr_dir not set\n", r);
+			burp_ca_conf_problem(path, "ca_csr_dir", r);
 		if(!get_string(c[OPT_SSL_CERT_CA]))
-			conf_problem(path,
-				"ca_burp_ca set, but ssl_cert_ca not set\n", r);
+			burp_ca_conf_problem(path, "ssl_cert_ca", r);
 		if(!get_string(c[OPT_SSL_CERT]))
-			conf_problem(path,
-				"ca_burp_ca set, but ssl_cert not set\n", r);
+			burp_ca_conf_problem(path, "ssl_cert", r);
 		if(!get_string(c[OPT_SSL_KEY]))
-			conf_problem(path,
-				"ca_burp_ca set, but ssl_key not set\n", r);
+			burp_ca_conf_problem(path, "ssl_key", r);
 	}
 
 	if(!r)
@@ -1449,14 +1455,17 @@ char *config_default_path(void)
 	if((pfenv=getenv("PROGRAMFILES")))
 	{
 		struct stat statp;
-		snprintf(path, sizeof(path), "%s/Burp/burp.conf", pfenv);
+		snprintf(path, sizeof(path), "%s/%s/%s.conf",
+			pfenv, PACKAGE_NAME, PACKAGE_TARNAME);
 		if(!lstat(path, &statp)
 		  && !S_ISDIR(statp.st_mode))
 			return path;
 	}
-	snprintf(path, sizeof(path), "C:/Program Files/Burp/burp.conf");
+	snprintf(path, sizeof(path), "C:/Program Files/%s/%s.conf",
+		PACKAGE_NAME, PACKAGE_TARNAME);
 #else
-	snprintf(path, sizeof(path), "%s", SYSCONFDIR "/burp.conf");
+	snprintf(path, sizeof(path), "%s/%s.conf",
+		SYSCONFDIR, PACKAGE_TARNAME);
 #endif
 	return path;
 }

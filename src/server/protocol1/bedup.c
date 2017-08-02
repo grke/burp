@@ -856,15 +856,15 @@ static int usage(void)
 	logfmt("                           configuration file on the server.\n");
 	logfmt("  -h|-?                    Print this text and exit.\n");
 	logfmt("  -d                       Delete any duplicate files found.\n");
-	logfmt("                           (non-burp mode only)\n");
+	logfmt("                           (non-%s mode only)\n", PACKAGE_TARNAME);
 	logfmt("  -l                       Hard link any duplicate files found.\n");
 	logfmt("  -m <number>              Maximum number of hard links to a single file.\n");
-	logfmt("                           (non-burp mode only - in burp mode, use the\n");
+	logfmt("                           (non-%s mode only - in burp mode, use the\n", PACKAGE_TARNAME);
 	logfmt("                           max_hardlinks option in the configuration file)\n");
 	logfmt("                           The default is %d. On ext3, the maximum number\n", DEF_MAX_LINKS);
 	logfmt("                           of links possible is 32000, but space is needed\n");
-	logfmt("                           for the normal operation of burp.\n");
-	logfmt("  -n <list of directories> Non-burp mode. Deduplicate any (set of) directories.\n");
+	logfmt("                           for the normal operation of %s.\n", PACKAGE_TARNAME);
+	logfmt("  -n <list of directories> Non-%s mode. Deduplicate any (set of) directories.\n", PACKAGE_TARNAME);
 	logfmt("  -v                       Print duplicate paths.\n");
 	logfmt("  -V                       Print version and exit.\n");
 	logfmt("\n");
@@ -873,7 +873,7 @@ static int usage(void)
 	logfmt("\n");
 	logfmt("With '-n', this knowledge is turned off and you have to specify the directories\n");
 	logfmt("to deduplicate on the command line. Running with '-n' is therefore dangerous\n");
-	logfmt("if you are deduplicating burp storage directories.\n\n");
+	logfmt("if you are deduplicating %s storage directories.\n\n", PACKAGE_TARNAME);
 	return 1;
 }
 
@@ -936,7 +936,7 @@ int run_bedup(int argc, char *argv[])
 	}
 	if(!nonburp && maxlinks!=DEF_MAX_LINKS)
 	{
-		logp("-m option is specified via the configuration file in burp mode (max_hardlinks=)\n");
+		logp("-m option is specified via the configuration file in %s mode (max_hardlinks=)\n", PACKAGE_TARNAME);
 		return 1;
 	}
 	if(deletedups && makelinks)

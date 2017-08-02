@@ -63,7 +63,7 @@
 #include <sys/statvfs.h>
 #endif
 
-static int (*burp_send_file)(struct asfd *, struct FF_PKT *, struct conf **);
+static int (*my_send_file)(struct asfd *, struct FF_PKT *, struct conf **);
 
 // Initialize the find files "global" variables
 struct FF_PKT *find_files_init(
@@ -74,7 +74,7 @@ struct FF_PKT *find_files_init(
 	if(!(ff=(struct FF_PKT *)calloc_w(1, sizeof(struct FF_PKT), __func__))
 	  || linkhash_init())
 		return NULL;
-	burp_send_file=callback;
+	my_send_file=callback;
 
 	return ff;
 }
@@ -286,7 +286,7 @@ static int file_size_match(struct FF_PKT *ff_pkt, struct conf **confs)
 }
 
 // Last checks before actually processing the file system entry.
-static int burp_send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
+static int my_send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
 {
 	if(!file_is_included(confs, ff->fname, top_level)) return 0;
 
@@ -325,7 +325,7 @@ static int burp_send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level
 		}
 	}
 
-	return burp_send_file(asfd, ff, confs);
+	return my_send_file(asfd, ff, confs);
 }
 
 static int found_regular_file(struct asfd *asfd,
@@ -333,7 +333,7 @@ static int found_regular_file(struct asfd *asfd,
 	bool top_level)
 {
 	ff_pkt->type=FT_REG;
-	return burp_send_file_w(asfd, ff_pkt, top_level, confs);
+	return my_send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
 static int found_soft_link(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
@@ -353,7 +353,7 @@ static int found_soft_link(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf
 		ff_pkt->link=buffer;	/* point to link */
 		ff_pkt->type=FT_LNK_S;	/* got a soft link */
 	}
-	return burp_send_file_w(asfd, ff_pkt, top_level, confs);
+	return my_send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
 static int fstype_matches(struct asfd *asfd,
@@ -531,7 +531,7 @@ static int found_directory(struct asfd *asfd,
 	windows_reparse_point_fiddling(ff_pkt);
 #endif
 
-	if(burp_send_file_w(asfd, ff_pkt, top_level, confs))
+	if(my_send_file_w(asfd, ff_pkt, top_level, confs))
 		goto end;
 	if(ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
 	{
@@ -554,14 +554,14 @@ static int found_directory(struct asfd *asfd,
 			if(top_level)
 				logw(asfd, get_cntr(confs),
 					"Skipping '%s' because of file system include or exclude.\n", fname);
-			ret=burp_send_file_w(asfd, ff_pkt, top_level, confs);
+			ret=my_send_file_w(asfd, ff_pkt, top_level, confs);
 			goto end;
 		}
 		if(!top_level && !fs_change_is_allowed(confs, ff_pkt->fname))
 		{
 			ff_pkt->type=FT_NOFSCHG;
 			// Just backup the directory and return.
-			ret=burp_send_file_w(asfd, ff_pkt, top_level, confs);
+			ret=my_send_file_w(asfd, ff_pkt, top_level, confs);
 			goto end;
 		}
 	}
@@ -575,7 +575,7 @@ static int found_directory(struct asfd *asfd,
 		case 0: break;
 		case 1:
 			ff_pkt->type=FT_NOOPEN;
-			ret=burp_send_file_w(asfd, ff_pkt, top_level, confs);
+			ret=my_send_file_w(asfd, ff_pkt, top_level, confs);
 		default:
 			goto end;
 	}
@@ -625,7 +625,7 @@ static int found_other(struct asfd *asfd, struct FF_PKT *ff_pkt,
 		/* The only remaining are special (character, ...) files */
 		ff_pkt->type=FT_SPEC;
 	}
-	return burp_send_file_w(asfd, ff_pkt, top_level, confs);
+	return my_send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
 static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
@@ -641,7 +641,7 @@ static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **co
 #endif
 	{
 		ff_pkt->type=FT_NOSTAT;
-		return burp_send_file_w(asfd, ff_pkt, top_level, confs);
+		return my_send_file_w(asfd, ff_pkt, top_level, confs);
 	}
 
 	if(S_ISREG(ff_pkt->statp.st_mode))

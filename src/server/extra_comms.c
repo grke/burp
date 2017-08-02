@@ -493,7 +493,8 @@ int extra_comms(struct async *as,
 				// Client is burp-1.x.x, use protocol1.
 				set_protocol(confs, PROTO_1);
 				set_protocol(cconfs, PROTO_1);
-				logp("Client is burp-%s - using protocol=%d\n",
+				logp("Client is %s-%s - using protocol=%d\n",
+					PACKAGE_TARNAME,
 					peer_version, PROTO_1);
 			}
 			else
@@ -504,13 +505,15 @@ int extra_comms(struct async *as,
 				/*
 				set_protocol(confs, PROTO_2);
 				set_protocol(cconfs, PROTO_2);
-				logp("Client is burp-%s - using protocol=%d\n",
+				logp("Client is %s-%s - using protocol=%d\n",
+					PACKAGE_TARNAME,
 					peer_version, PROTO_2);
 				*/
 				// PROTO_1 is safer for now.
 				set_protocol(confs, PROTO_1);
 				set_protocol(cconfs, PROTO_1);
-				logp("Client is burp-%s - using protocol=%d\n",
+				logp("Client is %s-%s - using protocol=%d\n",
+					PACKAGE_TARNAME,
 					peer_version, PROTO_1);
 			}
 			break;
@@ -522,8 +525,8 @@ int extra_comms(struct async *as,
 			if(vers.cli>=vers.burp2)
 				break;
 			logp("protocol=%d is set server side, "
-			  "but client is burp version %s\n",
-			  PROTO_2, peer_version);
+			  "but client is %s version %s\n",
+			  PROTO_2, PACKAGE_TARNAME, peer_version);
 			goto error;
 	}
 

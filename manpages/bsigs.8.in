@@ -1,7 +1,7 @@
 .TH bsigs 8 "March 18, 2016" "" "bsigs"
 
 .SH NAME
-bsigs \- program for debugging burp protocol2 manifest files and indexes
+bsigs \- program for debugging @name@ protocol2 manifest files and indexes
 
 .SH SYNOPSIS
 .B bsigs
@@ -9,11 +9,11 @@ bsigs \- program for debugging burp protocol2 manifest files and indexes
 .br
 
 .LP
-A program for debugging burp protocol2 manifest files and indexes. It reads a file containing binary signatures and checksums, converts them to hex, and writes them to stdout. This program comes with the burp backup and restore package.
+A program for debugging @name@ protocol2 manifest files and indexes. It reads a file containing binary signatures and checksums, converts them to hex, and writes them to stdout. This program comes with the @name@ backup and restore package.
 
 .SH EXAMPLES
 .TP
-\fBcd /var/spool/burp\fR
+\fBcd /var/spool/@name@\fR
 .TP
 \fBbsigs global/clients/testclient/current/manifest/00000022\fR
 .TP
@@ -29,10 +29,10 @@ A program for debugging burp protocol2 manifest files and indexes. It reads a fi
 
 .SH BUGS
 If you find bugs, please report them to the email list. See the website
-<http://burp.grke.net/> for details.
+<@package_url@> for details.
 
 .SH AUTHOR
-The main author of Burp is Graham Keeling.
+The main author of @human_name@ is Graham Keeling.
 
 .SH COPYRIGHT
 See the LICENCE file included with the source distribution.

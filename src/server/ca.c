@@ -96,7 +96,7 @@ static int symlink_file(const char *oldpath, const char *newpath)
 	return 0;
 }
 
-static int burp_ca_init(struct conf **confs, const char *ca_dir)
+static int ca_init(struct conf **confs, const char *ca_dir)
 {
 	int a=0;
 	const char *args[15];
@@ -309,7 +309,7 @@ int ca_server_setup(struct conf **confs)
 	if(maybe_make_dhfile(confs, ca_dir))
 		goto end;
 
-	if(burp_ca_init(confs, ca_dir))
+	if(ca_init(confs, ca_dir))
 	{
 		recursive_delete(ca_dir);
 		goto end;

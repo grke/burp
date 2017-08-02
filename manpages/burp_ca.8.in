@@ -1,15 +1,15 @@
-.TH burp_ca 8 "February 10, 2012" "" "burp_ca"
+.TH @name@_ca 8 "February 10, 2012" "" "@name@_ca"
 
 .SH NAME
-burp_ca \- program for generating certificates for use with burp
+@name@_ca \- program for generating certificates for use with @name@
 
 .SH SYNOPSIS
-.B burp_ca
+.B @name@_ca
 .RI [ options ]
 .br
 
 .LP
-A script for generating certificates for use with burp. This script comes with the burp backup and restore package, and was contributed by Patrick Koppen.
+A script for generating certificates for use with @name@. This script comes with the @name@ backup and restore package, and was contributed by Patrick Koppen.
 
 .SH OPTIONS
 .TP
@@ -38,10 +38,10 @@ revoke certificate with serial number
 generate certificate revoke list
 .TP
 \fB\-d|\-\-dir\fR \fB<dir>\fR
-ca output dir (default: /etc/burp/CA)
+ca output dir (default: /etc/@name@/CA)
 .TP
 \fB\-c|\-\-config\fR \fB\fR
-config file (default: /etc/burp/CA.cnf)
+config file (default: /etc/@name@/CA.cnf)
 .TP
 \fB\-n|\-\-name\fR \fB\fR
 name (default: builder)
@@ -64,11 +64,11 @@ generate a new dhfile
 
 .SH BUGS
 If you find bugs, please report them to the email list. See the website
-<http://burp.grke.net/> for details.
+<@package_url@> for details.
 
 .SH AUTHOR
-Patrick Koppen wrote burp_ca.
-The main author of Burp is Graham Keeling.
+Patrick Koppen wrote @name@_ca.
+The main author of @human_name@ is Graham Keeling.
 
 .SH COPYRIGHT
 See the LICENCE file included with the source distribution.

@@ -1,14 +1,14 @@
-.\" manual page [] for Burp
+.\" manual page [] for @human_name@
 .\" SH section heading
 .\" SS subsection heading
 .\" LP paragraph
 .\" IP indented paragraph
 .\" TP hanging label
-.TH Burp 8 "Burp"
+.TH @human_name@ 8 "@human_name@"
 .SH NAME
-Burp \- BackUp and Restore Program
+@human_name@ \- BackUp and Restore Program
 .SH SYNOPSIS
-.B burp [OPTIONS]
+.B @name@ [OPTIONS]
 .SH DESCRIPTION
 .LP
 BackUp and Restore Program.
@@ -20,7 +20,7 @@ Run as a stand-alone champion chooser process (useful for debugging protocol2 st
 .TP
 \fB\-c\fR \fB[path]\fR
 Short for 'config file'. The argument is a path to the config file. The default
-is /etc/burp/burp.conf.
+is /etc/@name@/@name@.conf.
 .TP
 \fB\-F\fR \fB\fR
 Foreground mode. The server will fork into the background and run as a daemon if you do not give this option.
@@ -35,7 +35,7 @@ Print help and then exit.
 Print help and then exit.
 .TP
 \fB\-i\fR \fB\fR
-Print an index table of symbols that humans may see burp produce, and exit.
+Print an index table of symbols that humans may see @name@ produce, and exit.
 .TP
 \fB\-n\fR \fB\fR
 No forking mode. The program will accept a single query, deal with it, and then
@@ -66,7 +66,7 @@ backups.
 .TP
 \fB\-c\fR \fB[path]\fR
 Short for 'config file'. The argument is a path to the config file. The default
-is /etc/burp/burp.conf, or %PROGRAMFILES%\\Burp\\burp.conf on Windows.
+is /etc/@name@/@name@.conf, or %PROGRAMFILES%\\@human_name@\\@name@.conf on Windows.
 .TP
 \fB\-C\fR \fB[client]\fR
 Allows you to specify an alternative client to list or restore from. Requires that the server configuration of the alternative client permits your client to do this. See the 'restore_client' option.
@@ -85,7 +85,7 @@ Print help and then exit.
 Print help and then exit.
 .TP
 \fB\-i\fR \fB\fR
-Print an index table of symbols that humans may see burp produce, and exit.
+Print an index table of symbols that humans may see @name@ produce, and exit.
 .TP
 \fB\-q\fR \fB[max secs]\fR
 When running a timed backup, sleep for a random number of seconds (between 0 and the number given) before contacting the server. Alternatively, this can be specified by the 'randomise' configuration file option.
@@ -132,82 +132,82 @@ Log file for status monitor - useful for debugging.
 
 .SH EXAMPLES
 .TP
-\fBburp \-a b\fR
+\fB@name@ \-a b\fR
 Runs a backup.
 .TP
-\fBburp \-a l\fR
+\fB@name@ \-a l\fR
 Lists the available backups and dates.
 .TP
-\fBburp \-a l \-b 1\fR
+\fB@name@ \-a l \-b 1\fR
 Lists all the files in backup number 1.
 .TP
-\fBburp \-a l \-b a\fR
+\fB@name@ \-a l \-b a\fR
 Lists all the files in all the backups.
 .TP
-\fBburp \-a l \-b c\fR
+\fB@name@ \-a l \-b c\fR
 Lists all the files in the current backup.
 .TP
-\fBburp \-a l \-b 1 \-r myregex\fR
+\fB@name@ \-a l \-b 1 \-r myregex\fR
 Lists all the files in backup number 1 that match the regular expression 'myregex'.
 .TP
-\fBburp \-a L \-b 1 \-r myregex\fR
+\fB@name@ \-a L \-b 1 \-r myregex\fR
 Long lists all the files in backup number 1 that match the regular expression 'myregex'. This is like doing an 'ls \-l'.
 .TP
-\fBburp \-a r \-b 1 \-r myregex\fR
+\fB@name@ \-a r \-b 1 \-r myregex\fR
 Restores all the files in backup number 1 that match the regular expression 'myregex' back to their original location.
 .TP
-\fBburp \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
+\fB@name@ \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
 Restores all the files in backup number 1 that match the regular expression 'myregex' into the directory /tmp/restoredir.
 .TP
-\fBburp \-a r \-b 1 \-r myregex \-d /tmp/restoredir \-s 2\fR
+\fB@name@ \-a r \-b 1 \-r myregex \-d /tmp/restoredir \-s 2\fR
 Restores all the files in backup number 1 that match the regular expression 'myregex' into the directory /tmp/restoredir and strip 2 leading path components.
 .TP
-\fBburp \-a r\fR
+\fB@name@ \-a r\fR
 Restores all the files in the most recent backup to their original location.
 .TP
-\fBburp \-a v\fR
+\fB@name@ \-a v\fR
 Verifies the most recent backup.
 .TP
-\fBburp \-a v \-b 1 \-r myregex\fR
+\fB@name@ \-a v \-b 1 \-r myregex\fR
 Verifies everything in backup number 1 that matches the regular expression 'myregex'.
 .TP
-\fBburp \-a delete \-b 1\fR
-Deletes backup number 1. Note that burp will not delete backup directories that other backup directories depend upon.
+\fB@name@ \-a delete \-b 1\fR
+Deletes backup number 1. Note that @name@ will not delete backup directories that other backup directories depend upon.
 .TP
-\fBburp \-a t\fR
-Timed backup. The same as 'burp \-a b', except that a script is run on the server before deciding to go ahead. The intention is that this command will be run on a repeating cron job with a short interval, and that the server will decide when it is time for a new backup.
+\fB@name@ \-a t\fR
+Timed backup. The same as '@name@ \-a b', except that a script is run on the server before deciding to go ahead. The intention is that this command will be run on a repeating cron job with a short interval, and that the server will decide when it is time for a new backup.
 .TP
-\fBburp \-a L \-b 1 \-d ''\fR
+\fB@name@ \-a L \-b 1 \-d ''\fR
 Long list the top level directory of backup 1.
 .TP
-\fBburp \-a L \-b 1 \-d '/home/graham'\fR
+\fB@name@ \-a L \-b 1 \-d '/home/graham'\fR
 Long list the /home/graham directory of backup 1. These '\-d' versions of the list function provide the ability to 'browse' backups.
 .TP
-\fBburp \-a d\fR
+\fB@name@ \-a d\fR
 Report the differences between the current backup and the backup that will be made next. DIFF OPTIONS NOT FULLY IMPLEMENTED YET.
 .TP
-\fBburp \-a D\fR
+\fB@name@ \-a D\fR
 A more verbose report of the differences between the current backup and the backup that will be made next.
 .TP
-\fBburp \-a d \-b 1 \-b 2\fR
+\fB@name@ \-a d \-b 1 \-b 2\fR
 Report the differences between backups 1 and 2 (use \-a D for more verbosity).
 .TP
-\fBburp \-a d \-b 2 \-b n\fR
+\fB@name@ \-a d \-b 2 \-b n\fR
 Report the differences between backup 1 and the backup that will be made next (use \-a D for more verbosity).
 .TP
-\fBburp \-C altclient \-a L\fR
+\fB@name@ \-C altclient \-a L\fR
 Long list the top level directory of backup 1 on client 'altclient'.
 .TP
-\fBburp \-C altclient \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
+\fB@name@ \-C altclient \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
 Restores all the files in backup number 1 from client 'altclient' that match the regular expression 'myregex' into the directory /tmp/restoredir.
 .TP
-\fBburp \-a s\fR
+\fB@name@ \-a s\fR
 Run the ncurses status monitor.
 .TP
-\fBburp \-a S\fR
+\fB@name@ \-a S\fR
 Print a status monitor snapshot, summarising all clients.
 .TP
-\fBburp \-a S \-C testclient\fR
+\fB@name@ \-a S \-C testclient\fR
 Print a status monitor snapshot, showing client 'testclient' only.
 
 .SH SERVER CONFIGURATION FILE OPTIONS
@@ -250,7 +250,7 @@ Path to the directory in which to store backups.
 When turned on (which is the default) and the client is on version 1.3.6 or greater, the structure of the storage directory will mimic that of the original filesystem on the client.
 .TP
 \fBtimestamp_format=[strftime format]\fR
-This allows you to tweak the format of the timestamps of individual backups. See 'man strftime' to see available substitutions. If this option is unset, burp uses "%Y-%m-%d %H:%M:%S %z".
+This allows you to tweak the format of the timestamps of individual backups. See 'man strftime' to see available substitutions. If this option is unset, @name@ uses "%Y-%m-%d %H:%M:%S %z".
 .TP
 \fBpassword_check=[0|1]\fR
 Allows you to turn client password checking on or off. The default is on. SSL certificates will still be checked if you turn passwords off. This option can be overridden by the client configuration files in clientconfdir on the server.
@@ -275,7 +275,7 @@ Log to syslog. Defaults to off.
 Log to stdout. Defaults to on.
 .TP
 \fBkeep=[number]\fR
-Number of backups to keep. This can be overridden by the clientconfdir configuration files in clientconfdir on the server. Specify multiple 'keep' entries on separate lines in order to keep multiple periods of backups. For example, assuming that you are doing a backup a day, keep=7 keep=4 keep=6 (on separate lines) will keep 7 daily backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168) \- roughly 6 monthly backups. Effectively, you will be guaranteed to be able to restore up to 168 days ago, with the number of available backups exponentially decreasing as you go back in time to that point. In this example, every 7th backup will be hardlinked to allow burp to safely delete intermediate backups when necessary. You can have as many 'keep' lines as you like, as long as they don't exceed 52560000 when multiplied together. That is, a backup every minute for 100 years.
+Number of backups to keep. This can be overridden by the clientconfdir configuration files in clientconfdir on the server. Specify multiple 'keep' entries on separate lines in order to keep multiple periods of backups. For example, assuming that you are doing a backup a day, keep=7 keep=4 keep=6 (on separate lines) will keep 7 daily backups, 4 weekly backups (7x4=28), and 6 multiples of 4 weeks (7x4x6=168) \- roughly 6 monthly backups. Effectively, you will be guaranteed to be able to restore up to 168 days ago, with the number of available backups exponentially decreasing as you go back in time to that point. In this example, every 7th backup will be hardlinked to allow @name@ to safely delete intermediate backups when necessary. You can have as many 'keep' lines as you like, as long as they don't exceed 52560000 when multiplied together. That is, a backup every minute for 100 years.
 .TP
 \fBmanual_delete=[path]\fR
 This can be overridden by the clientconfdir configuration files in clientconfdir on the server. When the server needs to delete old backups, or rubble left over from generating reverse patches with librsync=1, it will normally delete them in place. If you use the 'manual_delete' option, the files will be moved to the path specified for deletion at a later point. You will then need to configure a cron job, or similar, to delete the files yourself. Do not specify a path that is not on the same filesystem as the client storage directory.
@@ -317,10 +317,10 @@ Run as a particular group. This can be overridden by the client configuration fi
 Set the file creation umask. Default is 0022.
 .TP
 \fBratelimit=[Mb/s]\fR
-Set the network send rate limit, in Mb/s. If this option is not given, burp will send data as fast as it can.
+Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can.
 .TP
 \fBnetwork_timeout=[s]\fR
-Set the network timeout in seconds. If no data is sent or received over a period of this length, burp will give up. The default is 7200 seconds (2 hours).
+Set the network timeout in seconds. If no data is sent or received over a period of this length, @name@ will give up. The default is 7200 seconds (2 hours).
 .TP
 \fBworking_dir_recovery_method=[resume|delete]\fR
 This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir
@@ -350,10 +350,10 @@ Turn this off to prevent clients from initiating restores with the '\-a r' optio
 Turn this off to prevent clients from initiating a verify job with the '\-a v' option. The default is that clients can initiate a verify job. Restore clients can override this setting.
 .TP
 \fBrestore_client=[client]\fR
-A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client. You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files. Note that restoring a backup from a Windows computer onto a Linux computer will currently leave the VSS headers in place at the beginning of each file. This will be addressed in a future version of burp.
+A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client. You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files. Note that restoring a backup from a Windows computer onto a Linux computer will currently leave the VSS headers in place at the beginning of each file. This will be addressed in a future version of @name@.
 .TP
 \fBssl_cert_ca=[path]\fR
-The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/burp_ca.txt.
+The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/@name@_ca.txt.
 .TP
 \fBssl_cert=[path]\fR
 The path to the server SSL certificate. It works for me when the file contains the concatenation of the certificate and private key in PEM format.
@@ -447,7 +447,7 @@ If this is set to 1, server_script_post will always be run. The default is 0, wh
 Path to autoupgrade directory from which upgrades are downloaded. The option can be left unset in order not to autoupgrade clients. Please see docs/autoupgrade.txt in the source package for more help with this option.
 .TP
 \fBca_conf=[path]\fR
-Path to certificate authority configuration file. The CA configuration file will usually be /etc/burp/CA.cnf. The CA directory indicated by CA.cnf will usually be /etc/burp/CA. If ca_conf is set and the CA directory does not exist, the server will create, populate it, and the paths indicated by ssl_cert_ca, ssl_cert, ssl_key and ssl_dhfile will be overwritten. For more detailed information on this and the other ca_* options, please see docs/burp_ca.txt.
+Path to certificate authority configuration file. The CA configuration file will usually be /etc/@name@/CA.cnf. The CA directory indicated by CA.cnf will usually be /etc/@name@/CA. If ca_conf is set and the CA directory does not exist, the server will create, populate it, and the paths indicated by ssl_cert_ca, ssl_cert, ssl_key and ssl_dhfile will be overwritten. For more detailed information on this and the other ca_* options, please see docs/@name@_ca.txt.
 .TP
 \fBca_name=[name]\fR
 Name of the CA that the server will generate when using the ca_conf option.
@@ -455,8 +455,8 @@ Name of the CA that the server will generate when using the ca_conf option.
 \fBca_server_name=[name]\fR
 The name that the server will put into its own SSL certficates when using the ca_conf option.
 .TP
-\fBca_burp_ca=[path]\fR
-Path to the burp_ca script when using the ca_conf option.
+\fBca_@name@_ca=[path]\fR
+Path to the @name@_ca script when using the ca_conf option.
 .TP
 \fBca_crl=[path]\fR
 Override the default path to the certificate revocation list.
@@ -550,19 +550,19 @@ Run as a particular user (not supported on Windows).
 Run as a particular group (not supported on Windows).
 .TP
 \fBratelimit=[Mb/s]\fR
-Set the network send rate limit, in Mb/s. If this option is not given, burp will send data as fast as it can.
+Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can.
 .TP
 \fBnetwork_timeout=[s]\fR
-Set the network timeout in seconds. If no data is sent or received over a period of this length, burp will give up. The default is 7200 seconds (2 hours).
+Set the network timeout in seconds. If no data is sent or received over a period of this length, @name@ will give up. The default is 7200 seconds (2 hours).
 .TP
-\fBca_burp_ca=[path]\fR
-Path to the burp_ca script (burp_ca.bat on Windows). For more information on this, please see docs/burp_ca.txt.
+\fBca_@name@_ca=[path]\fR
+Path to the @name@_ca script (@name@_ca.bat on Windows). For more information on this, please see docs/@name@_ca.txt.
 .TP
 \fBca_csr_dir=[path]\fR
-Directory where certificate signing requests are generated. For more information on this, please see docs/burp_ca.txt.
+Directory where certificate signing requests are generated. For more information on this, please see docs/@name@_ca.txt.
 .TP
 \fBssl_cert_ca=[path]\fR
-The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this and the other ssl_* options, please see docs/burp_ca.txt.
+The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this and the other ssl_* options, please see docs/@name@_ca.txt.
 .TP
 \fBssl_cert=[path]\fR
 The path to the client SSL certificate. It works for me when the file contains the concatenation of the certificate and private key in PEM format.
@@ -589,7 +589,7 @@ To prevent the server from initiating restores, set this to 0. The default is 1.
 To prevent the server from being able to override your local include/exclude list, set this to 0. The default is 1.
 .TP
 \fBencryption_password=[password]\fR
-Set this to enable client side file Blowfish encryption. If you do not want encryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring this renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). Burp will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem.
+Set this to enable client side file Blowfish encryption. If you do not want encryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring this renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). @human_name@ will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem.
 .TP
 \fBglob_after_script_pre=[0|1]\fR
 Set this to 0 if you do not want include_glob settings to be evaluated after the pre script is run. The default is 1.
@@ -669,7 +669,7 @@ Not implemented.
 Exclude paths that match the regular expression.
 .TP
 \fBinclude_ext=[extension]\fR
-Extensions to include in the backup. Case insensitive. Nothing else will be included in the backup. You can have multiple include extension lines. For example, set 'txt' to include files that end in '.txt'. You need to specify an 'include' line so that burp knows where to start looking.
+Extensions to include in the backup. Case insensitive. Nothing else will be included in the backup. You can have multiple include extension lines. For example, set 'txt' to include files that end in '.txt'. You need to specify an 'include' line so that @name@ knows where to start looking.
 .TP
 \fBexclude_ext=[extension]\fR
 Extensions to exclude from the backup. Case insensitive. You can have multiple exclude extension lines. For example, set 'vdi' to exclude VirtualBox disk images.
@@ -678,10 +678,10 @@ Extensions to exclude from the backup. Case insensitive. You can have multiple e
 Extensions to exclude from compression. Case insensitive. You can have multiple exclude compression lines. For example, set 'gz' to exclude gzipped files from compression.
 .TP
 \fBexclude_fs=[fstype]\fR
-File systems to exclude from the backup. Case insensitive. You can have multiple exclude file system lines. For example, set 'tmpfs' to exclude tmpfs. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also exclude tmpfs.
+File systems to exclude from the backup. Case insensitive. You can have multiple exclude file system lines. For example, set 'tmpfs' to exclude tmpfs. @human_name@ has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'exclude_fs = 0x01021994' will also exclude tmpfs.
 .TP
 \fBinclude_fs=[fstype]\fR
-File systems to include into the backup. Case insensitive. You can have multiple include file system lines. For example, set 'ext4' to include ext4. Burp has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'include_fs = 0x01021994' will also include tmpfs. If at least one file system is included, all other filesystems will be excluded per default. Included directories that do not live on an included file system will be skipped, even if \fBcross_all_filesystems\fR is enabled and they contain subdirectories with included file systems.
+File systems to include into the backup. Case insensitive. You can have multiple include file system lines. For example, set 'ext4' to include ext4. @human_name@ has an internal mapping of file system names to file system IDs. If you know the file system ID, you can use that instead. For example, 'include_fs = 0x01021994' will also include tmpfs. If at least one file system is included, all other filesystems will be excluded per default. Included directories that do not live on an included file system will be skipped, even if \fBcross_all_filesystems\fR is enabled and they contain subdirectories with included file systems.
 
 Note that on SunOS systems \fBinclude_fs\fR and \fBexclude_fs\fR will do a case sensitive compare of the string descriptors of the file systems instead of the numeric IDs (see \fBf_basetype\fR member is \fBstruct statvfs\fR).
 .TP
@@ -713,19 +713,19 @@ Do not back up the given block device itself, but open it for reading and back u
 Open all block devices for reading and back up the contents as if they were regular files.
 .TP
 \fBsplit_vss=[0|1]\fR
-When backing up Windows computers with burp protocol 1, this option allows you to save the VSS header data separate from the file data. The default is off, which means that the VSS header data is saved prepended to the file data.
+When backing up Windows computers with @name@ protocol 1, this option allows you to save the VSS header data separate from the file data. The default is off, which means that the VSS header data is saved prepended to the file data.
 .TP
 \fBstrip_vss=[0|1]\fR
-When backing up Windows computers with burp protocol 1, this option allows you to prevent the VSS header data being backed up. The default is off. To restore a backup that has no VSS information on Windows, you need to give the client the '\-x' command line option.
+When backing up Windows computers with @name@ protocol 1, this option allows you to prevent the VSS header data being backed up. The default is off. To restore a backup that has no VSS information on Windows, you need to give the client the '\-x' command line option.
 .TP
 \fBvss_drives=[list of drive letters]\fR
-When backing up Windows computers, this option allows you to specify which drives have VSS snapshots taken of them. If you omit this option, burp will automatically decide based on the 'include' options. If you want no drives to have snapshots taken of them, you can specify '0'.
+When backing up Windows computers, this option allows you to specify which drives have VSS snapshots taken of them. If you omit this option, @name@ will automatically decide based on the 'include' options. If you want no drives to have snapshots taken of them, you can specify '0'.
 .TP
 \fBacl=[0|1]\fR
-If acl support is compiled into burp, this allows you to decide whether or not to backup acls at runtime. The default is '1'.
+If acl support is compiled into @name@, this allows you to decide whether or not to backup acls at runtime. The default is '1'.
 .TP
 \fBxattr=[0|1]\fR
-If xattr support is compiled into burp, this allows you to decide whether or not to backup xattrs at runtime. The default is '1'.
+If xattr support is compiled into @name@, this allows you to decide whether or not to backup xattrs at runtime. The default is '1'.
 .TP
 \fBatime=[0|1]\fR
 This allows you to control whether the client uses O_NOATIME when opening files and directories. The default is 0, which enables O_NOATIME. This means that the client can read files and directories without updating the access times. However, this is only possible if you are running as root, or are the owner of the file or directory. If this is not the case (perhaps you only have group or world access to the files), you will get errors until you set atime=1. With atime=1, the access times will be updated on the files and directories that get backed up.
@@ -792,7 +792,7 @@ As with the other configuration files, extra configuration can be included with 
 
 .SH Some notes on SSL certificates
 .TP
-The burp example configs come with example SSL certificates and keys. You can use these and burp will work. But if you are worried about network security, you should generate your own certificates and keys and point your config files to them. To create the example files, I used a handy interface to openssl, called 'tinyca' (http://tinyca.sm-zone.net/). If you are using Debian, you can run 'apt-get install tinyca' to get it. There is also the option of using burp_ca, which you can find in the source distribution, courtesy of Patrick Koppen.
+The @name@ example configs come with example SSL certificates and keys. You can use these and @name@ will work. But if you are worried about network security, you should generate your own certificates and keys and point your config files to them. To create the example files, I used a handy interface to openssl, called 'tinyca' (http://tinyca.sm-zone.net/). If you are using Debian, you can run 'apt-get install tinyca' to get it. There is also the option of using @name@_ca, which you can find in the source distribution, courtesy of Patrick Koppen.
 
 .SH Examining backups
 .TP
@@ -814,7 +814,7 @@ You can queue a backup on the server, to be performed when the client next makes
 
 .SH Server initiated restores
 .TP
-You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. The client can deny server initiated restores by setting "server_can_restore=0" in its burp.conf. Valid fields to include in the restore file are:
+You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. The client can deny server initiated restores by setting "server_can_restore=0" in its @name@.conf. Valid fields to include in the restore file are:
 .TP
 \fBorig_client=[client]\fR
 The original client to restore from. Equivalent to '\-C' when initiating a restore from a client. Do not include this line when restoring to the original client. See also the 'restore_client' server option.
@@ -841,7 +841,7 @@ Only restore files matching the regular expression. Equivalent to '\-r' when ini
 Restore directories and files that match the path. If it is a directory, the contents of the directory will be restored. You can have multiple 'include' lines. There is no equivalent when initiating a restore from the client.
 
 .SH SIGNALS
-Sending signal 1 (HUP) to the main server process will cause it to reload. For the vast majority of configuration changes, a reload is unnecessary as the server will pick up changes "on-the-fly". Sending signal 12 (USR2) to the main server process will cause it to wait until there are no longer any child processes, and then exit. The intention is to help with upgrades without interrupting current backups. if you are running upstart, a new burp server process will start up when the old one exits.
+Sending signal 1 (HUP) to the main server process will cause it to reload. For the vast majority of configuration changes, a reload is unnecessary as the server will pick up changes "on-the-fly". Sending signal 12 (USR2) to the main server process will cause it to wait until there are no longer any child processes, and then exit. The intention is to help with upgrades without interrupting current backups. if you are running upstart, a new @name@ server process will start up when the old one exits.
 
 .SH RETURN CODES (SERVER)
 0: success
@@ -861,10 +861,10 @@ Sending signal 1 (HUP) to the main server process will cause it to reload. For t
 
 .SH BUGS
 If you find bugs, please report them to the email list. See the website
-<http://burp.grke.net/> for details.
+<@package_url@> for details.
 
 .SH AUTHOR
-The main author of Burp is Graham Keeling.
+The main author of @human_name@ is Graham Keeling.
 
 .SH COPYRIGHT
 See the LICENCE file included with the source distribution.

@@ -6,7 +6,7 @@ if [ -z "$1" -o -z "$2" -o -z "$3" ] ; then
 fi
 
 (echo "To: $2"
- echo "From: burp"
+ echo "From: @name@"
  echo "Subject: $3"
- @sbindir@/burp -c "$1" -a S
+ @sbindir@/@name@ -c "$1" -a S
  echo) | /usr/sbin/sendmail -t

@@ -345,7 +345,7 @@ static void detail(const char *cntrclient, char status, char phase, const char *
 static void screen_header_ncurses(const char *date, int l, int col)
 {
 	char v[32]="";
-	snprintf(v, sizeof(v), " burp monitor %s", VERSION);
+	snprintf(v, sizeof(v), " %s monitor %s", PACKAGE_TARNAME, VERSION);
 	print_line(v, 0-TOP_SPACE, col);
 	mvprintw(0, col-l-1, date);
 }
@@ -355,9 +355,13 @@ static void screen_header_stdout(const char *date, int l, int col)
 {
 	size_t c=0;
 	char spaces[512]="";
-	stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n burp status");
+	char msg[64]="";
+	snprintf(msg, sizeof(msg), " %s status", PACKAGE_TARNAME);
+
+	stdout_asfd->write_str(stdout_asfd, CMD_GEN, "\n");
+	stdout_asfd->write_str(stdout_asfd, CMD_GEN, msg);
 	for(c=0;
-	  c<(col-strlen(" burp status")-l-1)
+	  c<(col-strlen(msg)-l-1)
 		&& c<sizeof(spaces)-1; c++)
 			spaces[c]=' ';
 	spaces[c]='\0';
@@ -1469,7 +1473,11 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 	else if(is_reg_lstat(prog_long)>0)
 		args[a++]=(char *)prog_long;
 	else
-		args[a++]=(char *)"/usr/sbin/burp";
+	{
+		static char p[64]="";
+		snprintf(p, sizeof(p), "/usr/sbin/%s", PACKAGE_TARNAME);
+		args[a++]=p;
+	}
 
 	args[a++]=(char *)"-c";
 	args[a++]=get_string(confs[OPT_CONFFILE]);

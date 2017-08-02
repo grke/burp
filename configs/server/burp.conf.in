@@ -1,4 +1,4 @@
-# This is an example config file for the burp server.
+# This is an example config file for the @name@ server.
 
 mode = server
 
@@ -21,7 +21,7 @@ max_status_children = 5
 # status_port = 5972
 # max_status_children = 6
 
-directory = @localstatedir@/spool/burp
+directory = @localstatedir@/spool/@name@
 dedup_group = global
 clientconfdir = @sysconfdir@/clientconfdir
 # Choose the protocol to use.
@@ -31,7 +31,7 @@ clientconfdir = @sysconfdir@/clientconfdir
 # Like many other settings, this can be set per client in the clientconfdir
 # files.
 # protocol = 0
-pidfile = @runstatedir@/burp.server.pid
+pidfile = @runstatedir@/@name@.server.pid
 hardlinked_archive = 0
 working_dir_recovery_method = delete
 umask = 0022
@@ -83,11 +83,11 @@ keep = 7
 # certificates, uncomment the following lines. If the directory specified in
 # ca_conf does not exist, the server will create, populate it, and the paths
 # indicated by ssl_cert_ca, ssl_cert, ssl_key and ssl_dhfile below will be
-# overwritten. See docs/burp_ca.txt for more information.
+# overwritten. See docs/@name@_ca.txt for more information.
 ca_conf = @sysconfdir@/CA.cnf
-ca_name = burpCA
-ca_server_name = burpserver
-ca_burp_ca = @sbindir@/burp_ca
+ca_name = @name@CA
+ca_server_name = @name@server
+ca_@name@_ca = @sbindir@/@name@_ca
 
 # Check for revoked certificates in the certificate revocation list.
 # Turn this off if you use the old ssl_extra_checks_script server script.
@@ -135,7 +135,7 @@ timer_arg = Sat,Sun,00,01,02,03,04,05,06,07,08,17,18,19,20,21,22,23
 #notify_success_script = @scriptdir@/notify_script
 #notify_success_arg = sendmail -t
 #notify_success_arg = To: youremail@example.com
-#notify_success_arg = From: burp
+#notify_success_arg = From: @name@
 #notify_success_arg = Subject: %b succeeded: %c %w
 # Uncomment the following to have success notifications only if there were
 # warnings.
@@ -148,14 +148,14 @@ timer_arg = Sat,Sun,00,01,02,03,04,05,06,07,08,17,18,19,20,21,22,23
 #notify_failure_script = @scriptdir@/notify_script
 #notify_failure_arg = sendmail -t
 #notify_failure_arg = To: youremail@example.com
-#notify_failure_arg = From: burp
+#notify_failure_arg = From: @name@
 #notify_failure_arg = Subject: %b failed: %c %w
 
 # The server can run scripts on each connection after authentication and before
 # disconnecting.
 #server_script_pre = @scriptdir@/ssl_extra_checks_script
 #server_script_pre_arg = @sysconfdir@/crl
-#server_script_pre_arg = @sysconfdir@/burp-server.conf
+#server_script_pre_arg = @sysconfdir@/@name@-server.conf
 #server_script_pre_arg = @scriptdir@/server-pre-script.local
 # Set server_script_pre_notify to 1 to have notifications on server_script_pre
 # returning non-zero. Most people will want to leave this off - it could

@@ -466,9 +466,9 @@ dnl -----------------------------------------------------------
 dnl Set some defaults
 dnl -----------------------------------------------------------
 
-dnl set sysconfdir to /etc/burp unless specified otherwise
+dnl set sysconfdir to /etc/${PACKAGE_TARNAME} unless specified otherwise
 if test "$prefix" = "NONE" && test "$sysconfdir" = '${prefix}/etc'; then
-  sysconfdir='/etc/burp'
+  sysconfdir="/etc/${PACKAGE_TARNAME}"
 fi
 
 if test "x$runstatedir" = x; then
@@ -488,8 +488,10 @@ AC_MSG_NOTICE([])
 AC_MSG_NOTICE([Configuration summary])
 AC_MSG_NOTICE([=====================])
 AC_MSG_NOTICE([])
+AC_MSG_NOTICE([               Package: ${PACKAGE_NAME}])
+AC_MSG_NOTICE([              Tar name: ${PACKAGE_TARNAME}])
+AC_MSG_NOTICE([               Version: ${PACKAGE_VERSION}])
 AC_MSG_NOTICE([                  Host: ${host}])
-AC_MSG_NOTICE([          Burp version: ${PACKAGE_VERSION}])
 AC_MSG_NOTICE([      Install binaries: ${sbindir}])
 AC_MSG_NOTICE([  Install config files: ${sysconfdir}])
 AC_MSG_NOTICE([            C Compiler: ${CC}])

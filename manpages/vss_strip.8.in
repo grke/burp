@@ -11,7 +11,7 @@ vss_strip \- program for extracting file data from a file containing VSS headers
 .br
 
 .LP
-A program for extracting file data from a file containing VSS headers. This program comes with the burp backup and restore package.
+A program for extracting file data from a file containing VSS headers. This program comes with the @name@ backup and restore package.
 
 .SH OPTIONS
 .TP
@@ -37,10 +37,10 @@ Takes the output of zcat as input, and outputs to stdout.
 
 .SH BUGS
 If you find bugs, please report them to the email list. See the website
-<http://burp.grke.net/> for details.
+<@package_url@> for details.
 
 .SH AUTHOR
-The main author of Burp is Graham Keeling.
+The main author of @human_name@ is Graham Keeling.
 
 .SH COPYRIGHT
 See the LICENCE file included with the source distribution.

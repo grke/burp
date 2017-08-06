@@ -33,6 +33,12 @@
 /libtool
 /Makefile
 /Makefile.in
+/manpages/bedup.8
+/manpages/bsigs.8
+/manpages/bsparse.8
+/manpages/burp.8
+/manpages/burp_ca.8
+/manpages/vss_strip.8
 /runner
 /runner.log
 /runner.trs

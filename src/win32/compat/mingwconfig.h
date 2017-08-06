@@ -313,13 +313,13 @@
 #define PACKAGE_BUGREPORT ""
 
 /* Define to the full name of this package. */
-#define PACKAGE_NAME ""
+#define PACKAGE_NAME "Burp"
 
 /* Define to the full name and version of this package. */
 #define PACKAGE_STRING ""
 
 /* Define to the one symbol short name of this package. */
-#define PACKAGE_TARNAME ""
+#define PACKAGE_TARNAME "burp"
 
 /* Define to the version of this package. */
 #define PACKAGE_VERSION ""

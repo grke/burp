@@ -7,7 +7,7 @@
 
 # Locking code to try to make sure that two instances do not run together and
 # corrupt the CA files.
-LOCKDIR="/tmp/burp_ca.lockdir"
+LOCKDIR="/tmp/@name@_ca.lockdir"
 PIDFILE="$LOCKDIR/pid"
 
 cleanup()
@@ -180,7 +180,7 @@ if [ "$init" = "yes" ]; then
 	umask ${sec_umask}
 	openssl genrsa -out ${dir}/CA_${ca}.key ${size}
 	umask ${def_umask}
-	TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
+	TEMP=$(mktemp /tmp/@name@_ca.tmp.XXXXXXXX || echo /tmp/@name@_ca.tmp.$$)
 	cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
 
@@ -221,7 +221,7 @@ fi
 if [ "$request" = "yes" ]; then
 	echo "generating request ${name}"
         [ -d $(dirname $requestpath) ] || mkdir $(dirname $requestpath)
-	TEMP=$(mktemp /tmp/burp_ca.tmp.XXXXXXXX || echo /tmp/burp_ca.tmp.$$)
+	TEMP=$(mktemp /tmp/@name@_ca.tmp.XXXXXXXX || echo /tmp/@name@_ca.tmp.$$)
 	cat <<-EOF > ${TEMP}
 	RANDFILE                = /dev/urandom
         req_extensions          = v3_req

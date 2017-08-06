@@ -464,8 +464,8 @@ long version_to_long(const char *version)
 	return ret;
 }
 
-/* These receive_a_file() and burp_send_file() functions are for use by extra_comms
-   and the CA stuff, rather than backups/restores. */
+/* These receive_a_file() and send_a_file() functions are for use by
+   extra_comms and the CA stuff, rather than backups/restores. */
 int receive_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 {
 	int ret=-1;

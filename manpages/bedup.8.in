@@ -1,0 +1,55 @@
+.TH bedup 8 "February 10, 2012" "" "bedup"
+
+.SH NAME
+bedup \- deduplication program with additional knowledge of @name@
+
+.SH SYNOPSIS
+.B bedup
+.RI [ options ]
+.br
+
+.LP
+A file deduplication program with additional knowledge of @name@ protocol 1 storage directories. This program comes with the @name@ backup and restore package.
+
+.SH OPTIONS
+.TP
+\fB\-c\fR \fBpath\fR
+Path to config file (default: /etc/@name@/@name@.conf).
+.TP
+\fB\-g\fR \fB<list of group names>\fR
+Only run on the directories of clients that are in one of the groups specified. The list is comma-separated. To put a client in a group, use the 'dedup_group' option in the client configuration file on the server.
+.TP
+\fB\-h|-?\fR \fB\fR
+Print help text and exit.
+.TP
+\fB\-d \fR \fB\fR
+Delete any duplicate files found. (non-@name@ mode only, use with caution!)
+.TP
+\fB\-l \fR \fB\fR
+Hard link any duplicate files found.
+.TP
+\fB\-m \fR \fB<number>\fR
+Maximum number of hard links to a single file. (non-@name@ mode only - in @name@ mode, use the max_hardlinks option in the configuration file) The default is 10000. On ext3, the maximum number of links possible is 32000, but space is needed for the normal operation of @name@.
+.TP
+\fB\-n\fR \fB<list of directories>\fR
+Non-@name@ mode. Deduplicate any (set of) directories.
+.TP
+\fB\-v\fR \fB\fR
+Print duplicate paths. Useful if you want to double check the files that would be hard linked or deleted before running with one of those options turned on.\fR
+.TP
+\fB\-V\fR \fB\fR
+Print version and exit.\fR
+.TP
+By default, bedup will read /etc/@name@/@name@.conf and deduplicate protocol 1 client storage directories using special knowledge of the structure.\fR
+.TP
+With '\-n', this knowledge is turned off and you have to specify the directories to deduplicate on the command line. Running with '\-n' is therefore dangerous if you are deduplicating @name@ storage directories.
+
+.SH BUGS
+If you find bugs, please report them to the email list. See the website
+<@package_url@> for details.
+
+.SH AUTHOR
+The main author of @human_name@ is Graham Keeling.
+
+.SH COPYRIGHT
+See the LICENCE file included with the source distribution.

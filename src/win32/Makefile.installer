@@ -4,8 +4,6 @@
 
 include ../Makefile.inc
 
-VERSION := $(shell awk '/AC_INIT/{print ;exit}' ../../../configure.ac | cut -d ',' -f 2 | sed -e 's/\[//' -e 's/\]//')
-
 ifeq ($(WIN64),yes)
   SSL_DLL := libssl-1_1-x64.dll
   CRYPTO_DLL := libcrypto-1_1-x64.dll
@@ -15,20 +13,22 @@ else
 endif
 
 DEFINES := \
-	-DVERSION=$(VERSION) \
-	-DRPMVERSION=$(RPMVERSION) \
-	-DOUT_DIR=..\\release@BITS@ \
-	-DSRC_DIR=release@BITS@ \
-	-DBITS=@BITS@ \
+	-DPACKAGE_NAME="$(PACKAGE_NAME)" \
+	-DPACKAGE_TARNAME="$(PACKAGE_TARNAME)" \
+	-DPACKAGE_VERSION="$(PACKAGE_VERSION)" \
+	-DPACKAGE_URL="$(PACKAGE_URL)" \
+	-DOUT_DIR=..\\release$(BITS) \
+	-DSRC_DIR=release$(BITS) \
+	-DBITS=$(BITS) \
 	-DSSL_DLL=$(SSL_DLL) \
 	-DCRYPTO_DLL=$(CRYPTO_DLL) \
 
-INSTALL_EXE := $(BUILDDIR)/release@BITS@/burp-win@BITS@-installer-$(VERSION).exe
+INSTALL_EXE := $(BUILDDIR)/release$(BITS)/$(PACKAGE_TARNAME)-win$(BITS)-installer-$(PACKAGE_VERSION).exe
 
 BURP_BINARIES := \
-	burp.dll \
-	burp.exe \
-	burp_ca.bat \
+	compat.dll \
+	$(PACKAGE_TARNAME).exe \
+	$(PACKAGE_TARNAME)_ca.bat \
 	utest.exe \
 
 DEPKGS_BINARIES := \
@@ -59,7 +59,7 @@ installer:	$(INSTALL_EXE)
 clean:
 	@echo "Cleaning `pwd`"
 	$(CMD_ECHO)-rm -f $(INSTALL_EXE)
-	$(CMD_ECHO)-rm -rf release@BITS@
+	$(CMD_ECHO)-rm -rf release$(BITS)
 	$(CMD_ECHO)-rm -rf winburp.nsi
 	$(CMD_ECHO)-rm -rf ConfigPage1.ini
 	$(CMD_ECHO)-rm -rf ConfigPage2.ini
@@ -72,14 +72,14 @@ clean:
 #
 
 define Convert_Binary
-release@BITS@/$$(notdir $(1)): $(1)
+release$(BITS)/$$(notdir $(1)): $(1)
 	$$(call checkdir,$$@)
 	$(ECHO_CMD)cp -f $$^ $$@ ; \
 	$(STAB2CV) $$@
 endef
 
 define Copy_Binary
-release@BITS@/$$(notdir $(1)): $(1)
+release$(BITS)/$$(notdir $(1)): $(1)
 	$$(call checkdir,$$@)
 	$(ECHO_CMD)cp -f $$^ $$@
 endef
@@ -98,7 +98,7 @@ winburp.nsi:
 	cp ../installer/ConfigPage4.ini .
 	cp ../installer/DumpLog.nsh .
 
-$(INSTALL_EXE): winburp.nsi $(addprefix release@BITS@/,$(BURP_BINARIES) $(DEPKGS_BINARIES) $(MINGW_LIBS))
+$(INSTALL_EXE): winburp.nsi $(addprefix release$(BITS)/,$(BURP_BINARIES) $(DEPKGS_BINARIES) $(MINGW_LIBS))
 	NSISDIR=$(NSIS_DIR) \
 	$(NSIS_DIR)/makensis -V3 $(DEFINES) winburp.nsi
 

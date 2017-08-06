@@ -225,7 +225,7 @@ static int run_test_confs(struct conf **confs, const char *client)
 		goto end;
 	confs_init(cconfs);
 	if(set_string(cconfs[OPT_CNAME], client)
-	  || set_string(cconfs[OPT_PEER_VERSION], VERSION)
+	  || set_string(cconfs[OPT_PEER_VERSION], PACKAGE_VERSION)
 	  || conf_load_clientconfdir(confs, cconfs))
 		goto end;
 	confs_dump(cconfs, CONF_FLAG_CC_OVERRIDE|CONF_FLAG_INCEXC);
@@ -262,7 +262,7 @@ error:
 }
 
 #ifdef HAVE_WIN32
-#define main BurpMain
+#define main RealMain
 #endif
 #ifndef UTEST
 static
@@ -365,7 +365,7 @@ int real_main(int argc, char *argv[])
 				strip=atoi(optarg);
 				break;
 			case 'v':
-				printf("%s-%s\n", progname(), VERSION);
+				printf("%s-%s\n", progname(), PACKAGE_VERSION);
 				ret=0;
 				goto end;
 			case 'x':

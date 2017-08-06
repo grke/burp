@@ -16,7 +16,7 @@ int authorise_client(struct asfd *asfd,
 	char hello[256]="";
 	struct iobuf *rbuf=asfd->rbuf;
 
-	snprintf(hello, sizeof(hello), "hello:%s", VERSION);
+	snprintf(hello, sizeof(hello), "hello:%s", PACKAGE_VERSION);
 	if(asfd->write_str(asfd, CMD_GEN, hello))
 	{
 		logp("problem with auth\n");

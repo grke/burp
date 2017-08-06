@@ -282,7 +282,7 @@ int run_bsparse(int argc, char *argv[])
 				configfile=optarg;
 				break;
 			case 'V':
-				logfmt("%s-%s\n", prog, VERSION);
+				logfmt("%s-%s\n", prog, PACKAGE_VERSION);
 				return 0;
 			case 'h':
 			case '?':

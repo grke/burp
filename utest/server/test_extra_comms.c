@@ -173,7 +173,7 @@ static void setup_feature_write_problem(struct asfd *asfd,
 	int r=0; int w=0;
 	const char *features;
 	enum protocol protocol=PROTO_AUTO;
-	common_confs(cconfs, VERSION, protocol);
+	common_confs(cconfs, PACKAGE_VERSION, protocol);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "extra_comms_begin");
 	features=get_features(protocol, /*srestore*/0, NULL/*version*/);
 	asfd_assert_write(asfd, &w, -1, CMD_GEN, features);
@@ -209,7 +209,7 @@ static void setup_send_features_proto(struct asfd *asfd,
 static void setup_send_features_proto_auto(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto(asfd, confs, cconfs, PROTO_AUTO, VERSION);
+	setup_send_features_proto(asfd, confs, cconfs, PROTO_AUTO, PACKAGE_VERSION);
 }
 
 static void setup_send_features_proto_auto_old_client(struct asfd *asfd,
@@ -221,7 +221,7 @@ static void setup_send_features_proto_auto_old_client(struct asfd *asfd,
 static void setup_send_features_proto1(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto(asfd, confs, cconfs, PROTO_1, VERSION);
+	setup_send_features_proto(asfd, confs, cconfs, PROTO_1, PACKAGE_VERSION);
 }
 
 static void setup_send_features_proto1_old_client(struct asfd *asfd,
@@ -233,7 +233,7 @@ static void setup_send_features_proto1_old_client(struct asfd *asfd,
 static void setup_send_features_proto2(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto(asfd, confs, cconfs, PROTO_2, VERSION);
+	setup_send_features_proto(asfd, confs, cconfs, PROTO_2, PACKAGE_VERSION);
 }
 
 static void setup_send_features_proto2_old_client(struct asfd *asfd,
@@ -247,7 +247,7 @@ static void setup_send_features_proto_auto_auto(struct asfd *asfd,
 {
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		PROTO_AUTO, &r, &w, VERSION, /*srestore*/0);
+		PROTO_AUTO, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "protocol=0");
 	asfd_assert_write(asfd, &w, 0, CMD_ERROR,
 		"Client is trying to use protocol=0, which is unknown\n");
@@ -270,7 +270,7 @@ static void setup_send_features_proto_proto(struct asfd *asfd,
 static void setup_send_features_proto_auto_1(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto_proto(asfd, confs, cconfs, VERSION,
+	setup_send_features_proto_proto(asfd, confs, cconfs, PACKAGE_VERSION,
 		PROTO_AUTO, PROTO_1);
 }
 
@@ -284,7 +284,7 @@ static void setup_send_features_proto_auto_1_old_client(struct asfd *asfd,
 static void setup_send_features_proto_auto_2(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto_proto(asfd, confs, cconfs, VERSION,
+	setup_send_features_proto_proto(asfd, confs, cconfs, PACKAGE_VERSION,
 		PROTO_AUTO, PROTO_2);
 }
 
@@ -304,7 +304,7 @@ static void setup_send_features_proto_x_y(struct asfd *asfd,
 	char cliproto[16]="";
 	snprintf(cliproto, sizeof(cliproto), "protocol=%d", (int)c_protocol);
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		s_protocol, &r, &w, VERSION, /*srestore*/0);
+		s_protocol, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, cliproto);
 	snprintf(msg, sizeof(msg), "Client is trying to use protocol=%d but server is set to protocol=%d\n", (int)c_protocol, (int)s_protocol);
 	asfd_assert_write(asfd, &w, 0, CMD_ERROR, msg);
@@ -341,14 +341,14 @@ static void setup_send_features_proto_2_1(struct asfd *asfd,
 static void setup_send_features_proto_1_1(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto_proto(asfd, confs, cconfs, VERSION,
+	setup_send_features_proto_proto(asfd, confs, cconfs, PACKAGE_VERSION,
 		PROTO_1, PROTO_1);
 }
 
 static void setup_send_features_proto_2_2(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-	setup_send_features_proto_proto(asfd, confs, cconfs, VERSION,
+	setup_send_features_proto_proto(asfd, confs, cconfs, PACKAGE_VERSION,
 		PROTO_2, PROTO_2);
 }
 
@@ -418,7 +418,7 @@ static void setup_unexpected_cmd_feature(struct asfd *asfd,
 {
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		PROTO_AUTO, &r, &w, VERSION, /*srestore*/0);
+		PROTO_AUTO, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_FILE, "blah");
 }
 
@@ -428,7 +428,7 @@ static void setup_simple(struct asfd *asfd,
 {
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		PROTO_AUTO, &r, &w, VERSION, srestore);
+		PROTO_AUTO, &r, &w, PACKAGE_VERSION, srestore);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, feature);
 	setup_send_features_proto_end(asfd, &r, &w);
 }
@@ -444,7 +444,7 @@ static void setup_autoupgrade(struct asfd *asfd,
 {
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		PROTO_AUTO, &r, &w, VERSION, /*srestore*/0);
+		PROTO_AUTO, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "autoupgrade:some_os");
 	// Server does not have an autoupgrade_dir set.
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "do not autoupgrade");
@@ -457,7 +457,7 @@ static void setup_rshash_blake2(struct asfd *asfd,
 #ifdef RS_DEFAULT_STRONG_LEN
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		PROTO_AUTO, &r, &w, VERSION, /*srestore*/0);
+		PROTO_AUTO, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "rshash=blake2");
 #else
 	setup_simple(asfd, confs, cconfs, "rshash=blake2", /*srestore*/0);
@@ -530,7 +530,7 @@ static void setup_unexpected_feature(struct asfd *asfd,
 {
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		PROTO_AUTO, &r, &w, VERSION, /*srestore*/0);
+		PROTO_AUTO, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "somenonsense");
 }
 
@@ -556,7 +556,7 @@ static void setup_srestore(struct asfd *asfd,
 	struct strlist *strlist=NULL;
 	build_file(SRESTORE_FILE, "");
 	setup_send_features_proto_begin(asfd, confs, cconfs, PROTO_AUTO,
-		r, w, VERSION, /*srestore*/1);
+		r, w, PACKAGE_VERSION, /*srestore*/1);
 
 	strlist_add(&strlist, "/some/path", 1);
 	// This needs to get unset.
@@ -602,7 +602,7 @@ static void setup_sincexc_ok(struct asfd *asfd,
 {
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs, PROTO_AUTO,
-		&r, &w, VERSION, /*srestore*/0);
+		&r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "sincexc ok");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "cross_all_filesystems = 0");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "read_all_fifos = 0");
@@ -628,7 +628,7 @@ static void setup_incexc(struct asfd *asfd,
 {
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs, PROTO_AUTO,
-		&r, &w, VERSION, /*srestore*/0);
+		&r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "incexc");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "incexc ok");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "include = /some/path");
@@ -650,7 +650,7 @@ static void setup_orig_client_not_existing(struct asfd *asfd,
 	int r=0; int w=0;
 
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		PROTO_AUTO, &r, &w, VERSION, /*srestore*/0);
+		PROTO_AUTO, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "orig_client=cli2");
 }
 
@@ -660,11 +660,11 @@ static void setup_orig_client(struct asfd *asfd,
 	int r=0; int w=0;
 	enum protocol protocol=PROTO_AUTO;
 
-	common_confs(cconfs, VERSION, protocol);
+	common_confs(cconfs, PACKAGE_VERSION, protocol);
 	set_string(confs[OPT_CLIENTCONFDIR], CLIENTCONFDIR);
 	build_file(CLIENTCONFDIR "/cli2", "restore_client=" TESTCLIENT);
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		protocol, &r, &w, VERSION, /*srestore*/0);
+		protocol, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "orig_client=cli2");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "orig_client ok");
 	setup_send_features_proto_end(asfd, &r, &w);
@@ -689,11 +689,11 @@ static void setup_orig_client_srestore(struct asfd *asfd,
 	build_file(SRESTORE_FILE, "overwrite=1");
 	build_file(SRESTORE_FILE_CLI2, "strip=1");
 
-	common_confs(cconfs, VERSION, protocol);
+	common_confs(cconfs, PACKAGE_VERSION, protocol);
 	set_string(confs[OPT_CLIENTCONFDIR], CLIENTCONFDIR);
 	build_file(CLIENTCONFDIR "/cli2", "restore_client=" TESTCLIENT);
 	setup_send_features_proto_begin(asfd, confs, cconfs,
-		protocol, &r, &w, VERSION, /*srestore*/1);
+		protocol, &r, &w, PACKAGE_VERSION, /*srestore*/1);
 
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "srestore ok");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "overwrite = 1");

@@ -120,7 +120,7 @@ static void do_test_ca_server_maybe_sign(
 	asfd=asfd_mock_setup(&areads, &awrites);
 	setup_asfd_callback(asfd);
 
-	set_string(cconfs[OPT_PEER_VERSION], VERSION);
+	set_string(cconfs[OPT_PEER_VERSION], PACKAGE_VERSION);
 	set_string(cconfs[OPT_CNAME], "utestclient");
 	result=ca_server_maybe_sign_client_cert(asfd, globalcs, cconfs);
 	fail_unless(result==expected_ret);

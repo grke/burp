@@ -913,7 +913,7 @@ int run_bedup(int argc, char *argv[])
 				nonburp=1;
 				break;
 			case 'V':
-				logfmt("%s-%s\n", prog, VERSION);
+				logfmt("%s-%s\n", prog, PACKAGE_VERSION);
 				return 0;
 			case 'v':
 				verbose=1;

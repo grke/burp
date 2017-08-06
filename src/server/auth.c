@@ -88,14 +88,14 @@ void version_warn(struct asfd *asfd, struct conf **confs, struct conf **cconfs)
 {
 	const char *cname=get_string(cconfs[OPT_CNAME]);
 	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
-	if(!peer_version || strcmp(peer_version, VERSION))
+	if(!peer_version || strcmp(peer_version, PACKAGE_VERSION))
 	{
 		char msg[256]="";
 
 		if(!peer_version || !*peer_version)
 			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", cname?cname:"unknown");
 		else
-			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cname?cname:"unknown", peer_version, VERSION);
+			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cname?cname:"unknown", peer_version, PACKAGE_VERSION);
 		if(confs) logw(asfd, get_cntr(confs), "%s\n", msg);
 		logp("WARNING: %s\n", msg);
 	}
@@ -146,7 +146,7 @@ int authorise_server(struct asfd *asfd,
 		// if the client version is recent enough.
 		if(min_ver<=cli_ver)
 		 snprintf(whoareyou, sizeof(whoareyou),
-			"whoareyou:%s", VERSION);
+			"whoareyou:%s", PACKAGE_VERSION);
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, whoareyou)

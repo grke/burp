@@ -1344,7 +1344,7 @@ static int win32_chmod_old(const char *path, mode_t mode)
 		attr=p_GetFileAttributesW((LPCWSTR)pwszBuf);
 		if(attr!=INVALID_FILE_ATTRIBUTES)
 		{
-			// Use Burp mappings defined in stat() above.
+			// Use mappings defined in stat() above.
 			if(!(mode & (S_IRUSR|S_IRGRP|S_IROTH)))
 				attr |= FILE_ATTRIBUTE_READONLY;
 			else

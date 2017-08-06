@@ -92,6 +92,7 @@ Makefile.inc: ../../burp-cross-tools
 	BUILDDIR=`(pwd)`; \
 	MAINDIR=`(cd ../..;pwd)`; \
 	sed \
+		-e "s^@BITS@^$${BITS}^g" \
 		-e "s^@WIN64@^$${WIN64}^g" \
 		-e "s^@DEPKGS@^$${DEPKGSDIR}^g" \
 		-e "s^@BUILDDIR@^$${BUILDDIR}^g" \
@@ -102,6 +103,4 @@ Makefile.inc: ../../burp-cross-tools
 		-e "s^@MINGW_PREFIX@^$${MINGW_PREFIX}^g" \
 		-e "s^@DLLDIR@^$${DLLDIR}^g" < Makefile.inc.in > $@ ; \
 	mkdir -vp installer$${BITS} ; \
-	sed \
-		-e "s^@BITS@^$${BITS}^g" \
-		< Makefile.installer.in > installer$${BITS}/Makefile
+	cp Makefile.installer installer$${BITS}/Makefile

@@ -14,7 +14,8 @@ DEFINES = \
 	-DUSING_DLL \
 	-DWIN32_VSS \
 	-DWINVER=0x500 \
-	$(HAVES)
+	$(HAVES) \
+	$(PACKAGE_DEFINES)
 
 vpath %.c $(MAINDIR)/src
 vpath %.cpp $(MAINDIR)/src
@@ -122,22 +123,25 @@ CLIENT_LIBS = \
 
 .PHONY: all clean
 
-all: $(BINDIR)/burp.exe $(BINDIR)/burp_ca.bat
+all: $(BINDIR)/$(PACKAGE_TARNAME).exe $(BINDIR)/$(PACKAGE_TARNAME)_ca.bat
 
 clean:
 	@echo "Cleaning `pwd`"
 	$(call clean_obj,$(ALL_OBJS))
-	$(call clean_exe,$(BINDIR)/burp.exe)
+	$(call clean_exe,$(BINDIR)/$(PACKAGE_TARNAME).exe)
 	$(ECHO_CMD)rm -rf $(OBJDIRS)
 
 #
 # Rules
 #
 
-$(BINDIR)/burp.exe: $(CLIENT_OBJS) $(LIBS_BURP)
+$(BINDIR)/$(PACKAGE_TARNAME).exe: $(CLIENT_OBJS) $(LIBS_BURP)
 	$(call link_conapp,$(CLIENT_LIBS))
 
-$(BINDIR)/burp_ca.bat:
-	cp $(MAINDIR)/configs/certs/CA/burp_ca.bat $(BINDIR)
+$(BINDIR)/$(PACKAGE_TARNAME)_ca.bat:
+	sed \
+		-e 's/@name@/$(PACKAGE_TARNAME)/g' \
+		-e 's/@human_name@/$(PACKAGE_NAME)/g' \
+			< $(MAINDIR)/configs/certs/CA/burp_ca.bat.in > $@
 
 include ../Makefile.rules

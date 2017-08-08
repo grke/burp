@@ -44,7 +44,7 @@
 HINSTANCE appInstance;
 bool have_service_api;
 
-extern int BurpMain(int argc, char *argv[]);
+extern int RealMain(int argc, char *argv[]);
 
 // Main Windows entry point.
 int main(int argc, char *argv[])
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		p_SetProcessShutdownParameters(0x100, 0);
 
 	// Call the main code
-	ret=BurpMain(argc, argv);
+	ret=RealMain(argc, argv);
 
 	// Terminate our main message loop
 	PostQuitMessage(0);

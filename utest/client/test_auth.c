@@ -19,7 +19,7 @@ static void tear_down(struct asfd **asfd)
 static void setup_all_ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" PACKAGE_VERSION);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
@@ -30,8 +30,8 @@ static void setup_all_ok(struct asfd *asfd)
 static void setup_all_ok_server_version(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" PACKAGE_VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou:" PACKAGE_VERSION);
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "password");
@@ -41,7 +41,7 @@ static void setup_all_ok_server_version(struct asfd *asfd)
 static void setup_all_ok_server_version_empty(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" PACKAGE_VERSION);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou:");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
@@ -52,8 +52,8 @@ static void setup_all_ok_server_version_empty(struct asfd *asfd)
 static void setup_all_ok_version_warning(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" PACKAGE_VERSION);
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou:" PACKAGE_VERSION);
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "password");
@@ -64,8 +64,8 @@ static void setup_all_ok_version_warning(struct asfd *asfd)
 static void setup_all_ok_version_warning_read_error(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
-	asfd_mock_read(asfd, &r,  0, CMD_GEN, "whoareyou:" VERSION);
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" PACKAGE_VERSION);
+	asfd_mock_read(asfd, &r,  0, CMD_GEN, "whoareyou:" PACKAGE_VERSION);
 	asfd_assert_write(asfd, &w,  0, CMD_GEN, "testclient");
 	asfd_mock_read(asfd, &r,  0, CMD_GEN, "okpassword");
 	asfd_assert_write(asfd, &w,  0, CMD_GEN, "password");
@@ -76,7 +76,7 @@ static void setup_all_ok_version_warning_read_error(struct asfd *asfd)
 static void setup_not_ok(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "hello:" PACKAGE_VERSION);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "whoareyou");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "testclient");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "okpassword");
@@ -87,20 +87,20 @@ static void setup_not_ok(struct asfd *asfd)
 static void setup_write_fail(struct asfd *asfd)
 {
 	int w=0;
-	asfd_assert_write(asfd, &w, -1, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w, -1, CMD_GEN, "hello:" PACKAGE_VERSION);
 }
 
 static void setup_read_fail(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" PACKAGE_VERSION);
 	asfd_mock_read(asfd, &r, -1, CMD_GEN, "whoareyou");
 }
 
 static void setup_read_fail_2(struct asfd *asfd)
 {
 	int r=0; int w=0;
-	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" VERSION);
+	asfd_assert_write(asfd, &w,  0, CMD_GEN, "hello:" PACKAGE_VERSION);
 	asfd_mock_read(asfd, &r,  0, CMD_GEN, "whoareyou");
 	asfd_assert_write(asfd, &w,  0, CMD_GEN, "testclient");
 	asfd_mock_read(asfd, &r, -1, CMD_GEN, "okpassword");
@@ -132,10 +132,10 @@ static void run_test(int expected_ret, const char *expected_server_version,
 START_TEST(test_auth)
 {
 	run_test( 0, NULL,    setup_all_ok);
-	run_test( 0, VERSION, setup_all_ok_server_version);
+	run_test( 0, PACKAGE_VERSION, setup_all_ok_server_version);
 	run_test( 0, "",      setup_all_ok_server_version_empty);
-	run_test( 0, VERSION, setup_all_ok_version_warning);
-	run_test(-1, VERSION, setup_all_ok_version_warning_read_error);
+	run_test( 0, PACKAGE_VERSION, setup_all_ok_version_warning);
+	run_test(-1, PACKAGE_VERSION, setup_all_ok_version_warning_read_error);
 	run_test(-1, NULL,    setup_not_ok);
 	run_test(-1, NULL,    setup_write_fail);
 	run_test(-1, NULL,    setup_read_fail);

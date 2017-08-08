@@ -12,13 +12,13 @@
 
 ECHO_CMD = 
 
-# Main Burp source dir
+# Main source dir
 MAINDIR := @MAINDIR@
 #
 # Build dir -- i.e. normally  src/win32
 BUILDDIR := @BUILDDIR@
 #
-# Dir above Burp where we find depkgs
+# Dir above the main source directory, where we find depkgs
 TOPDIR := @TOPDIR@
 #
 # where we find depkgs
@@ -41,7 +41,11 @@ OBJCPY := $(MINGW_BIN)/$(MINGW_PREFIX)objcopy
 NSIS_DIR := $(DEPKGS)/nsis
 STAB2CV := $(DEPKGS)/tools/bin/stab2cv
 
-VERSION := $(shell awk '/AC_INIT/{print ;exit}' ../../../configure.ac | cut -d ',' -f 2 | sed -e 's/\[//' -e 's/\]//')
+PACKAGE_NAME := $(shell awk '/AC_INIT/{print ;exit}' $(MAINDIR)/configure.ac | cut -d ',' -f 1 | sed -e 's/\[//' -e 's/\]//' -e 's/^AC_INIT.//')
+PACKAGE_VERSION := $(shell awk '/AC_INIT/{print ;exit}' $(MAINDIR)/configure.ac | cut -d ',' -f 2 | sed -e 's/\[//' -e 's/\]//')
+PACKAGE_BUGREPORT := $(shell awk '/AC_INIT/{print ;exit}' $(MAINDIR)/configure.ac | cut -d ',' -f 3 | sed -e 's/\[//' -e 's/\]//')
+PACKAGE_TARNAME := $(shell awk '/AC_INIT/{print ;exit}' $(MAINDIR)/configure.ac | cut -d ',' -f 4 | sed -e 's/\[//' -e 's/\]//')
+PACKAGE_URL := $(shell awk '/AC_INIT/{print ;exit}' $(MAINDIR)/configure.ac | cut -d ',' -f 5 | sed -e 's/\[//' -e 's/\]//' -e 's/.$$//')
 
 WIN64=@WIN64@
 
@@ -94,12 +98,20 @@ LIBS_CHECK := \
 	$(DEPKGS)/lib/libcheck.dll.a
 
 LIBS_BURP := \
-	$(LIBDIR)/libburp.a
+	$(LIBDIR)/libcompat.a
 
 HAVES := \
 	-DHAVE_WIN32 \
 	-DHAVE_ZLIB_H \
 	-DHAVE_LIBZ \
 	-DHAVE_OPENSSL \
-	-DHAVE_PCREPOSIX \
-	-DVERSION="\"$(VERSION)\""
+	-DHAVE_PCREPOSIX
+
+PACKAGE_DEFINES := \
+	-DPACKAGE_NAME="\"$(PACKAGE_NAME)\"" \
+	-DPACKAGE_VERSION="\"$(PACKAGE_VERSION)\"" \
+	-DPACKAGE_BUGREPORT="\"$(PACKAGE_BUGREPORT)\"" \
+	-DPACKAGE_TARNAME="\"$(PACKAGE_TARNAME)\"" \
+	-DPACKAGE_URL="\"$(PACKAGE_URL)\""
+
+BITS := @BITS@

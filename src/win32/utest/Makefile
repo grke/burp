@@ -15,7 +15,8 @@ DEFINES = \
 	-DWIN32_VSS \
 	-DWINVER=0x500 \
 	-DUTEST \
-	$(HAVES)
+	$(HAVES) \
+	$(PACKAGE_DEFINES)
 
 vpath %.c $(MAINDIR)
 vpath %.cpp $(MAINDIR)

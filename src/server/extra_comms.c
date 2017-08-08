@@ -424,7 +424,7 @@ static int vers_init(struct vers *vers, struct conf **cconfs)
 	memset(vers, 0, sizeof(struct vers));
 	return ((vers->min=version_to_long("1.2.7"))<0
 	  || (vers->cli=version_to_long(get_string(cconfs[OPT_PEER_VERSION])))<0
-	  || (vers->ser=version_to_long(VERSION))<0
+	  || (vers->ser=version_to_long(PACKAGE_VERSION))<0
 	  || (vers->feat_list=version_to_long("1.3.0"))<0
 	  || (vers->directory_tree=version_to_long("1.3.6"))<0
 	  || (vers->burp2=version_to_long("2.0.0"))<0

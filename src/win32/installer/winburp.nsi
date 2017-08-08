@@ -1,5 +1,3 @@
-; winburp.nsi
-
 ;
 ; Include the Modern UI
 ;
@@ -15,16 +13,16 @@
 ;
 ; Basics
 ;
-Name "Burp"
-OutFile "${OUT_DIR}\burp-win${BITS}-installer-${VERSION}.exe"
+Name "${PACKAGE_NAME}"
+OutFile "${OUT_DIR}\${PACKAGE_TARNAME}-win${BITS}-installer-${PACKAGE_VERSION}.exe"
 SetCompressor lzma
 !If "$BITS" == "32"
-	InstallDir "$PROGRAMFILES\Burp"
+	InstallDir "$PROGRAMFILES\${PACKAGE_NAME}"
 !Else
-	InstallDir "$PROGRAMFILES64\Burp"
+	InstallDir "$PROGRAMFILES64\${PACKAGE_NAME}"
 !EndIf
 
-InstType "Burp"
+InstType "${PACKAGE_NAME}"
 InstType "Client"
 
 !insertmacro GetParent
@@ -38,7 +36,7 @@ InstType "Client"
 !define      MUI_HEADERIMAGE
 !define      MUI_BGCOLOR                FFFFFF
 
-!define      MUI_WELCOMEPAGE_TITLE      "Welcome to the Burp setup wizard, version ${VERSION}."
+!define      MUI_WELCOMEPAGE_TITLE      "Welcome to the ${PACKAGE_NAME} setup wizard, version ${PACKAGE_VERSION}."
 !InsertMacro MUI_PAGE_WELCOME
 !define      MUI_PAGE_CUSTOMFUNCTION_SHOW PageComponentsShow
 !define      MUI_PAGE_CUSTOMFUNCTION_PRE PageDirectoryPre
@@ -63,7 +61,7 @@ Page custom EnterConfigPage4 LeaveConfigPage4
 !InsertMacro GetParameters
 !InsertMacro GetOptions
 
-DirText "Setup will install Burp ${VERSION} to the directory specified below. To install in a different folder, click Browse and select another folder."
+DirText "Setup will install ${PACKAGE_NAME} ${PACKAGE_VERSION} to the directory specified below. To install in a different folder, click Browse and select another folder."
 
 !InsertMacro MUI_RESERVEFILE_INSTALLOPTIONS
 ;
@@ -288,10 +286,10 @@ Function InstallCommonFiles
 		File "${SRC_DIR}\libyajl.dll"
 		File "${SRC_DIR}\zlib1.dll"
 		File "${SRC_DIR}\libgcc_s_sjlj-1.dll"
-		File "${SRC_DIR}\burp.dll"
+		File "${SRC_DIR}\compat.dll"
 		File "${SRC_DIR}\libcheck-0.dll"
 		File "${SRC_DIR}\openssl.exe"
-		File "${SRC_DIR}\burp_ca.bat"
+		File "${SRC_DIR}\${PACKAGE_TARNAME}_ca.bat"
 		StrCpy $CommonFilesDone 1
 	${EndIf}
 FunctionEnd
@@ -303,10 +301,11 @@ Section "-Initialize"
 	SetShellVarContext all
 
 	; Upgrade consideration. Things always used to get installed in
-	; C:\Program Files\Burp\ but changed to %PROGRAMFILES% in 1.3.11.
-	IfFileExists "C:\Program Files\Burp\burp.conf" resetinstdir donotresetinstdir
+	; C:\Program Files\${PACKAGE_NAME}\ but changed to %PROGRAMFILES%
+	; in 1.3.11.
+	IfFileExists "C:\Program Files\${PACKAGE_NAME}\${PACKAGE_TARNAME}.conf" resetinstdir donotresetinstdir
 resetinstdir:
-	StrCpy $INSTDIR "C:\Program Files\Burp"
+	StrCpy $INSTDIR "C:\Program Files\${PACKAGE_NAME}"
 donotresetinstdir:
 
 	CreateDirectory "$INSTDIR"
@@ -319,15 +318,15 @@ donotresetinstdir:
 ; If /overwrite was given on the command line, allow overwrite of
 ; old configuration.
 	StrCmp $Overwrite 1 overwrite
-	IfFileExists "$INSTDIR\Burp.conf" end
+	IfFileExists "$INSTDIR\${PACKAGE_NAME}.conf" end
 overwrite:
 
 ; Need to create an empty openssl.conf file in order to not have warnings from
-; the burp_ca.bat script.
+; the ${PACKAGE_TARNAME}_ca.bat script.
 	FileOpen $R1 "$INSTDIR\openssl.conf" w
 	FileClose $R1
 
-	FileOpen $R1 "$INSTDIR\burp.conf" w
+	FileOpen $R1 "$INSTDIR\${PACKAGE_TARNAME}.conf" w
 
 !If "$BITS" == "32"
 	StrCpy $R2 "32"
@@ -361,13 +360,13 @@ overwrite:
 	FileWrite $R1 "progress_counter = 1$\r$\n"
 	FileWrite $R1 "nobackup = .nobackup$\r$\n"
 	FileWrite $R1 "lockfile = $ConfDir/lockfile$\r$\n"
-	FileWrite $R1 "ca_burp_ca = $ConfDir/bin/burp_ca.bat$\r$\n"
+	FileWrite $R1 "ca_${PACKAGE_TARNAME}_ca = $ConfDir/bin/${PACKAGE_TARNAME}_ca.bat$\r$\n"
 	FileWrite $R1 "ca_csr_dir = $ConfDir/CA$\r$\n"
 	FileWrite $R1 "ssl_cert_ca = $ConfDir/ssl_cert_ca.pem$\r$\n"
 	FileWrite $R1 "ssl_cert = $ConfDir/ssl_cert-client.pem$\r$\n"
 	FileWrite $R1 "ssl_key = $ConfDir/ssl_cert-client.key$\r$\n"
 	FileWrite $R1 "ssl_key_password = password$\r$\n"
-	FileWrite $R1 "ssl_peer_cn = burpserver$\r$\n"
+	FileWrite $R1 "ssl_peer_cn = ${PACKAGE_TARNAME}server$\r$\n"
 	FileWrite $R1 "server_can_restore = $ConfigServerRestore$\r$\n"
 	FileWrite $R1 "split_vss = 0$\r$\n"
 	FileWrite $R1 "strip_vss = 0$\r$\n"
@@ -391,12 +390,12 @@ overwrite:
 
 	${If} $ConfigPoll != 0
 		; Delete the cron if it already exists.
-		nsExec::Exec 'schtasks /DELETE /TN "burp cron" /F'
-		nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "burp cron" /TR "\"$INSTDIR\bin\burp.exe\" -a t" /SC $ConfigMinuteText /MO $ConfigPoll'
+		nsExec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
+		nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "${PACKAGE_TARNAME} cron" /TR "\"$INSTDIR\bin\${PACKAGE_TARNAME}.exe\" -a t" /SC $ConfigMinuteText /MO $ConfigPoll'
 	${EndIf}
 
 end:
-  DetailPrint "$INSTDIR\burp.conf already exists. Not overwriting."
+  DetailPrint "$INSTDIR\${PACKAGE_TARNAME}.conf already exists. Not overwriting."
 
 SectionEnd
 
@@ -406,7 +405,7 @@ Section "File Service" SecFileDaemon
 	SectionIn 1 2 3
 
 	Call InstallCommonFiles
-	File "${SRC_DIR}\burp.exe"
+	File "${SRC_DIR}\${PACKAGE_TARNAME}.exe"
 	File "${SRC_DIR}\utest.exe"
 SectionEnd
 
@@ -416,20 +415,18 @@ Section "-Finish"
 	Push $R0
 
 	; Write the uninstall keys for Windows.
-	; These are also needed to put burp in the 'Programs' section of the
-	; Control Panel.
-	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "DisplayName" "Burp"
-	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "InstallLocation" "$INSTDIR"
-	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "DisplayVersion" "${VERSION}"
-	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "Publisher" "Graham Keeling"
-	DeleteRegKey  HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp\VersionMajor"
-	DeleteRegKey  HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp\VersionMinor"
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "NoModify" 1
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "NoRepair" 1
-	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "URLUpdateInfo" "http://burp.grke.net"
-	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "URLInfoAbout" "http://burp.grke.net"
-	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "HelpLink" "http://burp.grke.net"
-	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp" "UninstallString" '"$INSTDIR\uninstall.exe"'
+	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "DisplayName" "${PACKAGE_NAME}"
+	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "InstallLocation" "$INSTDIR"
+	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "DisplayVersion" "${PACKAGE_VERSION}"
+	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "Publisher" "Graham Keeling"
+	DeleteRegKey  HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}\VersionMajor"
+	DeleteRegKey  HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}\VersionMinor"
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "NoModify" 1
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "NoRepair" 1
+	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "URLUpdateInfo" "${PACKAGE_URL}"
+	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "URLInfoAbout" "${PACKAGE_URL}"
+	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "HelpLink" "${PACKAGE_URL}"
+	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "UninstallString" '"$INSTDIR\uninstall.exe"'
 	WriteUninstaller "$INSTDIR\Uninstall.exe"
 
 	Pop $R0
@@ -437,7 +434,7 @@ SectionEnd
 
 ; Extra Page descriptions
 
-LangString DESC_SecFileDaemon ${LANG_ENGLISH} "Install Burp on this system."
+LangString DESC_SecFileDaemon ${LANG_ENGLISH} "Install ${PACKAGE_NAME} on this system."
 
 LangString TITLE_ConfigPage1 ${LANG_ENGLISH} "Configuration"
 LangString SUBTITLE_ConfigPage1 ${LANG_ENGLISH} "Set installation configuration."
@@ -455,13 +452,13 @@ LangString SUBTITLE_ConfigPage3 ${LANG_ENGLISH} "Set installation configuration.
 
 ; Uninstall section
 
-UninstallText "This will uninstall Burp. Click Uninstall to continue."
+UninstallText "This will uninstall ${PACKAGE_NAME}. Click Uninstall to continue."
 
 Section "Uninstall"
 	SetShellVarContext all
 
-	; remove the burp cron
-	nsExec::Exec 'schtasks /DELETE /TN "burp cron" /F'
+	; remove the cron
+	nsExec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
 
 	; remove files
 	Delete "$INSTDIR\autoupgrade\*"
@@ -476,8 +473,8 @@ Section "Uninstall"
 	RMDir "$INSTDIR"
 
 	; remove registry keys
-	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Burp"
-	DeleteRegKey HKLM "Software\Burp"
+	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}"
+	DeleteRegKey HKLM "Software\${PACKAGE_NAME}"
 SectionEnd
 
 Function GetSelectedComponents
@@ -532,10 +529,10 @@ Function EnterConfigPage1
 	StrCmp $SkipPages 1 end
 
 	StrCmp $Overwrite 1 overwrite
-	IfFileExists "$INSTDIR\Burp.conf" end
+	IfFileExists "$INSTDIR\${PACKAGE_NAME}.conf" end
 overwrite:
 
-	!insertmacro MUI_HEADER_TEXT "Install burp (page 1 of 4)" ""
+	!insertmacro MUI_HEADER_TEXT "Install ${PACKAGE_TARNAME} (page 1 of 4)" ""
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 2" "State" "$ConfigServerAddress"
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigClientName"
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 8" "State" "$ConfigPassword"
@@ -552,10 +549,10 @@ Function EnterConfigPage2
 	StrCmp $SkipPages 1 end
 
 	StrCmp $Overwrite 1 overwrite
-	IfFileExists "$INSTDIR\Burp.conf" end
+	IfFileExists "$INSTDIR\${PACKAGE_NAME}.conf" end
 overwrite:
 
-	!insertmacro MUI_HEADER_TEXT "Install burp (page 2 of 4)" ""
+	!insertmacro MUI_HEADER_TEXT "Install ${PACKAGE_TARNAME} (page 2 of 4)" ""
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 2" "State" "$ConfigPoll"
 	!insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage2.ini"
 	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPoll "ConfigPage2.ini" "Field 2" State
@@ -568,10 +565,10 @@ Function EnterConfigPage3
 	StrCmp $SkipPages 1 end
 
 	StrCmp $Overwrite 1 overwrite
-	IfFileExists "$INSTDIR\Burp.conf" end
+	IfFileExists "$INSTDIR\${PACKAGE_NAME}.conf" end
 overwrite:
 
-	!insertmacro MUI_HEADER_TEXT "Install burp (page 3 of 4)" ""
+	!insertmacro MUI_HEADER_TEXT "Install ${PACKAGE_TARNAME} (page 3 of 4)" ""
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage3.ini" "Field 2" "State" "$ConfigEncPass"
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage3.ini" "Field 5" "State" "$ConfigAutoupgrade"
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage3.ini" "Field 8" "State" "$ConfigServerRestore"
@@ -588,9 +585,9 @@ Function EnterConfigPage4
 	StrCmp $SkipPages 1 end
 
 	StrCmp $Overwrite 1 overwrite
-	IfFileExists "$INSTDIR\Burp.conf" end
+	IfFileExists "$INSTDIR\${PACKAGE_NAME}.conf" end
 overwrite:
-	!insertmacro MUI_HEADER_TEXT "Install burp (page 4 of 4)" ""
+	!insertmacro MUI_HEADER_TEXT "Install ${PACKAGE_TARNAME} (page 4 of 4)" ""
 	!insertmacro MUI_INSTALLOPTIONS_INITDIALOG "ConfigPage4.ini"
 	Pop $HWND
 

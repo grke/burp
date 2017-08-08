@@ -2,7 +2,8 @@ include ../Makefile.inc
 
 DEFINES = \
 	-DWIN32 \
-	$(HAVES)
+	$(HAVES) \
+	$(PACKAGE_DEFINES)
 
 ######################################################################
 

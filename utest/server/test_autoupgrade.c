@@ -79,13 +79,13 @@ static void setup_files(int script_top, int script_specific, int package)
 	if(script_specific)
 	{
 		snprintf(path, sizeof(path), "%s/%s/%s/script",
-			BASE, OS, VERSION);
+			BASE, OS, PACKAGE_VERSION);
 		build_file(path, "");
 	}
 	if(package)
 	{
 		snprintf(path, sizeof(path), "%s/%s/%s/package",
-			BASE, OS, VERSION);
+			BASE, OS, PACKAGE_VERSION);
 		build_file(path, "");
 	}
 }
@@ -148,7 +148,7 @@ static void setup_broken_package_path(struct asfd *asfd)
 	// This will create a directory where a file should be.
 	char path[256];
 	snprintf(path, sizeof(path), "%s/%s/%s/package/blah",
-		BASE, OS, VERSION);
+		BASE, OS, PACKAGE_VERSION);
 	build_file(path, "");
 	setup_files(1, 0, 0);
 	setup_do_not_autoupgrade(asfd);

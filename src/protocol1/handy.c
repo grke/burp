@@ -41,6 +41,8 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
 	uint8_t enc_iv[9];
 	uint8_t enc_key[256];
 	EVP_CIPHER_CTX *ctx=NULL;
+	const EVP_CIPHER *cipher=EVP_bf_cbc();
+	int key_len;
 	
 	if(!encryption_password)
 	{
@@ -52,10 +54,16 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
 	{
 		// New, good way.
 		uint64_t be_salt=htobe64(salt);
-		EVP_BytesToKey(EVP_bf_cbc(), EVP_sha256(), (uint8_t *)&be_salt,
-			       (const unsigned char *)encryption_password,
-			       strlen(encryption_password),
-			       100, enc_key, enc_iv);
+		const EVP_MD *dgst=EVP_sha256();
+		
+		if(!(key_len=EVP_BytesToKey(cipher, dgst, (uint8_t *)&be_salt,
+		       (const unsigned char *)encryption_password,
+		       strlen(encryption_password),
+		       100, enc_key, enc_iv)))
+		{
+			logp("EVP_BytesToKey failed\n");
+			goto error;
+		}
 	}
 	else
 	{
@@ -68,6 +76,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
 		};
 		memcpy(enc_iv, new_enc, 9);
 		strcpy((char*)enc_key, encryption_password);
+		key_len=strlen(encryption_password);
 	}
 
 	if(!(ctx=(EVP_CIPHER_CTX *)EVP_CIPHER_CTX_new()))
@@ -75,12 +84,16 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
 
 	// Don't set key or IV because we will modify the parameters.
 	EVP_CIPHER_CTX_init(ctx);
-	if(!(EVP_CipherInit_ex(ctx, EVP_bf_cbc(), NULL, NULL, NULL, encrypt)))
+	if(!(EVP_CipherInit_ex(ctx, cipher, NULL, NULL, NULL, encrypt)))
 	{
 		logp("EVP_CipherInit_ex failed\n");
 		goto error;
 	}
-	EVP_CIPHER_CTX_set_key_length(ctx, strlen(encryption_password));
+	if(!EVP_CIPHER_CTX_set_key_length(ctx, key_len))
+	{
+		logp("EVP_CIPHER_CTX_set_key_length failed\n");
+		goto error;
+	}
 	// We finished modifying parameters so now we can set key and IV
 
 	if(!EVP_CipherInit_ex(ctx, NULL, NULL,

@@ -1,3 +1,13 @@
+2017-08-10 Changes in burp-2.1.16:
+  * Fix encryption_password key length issue introduced in 2.1.14.
+    Backups made by 2.1.14 using encryption_password should be considered
+    broken.
+  * Follow AC_INIT defines throughout the codebase, including the Windows
+    installer.
+  * Log strerror(errno) when failing to write a lock.
+  * From deajan:
+    - Add systemd file for running Burp without root privileges.
+
 2017-08-01 Changes in burp-2.1.14:
   * From Marek Szuba:
     - Use pkg-config to detect ncurses.

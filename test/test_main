@@ -417,7 +417,7 @@ add_encryption_off()
 add_encryption_on()
 {
 	add_encryption_off
-	append_client 'encryption_password = 7djh34nmmsd'
+	append_client 'encryption_password = 012345678901234567890123456789'
 }
 
 add_include_off()

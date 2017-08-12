@@ -2075,3 +2075,56 @@ int win32_utime(const char *fname, struct utimbuf *times)
 	if(rval==-1) errno=b_errno_win32;
 	return rval;
 }
+
+int win32_getfsname(const char *path, char *fsname, size_t fsname_size)
+{
+	// I do not think anyone still needs non-Unicode stuff.
+	WCHAR fsname_ucs2[MAX_PATH + 1];
+	{
+		WCHAR *pwsz_path=(WCHAR*)sm_get_pool_memory(PM_FNAME);
+		make_win32_path_UTF8_2_wchar((char**)&pwsz_path, path);
+		int path_len=wcslen(pwsz_path);
+		if (path_len && pwsz_path[path_len-1] != '\\')
+		{
+			pwsz_path=(WCHAR*)sm_check_pool_memory_size((char*)pwsz_path,
+				sizeof(WCHAR)*path_len+sizeof(L"\\"));
+			wcscpy(pwsz_path+path_len++, L"\\");
+		}
+
+		int error;
+		for(;;)
+		{
+			error=GetVolumeInformationW(
+				pwsz_path /* lpRootPathName */,
+				NULL /* lpVolumeNameBuffer */,
+				0 /* nVolumeNameSize */,
+				NULL /* lpVolumeSerialNumber */,
+				NULL /* lpMaximumComponentLength */,
+				NULL /* lpFileSystemFlags */,
+				fsname_ucs2 /* lpFileSystemNameBuffer */,
+				MAX_PATH + 1 /* nFileSystemNameSize */
+			) ? 0 : GetLastError();
+			if(error!=ERROR_DIR_NOT_ROOT)
+				break;
+
+			// We are not in root, let's try upper directory.
+			do --path_len; while(path_len && pwsz_path[path_len-1]!='\\');
+			if (!path_len)
+				break;
+			// Terminate string right after earlier slash.
+			pwsz_path[path_len]=0;
+		}
+		sm_free_pool_memory((char*)pwsz_path);
+
+		if (error)
+		{
+			char used_path[MAX_PATH_UTF8 + 1];
+			wchar_2_UTF8(used_path, (WCHAR*)pwsz_path, sizeof(used_path));
+			fprintf(stderr, "Cannot get volume information for %s: ERR=%d\n",
+				used_path, error);
+			return error;
+		}
+	}
+	wchar_2_UTF8(fsname, fsname_ucs2, fsname_size);
+	return 0;
+}

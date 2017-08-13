@@ -441,47 +441,47 @@ $(configs): Makefile
 $(PACKAGE_TARNAME): main
 	$(AM_V_at)mv -v main $(PACKAGE_TARNAME)
 
-$(PACKAGE_TARNAME).conf: $(srcdir)/configs/client/burp.conf.in
+$(PACKAGE_TARNAME).conf:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/client/burp.conf.in >$@
 
-$(PACKAGE_TARNAME)-server.conf: $(srcdir)/configs/server/burp.conf.in
+$(PACKAGE_TARNAME)-server.conf:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/burp.conf.in >$@
 
-CA.cnf: $(srcdir)/configs/certs/CA/CA.cnf.in
+CA.cnf:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/CA.cnf.in >$@
 
-$(PACKAGE_TARNAME)_ca: $(srcdir)/configs/certs/CA/burp_ca.in
+$(PACKAGE_TARNAME)_ca:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/certs/CA/burp_ca.in >$@
 
-summary_script: $(srcdir)/configs/server/summary_script.in
+summary_script:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/summary_script.in >$@
 
-manpages/bedup.8: $(srcdir)/manpages/bedup.8.in
+manpages/bedup.8:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bedup.8.in >$@
 
-manpages/bsigs.8: $(srcdir)/manpages/bsigs.8.in
+manpages/bsigs.8:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bsigs.8.in >$@
 
-manpages/bsparse.8: $(srcdir)/manpages/bsparse.8.in
+manpages/bsparse.8:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bsparse.8.in >$@
 
-manpages/$(PACKAGE_TARNAME).8: $(srcdir)/manpages/burp.8.in
+manpages/$(PACKAGE_TARNAME).8:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/burp.8.in >$@
 
-manpages/$(PACKAGE_TARNAME)_ca.8: $(srcdir)/manpages/burp_ca.8.in
+manpages/$(PACKAGE_TARNAME)_ca.8:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/burp_ca.8.in >$@
 
-manpages/vss_strip.8: $(srcdir)/manpages/vss_strip.8.in
+manpages/vss_strip.8:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/vss_strip.8.in >$@
 

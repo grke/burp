@@ -111,11 +111,6 @@ int reload(struct conf **confs, const char *conffile, bool firsttime)
 		setup_signals();
 #endif
 
-	// Do not try to change user or group after the first time.
-	if(firsttime && chuser_and_or_chgrp(
-		get_string(confs[OPT_USER]), get_string(confs[OPT_GROUP])))
-			return -1;
-
 	return 0;
 }
 
@@ -485,6 +480,11 @@ int real_main(int argc, char *argv[])
 				break;
 		}
 	}
+
+	// Change privileges after having got the lock, for convenience.
+	if(chuser_and_or_chgrp(
+		get_string(confs[OPT_USER]), get_string(confs[OPT_GROUP])))
+			return -1;
 
 	set_int(confs[OPT_OVERWRITE], forceoverwrite);
 	set_int(confs[OPT_STRIP], strip);

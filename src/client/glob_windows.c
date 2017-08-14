@@ -30,43 +30,30 @@ static void xfree_list(char **list, int size)
  */
 static char **xstrsplit(const char *src, const char *delimiters, size_t *size)
 {
-	int n=1;
-	char *tmp;
+	size_t allocated;
 	char *init=NULL;
 	char **ret=NULL;
 
 	*size=0;
 	if(!(init=strdup_w(src, __func__))) goto end;
-	if(!(tmp=strtok(init, delimiters)))
-	{
-		logp("Found no tokens from %s in %s\n", init, __func__);
+	if(!(ret=(char **)malloc_w((allocated=10)*sizeof(char *), __func__)))
 		goto end;
-	}
-	if(!(ret=(char **)calloc_w(10, sizeof(char *), __func__)))
-		goto end;
-	while(tmp)
+	for(char *tmp=strtok(init, delimiters); tmp; tmp=strtok(NULL, delimiters))
 	{
-		if((int)*size>n*10)
+		// Check if space is present for another token and terminating NULL.
+		if(allocated<*size+2)
 		{
 			if(!(ret=(char **)realloc_w(ret,
-				n++*10*sizeof(char *), __func__)))
+				(allocated=*size+11)*sizeof(char *), __func__)))
 					return NULL;
 		}
-		if(!(ret[*size]=strdup_w(tmp, __func__)))
+		if(!(ret[(*size)++]=strdup_w(tmp, __func__)))
 		{
 			ret=NULL;
 			goto end;
 		}
-		tmp=strtok(NULL, delimiters);
-		(*size)++;
 	}
-	if((int)*size+1>n*10)
-	{
-		if(!(ret=(char **)realloc_w(ret,
-			(n*10+1)*sizeof(char *), __func__)))
-				return NULL;
-	}
-	ret[*size+1]=NULL;
+	ret[*size]=NULL;
 
 end:
 	free_w(&init);

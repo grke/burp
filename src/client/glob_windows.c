@@ -21,6 +21,13 @@ static void xfree_list(char **list, int size)
 	free_w(list);
 }
 
+/*
+ * Returns NULL-terminated list of tokens found in string src,
+ * also sets *size to number of tokens found (list length without final NULL).
+ * On failure returns NULL. List itself and tokens are dynamically allocated.
+ * Calls to strtok with delimiters in second argument are used (see its docs),
+ * but neither src nor delimiters arguments are altered.
+ */
 static char **xstrsplit(const char *src, const char *delimiters, size_t *size)
 {
 	int n=1;

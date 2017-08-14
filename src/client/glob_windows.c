@@ -21,7 +21,7 @@ static void xfree_list(char **list, int size)
 	free_w(list);
 }
 
-static char **xstrsplit(const char *src, const char *token, size_t *size)
+static char **xstrsplit(const char *src, const char *delimiters, size_t *size)
 {
 	int n=1;
 	char *tmp;
@@ -30,7 +30,7 @@ static char **xstrsplit(const char *src, const char *token, size_t *size)
 
 	*size=0;
 	if(!(init=strdup_w(src, __func__))) goto end;
-	if(!(tmp=strtok(init, token)))
+	if(!(tmp=strtok(init, delimiters)))
 	{
 		logp("Found no tokens from %s in %s\n", init, __func__);
 		goto end;
@@ -50,7 +50,7 @@ static char **xstrsplit(const char *src, const char *token, size_t *size)
 			ret=NULL;
 			goto end;
 		}
-		tmp=strtok(NULL, token);
+		tmp=strtok(NULL, delimiters);
 		(*size)++;
 	}
 	if((int)*size+1>n*10)

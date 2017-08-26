@@ -8,5 +8,6 @@ fi
 (echo "To: $2"
  echo "From: @name@"
  echo "Subject: $3"
+ echo "Content-Type: text/plain; charset=utf-8"
  @sbindir@/@name@ -c "$1" -a S
  echo) | /usr/sbin/sendmail -t

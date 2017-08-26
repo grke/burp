@@ -21,39 +21,45 @@ static void xfree_list(char **list, int size)
 	free_w(list);
 }
 
-/*
- * Returns NULL-terminated list of tokens found in string src,
- * also sets *size to number of tokens found (list length without final NULL).
- * On failure returns NULL. List itself and tokens are dynamically allocated.
- * Calls to strtok with delimiters in second argument are used (see its docs),
- * but neither src nor delimiters arguments are altered.
- */
-static char **xstrsplit(const char *src, const char *delimiters, size_t *size)
+static char **xstrsplit(const char *src, const char *token, size_t *size)
 {
-	size_t allocated;
+	int n=1;
+	char *tmp;
 	char *init=NULL;
 	char **ret=NULL;
 
 	*size=0;
 	if(!(init=strdup_w(src, __func__))) goto end;
-	if(!(ret=(char **)malloc_w((allocated=10)*sizeof(char *), __func__)))
-		goto end;
-	for(char *tmp=strtok(init, delimiters); tmp; tmp=strtok(NULL, delimiters))
+	if(!(tmp=strtok(init, token)))
 	{
-		// Check if space is present for another token and terminating NULL.
-		if(allocated<*size+2)
+		logp("Found no tokens from %s in %s\n", init, __func__);
+		goto end;
+	}
+	if(!(ret=(char **)calloc_w(10, sizeof(char *), __func__)))
+		goto end;
+	while(tmp)
+	{
+		if((int)*size>n*10)
 		{
 			if(!(ret=(char **)realloc_w(ret,
-				(allocated=*size+11)*sizeof(char *), __func__)))
+				n++*10*sizeof(char *), __func__)))
 					return NULL;
 		}
-		if(!(ret[(*size)++]=strdup_w(tmp, __func__)))
+		if(!(ret[*size]=strdup_w(tmp, __func__)))
 		{
 			ret=NULL;
 			goto end;
 		}
+		tmp=strtok(NULL, token);
+		(*size)++;
 	}
-	ret[*size]=NULL;
+	if((int)*size+1>n*10)
+	{
+		if(!(ret=(char **)realloc_w(ret,
+			(n*10+1)*sizeof(char *), __func__)))
+				return NULL;
+	}
+	ret[*size+1]=NULL;
 
 end:
 	free_w(&init);

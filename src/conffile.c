@@ -1395,12 +1395,16 @@ static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
 	return 0;
 }
 
-// FIX THIS: need to unit test this.
 int conf_switch_to_orig_client(struct conf **globalcs,
 	struct conf **cconfs, const char *orig_client)
 {
 	int ret=-1;
 	struct conf **sconfs=NULL;
+
+	// If we are already the wanted client, no need to switch.
+	if(!strcmp(get_string(cconfs[OPT_CNAME]), orig_client))
+		return 0;
+
 	if(!(sconfs=confs_alloc())
 	  || confs_init(sconfs)) goto end;
 	if(set_string(sconfs[OPT_CNAME], orig_client))

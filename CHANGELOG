@@ -1,3 +1,24 @@
+2017-09-11 Changes in burp-2.1.18:
+  * From qm2k:
+    - Fix buffer overrun and slightly refactor xstrsplit in glob_windows.c
+    - Add Content-Type to notification emails.
+    - Windows exclude_fs functionality.
+  * Add Content-Type to summary emails.
+  * Fix missing newlines on WARNING/MESSAGEs logged by the server.
+  * Make 'orig_client=<the same client>' work OK.
+  * Drop privileges after main pidfile creation (instead of before).
+  * Be slightly more helpful with SSL error messages.
+
+2017-08-10 Changes in burp-2.1.16:
+  * Fix encryption_password key length issue introduced in 2.1.14.
+    Backups made by 2.1.14 using encryption_password should be considered
+    broken.
+  * Follow AC_INIT defines throughout the codebase, including the Windows
+    installer.
+  * Log strerror(errno) when failing to write a lock.
+  * From deajan:
+    - Add systemd file for running Burp without root privileges.
+
 2017-08-01 Changes in burp-2.1.14:
   * From Marek Szuba:
     - Use pkg-config to detect ncurses.

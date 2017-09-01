@@ -51,7 +51,13 @@ echo 'NOTE: The following is the latest version of the man page.
 Some features may be different in the version of burp that you are using.
 
 ' >> "$manpage"
-man ../manpages/burp.8 | col -b | sed -e 's/</\&lt;/g' -e 's/>/\&gt;/g' >> "$manpage"
+man ../manpages/burp.8.in | col -b | sed \
+	-e 's/@name@/burp/g' \
+	-e 's/@human_name@/Burp/g' \
+	-e 's#@package_url@#http://burp.grke.net/#g' \
+	-e 's/</\&lt;/g' \
+	-e 's/>/\&gt;/g' \
+		>> "$manpage"
 end_page "$manpage"
 
 quickstart=content/docs/quickstart.content

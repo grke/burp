@@ -1,4 +1,10 @@
 <p>
+2017-09-01 burp-2.1.18 is released.
+<BR>
+Burp now has its main server TCP port 4971 official registered with the IANA.
+</p>
+
+<p>
 2017-08-10 burp-2.1.16 is released.
 <BR>
 This is an early release in order to fix a problem with encryption_password in 2.1.14 clients. Backups made with clients using 2.1.14 and encryption_password should be considered broken.

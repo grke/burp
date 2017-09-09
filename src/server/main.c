@@ -589,28 +589,6 @@ static int daemonise(void)
 	return 0;
 }
 
-static int relock(struct lock *lock)
-{
-	int tries=5;
-	for(; tries>0; tries--)
-	{
-		lock_get(lock);
-		switch(lock->status)
-		{
-			case GET_LOCK_GOT: return 0;
-			case GET_LOCK_NOT_GOT:
-				sleep(2);
-				break;
-			case GET_LOCK_ERROR:
-			default:
-				logp("Error when trying to re-get lockfile after forking.\n");
-				return -1;
-		}
-	}
-	logp("Unable to re-get lockfile after forking.\n");
-	return -1;
-}
-
 static int extract_client_name(struct asfd *asfd)
 {
 	size_t l;
@@ -868,7 +846,10 @@ int server(struct conf **confs, const char *conffile,
 
 	if(get_int(confs[OPT_FORK]) && get_int(confs[OPT_DAEMON]))
 	{
-		if(daemonise() || relock(lock)) goto error;
+		if(daemonise()
+		// Need to write the new pid to the already open lock fd.
+		  || lock_write_pid_and_prog(lock))
+			goto error;
 	}
 
 	ssl_load_globals();

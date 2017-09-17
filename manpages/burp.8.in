@@ -747,6 +747,7 @@ Additionally, the following options can be overridden here for each client:
 \fBenabled\fR
 \fBprotocol\fR
 \fBdirectory\fR
+\fBclient_lockdir\fR
 \fBdirectory_tree\fR
 \fBtimestamp_format\fR
 \fBpassword_check\fR

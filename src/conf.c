@@ -451,7 +451,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_MAX_STATUS_CHILDREN:
 	  return sc_lst(c[o], 0, 0, "max_status_children");
 	case OPT_CLIENT_LOCKDIR:
-	  return sc_str(c[o], 0, 0, "client_lockdir");
+	  return sc_str(c[o], 0, CONF_FLAG_CC_OVERRIDE, "client_lockdir");
 	case OPT_UMASK:
 	  return sc_mod(c[o], 0022, 0, "umask");
 	case OPT_MAX_HARDLINKS:

@@ -691,6 +691,7 @@ START_TEST(test_clientconfdir_conf)
 		"timer_arg=/timer/arg1\n"
 		"timer_arg=/timer/arg2\n"
 		"label=qwe\n"
+		"client_lockdir=/tmp/blah\n"
 		NOTIFY_CONF
 	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
@@ -756,6 +757,8 @@ START_TEST(test_clientconfdir_conf)
 	assert_strlist(&s, "rty", 0);
 	assert_strlist(&s, "xyz", 0);
 	notify_assertions(cconfs);
+	ck_assert_str_eq(get_string(globalcs[OPT_CLIENT_LOCKDIR]), "/tmp/blah");
+	ck_assert_str_eq(get_string(cconfs[OPT_CLIENT_LOCKDIR]), "/tmp/blah");
 	tear_down(&globalcs, &cconfs);
 }
 END_TEST

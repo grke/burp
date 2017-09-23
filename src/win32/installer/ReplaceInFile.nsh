@@ -36,7 +36,7 @@ Function RIF
       Push "$R3"                    ; (hair)stack
       Push "$1"                     ; needle
       Push "$0"                     ; blood
-      Call StrReplace               ; do the bartwalk
+      Call StrRep               ; do the bartwalk
       StrCpy $R4 "$R3"              ; remember previous state
       Pop $R3                       ; gimme s.th. back in return!
       StrCmp "$R3" "$R4" +1 RIF_sar ; loop, might change again!

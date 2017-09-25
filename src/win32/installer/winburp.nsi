@@ -74,6 +74,7 @@ Var ConfDir
 Var OptSilent
 Var Overwrite
 Var SkipPages
+Var NoPowerMode
 
 Var CommonFilesDone
 
@@ -175,6 +176,7 @@ Function .onInit
 	StrCpy $OptSilent 0
 	StrCpy $Overwrite 0
 	StrCpy $SkipPages 0
+	StrCpy $NoPowerMode 0
 	StrCpy $CommonFilesDone 0
 	StrCpy $AutomaticInstall 1
 	StrCpy $PreviousComponents 0
@@ -256,6 +258,10 @@ Function .onInit
 	${GetOptions} $R0 "/skippages" $R1
 	IfErrors +2
 	StrCpy $SkipPages 1
+	ClearErrors
+	${GetOptions} $R0 "/nopowermode" $R1
+	IfErrors +2
+	StrCpy $NoPowerMode 1
 	ClearErrors
 	${GetOptions} $R0 "/include" $R1
 	IfErrors +2
@@ -395,17 +401,19 @@ overwrite:
 		nsExec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
 		; Create a new task
 		nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "${PACKAGE_TARNAME} cron" /TR "\"$INSTDIR\bin\${PACKAGE_TARNAME}.exe\" -a t" /SC $ConfigMinuteText /MO $ConfigPoll'
-		; Export it as temporary XML file
-		nsExec::Exec 'schtasks /QUERY /TN "${PACKAGE_TARNAME} cron" /XML > "$INSTDIR\burp_task.xml"'
-		; Modify the XML file in order to remove battery limitations
-		!insertmacro _ReplaceInFile "$INSTDIR\burp_task.xml" <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries> <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-		!insertmacro _ReplaceInFile "$INSTDIR\burp_task.xml" <StopIfGoingOnBatteries>true</StopIfGoingOnBatteries> <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
-		; Delete the former task
-		nsexec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
-		; Insert the modified XML
-		nsexec::ExecToLog 'schtasks /CREATE /TN "${PACKAGE_TARNAME} cron" /XML "$INSTDIR\burp_task.xml" /RU SYSTEM /F'
-		; Remove temporary XML file
-		Delete "$INSTDIR\burp_task.xml"
+		${If} $NoPowerMode != 0
+			; Export it as temporary XML file
+			nsExec::Exec 'schtasks /QUERY /TN "${PACKAGE_TARNAME} cron" /XML > "$INSTDIR\burp_task.xml"'
+			; Modify the XML file in order to remove battery limitations
+			!insertmacro _ReplaceInFile "$INSTDIR\burp_task.xml" <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries> <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+			!insertmacro _ReplaceInFile "$INSTDIR\burp_task.xml" <StopIfGoingOnBatteries>true</StopIfGoingOnBatteries> <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+			; Delete the former task
+			nsexec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
+			; Insert the modified XML
+			nsexec::ExecToLog 'schtasks /CREATE /TN "${PACKAGE_TARNAME} cron" /XML "$INSTDIR\burp_task.xml" /RU SYSTEM /F'
+			; Remove temporary XML file
+			Delete "$INSTDIR\burp_task.xml"
+		${EndIf}
 	${EndIf}
 
 end:

@@ -6,16 +6,26 @@ distribution's package management system.
 
 You need to compile burp on a unix-based operating system first. Make sure that
 you have openssl, zlib, librsync, uthash and yajl libraries and development
-libraries installed. With debian or ubuntu, this command should install them
-for you:
-
+libraries installed. 
+With debian or ubuntu, this command should install them for you:
 apt-get install make pkg-config check g++ \
 	librsync-dev libz-dev libssl-dev uthash-dev libyajl-dev
 
-(If you are checking out directly from git, you will also need to get some
+With RHEL or CentOS, this command should install them for you:
+yum install make gcc gcc-c++ bzip2 pkgconfig \
+        librsync-devel libzip-devel openssl-devel uthash-devel yajl-devel libacl-devel ncurses-devel openssl-perl
+
+If you are checking out directly from git, you will also need to get some
 extra packages in order to generate the configure file:
+Debian / Ubunutu:
 apt-get install autoconf automake libtool
-autoreconf -vif)
+
+RHEL / CentOS:
+yum install autoconf automake libtool
+
+Then launch the following at the base directory of burp sources:
+autoreconf -vif
+
 
 Change to the burp source directory and run:
 

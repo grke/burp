@@ -1,3 +1,12 @@
+2017-10-01 Changes in burp-2.1.20:
+  * On server daemonise(), rewrite the pid/prog to the lockfile
+    without trying to open it a second time. This should avoid permission
+    problems after chuser/chgrp.
+  * Fix for 'success notification on failed backup'.
+  * Check fileno() for errors in asfd.c.
+  * List the mtime instead of the more recent of mtime/ctime.
+  * Fix client_lockdir option.
+
 2017-09-01 Changes in burp-2.1.18:
   * From qm2k:
     - Fix buffer overrun and slightly refactor xstrsplit in glob_windows.c

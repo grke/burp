@@ -187,7 +187,12 @@ Function .onInit
 
 	StrCpy $ConfigServerAddress		"10.0.0.1"
 	StrCpy $ConfigServerPort              "4971"
-	StrCpy $ConfigClientName              "clientname"
+	ReadRegStr $0 HKLM "System\CurrentControlSet\Control\ComputerName\ComputerName" "ComputerName"
+	${If} $0 == ""
+		StrCpy $ConfigClientName 	"clientname"
+	${Else}
+		StrCpy $ConfigClientName $0
+	${EndIf}
 	StrCpy $ConfigPassword                "abcdefgh"
 	StrCpy $ConfigPoll                    "20"
 	StrCpy $ConfigAutoupgrade		"0"

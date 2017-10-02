@@ -403,16 +403,16 @@ overwrite:
 		nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "${PACKAGE_TARNAME} cron" /TR "\"$INSTDIR\bin\${PACKAGE_TARNAME}.exe\" -a t" /SC $ConfigMinuteText /MO $ConfigPoll'
 		${If} $NoPowerMode != 0
 			; Export it as temporary XML file
-			nsExec::Exec 'schtasks /QUERY /TN "${PACKAGE_TARNAME} cron" /XML > "$INSTDIR\burp_task.xml"'
+			nsExec::Exec 'schtasks /QUERY /TN "${PACKAGE_TARNAME} cron" /XML > "$INSTDIR\${PACKAGE_TARNAME}_task.xml"'
 			; Modify the XML file in order to remove battery limitations
-			!insertmacro _ReplaceInFile "$INSTDIR\burp_task.xml" <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries> <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
-			!insertmacro _ReplaceInFile "$INSTDIR\burp_task.xml" <StopIfGoingOnBatteries>true</StopIfGoingOnBatteries> <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+			!insertmacro _ReplaceInFile "$INSTDIR\${PACKAGE_TARNAME}_task.xml" <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries> <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+			!insertmacro _ReplaceInFile "$INSTDIR\${PACKAGE_TARNAME}_task.xml" <StopIfGoingOnBatteries>true</StopIfGoingOnBatteries> <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
 			; Delete the former task
 			nsexec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
 			; Insert the modified XML
-			nsexec::ExecToLog 'schtasks /CREATE /TN "${PACKAGE_TARNAME} cron" /XML "$INSTDIR\burp_task.xml" /RU SYSTEM /F'
+			nsexec::ExecToLog 'schtasks /CREATE /TN "${PACKAGE_TARNAME} cron" /XML "$INSTDIR\${PACKAGE_TARNAME}_task.xml" /RU SYSTEM /F'
 			; Remove temporary XML file
-			Delete "$INSTDIR\burp_task.xml"
+			Delete "$INSTDIR\${PACKAGE_TARNAME}_task.xml"
 		${EndIf}
 	${EndIf}
 

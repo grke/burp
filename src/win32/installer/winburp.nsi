@@ -9,7 +9,6 @@
 !include "StrFunc.nsh"
 !include "WinMessages.nsh"
 !include "NsDialogs.nsh"
-!include "StrRep.nsh"
 !include "ReplaceInFile.nsh"
 
 ;
@@ -74,7 +73,6 @@ Var ConfDir
 Var OptSilent
 Var Overwrite
 Var SkipPages
-Var NoPowerMode
 
 Var CommonFilesDone
 
@@ -83,6 +81,7 @@ Var ConfigServerPort
 Var ConfigClientName
 Var ConfigPassword
 Var ConfigPoll
+Var ConfigNoPowerMode
 Var ConfigAutoupgrade
 Var ConfigMinuteText
 Var ConfigServerRestore
@@ -176,7 +175,6 @@ Function .onInit
 	StrCpy $OptSilent 0
 	StrCpy $Overwrite 0
 	StrCpy $SkipPages 0
-	StrCpy $NoPowerMode 0
 	StrCpy $CommonFilesDone 0
 	StrCpy $AutomaticInstall 1
 	StrCpy $PreviousComponents 0
@@ -194,6 +192,7 @@ Function .onInit
 	StrCpy $ConfigClientName              "clientname"
 	StrCpy $ConfigPassword                "abcdefgh"
 	StrCpy $ConfigPoll                    "20"
+	StrCpy $ConfigNoPowerMode		"0"
 	StrCpy $ConfigAutoupgrade		"0"
 	; The commands that you have to give the Windows scheduler change
 	; depending upon your language. 'MINUTE' works for English.
@@ -235,6 +234,10 @@ Function .onInit
 	IfErrors +2
 	StrCpy $ConfigPoll $R1
 	ClearErrors
+	${GetOptions} $R0 "/nopowermode" $R1
+	IfErrors +2
+	StrCpy $ConfigNoPowerMode 1
+	ClearErrors
 	${GetOptions} $R0 "/autoupgrade=" $R1
 	IfErrors +2
 	StrCpy $ConfigAutoupgrade $R1
@@ -258,10 +261,6 @@ Function .onInit
 	${GetOptions} $R0 "/skippages" $R1
 	IfErrors +2
 	StrCpy $SkipPages 1
-	ClearErrors
-	${GetOptions} $R0 "/nopowermode" $R1
-	IfErrors +2
-	StrCpy $NoPowerMode 1
 	ClearErrors
 	${GetOptions} $R0 "/include" $R1
 	IfErrors +2
@@ -401,7 +400,7 @@ overwrite:
 		nsExec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
 		; Create a new task
 		nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "${PACKAGE_TARNAME} cron" /TR "\"$INSTDIR\bin\${PACKAGE_TARNAME}.exe\" -a t" /SC $ConfigMinuteText /MO $ConfigPoll'
-		${If} $NoPowerMode != 0
+		${If} $ConfigNoPowerMode != 0
 			; Export it as temporary XML file
 			nsExec::Exec 'schtasks /QUERY /TN "${PACKAGE_TARNAME} cron" /XML > "$INSTDIR\${PACKAGE_TARNAME}_task.xml"'
 			; Modify the XML file in order to remove battery limitations

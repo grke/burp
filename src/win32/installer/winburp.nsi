@@ -401,15 +401,15 @@ overwrite:
 		; Create a new task
 		nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "${PACKAGE_TARNAME} cron" /TR "\"$INSTDIR\bin\${PACKAGE_TARNAME}.exe\" -a t" /SC $ConfigMinuteText /MO $ConfigPoll'
 		${If} $ConfigNoPowerMode != 0
-			; Export it as temporary XML file
-			nsExec::Exec 'schtasks /QUERY /TN "${PACKAGE_TARNAME} cron" /XML > "$INSTDIR\${PACKAGE_TARNAME}_task.xml"'
+			; Export it as temporary XML file (ugly hack to make command be able to write to stdout)
+			ExecWait '$SYSDIR\cmd.exe /C schtasks /QUERY /TN "${PACKAGE_TARNAME} cron" /XML > "$INSTDIR\${PACKAGE_TARNAME}_task.xml"'
 			; Modify the XML file in order to remove battery limitations
 			!insertmacro _ReplaceInFile "$INSTDIR\${PACKAGE_TARNAME}_task.xml" <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries> <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
 			!insertmacro _ReplaceInFile "$INSTDIR\${PACKAGE_TARNAME}_task.xml" <StopIfGoingOnBatteries>true</StopIfGoingOnBatteries> <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
 			; Delete the former task
-			nsexec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
+			nsExec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
 			; Insert the modified XML
-			nsexec::ExecToLog 'schtasks /CREATE /TN "${PACKAGE_TARNAME} cron" /XML "$INSTDIR\${PACKAGE_TARNAME}_task.xml" /RU SYSTEM /F'
+			nsExec::ExecToLog 'schtasks /CREATE /TN "${PACKAGE_TARNAME} cron" /XML "$INSTDIR\${PACKAGE_TARNAME}_task.xml" /RU SYSTEM /F'
 			; Remove temporary XML file
 			Delete "$INSTDIR\${PACKAGE_TARNAME}_task.xml"
 		${EndIf}

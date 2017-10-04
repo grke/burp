@@ -410,8 +410,9 @@ overwrite:
 			nsExec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
 			; Insert the modified XML
 			nsExec::ExecToLog 'schtasks /CREATE /TN "${PACKAGE_TARNAME} cron" /XML "$INSTDIR\${PACKAGE_TARNAME}_task.xml" /RU SYSTEM /F'
-			; Remove temporary XML file
+			; Remove temporary XML file (and .old file created by ReplaceInFile)
 			Delete "$INSTDIR\${PACKAGE_TARNAME}_task.xml"
+			Delete "$INSTDIR\${PACKAGE_TARNAME}_task.xml.old"
 		${EndIf}
 	${EndIf}
 

@@ -575,8 +575,10 @@ overwrite:
 
 	!insertmacro MUI_HEADER_TEXT "Install ${PACKAGE_TARNAME} (page 2 of 4)" ""
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 2" "State" "$ConfigPoll"
+	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 5" "State" "$ConfigNoPowerMode"
 	!insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage2.ini"
 	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPoll "ConfigPage2.ini" "Field 2" State
+	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigNoPowerMode "ConfigPage2.ini" "Field 5" State
 
 end:
 

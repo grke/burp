@@ -9,6 +9,7 @@
 !include "StrFunc.nsh"
 !include "WinMessages.nsh"
 !include "NsDialogs.nsh"
+!include "ReplaceInFile.nsh"
 
 ;
 ; Basics
@@ -80,6 +81,7 @@ Var ConfigServerPort
 Var ConfigClientName
 Var ConfigPassword
 Var ConfigPoll
+Var ConfigNoPowerMode
 Var ConfigAutoupgrade
 Var ConfigMinuteText
 Var ConfigServerRestore
@@ -190,6 +192,7 @@ Function .onInit
 	StrCpy $ConfigClientName              "clientname"
 	StrCpy $ConfigPassword                "abcdefgh"
 	StrCpy $ConfigPoll                    "20"
+	StrCpy $ConfigNoPowerMode		"0"
 	StrCpy $ConfigAutoupgrade		"0"
 	; The commands that you have to give the Windows scheduler change
 	; depending upon your language. 'MINUTE' works for English.
@@ -230,6 +233,10 @@ Function .onInit
 	${GetOptions} $R0 "/poll=" $R1
 	IfErrors +2
 	StrCpy $ConfigPoll $R1
+	ClearErrors
+	${GetOptions} $R0 "/nopowermode" $R1
+	IfErrors +2
+	StrCpy $ConfigNoPowerMode 1
 	ClearErrors
 	${GetOptions} $R0 "/autoupgrade=" $R1
 	IfErrors +2
@@ -391,7 +398,22 @@ overwrite:
 	${If} $ConfigPoll != 0
 		; Delete the cron if it already exists.
 		nsExec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
+		; Create a new task
 		nsExec::ExecToLog 'schtasks /CREATE /RU SYSTEM /TN "${PACKAGE_TARNAME} cron" /TR "\"$INSTDIR\bin\${PACKAGE_TARNAME}.exe\" -a t" /SC $ConfigMinuteText /MO $ConfigPoll'
+		${If} $ConfigNoPowerMode != 0
+			; Export it as temporary XML file (ugly hack to make command be able to write to stdout)
+			ExecWait '$SYSDIR\cmd.exe /C schtasks /QUERY /TN "${PACKAGE_TARNAME} cron" /XML > "$INSTDIR\${PACKAGE_TARNAME}_task.xml"'
+			; Modify the XML file in order to remove battery limitations
+			!insertmacro _ReplaceInFile "$INSTDIR\${PACKAGE_TARNAME}_task.xml" <DisallowStartIfOnBatteries>true</DisallowStartIfOnBatteries> <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+			!insertmacro _ReplaceInFile "$INSTDIR\${PACKAGE_TARNAME}_task.xml" <StopIfGoingOnBatteries>true</StopIfGoingOnBatteries> <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+			; Delete the former task
+			nsExec::Exec 'schtasks /DELETE /TN "${PACKAGE_TARNAME} cron" /F'
+			; Insert the modified XML
+			nsExec::ExecToLog 'schtasks /CREATE /TN "${PACKAGE_TARNAME} cron" /XML "$INSTDIR\${PACKAGE_TARNAME}_task.xml" /RU SYSTEM /F'
+			; Remove temporary XML file (and .old file created by ReplaceInFile)
+			Delete "$INSTDIR\${PACKAGE_TARNAME}_task.xml"
+			Delete "$INSTDIR\${PACKAGE_TARNAME}_task.xml.old"
+		${EndIf}
 	${EndIf}
 
 end:
@@ -554,8 +576,10 @@ overwrite:
 
 	!insertmacro MUI_HEADER_TEXT "Install ${PACKAGE_TARNAME} (page 2 of 4)" ""
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 2" "State" "$ConfigPoll"
+	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage2.ini" "Field 5" "State" "$ConfigNoPowerMode"
 	!insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage2.ini"
 	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPoll "ConfigPage2.ini" "Field 2" State
+	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigNoPowerMode "ConfigPage2.ini" "Field 5" State
 
 end:
 

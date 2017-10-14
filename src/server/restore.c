@@ -72,15 +72,19 @@ static int check_srestore(struct conf **confs, const char *path)
 	return 0;
 }
 
-int want_to_restore(int srestore, struct sbuf *sb,
-	regex_t *regex, struct conf **cconfs)
+static int want_to_restore(int srestore, struct sbuf *sb,
+	regex_t *regex, enum action act , struct conf **cconfs)
 {
+	if(act==ACTION_RESTORE
+	  && sbuf_is_vssdata(sb) && !get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
+		return 0;
 	return (!srestore || check_srestore(cconfs, sb->path.buf))
 	  && (!regex || regex_check(regex, sb->path.buf));
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
-	regex_t *regex, int srestore, struct conf **cconfs, struct bu *bu)
+	regex_t *regex, int srestore, struct conf **cconfs, enum action act,
+	struct bu *bu)
 {
 	int ars=0;
 	int ret=-1;
@@ -111,7 +115,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 		}
 		else
 		{
-			if(want_to_restore(srestore, sb, regex, cconfs))
+			if(want_to_restore(srestore, sb, regex, act, cconfs))
 			{
 				cntr_add_phase1(cntr, sb->path.cmd, 0);
 				if(sb->endfile.buf)
@@ -512,7 +516,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			sbuf_free_content(need_data);
 		}
 
-		if(want_to_restore(srestore, sb, regex, cconfs))
+		if(want_to_restore(srestore, sb, regex, act, cconfs))
 		{
 			if(restore_ent(asfd, &sb, slist,
 				bu, act, sdirs, cntr_status, cconfs,
@@ -652,7 +656,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	// This is the equivalent of a phase1 scan during backup.
 
 	if(setup_cntr(asfd, manifest,
-		regex, srestore, cconfs, bu))
+		regex, srestore, cconfs, act, bu))
 			goto end;
 
 	if(!manifest_count)

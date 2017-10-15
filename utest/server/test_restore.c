@@ -439,29 +439,33 @@ START_TEST(test_proto2_interrupt_on_non_filedata)
 }
 END_TEST
 
-static void setup_windows_restore_endfile(struct asfd *asfd)
+static void setup_windows_restore_endfile(struct asfd *asfd,
+	int client_is_windows)
 {
 	int r=0; int w=0;
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore_stream");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restore_stream_ok");
 	asfd_mock_read_no_op(asfd, &r, 10);
 
-	asfd_assert_write(asfd, &w, 0, CMD_ATTRIBS,
-		" J A A A EP4 B A A A A A A BYMChy BYMChy BXih7j A W");
-	asfd_assert_write(asfd, &w, 0, CMD_FILE, "C:/$Recycle.Bin");
-	asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
+	if(client_is_windows)
+	{
+		asfd_assert_write(asfd, &w, 0, CMD_ATTRIBS,
+			" J A A A EP4 B A A A A A A BYMChy BYMChy BXih7j A W");
+		asfd_assert_write(asfd, &w, 0, CMD_FILE, "C:/$Recycle.Bin");
+		asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
 
-	asfd_assert_write(asfd, &w, 0, CMD_ATTRIBS,
-		" J A A A EP4 B A A A BAA A A BYMCnk BYMCnk BXic5o A A");
-	asfd_assert_write(asfd, &w, 0, CMD_FILE, "C:/");
-	asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
+		asfd_assert_write(asfd, &w, 0, CMD_ATTRIBS,
+			" J A A A EP4 B A A A BAA A A BYMCnk BYMCnk BXic5o A A");
+		asfd_assert_write(asfd, &w, 0, CMD_FILE, "C:/");
+		asfd_assert_write(asfd, &w, 0, CMD_END_FILE, "0:0");
+	}
 
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend");
 	asfd_mock_read_no_op(asfd, &r, 10);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend ok");
 }
 
-START_TEST(test_proto2_windows_restore_endfile)
+static void do_test_proto2_windows_restore_endfile(int client_is_windows)
 {
 	struct async *as;
 	struct asfd *asfd;
@@ -477,6 +481,7 @@ START_TEST(test_proto2_windows_restore_endfile)
 	hexmap_init();
 	setup(protocol, &as, &sdirs, &confs);
 	set_string(confs[OPT_BACKUP], "1");
+	set_int(confs[OPT_CLIENT_IS_WINDOWS], client_is_windows);
 	set_protocol(confs, protocol);
 	asfd=asfd_mock_setup(&reads, &writes);
 	as->asfd_add(as, asfd);
@@ -505,7 +510,7 @@ START_TEST(test_proto2_windows_restore_endfile)
 
 	manio_close(&manio);
 
-	setup_windows_restore_endfile(asfd);
+	setup_windows_restore_endfile(asfd, client_is_windows);
 
 	fail_unless(do_restore_server(
 		asfd,
@@ -518,6 +523,17 @@ START_TEST(test_proto2_windows_restore_endfile)
 	sbuf_free(&sb);
 	free_w(&dir_for_notify);
 	tear_down(&as, &asfd, &sdirs, &confs);
+}
+
+START_TEST(test_proto2_windows_restore_endfile_windows)
+{
+	do_test_proto2_windows_restore_endfile(/*client_is_windows*/1);
+}
+END_TEST
+
+START_TEST(test_proto2_windows_restore_endfile_not_windows)
+{
+	do_test_proto2_windows_restore_endfile(/*client_is_windows*/0);
 }
 END_TEST
 
@@ -537,7 +553,8 @@ Suite *suite_server_restore(void)
 	tcase_add_test(tc_core, test_proto2_interrupt);
 	tcase_add_test(tc_core, test_proto2_interrupt_no_match);
 	tcase_add_test(tc_core, test_proto2_interrupt_on_non_filedata);
-	tcase_add_test(tc_core, test_proto2_windows_restore_endfile);
+	tcase_add_test(tc_core, test_proto2_windows_restore_endfile_windows);
+	tcase_add_test(tc_core, test_proto2_windows_restore_endfile_not_windows);
 
 	suite_add_tcase(s, tc_core);
 

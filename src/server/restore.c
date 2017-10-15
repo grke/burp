@@ -76,8 +76,15 @@ static int want_to_restore(int srestore, struct sbuf *sb,
 	regex_t *regex, enum action act , struct conf **cconfs)
 {
 	if(act==ACTION_RESTORE
-	  && sbuf_is_vssdata(sb) && !get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
-		return 0;
+	  && !get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
+	{
+		// Do not send VSS data to non-windows.
+		if(sbuf_is_vssdata(sb))
+			return 0;
+		// Do not send VSS directory data to non-windows.
+		if(S_ISDIR(sb->statp.st_mode) && sbuf_is_filedata(sb))
+			return 0;
+	}
 	return (!srestore || check_srestore(cconfs, sb->path.buf))
 	  && (!regex || regex_check(regex, sb->path.buf));
 }
@@ -306,7 +313,8 @@ int restore_ent(struct asfd *asfd,
 			  slist))
 				goto end;
 			if(get_protocol(cconfs)==PROTO_2
-			  && sbuf_is_filedata(xb))
+			  && sbuf_is_filedata(xb)
+			  && get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
 			{
 				// Windows directories need endfile to be sent.
 				if(asfd->write(asfd, &xb->endfile))
@@ -372,7 +380,8 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 			if(restore_sbuf_protocol2(asfd, sb, act,
 				get_cntr(cconfs), NULL))
 					goto end;
-			if(sbuf_is_filedata(sb))
+			if(sbuf_is_filedata(sb)
+			  && get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
 			{
 				// Windows directories need endfile to be sent.
 				if(asfd->write(asfd, &sb->endfile))
@@ -393,6 +402,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 {
 	int ret=-1;
 	int last_ent_was_dir=0;
+	int last_ent_was_skipped=0;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 	struct manio *manio=NULL;
@@ -469,7 +479,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		{
 			if(sb->endfile.buf)
 			{
-				if(act==ACTION_RESTORE)
+				if(act==ACTION_RESTORE && !last_ent_was_skipped)
 				{
 					if(last_ent_was_dir)
 					{
@@ -518,19 +528,24 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 
 		if(want_to_restore(srestore, sb, regex, act, cconfs))
 		{
+			last_ent_was_skipped=0;
 			if(restore_ent(asfd, &sb, slist,
 				bu, act, sdirs, cntr_status, cconfs,
 				need_data, &last_ent_was_dir, manifest))
 					goto end;
 		}
-		else if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
+		else
 		{
-			// Add it to the list of filedata that was not
-			// restored.
-			struct f_link **bucket=NULL;
-			if(!linkhash_search(&sb->statp, &bucket)
-			  && linkhash_add(sb->path.buf, &sb->statp, bucket))
-				goto end;
+			last_ent_was_skipped=1;
+			if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
+			{
+				// Add it to the list of filedata that was not
+				// restored.
+				struct f_link **bucket=NULL;
+				if(!linkhash_search(&sb->statp, &bucket)
+				  && linkhash_add(sb->path.buf, &sb->statp, bucket))
+					goto end;
+			}
 		}
 
 		sbuf_free_content(sb);

@@ -337,10 +337,28 @@ int attribs_set(struct asfd *asfd, const char *path,
 	{
 		struct berrno be;
 		berrno_init(&be);
-		logw(asfd, cntr,
-			"Unable to set file owner of %s to %d:%d: ERR=%s\n",
+		char msg[256]="";
+
+		snprintf(msg, sizeof(msg),
+			"Unable to set file owner of %s to %d:%d: ERR=%s",
 			path, statp->st_uid, statp->st_gid,
 			berrno_bstrerror(&be, errno));
+
+		if(errno==EPERM)
+		{
+			static int do_owner_warning=1;
+			if(getuid()!=0)
+			{
+				if(!do_owner_warning)
+					return -1;
+
+				logw(asfd, cntr, "%s - possibly because you are not root. Will suppress subsequent messages of this type.\n", msg);
+				do_owner_warning=0;
+				return -1;
+			}
+		}
+		logw(asfd, cntr, "%s\n", msg);
+
 		return -1;
 	}
 

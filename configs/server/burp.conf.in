@@ -13,7 +13,8 @@ max_children = 5
 
 # Think carefully before changing the status port address, as it can be used
 # to view the contents of backups.
-#status_address = 127.0.0.1
+# Special value 'localhost' includes both ::1 and 127.0.0.1.
+#status_address = localhost
 # If you do not wish to run a status server at all, comment status_port out.
 status_port = 4972
 max_status_children = 5

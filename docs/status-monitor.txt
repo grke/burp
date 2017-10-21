@@ -69,7 +69,7 @@ IPv4, use the --disable-ipv6 configure option).
 
 Burp-2 will listen for local connections by default. You can set the
 'status_address' option in /etc/burp/burp-server.conf to explicitly choose the
-listen address. This also lets you choose IPv4 or IPv6 at run time.
+listen address.
 
 Once you start the burp server, you may check the status address and port
 by running a command like this:

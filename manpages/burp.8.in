@@ -225,8 +225,8 @@ Defines the main TCP address that the server listens on. The default is either '
 \fBport=[port number]\fR
 Defines the main TCP port that the server listens on. Specify multiple 'port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_children' value.
 .TP
-\fBstatus_address=[address]\fR
-Defines the main TCP address that the server listens on for status requests. The default is either '::1' or '127.0.0.1', dependent upon compile time options.
+\fBstatus_address=[address|localhost]\fR
+Defines the main TCP address that the server listens on for status requests. The default is special value 'localhost' that includes both '::1' (if available) and '127.0.0.1' (always).
 .TP
 \fBstatus_port=[port number]\fR
 Defines the TCP port that the server listens on for status requests. Comment this out to have no status server. Specify multiple 'status_port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_status_children' value.

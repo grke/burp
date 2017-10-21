@@ -183,6 +183,17 @@ static int init_listen_sockets(const char *address, struct strlist *ports,
 	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
 {
 	struct strlist *p;
+	if(!strcmp(address, "localhost")) {
+		// If we only support "localhost" here, we can skip
+		// gethostbyname call due to RFC 6761.
+#ifdef HAVE_IPV6
+		address="::1";
+		for(p=ports; p; p=p->next)
+			// Ignore errors for IPv6 attempt.
+			init_listen_socket(address, p, mainas, fdtype, desc);
+#endif
+		address="127.0.0.1";
+	}
 	for(p=ports; p; p=p->next)
 	{
 		if(init_listen_socket(address, p, mainas, fdtype, desc))

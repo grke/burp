@@ -490,7 +490,7 @@ do_subst = ( sed \
   -e 's,[@]runstatedir[@],$(runstatedir),g' \
   -e 's,[@]sbindir[@],$(sbindir),g' \
   -e 's,[@]scriptdir[@],$(scriptdir),g' \
-  -e 's,[@]server_address[@],::1,g' \
+  -e 's,[@]server_address[@],localhost,g' \
   -e 's,[@]sysconfdir[@],$(sysconfdir),g' \
   -e 's,[@]name[@],$(PACKAGE_TARNAME),g' \
   -e 's,[@]package_url[@],$(PACKAGE_URL),g' \

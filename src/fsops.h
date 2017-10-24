@@ -30,6 +30,8 @@ extern int entries_in_directory_alphasort(const char *path,
 	char ***nl, int *count, int atime);
 extern int filter_dot(const struct dirent *d);
 
+extern int files_equal(const char *opath, const char *npath, int compressed);
+
 #ifndef HAVE_WIN32
 extern int mksock(const char *path);
 

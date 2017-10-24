@@ -1,3 +1,20 @@
+2017-10-01 Changes in burp-2.1.22:
+  * Limit 'set file owner' warnings on restore when not root
+  * On restore, don't send Windows VSS directory data to non-Windows clients.
+  * On restore, don't send to split VSS data to non-Windows.
+  * Don't overwrite the client config file on certificate exchange if there
+    were no changes.
+  * From josvo:
+    - Use ComputerName from Windows registry as suggested cname.
+  * From deajan:
+    - Added /nopowermode option to the Windows installer, with checkbox.
+      This allows you to run timed backups when the laptop is not plugged in.
+    - Update README and src/win32/README files.
+    - Update Windows cross-tools and depkgs README file.
+  * Upgrade Windows depkgs to librsync-1.0.1.
+  * Upgrade Windows depkgs to pcre-8.41.
+  * Upgrade Windows depkgs to zlib-1.2.11.
+
 2017-10-01 Changes in burp-2.1.20:
   * On server daemonise(), rewrite the pid/prog to the lockfile
     without trying to open it a second time. This should avoid permission

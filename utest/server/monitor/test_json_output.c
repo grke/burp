@@ -258,41 +258,10 @@ START_TEST(test_json_send_client_specific)
 }
 END_TEST
 
-#define FULL_CHUNK	4096
-
 static void do_assert_files_equal(const char *opath, const char *npath,
 	int compressed)
 {
-	size_t ogot;
-	size_t ngot;
-	unsigned int i=0;
-	struct fzp *ofp;
-	struct fzp *nfp;
-	static char obuf[FULL_CHUNK];
-	static char nbuf[FULL_CHUNK];
-
-	if(compressed)
-	{
-		fail_unless((ofp=fzp_gzopen(opath, "rb"))!=NULL);
-		fail_unless((nfp=fzp_gzopen(npath, "rb"))!=NULL);
-	}
-	else
-	{
-		fail_unless((ofp=fzp_open(opath, "rb"))!=NULL);
-		fail_unless((nfp=fzp_open(npath, "rb"))!=NULL);
-	}
-
-	while(1)
-	{
-		ogot=fzp_read(ofp, obuf, FULL_CHUNK);
-		ngot=fzp_read(nfp, nbuf, FULL_CHUNK);
-		fail_unless(ogot==ngot);
-		for(i=0; i<ogot; i++)
-			fail_unless(obuf[i]==nbuf[i]);
-		if(ogot<FULL_CHUNK) break;
-	}
-	fzp_close(&ofp);
-	fzp_close(&nfp);
+	fail_unless(files_equal(opath, npath, compressed)==1);
 }
 
 void assert_files_equal(const char *opath, const char *npath)

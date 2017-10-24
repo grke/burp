@@ -471,6 +471,61 @@ int entries_in_directory_alphasort(const char *path, char ***nl,
 	return entries_in_directory(path, nl, count, atime, my_alphasort);
 }
 
+#define FULL_CHUNK      4096
+
+int files_equal(const char *opath, const char *npath, int compressed)
+{
+	int ret=0;
+	size_t ogot;
+	size_t ngot;
+	unsigned int i=0;
+	struct fzp *ofp=NULL;
+	struct fzp *nfp=NULL;
+	static char obuf[FULL_CHUNK];
+	static char nbuf[FULL_CHUNK];
+
+	if(compressed)
+	{
+		ofp=fzp_gzopen(opath, "rb");
+		nfp=fzp_gzopen(npath, "rb");
+	}
+	else
+	{
+		ofp=fzp_open(opath, "rb");
+		nfp=fzp_open(npath, "rb");
+	}
+
+	if(!ofp && !nfp)
+	{
+		ret=1;
+		goto end;
+	}
+	if(!ofp && nfp)
+		goto end;
+	if(!nfp && ofp)
+		goto end;
+
+	while(1)
+	{
+		ogot=fzp_read(ofp, obuf, FULL_CHUNK);
+		ngot=fzp_read(nfp, nbuf, FULL_CHUNK);
+		if(ogot!=ngot)
+			goto end;
+		for(i=0; i<ogot; i++)
+		{
+			if(obuf[i]!=nbuf[i])
+				goto end;
+		}
+		if(ogot<FULL_CHUNK)
+			break;
+	}
+	ret=1;
+end:
+	fzp_close(&ofp);
+	fzp_close(&nfp);
+	return ret;
+}
+
 #ifndef HAVE_WIN32
 int mksock(const char *path)
 {

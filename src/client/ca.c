@@ -64,7 +64,6 @@ static int rewrite_client_conf(struct conf **confs)
 	const char *conffile=get_string(confs[OPT_CONFFILE]);
 	const char *ssl_peer_cn=get_string(confs[OPT_SSL_PEER_CN]);
 
-	logp("Rewriting conf file: %s\n", conffile);
 	snprintf(p, sizeof(p), ".%d", getpid());
 	if(!(tmp=prepend(conffile, p)))
 		goto end;
@@ -102,6 +101,17 @@ static int rewrite_client_conf(struct conf **confs)
 		logp("error closing %s in %s\n", tmp, __func__);
 		goto end;
 	}
+
+	if(files_equal(conffile, tmp, 0/*compressed*/))
+	{
+		// No need to overwrite if there were no differences.
+		ret=0;
+		unlink(tmp);
+		goto end;
+	}
+
+	logp("Rewriting conf file: %s\n", conffile);
+
 	// Nasty race conditions going on here. However, the new config
 	// file will get left behind, so at worse you will have to move
 	// the new file into the correct place by hand. Or delete everything
@@ -118,7 +128,7 @@ end:
 	fzp_close(&dp);
 	if(ret)
 	{
-		logp("Rewrite failed\n");
+		logp("%s with %s failed\n", __func__, conffile);
 		unlink(tmp);
 	}
 	free_w(&tmp);

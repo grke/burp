@@ -74,6 +74,16 @@ if(wbuf->cmd==CMD_APPEND)
 printf("%d %d\n", wbuf->len, expected->len);
 printf("w %s - '%c:%s' '%c:%s'\n", asfd->desc, wbuf->cmd, wbuf->buf,
 		expected->cmd, expected->buf);
+{
+	char *c;
+printf("HERE:\n");
+	for(c=wbuf->buf; c!=wbuf->buf+wbuf->len; c++)
+	{
+		printf("0x%02X ", *c);
+	}
+printf("\n");
+	
+}
 	fail_unless(wbuf->len==expected->len);
 	fail_unless(wbuf->cmd==expected->cmd);
 	fail_unless(!memcmp(expected->buf, wbuf->buf, wbuf->len));

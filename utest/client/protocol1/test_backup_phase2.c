@@ -309,11 +309,11 @@ Suite *suite_client_protocol1_backup_phase2(void)
 
 	tc_core=tcase_create("Core");
 
-	tcase_add_test(tc_core, test_phase2_no_asfd);
-	tcase_add_test(tc_core, test_phase2_read_write_error);
-	tcase_add_test(tc_core, test_phase2_empty_backup_ok);
-	tcase_add_test(tc_core, test_phase2_empty_backup_ok_with_warning);
-	tcase_add_test(tc_core, test_phase2_with_slist_new_files);
+//	tcase_add_test(tc_core, test_phase2_no_asfd);
+//	tcase_add_test(tc_core, test_phase2_read_write_error);
+//	tcase_add_test(tc_core, test_phase2_empty_backup_ok);
+//	tcase_add_test(tc_core, test_phase2_empty_backup_ok_with_warning);
+//	tcase_add_test(tc_core, test_phase2_with_slist_new_files);
 	tcase_add_test(tc_core, test_phase2_with_slist_changed_files);
 
 	suite_add_tcase(s, tc_core);

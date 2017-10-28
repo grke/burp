@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 autoreconf -vif
 if [ "$TRAVIS_OS_NAME" = "linux" ] ; then

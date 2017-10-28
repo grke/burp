@@ -315,6 +315,7 @@ Suite *suite_client_protocol1_backup_phase2(void)
 //	tcase_add_test(tc_core, test_phase2_empty_backup_ok_with_warning);
 //	tcase_add_test(tc_core, test_phase2_with_slist_new_files);
 	tcase_add_test(tc_core, test_phase2_with_slist_changed_files);
+printf("rs_librsync_version: %s\n", rs_librsync_version);
 
 	suite_add_tcase(s, tc_core);
 

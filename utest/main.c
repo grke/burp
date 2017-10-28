@@ -62,7 +62,7 @@ int main(void)
 	srunner_add_suite(sr, suite_client_protocol2_backup_phase2());
 	srunner_add_suite(sr, suite_client_restore());
 
-	// These compile for Windows, but has an error.
+	// These compile for Windows, but have an error.
 	srunner_add_suite(sr, suite_attribs());
 	srunner_add_suite(sr, suite_conffile());
 

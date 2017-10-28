@@ -36,7 +36,8 @@ install:
 script:
   - autoreconf -vif
   - test "$TRAVIS_OS_NAME" = "linux" && ./configure || ./configure --with-openssl=/usr/local/opt/openssl
-  - test "$TRAVIS_OS_NAME" = "linux" && make check  || make check DISTCHECK_CONFIGURE_FLAGS="--with-openssl=/usr/local/opt/openssl"
+  - test "$TRAVIS_OS_NAME" = "linux" && make -j3 runner  || make -j3 runner DISTCHECK_CONFIGURE_FLAGS="--with-openssl=/usr/local/opt/openssl"
+  - test "$TRAVIS_OS_NAME" = "linux" && ./runner
 
 after_failure:
   - tail burp-*/_build/sub/test-suite.log

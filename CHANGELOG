@@ -1,12 +1,14 @@
 2017-10-01 Changes in burp-2.1.22:
-  * Fix travis for osx, where brew is now installing librsync 2.0.1.
   * On certificate exchange, do not rewrite the client config file if there
     are no changes.
   * Limit 'set file owner' warnings on restore when not root
   * On restore, don't send Windows VSS directory data to non-Windows clients.
   * On restore, don't send to split VSS data to non-Windows.
-  * Don't overwrite the client config file on certificate exchange if there
-    were no changes.
+  * Fix travis for osx, where brew is now installing librsync 2.0.1.
+  * Add 'monitor_exe' client option, in order to set where to look for the
+    burp executable when forking a monitor client. This might be needed on
+    systems that don't have any sensible way to self-determine a process' own
+    path, such as openbsd.
   * From josvo:
     - Use ComputerName from Windows registry as suggested cname.
   * From deajan:

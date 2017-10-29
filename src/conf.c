@@ -474,6 +474,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
           return sc_int(c[o], 0, 0, "ca_crl_check");
 	case OPT_MONITOR_LOGFILE:
 	  return sc_str(c[o], 0, 0, "monitor_logfile");
+	case OPT_MONITOR_EXE:
+	  return sc_str(c[o], 0, 0, "monitor_exe");
 	case OPT_CNAME:
 	  return sc_str(c[o], 0, 0, "cname");
 	case OPT_CNAME_LOWERCASE:

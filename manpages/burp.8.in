@@ -647,6 +647,9 @@ Path to autoupgrade directory into which upgrades are downloaded. Please see doc
 .TP
 \fBautoupgrade_os=[string]\fR
 Name of the client operating system. Should match a directory name in the server's autoupgrade_dir. If you do not want your client to autoupgrade, do not set this option.
+.TP
+\fBmonitor_exe=[path]\fR
+Where to look to find the burp binary to use when forking a monitor client. This might be needed on systems that don't have any sensible way to self-determine a process' own path, such as openbsd.
 
 .SH INCLUDES / EXCLUDES
 

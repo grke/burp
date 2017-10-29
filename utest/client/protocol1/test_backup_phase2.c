@@ -245,14 +245,14 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 				char empty_delta[5]={'r', 's', 0x02, '6', 0x00};
 				iobuf_set(&wbuf, CMD_APPEND,
 					empty_delta, sizeof(empty_delta));
-				asfd_assert_write_iobuf(asfd, &w, 0, &wbuf);
-				iobuf_set(&wbuf, CMD_APPEND, (char *)"", 1);
 			}
 			else
 			{
 				char empty_delta[4]={'r', 's', 0x02, '6'};
 				iobuf_set(&wbuf, CMD_APPEND,
 					empty_delta, sizeof(empty_delta));
+				asfd_assert_write_iobuf(asfd, &w, 0, &wbuf);
+				iobuf_set(&wbuf, CMD_APPEND, (char *)"", 1);
 			}
 			asfd_assert_write_iobuf(asfd, &w, 0, &wbuf);
 			asfd_assert_write(asfd, &w, 0, CMD_END_FILE,

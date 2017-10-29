@@ -419,12 +419,12 @@ static void burp_ca_conf_problem(const char *conf_path,
 #ifdef HAVE_IPV6
 // These should work for IPv4 connections too.
 #define DEFAULT_ADDRESS_MAIN	"::"
-#define DEFAULT_ADDRESS_STATUS	"::1"
 #else
 // Fall back to IPv4 address if IPv6 is not compiled in.
 #define DEFAULT_ADDRESS_MAIN	"0.0.0.0"
-#define DEFAULT_ADDRESS_STATUS	"127.0.0.1"
 #endif
+
+#define DEFAULT_ADDRESS_STATUS	"localhost"
 
 static int server_conf_checks(struct conf **c, const char *path, int *r)
 {

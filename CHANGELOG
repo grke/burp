@@ -16,6 +16,8 @@
       This allows you to run timed backups when the laptop is not plugged in.
     - Update README and src/win32/README files.
     - Update Windows cross-tools and depkgs README file.
+  * From trustchk:
+    - Update README for AIX.
   * Upgrade Windows depkgs to librsync-1.0.1.
   * Upgrade Windows depkgs to pcre-8.41.
   * Upgrade Windows depkgs to zlib-1.2.11.

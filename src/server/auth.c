@@ -97,6 +97,7 @@ void version_warn(struct asfd *asfd, struct conf **confs, struct conf **cconfs)
 		else
 			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cname?cname:"unknown", peer_version, PACKAGE_VERSION);
 		if(confs) logw(asfd, get_cntr(confs), "%s\n", msg);
+		logp("WARNING: %s\n", msg);
 	}
 }
 

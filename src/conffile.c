@@ -155,6 +155,7 @@ struct fstype
 };
 
 static struct fstype fstypes[]={
+	{ "btrfs",		0x9123683E },
 	{ "debugfs",		0x64626720 },
 	{ "devfs",		0x00001373 },
 	{ "devpts",		0x00001CD1 },

@@ -32,7 +32,7 @@ while [ "$#" -gt 0 ] ; do
 	intimeband=0
 	timeband="$1"
 	case "$timeband" in
-		$curdayhour)
+		$curdayhour | "always")
 			echo "In timeband: $timeband"
 			intimeband=1
 			break

@@ -46,8 +46,9 @@ static int open_log(struct asfd *asfd,
 	// Make sure a warning appears in the backup log.
 	// The client will already have been sent a message with logw.
 	// This time, prevent it sending a logw to the client by specifying
-	// NULL for cntr.
-	if(get_int(cconfs[OPT_VERSION_WARN])) version_warn(asfd, NULL, cconfs);
+	// NULL for asfd and cntr.
+	if(get_int(cconfs[OPT_VERSION_WARN]))
+		version_warn(NULL, NULL, cconfs);
 
 	ret=0;
 end:

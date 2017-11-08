@@ -84,7 +84,8 @@ static int check_client_and_password(struct conf **globalcs,
 	return 0;
 }
 
-void version_warn(struct asfd *asfd, struct conf **confs, struct conf **cconfs)
+void version_warn(struct asfd *asfd,
+	struct cntr *cntr, struct conf **cconfs)
 {
 	const char *cname=get_string(cconfs[OPT_CNAME]);
 	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
@@ -96,8 +97,7 @@ void version_warn(struct asfd *asfd, struct conf **confs, struct conf **cconfs)
 			snprintf(msg, sizeof(msg), "Client '%s' has an unknown version. Please upgrade.", cname?cname:"unknown");
 		else
 			snprintf(msg, sizeof(msg), "Client '%s' version '%s' does not match server version '%s'. An upgrade is recommended.", cname?cname:"unknown", peer_version, PACKAGE_VERSION);
-		if(confs) logw(asfd, get_cntr(confs), "%s\n", msg);
-		logp("WARNING: %s\n", msg);
+		logw(asfd, cntr, "%s\n", msg);
 	}
 }
 
@@ -181,7 +181,7 @@ int authorise_server(struct asfd *asfd,
 		goto end;
 
 	if(get_int(cconfs[OPT_VERSION_WARN]))
-		version_warn(asfd, globalcs, cconfs);
+		version_warn(asfd, get_cntr(globalcs), cconfs);
 
 	logp("auth ok for: %s%s\n", get_string(cconfs[OPT_CNAME]),
 		get_int(cconfs[OPT_PASSWORD_CHECK])?

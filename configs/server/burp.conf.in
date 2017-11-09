@@ -69,7 +69,7 @@ version_warn = 1
 # autoupgrade_dir = @sysconfdir@/autoupgrade/server
 
 # You can have as many 'keep' lines as you like.
-# For example, if running backups daily, setting 7, 4, 6 will keep
+# For example, if running backups daily, setting keep 7, keep 4, keep 6 will keep
 # 7 daily backups, 4 weekly, and 6 four-weekly backups.
 keep = 7
 # keep = 4
@@ -116,6 +116,7 @@ ssl_key = @sysconfdir@/ssl_cert-server.key
 ssl_dhfile = @sysconfdir@/dhfile.pem
 
 timer_script = @scriptdir@/timer_script
+# The default timer_script treats the first timer_arg as the minimum interval
 # Ensure that 20 hours elapse between backups
 # Available units:
 # s (seconds), m (minutes), h (hours), d (days), w (weeks), n (months)

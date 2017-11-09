@@ -308,6 +308,7 @@ int log_incexcs_buf(const char *incexc)
 
 void log_recvd(struct iobuf *iobuf, struct cntr *cntr, int print)
 {
+	int newline=0;
 	const char *prefix="unset";
 	switch(iobuf->cmd)
 	{
@@ -315,6 +316,8 @@ void log_recvd(struct iobuf *iobuf, struct cntr *cntr, int print)
 		case CMD_WARNING: prefix="WARNING"; break;
 		default: break;
 	}
-	logp("%s: %s", prefix, iobuf->buf);
+	if(iobuf->buf[iobuf->len]!='\n')
+		newline=1;
+	logp("%s: %s%s", prefix, iobuf->buf, newline?"\n":"");
 	cntr_add(cntr, iobuf->cmd, print);
 }

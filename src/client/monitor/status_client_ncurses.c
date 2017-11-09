@@ -1466,9 +1466,13 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 	char *args[12];
 	char procpath[32];
 	char buf[PATH_MAX];
+	char *monitor_exe;
 
+	monitor_exe=get_string(confs[OPT_MONITOR_EXE]);
 	snprintf(procpath, sizeof(procpath), "/proc/%d/exe", getpid());
-	if(!readlink_w(procpath, buf, sizeof(buf)))
+	if(monitor_exe && is_reg_lstat(monitor_exe)>0)
+		args[a++]=monitor_exe;
+	else if(!readlink_w(procpath, buf, sizeof(buf)))
 		args[a++]=(char *)buf;
 	else if(is_reg_lstat(prog_long)>0)
 		args[a++]=(char *)prog_long;
@@ -1476,6 +1480,7 @@ static pid_t fork_monitor(int *csin, int *csout, struct conf **confs)
 	{
 		static char p[64]="";
 		snprintf(p, sizeof(p), "/usr/sbin/%s", PACKAGE_TARNAME);
+		logp("Using fallback monitor path: %s\n", p);
 		args[a++]=p;
 	}
 

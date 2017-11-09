@@ -155,6 +155,7 @@ struct fstype
 };
 
 static struct fstype fstypes[]={
+	{ "btrfs",		0x9123683E },
 	{ "debugfs",		0x64626720 },
 	{ "devfs",		0x00001373 },
 	{ "devpts",		0x00001CD1 },
@@ -419,12 +420,12 @@ static void burp_ca_conf_problem(const char *conf_path,
 #ifdef HAVE_IPV6
 // These should work for IPv4 connections too.
 #define DEFAULT_ADDRESS_MAIN	"::"
-#define DEFAULT_ADDRESS_STATUS	"::1"
 #else
 // Fall back to IPv4 address if IPv6 is not compiled in.
 #define DEFAULT_ADDRESS_MAIN	"0.0.0.0"
-#define DEFAULT_ADDRESS_STATUS	"127.0.0.1"
 #endif
+
+#define DEFAULT_ADDRESS_STATUS	"localhost"
 
 static int server_conf_checks(struct conf **c, const char *path, int *r)
 {
@@ -1395,12 +1396,16 @@ static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
 	return 0;
 }
 
-// FIX THIS: need to unit test this.
 int conf_switch_to_orig_client(struct conf **globalcs,
 	struct conf **cconfs, const char *orig_client)
 {
 	int ret=-1;
 	struct conf **sconfs=NULL;
+
+	// If we are already the wanted client, no need to switch.
+	if(!strcmp(get_string(cconfs[OPT_CNAME]), orig_client))
+		return 0;
+
 	if(!(sconfs=confs_alloc())
 	  || confs_init(sconfs)) goto end;
 	if(set_string(sconfs[OPT_CNAME], orig_client))

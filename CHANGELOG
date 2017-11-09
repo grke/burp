@@ -1,3 +1,57 @@
+2017-10-01 Changes in burp-2.1.22:
+  * On certificate exchange, do not rewrite the client config file if there
+    are no changes.
+  * Limit 'set file owner' warnings on restore when not root
+  * On restore, don't send Windows VSS directory data to non-Windows clients.
+  * On restore, don't send to split VSS data to non-Windows.
+  * Fix travis for osx, where brew is now installing librsync 2.0.1.
+  * Add 'monitor_exe' client option, in order to set where to look for the
+    burp executable when forking a monitor client. This might be needed on
+    systems that don't have any sensible way to self-determine a process' own
+    path, such as openbsd.
+  * From josvo:
+    - Use ComputerName from Windows registry as suggested cname.
+  * From deajan:
+    - Added /nopowermode option to the Windows installer, with checkbox.
+      This allows you to run timed backups when the laptop is not plugged in.
+    - Update README and src/win32/README files.
+    - Update Windows cross-tools and depkgs README file.
+  * From trustchk:
+    - Update README for AIX.
+  * Upgrade Windows depkgs to librsync-1.0.1.
+  * Upgrade Windows depkgs to pcre-8.41.
+  * Upgrade Windows depkgs to zlib-1.2.11.
+
+2017-10-01 Changes in burp-2.1.20:
+  * On server daemonise(), rewrite the pid/prog to the lockfile
+    without trying to open it a second time. This should avoid permission
+    problems after chuser/chgrp.
+  * Fix for 'success notification on failed backup'.
+  * Check fileno() for errors in asfd.c.
+  * List the mtime instead of the more recent of mtime/ctime.
+  * Fix client_lockdir option.
+
+2017-09-01 Changes in burp-2.1.18:
+  * From qm2k:
+    - Fix buffer overrun and slightly refactor xstrsplit in glob_windows.c
+    - Add Content-Type to notification emails.
+    - Windows exclude_fs functionality.
+  * Add Content-Type to summary emails.
+  * Fix missing newlines on WARNING/MESSAGEs logged by the server.
+  * Make 'orig_client=<the same client>' work OK.
+  * Drop privileges after main pidfile creation (instead of before).
+  * Be slightly more helpful with SSL error messages.
+
+2017-08-10 Changes in burp-2.1.16:
+  * Fix encryption_password key length issue introduced in 2.1.14.
+    Backups made by 2.1.14 using encryption_password should be considered
+    broken.
+  * Follow AC_INIT defines throughout the codebase, including the Windows
+    installer.
+  * Log strerror(errno) when failing to write a lock.
+  * From deajan:
+    - Add systemd file for running Burp without root privileges.
+
 2017-08-01 Changes in burp-2.1.14:
   * From Marek Szuba:
     - Use pkg-config to detect ncurses.

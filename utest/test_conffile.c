@@ -138,6 +138,19 @@ static void check_client_ports(struct conf **confs,
 	fail_unless(get_int(confs[OPT_PORT_DELETE])==p_delete);
 }
 
+START_TEST(test_client_conf_monitor_exe)
+{
+	struct conf **confs=NULL;
+	setup(&confs, NULL);
+	build_file(CONFFILE, MIN_CLIENT_CONF
+		"monitor_exe=/some/path"
+	);
+	fail_unless(!conf_load_global_only(CONFFILE, confs));
+	ck_assert_str_eq(get_string(confs[OPT_MONITOR_EXE]), "/some/path");
+	tear_down(NULL, &confs);
+}
+END_TEST
+
 START_TEST(test_client_conf_ports_opt_port_only)
 {
 	struct conf **confs=NULL;
@@ -691,6 +704,7 @@ START_TEST(test_clientconfdir_conf)
 		"timer_arg=/timer/arg1\n"
 		"timer_arg=/timer/arg2\n"
 		"label=qwe\n"
+		"client_lockdir=/tmp/blah\n"
 		NOTIFY_CONF
 	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
@@ -756,6 +770,8 @@ START_TEST(test_clientconfdir_conf)
 	assert_strlist(&s, "rty", 0);
 	assert_strlist(&s, "xyz", 0);
 	notify_assertions(cconfs);
+	ck_assert_str_eq(get_string(globalcs[OPT_CLIENT_LOCKDIR]), "/tmp/blah");
+	ck_assert_str_eq(get_string(cconfs[OPT_CLIENT_LOCKDIR]), "/tmp/blah");
 	tear_down(&globalcs, &cconfs);
 }
 END_TEST
@@ -913,6 +929,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_client_includes_excludes);
 	tcase_add_test(tc_core, test_client_include_failures);
 	tcase_add_test(tc_core, test_client_include_glob);
+	tcase_add_test(tc_core, test_client_conf_monitor_exe);
 	tcase_add_test(tc_core, test_client_conf_ports_opt_port_only);
 	tcase_add_test(tc_core, test_client_conf_ports_opt_port_and_restore);
 	tcase_add_test(tc_core, test_client_conf_ports_opt_port_and_all);

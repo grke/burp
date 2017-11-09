@@ -177,6 +177,12 @@ error:
 	return -1;
 }
 
+static void peer_msg(void)
+{
+	logp("This is probably caused by the peer exiting.\n");
+	logp("Please check the peer's logs.\n");
+}
+
 static int asfd_do_read_ssl(struct asfd *asfd)
 {
 	int e;
@@ -208,14 +214,15 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 		case SSL_ERROR_SYSCALL:
 			if(errno==EAGAIN || errno==EINTR)
 				break;
-			logp("%s: Got SSL_ERROR_SYSCALL\n",
+			logp("%s: Got network read error\n",
 				asfd->desc);
 			// Fall through to read problem
 		default:
 			logp_ssl_err(
-				"%s: SSL read problem in %s: %d - %d=%s\n",
+				"%s: network read problem in %s: %d - %d=%s\n",
 				asfd->desc, __func__,
 				e, errno, strerror(errno));
+			peer_msg();
 			goto error;
 	}
 	return 0;
@@ -329,14 +336,15 @@ printf("wrote %d: %s\n", w, buf);
 		case SSL_ERROR_SYSCALL:
 			if(errno==EAGAIN || errno==EINTR)
 				break;
-			logp("%s: Got SSL_ERROR_SYSCALL\n",
+			logp("%s: Got network write error\n",
 				asfd->desc);
 			// Fall through to read problem
 		default:
 			logp_ssl_err(
-				"%s: SSL write problem in %s: %d - %d=%s\n",
+				"%s: network write problem in %s: %d - %d=%s\n",
 				asfd->desc, __func__,
 				e, errno, strerror(errno));
+			peer_msg();
 			return -1;
 	}
 	return 0;
@@ -678,21 +686,33 @@ struct asfd *setup_asfd_linebuf_write(struct async *as,
 	return asfd;
 }
 
+static struct asfd *fileno_error(const char *func)
+{
+	logp("fileno error in %s: %s\n", func, strerror(errno));
+	return NULL;
+}
+
 struct asfd *setup_asfd_stdin(struct async *as)
 {
 	int fd=fileno(stdin);
+	if(fd<0)
+		return fileno_error(__func__);
 	return setup_asfd_linebuf_read(as, "stdin", &fd);
 }
 
 struct asfd *setup_asfd_stdout(struct async *as)
 {
 	int fd=fileno(stdout);
+	if(fd<0)
+		return fileno_error(__func__);
 	return setup_asfd_linebuf_write(as, "stdout", &fd);
 }
 
 struct asfd *setup_asfd_ncurses_stdin(struct async *as)
 {
 	int fd=fileno(stdin);
+	if(fd<0)
+		return fileno_error(__func__);
 	return do_setup_asfd(as, "stdin", &fd, -1,
 		/*ssl=*/NULL, ASFD_STREAM_NCURSES_STDIN);
 }

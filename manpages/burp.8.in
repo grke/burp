@@ -225,8 +225,8 @@ Defines the main TCP address that the server listens on. The default is either '
 \fBport=[port number]\fR
 Defines the main TCP port that the server listens on. Specify multiple 'port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_children' value.
 .TP
-\fBstatus_address=[address]\fR
-Defines the main TCP address that the server listens on for status requests. The default is either '::1' or '127.0.0.1', dependent upon compile time options.
+\fBstatus_address=[address|localhost]\fR
+Defines the main TCP address that the server listens on for status requests. The default is special value 'localhost' that includes both '::1' (if available) and '127.0.0.1' (always).
 .TP
 \fBstatus_port=[port number]\fR
 Defines the TCP port that the server listens on for status requests. Comment this out to have no status server. Specify multiple 'status_port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_status_children' value.
@@ -647,6 +647,9 @@ Path to autoupgrade directory into which upgrades are downloaded. Please see doc
 .TP
 \fBautoupgrade_os=[string]\fR
 Name of the client operating system. Should match a directory name in the server's autoupgrade_dir. If you do not want your client to autoupgrade, do not set this option.
+.TP
+\fBmonitor_exe=[path]\fR
+Where to look to find the burp binary to use when forking a monitor client. This might be needed on systems that don't have any sensible way to self-determine a process' own path, such as openbsd.
 
 .SH INCLUDES / EXCLUDES
 
@@ -713,10 +716,10 @@ Do not back up the given block device itself, but open it for reading and back u
 Open all block devices for reading and back up the contents as if they were regular files.
 .TP
 \fBsplit_vss=[0|1]\fR
-When backing up Windows computers with @name@ protocol 1, this option allows you to save the VSS header data separate from the file data. The default is off, which means that the VSS header data is saved prepended to the file data.
+When backing up Windows computers with @name@ protocol 1, this option allows you to save the VSS header data separate from the file data. The default is off, which means that the VSS header data is saved prepended to the file data. This option has no effect in protocol 2.
 .TP
 \fBstrip_vss=[0|1]\fR
-When backing up Windows computers with @name@ protocol 1, this option allows you to prevent the VSS header data being backed up. The default is off. To restore a backup that has no VSS information on Windows, you need to give the client the '\-x' command line option.
+When backing up Windows computers with @name@ protocol 1, this option allows you to prevent the VSS header data being backed up. The default is off. To restore a backup that has no VSS information on Windows, you need to give the client the '\-x' command line option. This option has no effect in protocol 2.
 .TP
 \fBvss_drives=[list of drive letters]\fR
 When backing up Windows computers, this option allows you to specify which drives have VSS snapshots taken of them. If you omit this option, @name@ will automatically decide based on the 'include' options. If you want no drives to have snapshots taken of them, you can specify '0'.
@@ -747,6 +750,7 @@ Additionally, the following options can be overridden here for each client:
 \fBenabled\fR
 \fBprotocol\fR
 \fBdirectory\fR
+\fBclient_lockdir\fR
 \fBdirectory_tree\fR
 \fBtimestamp_format\fR
 \fBpassword_check\fR

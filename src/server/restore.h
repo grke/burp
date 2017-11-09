@@ -8,9 +8,6 @@ struct sbuf;
 struct sdirs;
 struct slist;
 
-extern int want_to_restore(int srestore, struct sbuf *sb,
-	regex_t *regex, struct conf **cconfs);
-
 extern int restore_ent(struct asfd *asfd,
 	struct sbuf **sb,
 	struct slist *slist,

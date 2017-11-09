@@ -97,6 +97,7 @@ winburp.nsi:
 	cp ../installer/ConfigPage3.ini .
 	cp ../installer/ConfigPage4.ini .
 	cp ../installer/DumpLog.nsh .
+	cp ../installer/ReplaceInFile.nsh .
 
 $(INSTALL_EXE): winburp.nsi $(addprefix release$(BITS)/,$(BURP_BINARIES) $(DEPKGS_BINARIES) $(MINGW_LIBS))
 	NSISDIR=$(NSIS_DIR) \

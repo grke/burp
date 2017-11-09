@@ -6,20 +6,29 @@ distribution's package management system.
 
 You need to compile burp on a unix-based operating system first. Make sure that
 you have openssl, zlib, librsync, uthash and yajl libraries and development
-libraries installed. With debian or ubuntu, this command should install them
-for you:
+libraries installed.
 
-apt-get install make pkg-config check g++ \
+With debian or ubuntu, this command should install them for you:
+  apt-get install make pkg-config check g++ \
 	librsync-dev libz-dev libssl-dev uthash-dev libyajl-dev
 
-(If you are checking out directly from git, you will also need to get some
+With RHEL or CentOS, this command should install them for you:
+  yum install make gcc gcc-c++ bzip2 pkgconfig \
+        librsync-devel libzip-devel openssl-devel uthash-devel yajl-devel \
+        libacl-devel ncurses-devel openssl-perl
+
+If you are checking out directly from git, you will also need to get some
 extra packages in order to generate the configure file:
-apt-get install autoconf automake libtool
-autoreconf -vif)
+
+Debian / Ubunutu:
+  apt-get install autoconf automake libtool
+
+RHEL / CentOS:
+  yum install autoconf automake libtool
 
 Change to the burp source directory and run:
-
-./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var
+  autoreconf -vif
+  ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var
 
 Then run "make". All being well, burp will compile successfully. Run "make
 install" and then "make install-configs" as root to install.
@@ -27,7 +36,8 @@ The "make install-configs" command will overwrite configuration files in
 /etc/burp, so you will probably not want to do that if you have an existing
 burp installation.
 
-Start the burp server with this command: burp -c /etc/burp/burp-server.conf
+Start the burp server with this command:
+  burp -c /etc/burp/burp-server.conf
 
 By default, the server will fork into the background and run as a daemon. To
 stay in the foreground, add the '-F' option. The first time that the server
@@ -52,7 +62,7 @@ The example client configuration file is /etc/burp/burp.conf.
 It will backup /home by default.
 
 You can either force a backup by hand:
-burp -a b
+  burp -a b
 
 Or add a regular cron job like the following to /etc/cron.d/burp (or
 equivalent). This makes the client ask the server every twenty minutes whether

@@ -33,7 +33,6 @@ static void ls_to_buf(char *lsbuf, struct sbuf *sb)
 {
 	int n;
 	char *p;
-	time_t time;
 	const char *f;
 	struct stat *statp=&sb->statp;
 	*lsbuf='\0';
@@ -46,11 +45,8 @@ static void ls_to_buf(char *lsbuf, struct sbuf *sb)
 	p+=n;
 	n=sprintf(p, " %7lu ", (unsigned long)statp->st_size);
 	p+=n;
-	if(statp->st_ctime>statp->st_mtime) time=statp->st_ctime;
-	else time=statp->st_mtime;
 
-	// Display most recent time.
-	p=encode_time(time, p);
+	p=encode_time(statp->st_mtime, p);
 	*p++=' ';
 	for(f=sb->path.buf; *f; ) *p++=*f++;
 	*p=0;

@@ -183,6 +183,17 @@ static int init_listen_sockets(const char *address, struct strlist *ports,
 	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
 {
 	struct strlist *p;
+	if(!strcmp(address, "localhost")) {
+		// If we only support "localhost" here, we can skip
+		// gethostbyname call due to RFC 6761.
+#ifdef HAVE_IPV6
+		address="::1";
+		for(p=ports; p; p=p->next)
+			// Ignore errors for IPv6 attempt.
+			init_listen_socket(address, p, mainas, fdtype, desc);
+#endif
+		address="127.0.0.1";
+	}
 	for(p=ports; p; p=p->next)
 	{
 		if(init_listen_socket(address, p, mainas, fdtype, desc))
@@ -589,28 +600,6 @@ static int daemonise(void)
 	return 0;
 }
 
-static int relock(struct lock *lock)
-{
-	int tries=5;
-	for(; tries>0; tries--)
-	{
-		lock_get(lock);
-		switch(lock->status)
-		{
-			case GET_LOCK_GOT: return 0;
-			case GET_LOCK_NOT_GOT:
-				sleep(2);
-				break;
-			case GET_LOCK_ERROR:
-			default:
-				logp("Error when trying to re-get lockfile after forking.\n");
-				return -1;
-		}
-	}
-	logp("Unable to re-get lockfile after forking.\n");
-	return -1;
-}
-
 static int extract_client_name(struct asfd *asfd)
 {
 	size_t l;
@@ -868,7 +857,10 @@ int server(struct conf **confs, const char *conffile,
 
 	if(get_int(confs[OPT_FORK]) && get_int(confs[OPT_DAEMON]))
 	{
-		if(daemonise() || relock(lock)) goto error;
+		if(daemonise()
+		// Need to write the new pid to the already open lock fd.
+		  || lock_write_pid_and_prog(lock))
+			goto error;
 	}
 
 	ssl_load_globals();

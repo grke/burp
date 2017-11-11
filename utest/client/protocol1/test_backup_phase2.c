@@ -8,6 +8,7 @@
 #include "../../../src/base64.h"
 #include "../../../src/client/protocol1/backup_phase2.h"
 #include "../../../src/fsops.h"
+#include "../../../src/handy.h"
 #include "../../../src/hexmap.h"
 #include "../../../src/iobuf.h"
 #include "../../../src/slist.h"
@@ -187,6 +188,13 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 	struct sbuf *s;
 	char empty_sig[12]={'r', 's', 0x01, '6',
 		0, 0, 0, '@', 0, 0, 0, 0x08};
+	char *cp;
+	long our_lrv=0;
+	long lrv201;
+
+	lrv201=version_to_long("2.0.1");
+	if((cp=strchr(rs_librsync_version, ' ')))
+		our_lrv=version_to_long(cp+1);
 
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
@@ -226,7 +234,6 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 		  || sbuf_is_vssdata(s))
 		{
 			struct iobuf wbuf;
-			const char *lrv="librsync 2.";
 			if(sbuf_is_encrypted(s))
 			{
 				asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
@@ -238,7 +245,7 @@ static void setup_asfds_with_slist_changed_files(struct asfd *asfd,
 			asfd_assert_write(asfd, &w, 0, CMD_DATAPTH, "somepath");
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
-			if(!strncmp(rs_librsync_version, lrv, strlen(lrv)))
+			if(our_lrv>=lrv201)
 			{
 				// Brew on macs now gets librsync 2, which
 				// gives you the empty delta in one go.

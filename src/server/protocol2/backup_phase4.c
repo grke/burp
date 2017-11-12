@@ -58,7 +58,7 @@ int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 	struct blk blk;
 	while(1)
 	{
-		switch(sbuf_fill_from_file(sb, spzp, NULL, NULL))
+		switch(sbuf_fill_from_file(sb, spzp, NULL))
 		{
 			case -1: goto error;
 			case 1:

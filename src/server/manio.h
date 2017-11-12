@@ -58,7 +58,7 @@ extern int manio_close(struct manio **manio);
 extern int manio_read_fcount(struct manio *manio);
 
 extern int manio_read_with_blk(struct manio *manio,
-	struct sbuf *sb, struct blk *blk, struct sdirs *sdirs);
+	struct sbuf *sb, struct blk *blk);
 extern int manio_read(struct manio *manio, struct sbuf *sb);
 
 extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);

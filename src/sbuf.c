@@ -143,8 +143,7 @@ enum parse_ret
 };
 
 static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
-	struct iobuf *rbuf, struct blk *blk,
-	const char *datpath, struct cntr *cntr)
+	struct iobuf *rbuf, struct blk *blk, struct cntr *cntr)
 {
 	switch(rbuf->cmd)
 	{
@@ -234,11 +233,6 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 				return PARSE_RET_ERROR;
 			blk->got_save_path=1;
 			iobuf_free_content(rbuf);
-			if(datpath && rblk_retrieve_data(datpath, blk))
-			{
-				logp("Could not retrieve blk data.\n");
-				return PARSE_RET_ERROR;
-			}
 			return PARSE_RET_COMPLETE;
 #endif
 		case CMD_DATA:
@@ -314,7 +308,7 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 }
 
 static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
-	struct blk *blk, const char *datpath, struct cntr *cntr)
+	struct blk *blk, struct cntr *cntr)
 {
 	static struct iobuf *rbuf;
 	static struct iobuf localrbuf;
@@ -343,7 +337,7 @@ static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 				break;
 			}
 		}
-		switch(parse_cmd(sb, asfd, rbuf, blk, datpath, cntr))
+		switch(parse_cmd(sb, asfd, rbuf, blk, cntr))
 		{
 			case PARSE_RET_NEED_MORE:
 				continue;
@@ -366,11 +360,11 @@ end:
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
 	struct blk *blk, struct cntr *cntr)
 {
-	return sbuf_fill(sb, asfd, NULL, blk, NULL, cntr);
+	return sbuf_fill(sb, asfd, NULL, blk, cntr);
 }
 
 int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp,
-	struct blk *blk, const char *datpath)
+	struct blk *blk)
 {
-	return sbuf_fill(sb, NULL, fzp, blk, datpath, NULL);
+	return sbuf_fill(sb, NULL, fzp, blk, NULL);
 }

@@ -91,7 +91,7 @@ enum cand_ret candidate_load(struct candidate *candidate, const char *path,
 	while(fzp)
 	{
 		sbuf_free_content(sb);
-		switch(sbuf_fill_from_file(sb, fzp, blk, NULL))
+		switch(sbuf_fill_from_file(sb, fzp, blk))
 		{
 			case 1: goto end;
 			case -1:

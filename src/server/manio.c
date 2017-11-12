@@ -422,8 +422,7 @@ int manio_close(struct manio **manio)
 }
 
 // Return -1 for error, 0 for stuff read OK, 1 for end of files.
-int manio_read_with_blk(struct manio *manio,
-	struct sbuf *sb, struct blk *blk, struct sdirs *sdirs)
+int manio_read_with_blk(struct manio *manio, struct sbuf *sb, struct blk *blk)
 {
 	while(1)
 	{
@@ -433,8 +432,7 @@ int manio_read_with_blk(struct manio *manio,
 			if(!manio->fzp) return 1; // No more files to read.
 		}
 
-		switch(sbuf_fill_from_file(sb, manio->fzp, blk,
-			sdirs?sdirs->data:NULL))
+		switch(sbuf_fill_from_file(sb, manio->fzp, blk))
 		{
 			case 0: return 0; // Got something.
 			case 1: break; // Keep going.
@@ -455,7 +453,7 @@ error:
 
 int manio_read(struct manio *manio, struct sbuf *sb)
 {
-	return manio_read_with_blk(manio, sb, NULL, NULL);
+	return manio_read_with_blk(manio, sb, NULL);
 }
 
 static int reset_sig_count_and_close(struct manio *manio)
@@ -583,8 +581,8 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 		goto error;
 	while(1)
 	{
-		if((ars=manio_read_with_blk(srcmanio, csb,
-			blk, NULL))<0) goto error;
+		if((ars=manio_read_with_blk(srcmanio, csb, blk))<0)
+			goto error;
 		else if(ars>0)
 		{
 			// Finished.

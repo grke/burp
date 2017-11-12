@@ -3,6 +3,9 @@
 
 extern int rblk_init(void);
 extern void rblk_free(void);
-extern int rblk_retrieve_data(const char *datpath, struct blk *blk);
+extern char *rblk_get_fulldatpath(const char *datpath,
+	struct blk *blk, uint16_t *datno);
+extern int rblk_retrieve_data(const char *fulldatpath,
+	struct blk *blk, uint16_t datno);
 
 #endif

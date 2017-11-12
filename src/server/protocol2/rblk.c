@@ -119,14 +119,19 @@ static struct rblk *get_rblk(struct rblk *rblks, const char *datpath)
 	}
 }
 
-int rblk_retrieve_data(const char *datpath, struct blk *blk)
+char *rblk_get_fulldatpath(const char *datpath,
+	struct blk *blk, uint16_t *datno)
 {
 	static char fulldatpath[256]="";
-	uint16_t datno;
-	struct rblk *rblk;
-
 	snprintf(fulldatpath, sizeof(fulldatpath), "%s/%s", datpath,
-		uint64_to_savepathstr_with_sig_uint(blk->savepath, &datno));
+		uint64_to_savepathstr_with_sig_uint(blk->savepath, datno));
+	return fulldatpath;
+}
+
+int rblk_retrieve_data(const char *fulldatpath,
+	struct blk *blk, uint16_t datno)
+{
+	struct rblk *rblk;
 
 	if(!(rblk=get_rblk(rblks, fulldatpath)))
 	{

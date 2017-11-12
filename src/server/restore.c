@@ -114,7 +114,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	while(1)
 	{
-		if((ars=sbuf_fill_from_file(sb, fzp, NULL, NULL)))
+		if((ars=sbuf_fill_from_file(sb, fzp, NULL)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok
@@ -164,6 +164,8 @@ static int hard_link_substitution(struct asfd *asfd,
 	int pcmp;
 	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
+	char *fulldatpath=NULL;
+	uint16_t datno=0;
 
 	if(!(manio=manio_open(manifest, "rb", protocol))
 	  || !(need_data=sbuf_alloc(protocol))
@@ -178,8 +180,10 @@ static int hard_link_substitution(struct asfd *asfd,
 
 	while(1)
 	{
+		if(blk)
+			blk->got_save_path=0;
 		switch(manio_read_with_blk(manio,
-			hb, need_data->path.buf?blk:NULL, sdirs))
+			hb, need_data->path.buf?blk:NULL))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -192,6 +196,21 @@ static int hard_link_substitution(struct asfd *asfd,
 			{
 				sbuf_free_content(hb);
 				continue;
+			}
+			if(blk->got_save_path)
+			{
+				blk->got_save_path=0;
+				fulldatpath=rblk_get_fulldatpath(sdirs->data,
+					blk, &datno);
+				if(rblk_retrieve_data(fulldatpath, blk, datno))
+				{
+					logw(asfd, cntr,
+					  "%s: Missing block %s:%d",
+					  need_data->path.buf,
+					  fulldatpath+strlen(sdirs->data)+1,
+					  datno);
+					continue;
+				}
 			}
 			if(blk->data)
 			{
@@ -411,6 +430,9 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
 	struct iobuf interrupt;
+	char *fulldatpath=NULL;
+	uint16_t datno=0;
+
 	iobuf_init(&interrupt);
 
 	if(protocol==PROTO_2)
@@ -467,8 +489,10 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				goto end;
 		}
 
+		if(blk)
+			blk->got_save_path=0;
 		switch(manio_read_with_blk(manio,
-			sb, need_data->path.buf?blk:NULL, sdirs))
+			sb, need_data->path.buf?blk:NULL))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
@@ -511,8 +535,21 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				else if(!iobuf_pathcmp(&need_data->path,
 					&interrupt))
 				{
-					if(blk->data)
-						blk->data=NULL;
+					continue;
+				}
+			}
+			if(blk->got_save_path)
+			{
+				blk->got_save_path=0;
+				fulldatpath=rblk_get_fulldatpath(sdirs->data,
+					blk, &datno);
+				if(rblk_retrieve_data(fulldatpath, blk, datno))
+				{
+					logw(asfd, cntr,
+					  "%s: Missing block %s:%d",
+					  need_data->path.buf,
+					  fulldatpath+strlen(sdirs->data)+1,
+					  datno);
 					continue;
 				}
 			}

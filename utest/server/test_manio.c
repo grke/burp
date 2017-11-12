@@ -71,7 +71,7 @@ static void read_manifest(struct sbuf **sb_expected, struct manio *manio,
 	}
 	while(1)
 	{
-		switch(manio_read_with_blk(manio, rb, blk, NULL))
+		switch(manio_read_with_blk(manio, rb, blk))
 		{
 			case 0: break;
 			case 1: goto end;

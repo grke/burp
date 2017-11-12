@@ -117,7 +117,7 @@ enum hash_ret hash_load(const char *champ, const char *directory)
 	while(1)
 	{
 		sbuf_free_content(sb);
-		switch(sbuf_fill_from_file(sb, fzp, blk, NULL))
+		switch(sbuf_fill_from_file(sb, fzp, blk))
 		{
 			case 1: ret=HASH_RET_OK;
 				goto end;

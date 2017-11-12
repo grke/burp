@@ -324,7 +324,6 @@ static int deal_with_read(struct iobuf *rbuf, struct slist *slist,
 		case CMD_MESSAGE:
 		case CMD_WARNING:
 		{
-			struct cntr *cntr=NULL;
 			log_recvd(rbuf, cntr, 0);
 			goto end;
 		}

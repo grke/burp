@@ -506,7 +506,7 @@ Defines the TCP port on the server that we will send delete requests to. If not 
 \fBstatus_port=[port number]\fR
 Defines the TCP port that the server is listening on for status requests.
 .TP
-\fBcname=[password]\fR
+\fBcname=[client name]\fR
 Defines the client name to identify as to the server.
 .TP
 \fBcname_lowercase=[0|1]\fR

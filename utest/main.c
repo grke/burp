@@ -103,6 +103,7 @@ int main(void)
 	srunner_add_suite(sr, suite_server_resume());
 	srunner_add_suite(sr, suite_server_run_action());
 	srunner_add_suite(sr, suite_server_sdirs());
+	srunner_add_suite(sr, suite_server_timer());
 #endif
 
 	srunner_run_all(sr, CK_ENV);

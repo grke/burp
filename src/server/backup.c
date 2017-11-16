@@ -23,6 +23,8 @@
 #include "protocol2/backup_phase4.h"
 #include "backup.h"
 #include "rubble.h"
+#include "strlist.h"
+#include "timer.h"
 
 static int open_log(struct asfd *asfd,
 	struct sdirs *sdirs, struct conf **cconfs)
@@ -303,35 +305,18 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 
 	if(!strncmp_w(rbuf->buf, "backupphase1timed"))
 	{
-		int a=0;
-		const char *args[12];
 		int checkonly=!strncmp_w(rbuf->buf, "backupphase1timedcheck");
 		if(checkonly) logp("Client asked for a timer check only.\n");
 
-		args[a++]=get_string(cconfs[OPT_TIMER_SCRIPT]);
-		args[a++]=cname;
-		args[a++]=sdirs->current;
-		args[a++]=sdirs->clients;
-		args[a++]="reserved1";
-		args[a++]="reserved2";
-		args[a++]=NULL;
-		if((*timer_ret=run_script(asfd, args,
-		  get_strlist(cconfs[OPT_TIMER_ARG]),
-		  cconfs,
-		  1 /* wait */,
-		  1 /* use logp */,
-		  0 /* no log_remote */
-		))<0)
+		if((*timer_ret=run_timer(asfd, sdirs, cconfs))<0)
 		{
-			logp("Error running timer script for %s\n",
-				cname);
-			return *timer_ret;
+			logp("Error running timer for %s\n", cname);
+			return -1;
 		}
-		if(*timer_ret)
+		else if(*timer_ret)
 		{
 			if(!checkonly)
-				logp("Not running backup of %s\n",
-					cname);
+				logp("Not running backup of %s\n", cname);
 			return asfd->write_str(asfd,
 				CMD_GEN, "timer conditions not met");
 		}

@@ -228,6 +228,7 @@ main_SOURCES = \
 	src/server/rubble.c src/server/rubble.h \
 	src/server/run_action.c src/server/run_action.h \
 	src/server/sdirs.c src/server/sdirs.h \
+	src/server/timer.c src/server/timer.h \
 	src/server/timestamp.c src/server/timestamp.h \
 	src/server/monitor/browse.c src/server/monitor/browse.h \
 	src/server/monitor/cache.c src/server/monitor/cache.h \
@@ -354,6 +355,7 @@ runner_SOURCES = \
 	utest/server/test_restore.c \
 	utest/server/test_run_action.c \
 	utest/server/test_sdirs.c \
+	utest/server/test_timer.c \
 	utest/test_alloc.c \
 	utest/test_asfd.c \
 	utest/test_attribs.c \

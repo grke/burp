@@ -113,6 +113,7 @@ Suite *suite_server_resume(void);
 Suite *suite_server_restore(void);
 Suite *suite_server_run_action(void);
 Suite *suite_server_sdirs(void);
+Suite *suite_server_timer(void);
 Suite *suite_server_protocol1_backup_phase2(void);
 Suite *suite_server_protocol1_backup_phase4(void);
 Suite *suite_server_protocol1_bedup(void);

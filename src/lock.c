@@ -80,6 +80,12 @@ int lock_write_pid_and_prog(struct lock *lock)
 			lock->path, strerror(errno));
 		return -1;
 	}
+	if(lseek(lock->fd, 0, SEEK_SET)<0)
+	{
+		logp("Could not seek to start of lock %s: %s\n",
+			lock->path, strerror(errno));
+		return -1;
+	}
 	snprintf(text, sizeof(text), "%d\n%s\n", (int)getpid(), progname());
 	if(write(lock->fd, text, strlen(text))!=(ssize_t)strlen(text))
 	{

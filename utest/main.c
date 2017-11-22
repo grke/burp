@@ -49,6 +49,7 @@ int main(void)
 
 #ifndef HAVE_WIN32
 	// These do not compile for Windows.
+	srunner_add_suite(sr, suite_client_delete());
 	srunner_add_suite(sr, suite_client_find());
 	srunner_add_suite(sr, suite_client_monitor_status_client_ncurses());
 	srunner_add_suite(sr, suite_client_monitor_json_input());

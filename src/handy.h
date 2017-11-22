@@ -52,8 +52,6 @@ extern void free_w(char **str);
 extern char *strlwr(char *s);
 extern void strip_fqdn(char **fqdn);
 
-extern int astrcat(char **buf, const char *append, const char *func);
-
 extern void strip_trailing_slashes(char **str);
 
 extern int breakpoint(int breaking, const char *func);

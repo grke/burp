@@ -35,7 +35,10 @@ int timestamp_write(const char *path, const char *tstmp)
 	return 0;
 }
 
-static void timestamp_write_to_buf(char *buf, size_t s,
+#ifndef UTEST
+static
+#endif
+void timestamp_write_to_buf(char *buf, size_t s,
 	uint64_t index, const char *format, time_t *t)
 {
 	char tmpbuf[38]="";

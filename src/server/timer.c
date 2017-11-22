@@ -103,7 +103,7 @@ static long get_interval_in_seconds(const char *str, const char *cname)
 		case 'w':
 			return seconds*60*60*24*7;
 		case 'n':
-			return seconds*60*60*24*7*30;
+			return seconds*60*60*24*30;
 	}
 error:
 	logp("interval %s not understood for %s\n", str, cname);
@@ -147,7 +147,10 @@ static int check_interval(
 	return 1;
 }
 
-static int run_timer_internal(
+#ifndef UTEST
+static
+#endif
+int run_timer_internal(
 	const char *cname,
 	struct sdirs *sdirs,
 	struct strlist *timer_args,
@@ -181,7 +184,7 @@ static int run_timer_internal(
 		goto end;
 	}
 
-	if(!is_dir_stat(sdirs->current))
+	if(is_dir_stat(sdirs->current)<=0)
 	{
 		logp("No prior backup of %s\n", cname);
 		ret=0;
@@ -190,12 +193,6 @@ static int run_timer_internal(
 	if(!(ctimestamp=prepend_s(sdirs->current, "timestamp")))
 	{
 		ret=-1;
-		goto end;
-	}
-	if(!is_reg_lstat(ctimestamp))
-	{
-		logp("%s missing\n", ctimestamp);
-		ret=0;
 		goto end;
 	}
 

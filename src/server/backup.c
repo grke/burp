@@ -23,7 +23,6 @@
 #include "protocol2/backup_phase4.h"
 #include "backup.h"
 #include "rubble.h"
-#include "strlist.h"
 #include "timer.h"
 
 static int open_log(struct asfd *asfd,

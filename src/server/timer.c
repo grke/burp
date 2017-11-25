@@ -5,9 +5,9 @@
 #include "../log.h"
 #include "../prepend.h"
 #include "../run_script.h"
+#include "../strlist.h"
 #include "../times.h"
 #include "sdirs.h"
-#include "strlist.h"
 #include "timestamp.h"
 
 static int is_dir_stat(const char *path)

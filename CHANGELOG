@@ -1,4 +1,22 @@
-2017-10-01 Changes in burp-2.1.22:
+2017-12-01 Changes in burp-2.1.24:
+  * Internalise the timer script.
+  * Protocol2: Log a warning when a block cannot be retrieved during
+    restore, and attempt to continue.
+  * Fix for protocol 2 warnings not appearing on server side.
+  * Fix encryption_password key length issue reintroduced in 2.1.18.
+    Backups made by 2.1.18 to 2.1.22 using encryption_password should be
+    considered broken.
+  * Don't log version warning twice.
+  * From Sergey Moskovkin:
+    - Bug fix for rewriting the pidfile after forking - truncate first.
+  * From Josef:
+    - Include btrfs in fstype list.
+  * From josvo:
+    - Allow 'always' as an option to the timer script.
+  * From DerGatt:
+    - Small man page correction.
+
+2017-11-01 Changes in burp-2.1.22:
   * On certificate exchange, do not rewrite the client config file if there
     are no changes.
   * Limit 'set file owner' warnings on restore when not root

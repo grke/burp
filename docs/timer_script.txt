@@ -24,6 +24,10 @@ It may be overridden per-client in individual /etc/burp/clientconfdir files.
 The server will treat a return code of 0 as meaning that it is time to backup.
 Any other return code means that it is not time to backup.
 
+Note: As of 2.1.22, the timer script has been internalised as part of the
+main C code. You may still use an external timer script though.
+To use the internal version, don't define a timer_script option. Both versions
+use the same timer_arg parameters described below.
 
 
 Timer script arguments

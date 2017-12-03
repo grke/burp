@@ -61,8 +61,8 @@ $(DIRS):
 			exit 1 ; \
 		fi ; \
 	done ; \
-	ln -vsf $${TOOLSDIR}/burp-cross-tools ../../burp-cross-tools ; \
-	ln -vsf $${TOOLSDIR}/burp-depkgs ../../burp-depkgs
+	ln -vsf $${TOOLSDIR}/burp-cross-tools/cross-tools ../../burp-cross-tools ; \
+	ln -vsf $${TOOLSDIR}/burp-cross-tools/depkgs ../../burp-depkgs
 
 Makefile.inc: ../../burp-cross-tools
 	@echo Creating $@

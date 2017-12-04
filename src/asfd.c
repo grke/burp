@@ -393,17 +393,41 @@ static enum append_ret asfd_append_all_to_write_buffer(struct asfd *asfd,
 	return APPEND_OK;
 }
 
+#ifdef IPTOS_THROUGHPUT
+static int asfd_connection_af(struct asfd *asfd)
+{
+	struct sockaddr_storage s;
+	socklen_t slen = sizeof(s);
+
+	memset(&s, 0, sizeof(s));
+	if(getsockname(asfd->fd, (struct sockaddr *)&s, &slen)<0)
+		return 0;
+	return s.ss_family;
+}
+#endif
+
 static int asfd_set_bulk_packets(struct asfd *asfd)
 {
-#if defined(IP_TOS) && defined(IPTOS_THROUGHPUT)
+#ifdef IPTOS_THROUGHPUT
 	int opt=IPTOS_THROUGHPUT;
 	if(asfd->fd<0) return -1;
-	if(setsockopt(asfd->fd,
-		IPPROTO_IP, IP_TOS, (char *)&opt, sizeof(opt))<0)
+
+	switch(asfd_connection_af(asfd))
 	{
-		logp("%s: error: setsockopt IPTOS_THROUGHPUT: %s\n",
-			asfd->desc, strerror(errno));
-		return -1;
+		case AF_INET:
+			if(setsockopt(asfd->fd, IPPROTO_IP, IP_TOS,
+				(char *)&opt, sizeof(opt))>=0)
+					break;
+			logp("%s: error: set IPTOS throughput: %s\n",
+				asfd->desc, strerror(errno));
+			return -1;
+		case AF_INET6:
+			if(setsockopt(asfd->fd, IPPROTO_IPV6, IPV6_TCLASS,
+				(char *)&opt, sizeof(opt))>=0)
+					break;
+			logp("%s: error: set IPV6_TCLASS throughput: %s\n",
+				asfd->desc, strerror(errno));
+			return -1;
 	}
 #endif
 	return 0;

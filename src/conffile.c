@@ -180,6 +180,11 @@ static struct fstype fstypes[]={
 	{ "romfs",		0x00007275 },
 	{ "tmpfs",		0x01021994 },
 	{ "zfs",		0x2fc12fc1 },
+	{ "fuse.lxcfs",		0x65735546 },
+	{ "fusectl", 		0x65735543 },
+	{ "hugetlbfs",		0x958458F6 },
+	{ "autofs",		0x42494E4D },
+	{ "cgroup",		0x0027E0EB },
 	{ NULL,			0 },
 };
 /* Use this C code to figure out what f_type gets set to.

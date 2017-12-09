@@ -642,6 +642,34 @@ static int get_logpaths(struct bu *bu, const char *file,
 	return 0;
 }
 
+static void parallelism_warnings(struct asfd *asfd, struct conf **cconfs,
+	struct sdirs *sdirs, struct bu *bu, enum protocol protocol)
+{
+	struct bu *b;
+
+	if(lock_test(sdirs->lock_storage_for_write->path))
+	{
+		logm(asfd, cconfs, "Another process is currently backing up or deleting for this client.\n");
+		return;
+	}
+
+	if(!check_for_rubble(sdirs))
+		return;
+
+	for(b=bu; b && b->next; b=b->next)
+	{
+		if(b->flags & BU_CURRENT)
+			break; // Warning.
+		if(protocol==PROTO_2)
+			return; // No warning.
+		if(b->flags & BU_HARDLINKED)
+			return; // No warning.
+	}
+
+	logw(asfd, get_cntr(cconfs),
+		"The latest backup needs recovery, but continuing anyway.\n");
+}
+
 static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	regex_t *regex, int srestore, enum action act, struct sdirs *sdirs,
 	char **dir_for_notify, struct conf **cconfs)
@@ -723,10 +751,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 			goto end;
 	}
 
-	if(lock_test(sdirs->lock_storage_for_write->path))
-		logm(asfd, cconfs, "Another process is currently backing up or deleting for this client.\n");
-	else if(check_for_rubble(sdirs))
-		logw(asfd, get_cntr(cconfs), "The latest backup needs recovery, but continuing anyway.\n");
+	parallelism_warnings(asfd, cconfs, sdirs, bu, protocol);
 
 	// Now, do the actual restore.
 	ret=actual_restore(asfd, bu, manifest,

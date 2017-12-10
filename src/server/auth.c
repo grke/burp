@@ -15,6 +15,7 @@ static
 #endif
 int check_passwd(const char *passwd, const char *plain_text)
 {
+#ifndef HAVE_OPENBSD_OS
 #ifdef HAVE_CRYPT
 	const char *encrypted=NULL;
 	if(!plain_text || !passwd || strlen(passwd)<13)
@@ -22,7 +23,8 @@ int check_passwd(const char *passwd, const char *plain_text)
 
 	encrypted=crypt(plain_text, passwd);
 	return encrypted && !strcmp(encrypted, passwd);
-#endif // HAVE_CRYPT
+#endif
+#endif
 	logp("Server compiled without crypt support - cannot use passwd option\n");
 	return -1;
 }

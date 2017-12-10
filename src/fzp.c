@@ -63,8 +63,8 @@ static int close_zp(gzFile *zp)
 	  && e!=Z_BUF_ERROR)
 	{
 		const char *str=NULL;
-		if(e==Z_ERRNO) str=strerror(errno);
-		else str=gzerror(*zp, &e);
+		if(e==Z_ERRNO)
+			str=strerror(errno);
 		logp("gzclose failed: %d (%s)\n", e, str?:"");
 		ret=-1;
 	}

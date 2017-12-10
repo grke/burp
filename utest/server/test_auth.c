@@ -29,6 +29,9 @@ struct pdata
 
 static struct pdata p[] = {
 	// 1 is success, 0 is failure.
+#ifdef HAVE_OPENBSD_OS // Feature not supported at all on openbsd.
+	{ -1, "hiH9IOyyrrl4k", "ifpqgio" },
+#else
 	{ 1, "hiH9IOyyrrl4k", "ifpqgio" },
 	{ 0, "hiH9IOyyrrl4k", "ifpqgia" },
 	/* Salt format below is a GNU extension not present on other systems */
@@ -39,6 +42,7 @@ static struct pdata p[] = {
 #endif
 	{ 0, NULL, "testuser" },
 	{ 0, "123", "testuser" }
+#endif
 };
 
 START_TEST(test_check_passwd)
@@ -198,6 +202,7 @@ static void setup_no_password_configured(struct asfd *asfd)
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "mypass");
 }
 
+#ifndef HAVE_OPENBSD_OS // Feature not supported on openbsd.
 static void setup_passwd_failed(struct asfd *asfd)
 {
 	int r=0;
@@ -210,6 +215,7 @@ static void setup_passwd_failed(struct asfd *asfd)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "okpassword");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "dafklfd");
 }
+#endif
 
 static void setup_no_keep_configured(struct asfd *asfd)
 {
@@ -289,7 +295,9 @@ START_TEST(test_authorise_server)
 	do_test(-1, setup_okpassword_error);
 	do_test(-1, setup_wrong_password);
 	do_test(-1, setup_no_password_configured);
+#ifndef HAVE_OPENBSD_OS // Feature not supported on openbsd.
 	do_test(-1, setup_passwd_failed);
+#endif
 	do_test(-1, setup_no_keep_configured);
 #ifndef HAVE_DARWIN_OS
 	// MacOSX has case insensitive fs so this test fails in such case

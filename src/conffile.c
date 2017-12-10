@@ -630,19 +630,23 @@ static int get_fqdn(struct conf **c)
 	{
 		logp("getaddrinfo in %s: %s\n", __func__,
 			gai_strerror(gai_result));
-		goto end;
+		logp("Using %s\n", hostname);
+		if(!(fqdn=strdup_w(hostname, __func__)))
+			goto end;
 	}
-
-	//for(p=info; p; p=p->ai_next)
-	// Just use the first one.
-	if(!info)
+	else
 	{
-		logp("Got no hostname in %s\n", __func__);
-		goto end;
+		//for(p=info; p; p=p->ai_next)
+		// Just use the first one.
+		if(!info)
+		{
+			logp("Got no hostname in %s\n", __func__);
+			goto end;
+		}
+		if(!(fqdn=strdup_w(info->ai_canonname, __func__)))
+			goto end;
 	}
 
-	if(!(fqdn=strdup_w(info->ai_canonname, __func__)))
-		goto end;
 	mangle_cname(&fqdn, c);
 
 	if(set_string(c[OPT_CNAME], fqdn))

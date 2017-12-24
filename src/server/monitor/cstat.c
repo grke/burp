@@ -15,40 +15,119 @@
 static 
 #endif
 int cstat_permitted(struct cstat *cstat,
-	struct conf **parentconfs, struct conf **cconfs)
+	struct conf **monitor_cconfs, struct conf **cconfs)
 {
 	struct strlist *rclient;
-	const char *parentconf_cname;
+	const char *monitorconf_cname;
 
-	parentconf_cname=get_string(parentconfs[OPT_CNAME]);
-	if(!parentconf_cname) return 0;
+	monitorconf_cname=get_string(monitor_cconfs[OPT_CNAME]);
+	if(!monitorconf_cname)
+		return 0;
 
 	// Allow clients to look at themselves.
-	if(!strcmp(cstat->name, parentconf_cname)) return 1;
+	if(!strcmp(cstat->name, monitorconf_cname))
+		return 1;
 
 	// Do not allow clients using the restore_client option to see more
 	// than the client that it is pretending to be.
-	if(get_string(parentconfs[OPT_RESTORE_CLIENT])) return 0;
+	if(get_string(monitor_cconfs[OPT_RESTORE_CLIENT]))
+		return 0;
 
 	// If we are listed in this restore_client list.
 	for(rclient=get_strlist(cconfs[OPT_RESTORE_CLIENTS]);
 	  rclient; rclient=rclient->next)
-		if(!strcmp(get_string(parentconfs[OPT_CNAME]), rclient->path))
-			return 1;
+	    if(!strcmp(get_string(monitor_cconfs[OPT_CNAME]), rclient->path))
+		return 1;
 	return 0;
 }
 
+static int cstat_set_sdirs_protocol_unknown(struct cstat *cstat,
+	struct conf **cconfs)
+{
+	struct stat buf1;
+	struct stat buf2;
+	struct sdirs *sdirs1=NULL;
+	struct sdirs *sdirs2=NULL;
+
+	if(!(sdirs1=sdirs_alloc())
+	  || !(sdirs2=sdirs_alloc()))
+		goto error;
+
+	set_protocol(cconfs, PROTO_1);
+	if(sdirs_init_from_confs(sdirs1, cconfs))
+		goto error;
+	set_protocol(cconfs, PROTO_2);
+	if(sdirs_init_from_confs(sdirs2, cconfs))
+		goto error;
+
+	if(lstat(sdirs2->client, &buf2))
+		goto protocol1; // No protocol2 client directory.
+
+	if(lstat(sdirs1->client, &buf1))
+		goto protocol2; // No protocol1 client directory.
+
+	// Both directories exist.
+
+	if(buf2.st_mtime>buf1.st_mtime)
+		goto protocol2; // 2 was modified most recently.
+
+	// Fall through to protocol1.
+
+protocol1:
+	cstat->sdirs=sdirs1;
+	cstat->protocol=PROTO_1;
+	sdirs_free(&sdirs2);
+	set_protocol(cconfs, PROTO_AUTO);
+	return 0;
+protocol2:
+	cstat->sdirs=sdirs2;
+	cstat->protocol=PROTO_2;
+	sdirs_free(&sdirs1);
+	set_protocol(cconfs, PROTO_AUTO);
+	return 0;
+error:
+	sdirs_free(&sdirs1);
+	sdirs_free(&sdirs2);
+	set_protocol(cconfs, PROTO_AUTO);
+	return -1;
+}
+
+static int cstat_set_sdirs_protocol_known(struct cstat *cstat,
+	struct conf **cconfs)
+{
+	struct sdirs *sdirs=NULL;
+
+	if(!(sdirs=sdirs_alloc()))
+		return -1;
+	if(sdirs_init_from_confs(sdirs, cconfs))
+	{
+		sdirs_free(&sdirs);
+		return -1;
+	}
+	cstat->sdirs=sdirs;
+	return 0;
+}
+
+static int cstat_set_sdirs(struct cstat *cstat, struct conf **cconfs)
+{
+	enum protocol protocol=get_protocol(cconfs);
+	sdirs_free((struct sdirs **)&cstat->sdirs);
+
+	if(protocol==PROTO_AUTO)
+		return cstat_set_sdirs_protocol_unknown(cstat, cconfs);
+
+	cstat->protocol=protocol;
+	return cstat_set_sdirs_protocol_known(cstat, cconfs);
+}
+
 static int set_cstat_from_conf(struct cstat *cstat,
-	struct conf **parentconfs, struct conf **cconfs)
+	struct conf **monitor_cconfs, struct conf **cconfs)
 {
 	struct strlist *s=NULL;
 	// Make sure the permitted flag is set appropriately.
-	cstat->permitted=cstat_permitted(cstat, parentconfs, cconfs);
+	cstat->permitted=cstat_permitted(cstat, monitor_cconfs, cconfs);
 
-	cstat->protocol=get_protocol(cconfs);
-	sdirs_free((struct sdirs **)&cstat->sdirs);
-	if(!(cstat->sdirs=sdirs_alloc())
-	  || sdirs_init_from_confs((struct sdirs *)cstat->sdirs, cconfs))
+	if(cstat_set_sdirs(cstat, cconfs))
 		return -1;
 	strlists_free(&cstat->labels);
 	for(s=get_strlist(cconfs[OPT_LABEL]); s; s=s->next)
@@ -145,6 +224,7 @@ void cstat_remove(struct cstat **clist, struct cstat **cstat)
 static
 #endif
 int cstat_reload_from_client_confs(struct cstat **clist,
+	struct conf **monitor_cconfs,
 	struct conf **globalcs, struct conf **cconfs)
 {
 	struct cstat *c;
@@ -202,7 +282,7 @@ int cstat_reload_from_client_confs(struct cstat **clist,
 				continue;
 			}
 
-			if(set_cstat_from_conf(c, globalcs, cconfs))
+			if(set_cstat_from_conf(c, monitor_cconfs, cconfs))
 				return -1;
 			reloaded++;
 		}
@@ -261,13 +341,15 @@ error:
 	return -1;
 }
 
-int cstat_load_data_from_disk(struct cstat **clist, struct conf **globalcs,
-	struct conf **cconfs)
+int cstat_load_data_from_disk(struct cstat **clist,
+	struct conf **monitor_cconfs,
+	struct conf **globalcs, struct conf **cconfs)
 {
 	if(!globalcs) return -1;
 	return cstat_get_client_names(clist,
 		get_string(globalcs[OPT_CLIENTCONFDIR]))
-	  || cstat_reload_from_client_confs(clist, globalcs, cconfs)<0
+	  || cstat_reload_from_client_confs(clist,
+		monitor_cconfs, globalcs, cconfs)<0
 	  || reload_from_clientdir(clist)<0;
 }
 

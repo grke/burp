@@ -211,6 +211,7 @@ static void set_mtimes(const char *cnames[], int diff)
 START_TEST(test_cstat_reload_from_client_confs)
 {
 	struct cstat *clist=NULL;
+	struct conf **monitor_cconfs;
 	struct conf **globalcs;
 	struct conf **cconfs;
 	const char *cnames1[] = {"cli1", NULL};
@@ -218,71 +219,75 @@ START_TEST(test_cstat_reload_from_client_confs)
 	const char *cnames13[] = {"cli1", "cli3", NULL};
 
 	clean();
+	fail_unless((monitor_cconfs=confs_alloc())!=NULL);
 	fail_unless((globalcs=confs_alloc())!=NULL);
 	fail_unless((cconfs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(monitor_cconfs));
 	fail_unless(!confs_init(globalcs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(GLOBAL_CONF, monitor_cconfs));
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, globalcs));
 	build_clientconfdir_files(cnames123, NULL);
 
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==3);
 	assert_cstat_list(clist, cnames123);
 
 	// Going again should result in 0 updates.
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==0);
 	assert_cstat_list(clist, cnames123);
 
 	// Touching all clientconfdir files should result in 3 updates.
 	set_mtimes(cnames123, -100);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==3);
 	assert_cstat_list(clist, cnames123);
 
 	// Touching one clientconfdir file should result in 1 update.
 	set_mtimes(cnames1, -200);
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==1);
 	assert_cstat_list(clist, cnames123);
 
 	// Deleting one clientconfdir file should result in 0 updates.
 	delete_clientconfdir_file("cli2");
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==0);
 	assert_cstat_list(clist, cnames13);
 
 	// A clientconfdir file with junk in it should get permission denied
 	// and remain in the list.
 	build_file(get_clientconfdir_path("cli1"), "klasdjldkjf");
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==0);
 	assert_cstat_list(clist, cnames13);
 	// Should not reload it next time round.
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==0);
 	assert_cstat_list(clist, cnames13);
 	// Fix the file, and we should reload it.
 	build_file(get_clientconfdir_path("cli1"), NULL);
 	set_mtimes(cnames1, -300);
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==1);
 	assert_cstat_list(clist, cnames13);
 
 	// Delete everything.
 	delete_clientconfdir_file("cli1");
 	delete_clientconfdir_file("cli3");
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==0);
 	assert_cstat_list(clist, NULL);
 
 	unlink(GLOBAL_CONF);
-	fail_unless(cstat_reload_from_client_confs(&clist,
+	fail_unless(cstat_reload_from_client_confs(&clist, monitor_cconfs,
 		globalcs, cconfs)==-1);
 
+	confs_free(&monitor_cconfs);
 	confs_free(&globalcs);
 	confs_free(&cconfs);
 	cstat_list_free_sdirs(clist);
@@ -292,15 +297,20 @@ START_TEST(test_cstat_reload_from_client_confs)
 }
 END_TEST
 
+static void setup_globalcs(struct conf ***globalcs)
+{
+	fail_unless((*globalcs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(*globalcs));
+	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(GLOBAL_CONF, *globalcs));
+}
+
 static struct cstat *test_cstat_remove_setup(struct conf ***globalcs,
 	const char *cnames[])
 {
 	struct cstat *clist=NULL;
 	clean();
-	fail_unless((*globalcs=confs_alloc())!=NULL);
-	fail_unless(!confs_init(*globalcs));
-	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
-	fail_unless(!conf_load_global_only(GLOBAL_CONF, *globalcs));
+	setup_globalcs(globalcs);
 	build_clientconfdir_files(cnames, NULL);
 	fail_unless(!cstat_get_client_names(&clist, CLIENTCONFDIR));
 	assert_cstat_list(clist, cnames);
@@ -498,61 +508,61 @@ START_TEST(test_cstat_reload_from_clientdir)
 END_TEST
 
 static void check_restore_clients(struct cstat *cstat,
-	struct conf **parentconf, const char *restore_clients, int permitted)
+	struct conf **monitor_cconfs, const char *restore_clients, int permitted)
 {
 	struct conf **cconfs=NULL;
 	fail_unless((cconfs=confs_alloc())!=NULL);
 	fail_unless(!confs_init(cconfs));
 	fail_unless(!set_string(cconfs[OPT_CNAME], "cli1"));
 	build_clientconfdir_file("cli1", restore_clients);
-	fail_unless(!conf_load_clientconfdir(parentconf, cconfs));
-	fail_unless(!set_string(parentconf[OPT_CNAME], "cli2"));
-	fail_unless(cstat_permitted(cstat, parentconf, cconfs)==permitted);
+	fail_unless(!conf_load_clientconfdir(monitor_cconfs, cconfs));
+	fail_unless(!set_string(monitor_cconfs[OPT_CNAME], "cli2"));
+	fail_unless(cstat_permitted(cstat, monitor_cconfs, cconfs)==permitted);
 	confs_free(&cconfs);
 }
 
 START_TEST(test_cstat_permitted)
 {
 	struct cstat *cstat=NULL;
-	struct conf **parentconf=NULL;
+	struct conf **monitor_cconfs=NULL;
 
 	clean();
 	fail_unless((cstat=cstat_alloc())!=NULL);
 	fail_unless(!cstat_init(cstat, "cli1", CLIENTCONFDIR));
-	fail_unless((parentconf=confs_alloc())!=NULL);
-	fail_unless(!confs_init(parentconf));
+	fail_unless((monitor_cconfs=confs_alloc())!=NULL);
+	fail_unless(!confs_init(monitor_cconfs));
 	build_file(GLOBAL_CONF, MIN_SERVER_CONF);
-	fail_unless(!conf_load_global_only(GLOBAL_CONF, parentconf));
+	fail_unless(!conf_load_global_only(GLOBAL_CONF, monitor_cconfs));
 
 	// Clients can look at themselves.
 	// In this case, cli1 is 'us'.
-	fail_unless(!set_string(parentconf[OPT_CNAME], "cli1"));
-	fail_unless(cstat_permitted(cstat, parentconf, NULL)==1);
+	fail_unless(!set_string(monitor_cconfs[OPT_CNAME], "cli1"));
+	fail_unless(cstat_permitted(cstat, monitor_cconfs, NULL)==1);
 
 	// Clients using the restore_client cannot see anything but the client
 	// they are pretending to be.
 	// In this case, cli2 is 'us'.
-	fail_unless(!set_string(parentconf[OPT_CNAME], "cli2"));
-	fail_unless(!set_string(parentconf[OPT_RESTORE_CLIENT], "is_set"));
-	fail_unless(cstat_permitted(cstat, parentconf, NULL)==0);
-	fail_unless(!set_string(parentconf[OPT_RESTORE_CLIENT], NULL));
+	fail_unless(!set_string(monitor_cconfs[OPT_CNAME], "cli2"));
+	fail_unless(!set_string(monitor_cconfs[OPT_RESTORE_CLIENT], "is_set"));
+	fail_unless(cstat_permitted(cstat, monitor_cconfs, NULL)==0);
+	fail_unless(!set_string(monitor_cconfs[OPT_RESTORE_CLIENT], NULL));
 
 	// Clients can see another client if we are listed in its
 	// restore_clients list.
 	// In this case, cli2 is 'us' and we are trying to look at cli1.
-	check_restore_clients(cstat, parentconf,
+	check_restore_clients(cstat, monitor_cconfs,
 		"restore_client = cli3\n"
 		"restore_client = cli2\n"
 		"restore_client = cli4\n",
 		1 /* permitted */);
 
 	// If we are not in its list, we cannot see it.
-	check_restore_clients(cstat, parentconf,
+	check_restore_clients(cstat, monitor_cconfs,
 		"restore_client = cli3\n"
 		"restore_client = cli4\n",
 		0 /* not permitted */);
 
-	confs_free(&parentconf);
+	confs_free(&monitor_cconfs);
 	cstat_free(&cstat);
 	clean();
 	alloc_check();
@@ -562,12 +572,15 @@ END_TEST
 START_TEST(test_cstat_load_data_from_disk)
 {
 	struct cstat *clist=NULL;
+	struct conf **monitor_cconfs;
 	struct conf **globalcs;
 	struct conf **cconfs;
+	setup_globalcs(&monitor_cconfs);
 	clist=test_cstat_remove_setup(&globalcs, cnames1234);
 	fail_unless((cconfs=confs_alloc())!=NULL);
-	cstat_load_data_from_disk(&clist, globalcs, cconfs);
+	cstat_load_data_from_disk(&clist, monitor_cconfs, globalcs, cconfs);
 	confs_free(&cconfs);
+	confs_free(&monitor_cconfs);
 	test_cstat_remove_teardown(&globalcs, &clist);
 }
 END_TEST

@@ -5,6 +5,6 @@
 extern int parse_parent_data(char *buf, struct cstat *clist);
 #endif
 
-extern int status_server(struct async *as, struct conf **confs);
+extern int status_server(struct async *as, struct conf **monitor_cconfs);
 
 #endif

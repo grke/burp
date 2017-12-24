@@ -4,6 +4,7 @@
 #include "../../async.h"
 #include "../../bu.h"
 #include "../../cstat.h"
+#include "../../conffile.h"
 #include "../../handy.h"
 #include "../../iobuf.h"
 #include "../../log.h"
@@ -189,7 +190,7 @@ void dump_cbno(struct cstat *clist, const char *msg)
 */
 
 static int parse_client_data(struct asfd *srfd,
-	struct cstat *clist, struct conf **confs, long *peer_version)
+	struct cstat *clist, int monitor_browse_cache, long *peer_version)
 {
 	int ret=0;
 	char *command=NULL;
@@ -310,7 +311,7 @@ static int parse_client_data(struct asfd *srfd,
 	printf("logfile: %s\n", logfile?:"");
 */
 	if(json_send(srfd, clist, cstat, bu, logfile, browse,
-		get_int(confs[OPT_MONITOR_BROWSE_CACHE]), *peer_version))
+		monitor_browse_cache, *peer_version))
 			goto error;
 
 	goto end;
@@ -325,10 +326,11 @@ end:
 }
 
 static int parse_data(struct asfd *asfd, struct cstat *clist,
-	struct asfd *cfd, struct conf **confs, long *peer_version)
+	struct asfd *cfd, int monitor_browse_cache, long *peer_version)
 {
 	if(asfd==cfd)
-		return parse_client_data(asfd, clist, confs, peer_version);
+		return parse_client_data(asfd,
+			clist, monitor_browse_cache, peer_version);
 	return parse_parent_data(asfd->rbuf->buf, clist);
 }
 
@@ -358,12 +360,14 @@ static int have_run_statuses(struct cstat *clist)
 
 static int get_initial_data(struct async *as,
 	struct cstat **clist,
-	struct conf **confs, struct conf **cconfs, long *peer_version)
+	struct conf **monitor_cconfs,
+	struct conf **globalcs, struct conf **cconfs,
+	int monitor_browse_cache, long *peer_version)
 {
 	int x=10;
 	struct asfd *asfd=NULL;
 
-	if(cstat_load_data_from_disk(clist, confs, cconfs))
+	if(cstat_load_data_from_disk(clist, monitor_cconfs, globalcs, cconfs))
 		return -1;
 
 	// Try to get the initial data.
@@ -383,7 +387,8 @@ static int get_initial_data(struct async *as,
 		asfd=as->asfd->next;
 		if(asfd->rbuf->buf)
 		{
-			if(parse_data(asfd, *clist, NULL, confs, peer_version))
+			if(parse_data(asfd, *clist,
+				NULL, monitor_browse_cache, peer_version))
 			{
 				iobuf_free_content(asfd->rbuf);
 				return -1;
@@ -394,7 +399,7 @@ static int get_initial_data(struct async *as,
 	return 0;
 }
 
-int status_server(struct async *as, struct conf **confs)
+int status_server(struct async *as, struct conf **monitor_cconfs)
 {
 	int ret=-1;
 	int gotdata=0;
@@ -402,21 +407,37 @@ int status_server(struct async *as, struct conf **confs)
 	struct cstat *clist=NULL;
 	struct asfd *cfd=as->asfd; // Client.
 	struct conf **cconfs=NULL;
-	long peer_version=version_to_long(get_string(confs[OPT_PEER_VERSION]));
+	struct conf **globalcs=NULL;
+	const char *conffile=get_string(monitor_cconfs[OPT_CONFFILE]);
+	long peer_version=version_to_long(get_string(monitor_cconfs[OPT_PEER_VERSION]));
+	int monitor_browse_cache=get_int(monitor_cconfs[OPT_MONITOR_BROWSE_CACHE]);
+
+	// We need to load a fresh global conf so that the clients do not all
+	// get settings from the monitor client. In particular, if protocol=0
+	// in both burp-server.conf and the monitor burp.conf, the monitor
+	// client gets protocol=1 from extra comms, and all the clients here
+	// would end up getting protocol=1.
+	if(!(globalcs=confs_alloc()))
+		goto end;
+	if(confs_init(globalcs)) return -1;
+	if(conf_load_global_only(conffile, globalcs))
+		return -1;
 
 	if(!(cconfs=confs_alloc()))
 		goto end;
 
-	if(get_initial_data(as, &clist, confs, cconfs, &peer_version))
-		goto end;
+	if(get_initial_data(as, &clist, monitor_cconfs,
+		globalcs, cconfs, monitor_browse_cache, &peer_version))
+			goto end;
 
 	while(1)
 	{
 		// Take the opportunity to get data from the disk if nothing
 		// was read from the fds.
 		if(gotdata) gotdata=0;
-		else if(cstat_load_data_from_disk(&clist, confs, cconfs))
-			goto end;
+		else if(cstat_load_data_from_disk(&clist, monitor_cconfs,
+			globalcs, cconfs))
+				goto end;
 		if(as->read_write(as))
 		{
 			logp("Exiting main status server loop\n");
@@ -426,7 +447,8 @@ int status_server(struct async *as, struct conf **confs)
 			while(asfd->rbuf->buf)
 		{
 			gotdata=1;
-			if(parse_data(asfd, clist, cfd, confs, &peer_version)
+			if(parse_data(asfd, clist,
+				cfd, monitor_browse_cache, &peer_version)
 			  || asfd->parse_readbuf(asfd))
 				goto end;
 			iobuf_free_content(asfd->rbuf);
@@ -435,5 +457,6 @@ int status_server(struct async *as, struct conf **confs)
 	ret=0;
 end:
 // FIX THIS: should free clist;
+	confs_free(&globalcs);
 	return ret;
 }

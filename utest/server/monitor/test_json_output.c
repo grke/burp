@@ -108,28 +108,34 @@ START_TEST(test_json_send_clients)
 	struct asfd *asfd;
 	struct cstat *c=NULL;
 	struct cstat *clist=NULL;
+	struct conf **monitor_cconfs=NULL;
 	struct conf **globalcs=NULL;
 	struct conf **cconfs=NULL;
 	const char *cnames[] ={"cli1", "cli2", "cli3", NULL};
 
 	tz=setup_tz();
+	monitor_cconfs=setup_conf();
 	globalcs=setup_conf();
 	cconfs=setup_conf();
 
 	build_file(CONFFILE, MIN_SERVER_CONF);
+	fail_unless(!conf_load_global_only(CONFFILE, monitor_cconfs));
 	fail_unless(!conf_load_global_only(CONFFILE, globalcs));
 
 	fail_unless(recursive_delete(CLIENTCONFDIR)==0);
 	build_clientconfdir_files(cnames, "label=abc\nlabel=xyz\n");
-	fail_unless(!cstat_load_data_from_disk(&clist, globalcs, cconfs));
+	fail_unless(!cstat_load_data_from_disk(&clist, monitor_cconfs,
+		globalcs, cconfs));
 	assert_cstat_list(clist, cnames);
-	for(c=clist; c; c=c->next) c->permitted=1;
+	for(c=clist; c; c=c->next)
+		c->permitted=1;
 	asfd=asfd_setup(BASE "/clients");
 	fail_unless(!json_send(asfd, clist, NULL, NULL, NULL, NULL, 0/*cache*/,
 		version_to_long(VERSION)));
 	for(c=clist; c; c=c->next)
 		sdirs_free((struct sdirs **)&c->sdirs);
 	cstat_list_free(&clist);
+	confs_free(&monitor_cconfs);
 	confs_free(&globalcs);
 	confs_free(&cconfs);
 	tear_down(&asfd, &tz);

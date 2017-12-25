@@ -13,6 +13,15 @@ enum bf_mode
 	BF_WRITE /* BackupWrite */
 };
 
+#ifndef HAVE_WIN32
+struct mysid
+{
+        struct bsid sid;
+        size_t needed_s;
+        size_t needed_d;
+};
+#endif
+
 struct BFILE
 {
 	enum bf_mode mode;   /* set if file is open */
@@ -34,6 +43,8 @@ struct BFILE
 	int berrno;          /* errno */
 #else
 	int fd;
+	int vss_strip;
+	struct mysid mysid;
 #endif
 	int set_attribs_on_close;
 
@@ -48,6 +59,8 @@ struct BFILE
 		int atime, struct cntr *cntr, enum protocol protocol);
 #ifdef HAVE_WIN32
 	void (*set_win32_api)(struct BFILE *bfd, int on);
+#else
+	void (*set_vss_strip)(struct BFILE *bfd, int vss_strip);
 #endif
 };
 

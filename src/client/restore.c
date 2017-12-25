@@ -163,6 +163,9 @@ enum ofr_e open_for_restore(struct asfd *asfd, struct BFILE *bfd, const char *pa
 	bfd->set_attribs_on_close=1;
 #ifdef HAVE_WIN32
 	bfd->set_win32_api(bfd, vss_restore);
+#else
+	// Abuse the vss_restore option to mean vss_strip on non-Windows.
+	bfd->set_vss_strip(bfd, !vss_restore);
 #endif
 	if(S_ISDIR(sb->statp.st_mode))
 	{
@@ -494,24 +497,6 @@ static int overwrite_ok(struct sbuf *sb,
 	return 1;
 }
 
-static int write_data(struct asfd *asfd, struct BFILE *bfd, struct blk *blk)
-{
-	if(bfd->mode==BF_CLOSED)
-		logp("Got data without an open file\n");
-	else
-	{
-		int w;
-		if((w=bfd->write(bfd, blk->data, blk->length))<=0)
-		{
-			logp("%s(): error when appending %d: %d\n",
-				__func__, blk->length, w);
-			asfd->write_str(asfd, CMD_ERROR, "write failed");
-			return -1;
-		}
-	}
-	return 0;
-}
-
 #define RESTORE_STREAM	"restore_stream"
 // Used to have "restore_spool". Removed for simplicity.
 
@@ -621,7 +606,8 @@ int do_restore_client(struct asfd *asfd,
 				if(act==ACTION_VERIFY)
 					cntr_add(cntr, CMD_DATA, 1);
 				else
-					wret=write_data(asfd, bfd, blk);
+					wret=write_protocol2_data(asfd,
+						bfd, blk, vss_restore);
 				blk_free_content(blk);
 				blk->data=NULL;
 				if(wret) goto error;

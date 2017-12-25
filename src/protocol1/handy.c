@@ -113,15 +113,6 @@ error:
 	return NULL;
 }
 
-#ifdef HAVE_WIN32
-struct bsid {
-	int32_t dwStreamId;
-	int32_t dwStreamAttributes;
-	int64_t Size;
-	int32_t dwStreamNameSize;
-};
-#endif
-
 char *get_endfile_str(uint64_t bytes, uint8_t *checksum)
 {
 	static char endmsg[128]="";

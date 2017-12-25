@@ -165,4 +165,15 @@
 	#endif
 #endif
 
+// This is the shape of the Windows VSS header structure.
+// It is size 20 on disk. Using sizeof(struct bsid) gives 24 in memory.
+struct bsid
+{
+	int32_t dwStreamId;
+	int32_t dwStreamAttributes;
+	int64_t Size;
+	int32_t dwStreamNameSize;
+};
+#define bsidsize        20
+
 #endif

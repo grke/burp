@@ -75,9 +75,18 @@ Considering that backups may occur nightly depending on your configuration, it w
 
 On Ubuntu, you'll need to remove the "root" username on the crontab line.
 
+Logs
+----
+
+By default, burp_tool.sh logs to /var/log/burp_tool.[instance-id].log
+If /var/log is not writable, it will log to ${HOME}.
+
 Customisation and developpment
 ------------------------------
 
 As of today, the script should work on all linux platforms.
 Some work is needed to make some regular expressions work on *BSD.
 Feel free to fork and help :)
+
+Orsiris de Jong
+http://www.netpower.fr - ozy@netpower.fr

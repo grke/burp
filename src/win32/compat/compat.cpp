@@ -1320,7 +1320,7 @@ long pathconf(const char *path, int name)
 
 int WSA_Init(void)
 {
-	WORD wVersionRequested=MAKEWORD( 1, 1);
+	WORD wVersionRequested=MAKEWORD(1, 1);
 	WSADATA wsaData;
 
 	if(WSAStartup(wVersionRequested, &wsaData))

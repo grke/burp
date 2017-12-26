@@ -24,17 +24,15 @@
 
 #include "protocol2/blist.h"
 
-static size_t bufmaxsize=(ASYNC_BUF_LEN*2)+32;
-
 static void truncate_readbuf(struct asfd *asfd)
 {
 	asfd->readbuf[0]='\0';
 	asfd->readbuflen=0;
 }
 
-static int asfd_alloc_buf(char **buf)
+static int asfd_alloc_buf(struct asfd *asfd, char **buf)
 {
-	if(!*buf && !(*buf=(char *)calloc_w(1, bufmaxsize, __func__)))
+	if(!*buf && !(*buf=(char *)calloc_w(1, asfd->bufmaxsize, __func__)))
 		return -1;
 	return 0;
 }
@@ -154,7 +152,7 @@ static int asfd_do_read(struct asfd *asfd)
 {
 	ssize_t r;
 	r=read(asfd->fd,
-		asfd->readbuf+asfd->readbuflen, bufmaxsize-asfd->readbuflen);
+	  asfd->readbuf+asfd->readbuflen, asfd->bufmaxsize-asfd->readbuflen);
 	if(r<0)
 	{
 		if(errno==EAGAIN || errno==EINTR)
@@ -192,7 +190,7 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 
 	ERR_clear_error();
 	r=SSL_read(asfd->ssl,
-		asfd->readbuf+asfd->readbuflen, bufmaxsize-asfd->readbuflen);
+	  asfd->readbuf+asfd->readbuflen, asfd->bufmaxsize-asfd->readbuflen);
 
 	switch((e=SSL_get_error(asfd->ssl, r)))
 	{
@@ -368,7 +366,7 @@ static enum append_ret asfd_append_all_to_write_buffer(struct asfd *asfd,
 		{
 			size_t sblen=0;
 			char sbuf[10]="";
-			if(asfd->writebuflen+6+(wbuf->len) >= bufmaxsize-1)
+			if(asfd->writebuflen+6+(wbuf->len)>=asfd->bufmaxsize-1)
 				return APPEND_BLOCKED;
 
 			snprintf(sbuf, sizeof(sbuf), "%c%04X",
@@ -378,7 +376,7 @@ static enum append_ret asfd_append_all_to_write_buffer(struct asfd *asfd,
 			break;
 		}
 		case ASFD_STREAM_LINEBUF:
-			if(asfd->writebuflen+wbuf->len >= bufmaxsize-1)
+			if(asfd->writebuflen+wbuf->len>=asfd->bufmaxsize-1)
 				return APPEND_BLOCKED;
 			break;
 		case ASFD_STREAM_NCURSES_STDIN:
@@ -547,6 +545,13 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 	asfd->rlsleeptime=10000;
 	asfd->pid=-1;
 	asfd->attempt_reads=1;
+	asfd->bufmaxsize=(ASYNC_BUF_LEN*2)+32;
+#ifdef HAVE_WIN32
+	// Windows craps out if you try to read stdin into a buffer that is
+	// too big!
+	if(asfd->fd==fileno(stdin))
+		asfd->bufmaxsize=4096;
+#endif
 
 	asfd->parse_readbuf=asfd_parse_readbuf;
 	asfd->append_all_to_write_buffer=asfd_append_all_to_write_buffer;
@@ -594,8 +599,8 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 	}
 
 	if(!(asfd->rbuf=iobuf_alloc())
-	  || asfd_alloc_buf(&asfd->readbuf)
-	  || asfd_alloc_buf(&asfd->writebuf)
+	  || asfd_alloc_buf(asfd, &asfd->readbuf)
+	  || asfd_alloc_buf(asfd, &asfd->writebuf)
 	  || !(asfd->desc=strdup_w(desc, __func__)))
 		return -1;
 	return 0;

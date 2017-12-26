@@ -28,6 +28,58 @@ static int asfd_problem(struct asfd *asfd)
 	return -1;
 }
 
+#ifdef HAVE_WIN32
+// Jesus H. Christ. How does anybody ever get anything done with windows?
+// The normal async stuff does not work for the client monitor, because the
+// windows select() only supports sockets, and windows stdin/stdout are not
+// sockets.
+// It seems to be impossible to do non-blocking i/o on windows stdin.
+// If you have a windows console, you can use PeekConsoleInput to look at
+// events in order to look ahead. This is not looking at stdin, which means
+// that this does not work for ssh via cygwin.
+static int windows_stupidity_hacks(struct asfd *asfd,
+	fd_set *fsr, fd_set *fsw)
+{
+	if(asfd->do_read && asfd->fd==fileno(stdin))
+	{
+		DWORD len=0;
+		INPUT_RECORD irec;
+		HANDLE han=GetStdHandle(STD_INPUT_HANDLE);
+
+		switch(WaitForSingleObject(han, 0))
+		{
+			case WAIT_OBJECT_0:
+				if(!PeekConsoleInput(han, &irec, 1, &len))
+					break;
+				if(irec.EventType==KEY_EVENT
+				  && irec.Event.KeyEvent.bKeyDown)
+				{
+					// This will block until the user hits
+					// the return key.
+					if(asfd->do_read(asfd)
+					  || asfd->parse_readbuf(asfd))
+						return asfd_problem(asfd);
+				}
+				else
+				{
+					// Purge event we are not interested in.
+					ReadConsoleInput(han, &irec, 1, &len);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+	if(asfd->do_write && asfd->fd==fileno(stdout))
+	{
+		// This is saying that we think that stdout is always OK to
+		// write to. Maybe this will not work all the time.
+		FD_SET((unsigned int)asfd->fd, fsw);
+	}
+	return 0;
+}
+#endif
+
 static int async_io(struct async *as, int doread)
 {
 	int mfd=-1;
@@ -73,6 +125,15 @@ static int async_io(struct async *as, int doread)
 
 		if(!asfd->doread && !asfd->dowrite) continue;
 
+#ifdef HAVE_WIN32
+		if(asfd->fd==fileno(stdin)
+		  || asfd->fd==fileno(stdout))
+		{
+			dosomething++;
+			continue;
+		}
+#endif
+
 		add_fd_to_sets(asfd->fd, asfd->doread?&fsr:NULL,
 			asfd->dowrite?&fsw:NULL, &fse, &mfd);
 
@@ -88,20 +149,27 @@ static int async_io(struct async *as, int doread)
 	}
 */
 
-	errno=0;
-	s=select(mfd+1, &fsr, &fsw, &fse, &tval);
-	if(errno==EAGAIN || errno==EINTR) goto end;
-
-	if(s<0)
+	if(mfd>0)
 	{
-		logp("select error in %s: %s\n", __func__,
-			strerror(errno));
-		as->last_time=as->now;
-		return -1;
+		errno=0;
+		s=select(mfd+1, &fsr, &fsw, &fse, &tval);
+		if(errno==EAGAIN || errno==EINTR) goto end;
+
+		if(s<0)
+		{
+			logp("select error in %s: %s\n", __func__,
+				strerror(errno));
+			as->last_time=as->now;
+			return -1;
+		}
 	}
 
 	for(asfd=as->asfd; asfd; asfd=asfd->next)
 	{
+#ifdef HAVE_WIN32
+		if(windows_stupidity_hacks(asfd, &fsr, &fsw))
+			return -1;
+#endif
 		if(FD_ISSET(asfd->fd, &fse))
 		{
 			switch(asfd->fdtype)

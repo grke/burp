@@ -96,7 +96,8 @@ sbin_SCRIPTS = $(PACKAGE_TARNAME)_ca
 dist_script_SCRIPTS = \
 	configs/server/timer_script \
 	configs/server/notify_script \
-	configs/server/ssl_extra_checks_script
+	configs/server/ssl_extra_checks_script \
+	configs/server/burp_tool.sh
 
 EXTRA_script_SCRIPTS = summary_script
 

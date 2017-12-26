@@ -44,6 +44,7 @@ dist_doc_DATA = \
 	docs/tests.txt \
 	docs/timer_script.txt \
 	docs/working_dir.txt \
+	docs/burp_tool.sh.txt \
 	src/protocol1/backup_phases.txt \
 	src/protocol1/readwrite.txt
 

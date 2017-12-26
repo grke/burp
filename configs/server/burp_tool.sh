@@ -2,20 +2,20 @@
 
 PROGRAM="burp_tool"
 PROGRAM_VERSION=0.2.0
-PROGRAM_BUILD=2017120403
+PROGRAM_BUILD=2017122601
 AUTHOR="(C) 2017 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=yes
 
-## burp-tool.sh - A script to check burp backup sanity
+## burp_tool.sh - A script to check burp backup sanity
 ## burp is written by Graham Keeling, see http://burp.grke.org
 
-## burp-tool.sh can verify a given number of backups for each client. It can run verify operations in parallel.
-## Verify operations can be timed in order to stop them after a given amount of time, leaving the system performance for the backup operations.
-## It can list all clients that have outdated backups (eg no backups since a given number of days)
-## It uses two different methods to list clients, in order to catch rogue client directories
-## It can send an alert email when problems are found, even while operating.
-## burp-tool.sh can also launch vss_strip for each file in a directory
+## burp_tool.sh can verify a given number of backups for each client. It can run verifiy operations in parallel.
+## Verify operations are timed in order to stop them after a given amount of time, leaving the system performance ready for backup operations.
+## The script can also list clients that have outdated backups. It uses two different methods to list clients in order to detect rogue clients.
+## It can also ensure that the burp server service is running properly, relaunch it if needed, on a scheduled basis.
+## The script can send a warning / error when problems are found, even while operating.
+## burp_tool.sh can also launch vss_strip for each file found in a given directory.
 
 ## Set an unique identifier for the script
 INSTANCE_ID="base"
@@ -30,10 +30,10 @@ SOFT_MAX_EXEC_TIME=10800
 HARD_MAX_EXEC_TIME=36000
 
 ## Burp executable (can be set to /usr/bin/burp, /usr/local/bin/burp...)
-burpExecutable=burp
+BURP_EXECUTABLE=burp
 
 ## Burp service type (can be "initv" or "systemd")
-ServiceType=systemd
+SERVICE_TYPE=systemd
 
 ## How many simultaneous verify operations should be launched (please check I/O and CPU usage before increasing this)
 PARELLEL_VERIFY_CONCURRENCY=2
@@ -52,7 +52,7 @@ _LOGGER_VERBOSE=false
 _LOGGER_ERR_ONLY=false
 _LOGGER_PREFIX="date"
 if [ "$KEEP_LOGGING" == "" ]; then
-	KEEP_LOGGING=301
+	KEEP_LOGGING=721
 fi
 
 # Initial error status, logging 'WARN', 'ERROR' or 'CRITICAL' will enable alerts flags
@@ -959,12 +959,12 @@ function ListClients {
 	fi
 
 	# Using both burp -a S list and find method in order to find maximum backup clients
-	cmd="$burpExecutable $configString -a S | grep \"last backup\" | awk '{print \$1}' > \"$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP\""
+	cmd="$BURP_EXECUTABLE $configString -a S | grep \"last backup\" | awk '{print \$1}' > \"$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP\""
 	Logger "Running cmd [$cmd]." "DEBUG"
 	eval "$cmd" &
 	WaitForTaskCompletion $! 1800 3600 1 $KEEP_LOGGING true true false
 	if [ $? != 0 ]; then
-		Logger "Enumerating burp clients via [$burpExecutable $configString -a S] failed." "ERROR"
+		Logger "Enumerating burp clients via [$BURP_EXECUTABLE $configString -a S] failed." "ERROR"
 	else
 		Logger "Burp method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP)" "DEBUG"
 	fi
@@ -1036,7 +1036,7 @@ function IsClientIdle {
 
 	Logger "Checking if client [$client] is currently idle." "DEBUG"
 
-	cmd="$burpExecutable $configString -a S -C $client | grep \"Status: idle\""
+	cmd="$BURP_EXECUTABLE $configString -a S -C $client | grep \"Status: idle\""
 	WaitForTaskCompletion $! 120 300 1 $KEEP_LOGGING true true false
 	exitCode=$?
 
@@ -1080,7 +1080,7 @@ function VerifyBackups {
 			#TODO: sed expressions won't probably work on BSD nor Mac
 			# sed here removes all lines containing only block logs (64 chars + number)
 			Logger "Preparing verification of backup [$backupNumber] for client [$client]." "NOTICE"
-			echo "$burpExecutable $configString -C $client -a v -b $backupNumber | sed '/^[BbfFvud]\{64\} [0-9]\+$/d' >> \"$LOG_FILE\" 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP"
+			echo "$BURP_EXECUTABLE $configString -C $client -a v -b $backupNumber | sed '/^[BbfFvud]\{64\} [0-9]\+$/d' >> \"$LOG_FILE\" 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP"
 		done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP"
 
 		if [ -f "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP" ]; then
@@ -1183,7 +1183,7 @@ function VerifyService {
 		else
 			serviceStatusCommand="service $i status"
 			serviceStartCommand="systemctl start $i"
-			Logger "No valid serviceType given [$serviceType]. Trying default initV style." "ERROR"
+			Logger "No valid service type given [$serviceType]. Trying default initV style." "ERROR"
 		fi
 
 		eval "$serviceStatusCommand" > /dev/null 2>&1 &
@@ -1226,7 +1226,7 @@ function Usage {
 	echo "$0 [OPTIONS]"
 	echo ""
 	echo "[OPTIONS]"
-	echo "-d, --backup-dir=\"\"                The directory where the client directories are"
+	echo "-d, --backup-dir=\"\"                The directory where the client backup directories are"
 	echo "-o, --check-outdated-clients=n     Check for clients that don't have backups newer than n days"
 	echo "-v, --verify-last-backups=n        Verify the last n backups of all clients"
 	echo "-i, --include-clients=\"\"           Comma separated list of clients to include. This list takes grep -e compatible regular expressions, includes prevail excludes"
@@ -1407,7 +1407,7 @@ if [ "$VSS_STRIP_DIR" != "" ]; then
 fi
 
 if [ "$VERIFY_SERVICE" != "" ]; then
-	VerifyService "$VERIFY_SERVICE" "$ServiceType"
+	VerifyService "$VERIFY_SERVICE" "$SERVICE_TYPE"
 fi
 
 if [ "$BACKUP_DIR" != "" ]; then

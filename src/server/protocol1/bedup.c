@@ -280,7 +280,15 @@ static int do_hardlink(struct file *o, struct file *n)
 		goto end;
 	}
 	if((ret=do_rename(tmppath, o->path)))
+	{
+		// 'man 2 rename', says it should be safe to unlink tmppath:
+		// "If newpath exists but the operation fails for some reason,
+		// rename() guarantees to leave an instance of newpath in
+		// place."
+		if(unlink(tmppath))
+			logp("Could not unlink %s\n", tmppath);
 		goto end;
+	}
 	ret=0;
 end:
 	free_w(&tmppath);
@@ -385,33 +393,16 @@ static int check_files(struct mystruct *find, struct file *newfile,
 		// Now hardlink it.
 		if(makelinks)
 		{
-			switch(do_hardlink(newfile, f))
+			if(do_hardlink(newfile, f))
 			{
-				case 0:
-					f->nlink++;
-					// Only count bytes as saved if we
-					// removed the last link.
-					if(newfile->nlink==1)
-						savedbytes+=info->st_size;
-					break;
-				case -1:
-					// On error, replace the memory of the
-					// old file with the one that we just
-					// found. It might work better when
-					// someone later tries to link to the
-					// new one instead of the old one.
-					reset_old_file(f, newfile, info);
-					count--;
-					break;
-				default:
-					// Abandon all hope.
-					// This could happen if renaming the
-					// hardlink failed in such a way that
-					// the target file was unlinked without
-					// being replaced - ie, if the max
-					// number of hardlinks is being hit.
-					return -1;
+				count--;
+				return -1;
 			}
+			f->nlink++;
+			// Only count bytes as saved if we
+			// removed the last link.
+			if(newfile->nlink==1)
+				savedbytes+=info->st_size;
 		}
 		else if(deletedups)
 		{

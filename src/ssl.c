@@ -258,6 +258,7 @@ static int setenv_x509_serialnumber(ASN1_INTEGER *i, const char *env)
 int ssl_check_cert(SSL *ssl, struct conf **confs, struct conf **cconfs)
 {
 	X509 *peer;
+	int result;
 	char tmpbuf[256]="";
 	const char *ssl_peer_cn=get_string(cconfs[OPT_SSL_PEER_CN]);
 
@@ -275,9 +276,10 @@ int ssl_check_cert(SSL *ssl, struct conf **confs, struct conf **cconfs)
 		logp("Could not get peer certificate.\n");
 		return -1;
 	}
-	if(SSL_get_verify_result(ssl)!=X509_V_OK)
+	result=SSL_get_verify_result(ssl);
+	if(result!=X509_V_OK)
 	{
-		logp_ssl_err("Certificate doesn't verify.\n");
+		logp_ssl_err("Certificate doesn't verify (%d).\n", result);
 		return -1;
 	}
 

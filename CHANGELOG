@@ -1,3 +1,25 @@
+2018-01-01 Changes in burp-2.1.26:
+  * On non-Windows, strip vss on restore with the '-x' option.
+  * Make 'burp -a m' work on a Windows console.
+  * Monitor detect from storage when server side protocol unset.
+  * Tweak man page 'backup_script_pre' section.
+  * Fix all utests for openbsd 6.2.
+  * Fewer warnings about the last backup on restore/verify.
+  * Different setsockopt parameters for bulk packets with ipv6.
+  * Log the return code of SSL_get_verify_result when it fails, so that
+    we have a chance of knowing why "Certificate doesn't verify".
+  * Make it a fatal error when bedup's do_hardlink() fails. Unlink the
+    temporary path when bedup's do_rename() fails. This should stop
+    bedup generating lots of mess when these things happen.
+  * From Pablo Estigarribia:
+    - Add additional entries to fstypes.
+  * From BobRyanConsulting:
+    - Add cifs entry to fstypes.
+  * Note in docs/timer_script.txt about the internal timer_script.
+  * Add Windows build tools to its own repo, and make the scripts download
+    the sources: https://github.com/grke/burp-cross-tools
+  * Make burp work with the new Windows build tools.
+
 2017-12-01 Changes in burp-2.1.24:
   * Internalise the timer script.
   * Protocol2: Log a warning when a block cannot be retrieved during

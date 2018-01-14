@@ -521,6 +521,11 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 					close(p);
 			}
 
+			// Do this to closelog/openlog for syslog, or I think
+			// the child processes will write to the same syslog
+			// file descriptor - which causes a bit of chaos.
+			log_fzp_set(NULL, confs);
+
 			// Set SIGCHLD back to default, so that I
 			// can get sensible returns from waitpid.
 			memset(&sa, 0, sizeof(sa));

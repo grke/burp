@@ -425,6 +425,19 @@ end:
 	return ret;
 }
 
+static int librsync_enabled(struct sbuf *p1b,
+	struct sbuf *cb,
+	struct conf **cconfs)
+{
+	off_t max_size;
+	if(!get_int(cconfs[OPT_LIBRSYNC]))
+		return 0;
+	max_size=(off_t)get_uint64_t(cconfs[OPT_LIBRSYNC_MAX_SIZE]);
+	if(!max_size)
+		return 1;
+	return max_size >= cb->statp.st_size && max_size >= p1b->statp.st_size;
+}
+
 static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 	struct dpth *dpth,
 	struct sdirs *sdirs, struct sbuf *cb, struct sbuf *p1b,
@@ -513,7 +526,7 @@ static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 	// If either old or new is encrypted, or librsync is off, we need to
 	// get a new file.
 	// FIX THIS horrible mess.
-	if(!get_int(cconfs[OPT_LIBRSYNC])
+	if(!librsync_enabled(p1b, cb, cconfs)
 	// FIX THIS: make unencrypted metadata use the librsync
 	  || cb->path.cmd==CMD_METADATA
 	  || p1b->path.cmd==CMD_METADATA

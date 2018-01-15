@@ -644,6 +644,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_LIBRSYNC:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "librsync");
+	case OPT_LIBRSYNC_MAX_SIZE:
+	  return sc_u64(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "librsync_max_size");
 	case OPT_COMPRESSION:
 	  return sc_int(c[o], 9,
 		CONF_FLAG_CC_OVERRIDE, "compression");

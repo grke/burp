@@ -292,6 +292,9 @@ On the server, the number of times that a single file can be hardlinked. The bed
 \fBlibrsync=[0|1]\fR
 When set to 0, delta differencing will not take place. That is, when a file changes, the server will request the whole new file. The default is 1. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
+\fBlibrsync_max_size=[b/Kb/Mb/Gb]\fR
+Only use librsync when a file is less than the given size. Both the most recently backed up version of a file and the version to be backed up are checked. The default is 0, which means the option is off. This option can be overridden by the client configuration files in clientconfdir on the server.
+.TP
 \fBcompression=zlib[0-9] (or gzip[0-9])\fR
 Choose the level of zlib compression for files stored in backups. Setting 0 or zlib0 turns compression off. The default is zlib9. This option can be overridden by the client configuration files in clientconfdir on the server. 'gzip' is a synonym of 'zlib'.
 .TP
@@ -761,6 +764,7 @@ Additionally, the following options can be overridden here for each client:
 \fBmanual_delete\fR
 \fBworking_dir_recovery_method\fR
 \fBlibrsync\fR
+\fBlibrsync_max_size\fR
 \fBversion_warn\fR
 \fBpath_length_warn\fR
 \fBsyslog\fR

@@ -717,6 +717,7 @@ START_TEST(test_clientconfdir_conf)
 		"keep=7\n"
 		"working_dir_recovery_method=resume\n"
 		"librsync=0\n"
+		"librsync_max_size=10Mb\n"
 		"version_warn=0\n"
 		"path_length_warn=0\n"
 		"syslog=1\n"
@@ -753,6 +754,7 @@ START_TEST(test_clientconfdir_conf)
 	fail_unless(get_e_recovery_method(
 	  cconfs[OPT_WORKING_DIR_RECOVERY_METHOD])==RECOVERY_METHOD_RESUME);
 	fail_unless(get_int(cconfs[OPT_LIBRSYNC])==0);
+	fail_unless(get_uint64_t(cconfs[OPT_LIBRSYNC_MAX_SIZE])==10485760);
 	fail_unless(get_int(cconfs[OPT_VERSION_WARN])==0);
 	fail_unless(get_int(cconfs[OPT_PATH_LENGTH_WARN])==0);
 	fail_unless(get_int(cconfs[OPT_SYSLOG])==1);

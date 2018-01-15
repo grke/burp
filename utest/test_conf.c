@@ -198,6 +198,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_SOFT_QUOTA:
 		case OPT_MIN_FILE_SIZE:
 		case OPT_MAX_FILE_SIZE:
+		case OPT_LIBRSYNC_MAX_SIZE:
 			fail_unless(get_uint64_t(c[o])==0);
 			break;
 		case OPT_WORKING_DIR_RECOVERY_METHOD:

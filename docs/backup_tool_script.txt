@@ -1,19 +1,19 @@
 Backup verification script
 --------------------------
 
-burp_tool.sh is a script to check burp backup sanity
+backup_tool_script is a script to check backup sanity
 
-burp_tool.sh can verify a given number of backups for each client. It can run verifiy operations in parallel, interleaving different clients in order to prevent performance bottlenecks on the storage.
+backup_tool_script can verify a given number of backups for each client. It can run verifiy operations in parallel, interleaving different clients in order to prevent performance bottlenecks on the storage.
 Verify operations are timed in order to stop them after a given amount of time, leaving the system performance ready for backup operations.
 The script can also list clients that have outdated backups. It uses two different methods to list clients in order to detect rogue clients.
-It can also ensure that the burp server service is running properly, relaunch it if needed, on a scheduled basis.
+It can also ensure that the server service is running properly, relaunch it if needed, on a scheduled basis.
 The script can send a warning / error when problems are found, even while operating.
-burp_tool.sh can also launch vss_strip for each file found in a given directory.
+backup_tool_script can also launch vss_strip for each file found in a given directory.
 
 Usage
 -----
 
-You will find the script in /usr/local/share/burp/scripts/burp_tool.sh
+You will find the script in /usr/local/share/burp/scripts/backup_tool_script
 
 To begin with, modify thez script and configure the following variables:
 
@@ -21,34 +21,34 @@ INSTANCE_ID: Some unique string to identify the instance of the script, given th
 MAIL_ALERT_MSG: The warning / error email subject
 SOFT_MAX_EXEC_TIME: Amount of time in seconds after which a warning message is sent to inform that the verification process takes too long
 HARD_MAX_EXEC_TIME: Amount of time in seconds after which all verification operations are forcefully stopped
-BURP_EXECUTABLE: Name of the burp executable, don't change it until you have reasons to
+BACKUP_EXECUTABLE: Name of the burp executable, don't change it until you have reasons to
 SERVICE_TYPE: Which service system your are using. Can be set to "initv" or "systemd"
 PARALLEL_VERIFY_CONCURRENCY: How many simultaneous verify operations will be launched
 
-After having setup those initial values, you may test burp_tool.sh with your current setup
+After having setup those initial values, you may test backup_tool_script with your current setup
 
 Syntax
 ------
 
-The path given to burp_tool.sh must be the path that leads to every client directory, regardless of protocol 1 or 2 usage (for protocol 2, you'll have to dive into dedup group directory).
+The path given to backup_tool_script must be the path that leads to every client directory, regardless of protocol 1 or 2 usage (for protocol 2, you'll have to dive into dedup group directory).
 
 Check for clients that don't have backups newer than 3 days
-/usr/local/share/burp/scripts/burp_tool.sh -d /path/to/clients/backups/dir -o 3
+/usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backups/dir -o 3
 
 Launch backup verification for last 7 backups for each client
-/usr/local/share/burp/scripts/burp_tool.sh -d /path/to/clients/backups/dir -v 7
+/usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backups/dir -v 7
 
 Run with a different client configuration file (default is /etc/burp/burp.conf) and check for clients that don't have backups newer than 5 days
-/usr/local/share/burp/scripts/burp_tool.sh -c /etc/burp/burp-client.conf -d /path/to/clients/backup/dir -o 5
+/usr/local/share/burp/scripts/backup_tool_script -c /etc/burp/burp-client.conf -d /path/to/clients/backup/dir -o 5
 
 Run vss_strip for all files in /tmp/burp_restore
-/usr/local/share/burp/scripts/burp_tool.sh -s /tmp/burp_restore
+/usr/local/share/burp/scripts/backup_tool_script -s /tmp/burp_restore
 
 Check that burp service is running
-/usr/local/share/burp/scripts/burp_tool.sh -j burp
+/usr/local/share/burp/scripts/backup_tool_script -j burp
 
 Example of full configuration, which checks the service health, checks for outdated clients, verifies last 5 backups, and sends a report to an email address specifying a trivial instance name 
-/usr/local/share/burp/scripts/burp_tool.sh -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf --destination-mails=backupadmin@example.com --instance-id=burp_checks
+/usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf --destination-mails=backupadmin@example.com --instance-id=burp_checks
 
 You can check the full syntax simply by running the script without any arguments.
 
@@ -56,13 +56,13 @@ Client inclusions and exclusions
 --------------------------------
 
 You may want to include / exclude some clients on the checks.
-burp_tool.sh uses grep compatible regular expressions to do so. Inclusions are evaluated before exclusions.
+backup_tool_script uses grep compatible regular expressions to do so. Inclusions are evaluated before exclusions.
 
 Exmaple: include all clients which names begin with "servers", and exclude everything else:
-/usr/local/share/burp/scripts/burp_tool.sh -i servers.* -e ".*" -d /path/to/clients/backup/dir
+/usr/local/share/burp/scripts/backup_tool_script -i servers.* -e ".*" -d /path/to/clients/backup/dir
 
 Example: exclude all clients which names begin with customerX:
-/usr/local/share/burp/scripts/burp_tool.sh -e customerX.* -d /path/to/clients/backup/dir
+/usr/local/share/burp/scripts/backup_tool_script -e customerX.* -d /path/to/clients/backup/dir
 
 Scheduling
 ----------
@@ -71,14 +71,14 @@ Once you have found the right settings for your usage, you may schedule the scri
 Example on RHEL / CentOS, add the following line to /etc/crontab in order to run the script every day at 10am.
 Considering that backups may occur nightly depending on your configuration, it would make sense to run verifications out of the backup timeframe:
 
-00 10 * * * root /usr/local/share/burp/scripts/burp_tool.sh -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf --destination-mails=backupadmin@example.com --instance-id=burp_checks
+00 10 * * * root /usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf --destination-mails=backupadmin@example.com --instance-id=burp_checks
 
 On Ubuntu, you'll need to remove the "root" username on the crontab line.
 
 Logs
 ----
 
-By default, burp_tool.sh logs to /var/log/burp_tool.[instance-id].log
+By default, backup_tool_script logs to /var/log/backup_tool_script.[instance-id].log
 If /var/log is not writable, it will log to ${HOME}.
 
 Customisation and developpment

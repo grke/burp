@@ -1,0 +1,1620 @@
+#!/usr/bin/env bash
+
+PROGRAM="backup_tool_script"
+PROGRAM_VERSION=0.3.0
+PROGRAM_BUILD=2018011903
+AUTHOR="(C) 2017 by Orsiris de Jong"
+CONTACT="http://www.netpower.fr - ozy@netpower.fr"
+IS_STABLE=yes
+
+## backup_tool_script - A script to check @name@ backup sanity
+
+## backup_tool_script can verify a given number of backups for each client. It can run verifiy operations in parallel.
+## Verify operations are timed in order to stop them after a given amount of time, leaving the system performance ready for backup operations.
+## The script can also list clients that have outdated backups. It uses two different methods to list clients in order to detect rogue clients.
+## It can also ensure that the @name@ server service is running properly, relaunch it if needed, on a scheduled basis.
+## The script can send a warning / error when problems are found, even while operating.
+## backup_tool_script can also launch vss_strip for each file found in a given directory.
+
+## When exiting, backup_tool_script ensures that no forked @name@ processes remain, without touching processes that didn't belong to backup_tool_script.
+
+## Set an unique identifier for the script which will be used for logs and alert mails
+INSTANCE_ID="base"
+
+## Alert mail subject
+MAIL_ALERT_MSG="Execution of $PROGRAM instance $INSTANCE_ID on $(date) has warnings/errors."
+
+## Backup verifications are timed in seconds.
+## After how much seconds a warning should be logged (defaults to 3 hours)
+SOFT_MAX_EXEC_TIME=10800
+## After how much seconds a verification process should be stopped (defaults to 10 hours)
+HARD_MAX_EXEC_TIME=36000
+
+## Backup executable (can be set to /usr/bin/@name@, /usr/local/bin/@name@...)
+BACKUP_EXECUTABLE=@sbindir@/@name@
+
+## @name@ service type (can be "initv" or "systemd")
+SERVICE_TYPE=systemd
+
+## How many simultaneous verify operations should be launched (please check I/O and CPU usage before increasing this)
+PARELLEL_VERIFY_CONCURRENCY=2
+
+# ------------ Do not modify under this line unless you have great cow powers --------------
+
+if ! type "$BASH" > /dev/null; then
+	echo "Please run this script only with bash shell. Tested on bash >= 3.2"
+	exit 127
+fi
+
+export LC_ALL=C
+
+_LOGGER_SILENT=false
+_LOGGER_VERBOSE=false
+_LOGGER_ERR_ONLY=false
+_LOGGER_PREFIX="date"
+if [ "$KEEP_LOGGING" == "" ]; then
+	KEEP_LOGGING=721
+fi
+
+# Initial error status, logging 'WARN', 'ERROR' or 'CRITICAL' will enable alerts flags
+ERROR_ALERT=false
+WARN_ALERT=false
+
+LOCAL_USER=$(whoami)
+LOCAL_HOST=$(hostname)
+
+SCRIPT_PID=$$
+
+TSTAMP=$(date '+%Y%m%dT%H%M%S.%N')
+
+ALERT_LOG_FILE="$RUN_DIR/$PROGRAM.$SCRIPT_PID.$TSTAMP.last.log"
+
+## Default log file until config file is loaded
+if [ -w /var/log ]; then
+	LOG_FILE="/var/log/$PROGRAM.log"
+elif ([ "$HOME" != "" ] && [ -w "$HOME" ]); then
+	LOG_FILE="$HOME/$PROGRAM.log"
+elif [ -w . ]; then
+	LOG_FILE="./$PROGRAM.log"
+else
+	LOG_FILE="/tmp/$PROGRAM.log"
+fi
+
+## Default directory where to store temporary run files
+if [ -w /tmp ]; then
+	RUN_DIR=/tmp
+elif [ -w /var/tmp ]; then
+	RUN_DIR=/var/tmp
+else
+	RUN_DIR=.
+fi
+
+#### DEBUG SUBSET ####
+## allow function call checks                   #__WITH_PARANOIA_DEBUG
+if [ "$_PARANOIA_DEBUG" == "yes" ];then         #__WITH_PARANOIA_DEBUG
+        _DEBUG=yes                              #__WITH_PARANOIA_DEBUG
+fi                                              #__WITH_PARANOIA_DEBUG
+
+## allow debugging from command line with _DEBUG=yes
+if [ ! "$_DEBUG" == "yes" ]; then
+        _DEBUG=no
+        _LOGGER_VERBOSE=false
+else
+        trap 'TrapError ${LINENO} $?' ERR
+        _LOGGER_VERBOSE=true
+fi
+
+if [ "$SLEEP_TIME" == "" ]; then # Leave the possibity to set SLEEP_TIME as environment variable when runinng with bash -x in order to avoid spamming console
+        SLEEP_TIME=.05
+fi
+#### DEBUG SUBSET END ####
+
+#### Logger SUBSET ####
+#### RemoteLogger SUBSET ####
+
+# Array to string converter, see http://stackoverflow.com/questions/1527049/bash-join-elements-of-an-array
+# usage: joinString separaratorChar Array
+function joinString {
+        local IFS="$1"; shift; echo "$*";
+}
+
+# Sub function of Logger
+function _Logger {
+        local logValue="${1}"           # Log to file
+        local stdValue="${2}"           # Log to screeen
+        local toStdErr="${3:-false}"    # Log to stderr instead of stdout
+
+        if [ "$logValue" != "" ]; then
+                echo -e "$logValue" >> "$LOG_FILE"
+                # Current log file
+                echo -e "$logValue" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP"
+        fi
+
+        if [ "$stdValue" != "" ] && [ "$_LOGGER_SILENT" != true ]; then
+                if [ $toStdErr == true ]; then
+                        # Force stderr color in subshell
+                        (>&2 echo -e "$stdValue")
+
+                else
+                        echo -e "$stdValue"
+                fi
+        fi
+}
+
+# General log function with log levels:
+
+# Environment variables
+# _LOGGER_SILENT: Disables any output to stdout & stderr
+# _LOGGER_ERR_ONLY: Disables any output to stdout except for ALWAYS loglevel
+# _LOGGER_VERBOSE: Allows VERBOSE loglevel messages to be sent to stdout
+
+# Loglevels
+# Except for VERBOSE, all loglevels are ALWAYS sent to log file
+
+# CRITICAL, ERROR, WARN sent to stderr, color depending on level, level also logged
+# NOTICE sent to stdout
+# VERBOSE sent to stdout if _LOGGER_VERBOSE = true
+# ALWAYS is sent to stdout unless _LOGGER_SILENT = true
+# DEBUG & PARANOIA_DEBUG are only sent to stdout if _DEBUG=yes
+function Logger {
+        local value="${1}"              # Sentence to log (in double quotes)
+        local level="${2}"              # Log level
+        local retval="${3:-undef}"      # optional return value of command
+
+        if [ "$_LOGGER_PREFIX" == "time" ]; then
+                prefix="TIME: $SECONDS - "
+        elif [ "$_LOGGER_PREFIX" == "date" ]; then
+                prefix="$(date) - "
+        else
+                prefix=""
+        fi
+
+        ## Obfuscate _REMOTE_TOKEN in logs (for ssh_filter usage only in osync and obackup)
+        value="${value/env _REMOTE_TOKEN=$_REMOTE_TOKEN/__(o_O)__}"
+        value="${value/env _REMOTE_TOKEN=\$_REMOTE_TOKEN/__(o_O)__}"
+
+        if [ "$level" == "CRITICAL" ]; then
+                _Logger "$prefix($level):$value" "$prefix\e[1;33;41m$value\e[0m" true
+                ERROR_ALERT=true
+                # ERROR_ALERT / WARN_ALERT isn't set in main when Logger is called from a subprocess. Need to keep this flag.
+                echo -e "[$retval] in [$(joinString , ${FUNCNAME[@]})] SP=$SCRIPT_PID P=$$\n$prefix($level):$value" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.error.$SCRIPT_PID.$TSTAMP"
+                return
+        elif [ "$level" == "ERROR" ]; then
+                _Logger "$prefix($level):$value" "$prefix\e[91m$value\e[0m" true
+                ERROR_ALERT=true
+                echo -e "[$retval] in [$(joinString , ${FUNCNAME[@]})] SP=$SCRIPT_PID P=$$\n$prefix($level):$value" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.error.$SCRIPT_PID.$TSTAMP"
+                return
+        elif [ "$level" == "WARN" ]; then
+                _Logger "$prefix($level):$value" "$prefix\e[33m$value\e[0m" true
+                WARN_ALERT=true
+                echo -e "[$retval] in [$(joinString , ${FUNCNAME[@]})] SP=$SCRIPT_PID P=$$\n$prefix($level):$value" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.warn.$SCRIPT_PID.$TSTAMP"
+                return
+        elif [ "$level" == "NOTICE" ]; then
+                if [ "$_LOGGER_ERR_ONLY" != true ]; then
+                        _Logger "$prefix$value" "$prefix$value"
+                fi
+                return
+        elif [ "$level" == "VERBOSE" ]; then
+                if [ $_LOGGER_VERBOSE == true ]; then
+                        _Logger "$prefix($level):$value" "$prefix$value"
+                fi
+                return
+        elif [ "$level" == "ALWAYS" ]; then
+                _Logger "$prefix$value" "$prefix$value"
+                return
+        elif [ "$level" == "DEBUG" ]; then
+                if [ "$_DEBUG" == "yes" ]; then
+                        _Logger "$prefix$value" "$prefix$value"
+                        return
+                fi
+        elif [ "$level" == "PARANOIA_DEBUG" ]; then                             #__WITH_PARANOIA_DEBUG
+                if [ "$_PARANOIA_DEBUG" == "yes" ]; then                        #__WITH_PARANOIA_DEBUG
+                        _Logger "$prefix$value" "$prefix\e[35m$value\e[0m"      #__WITH_PARANOIA_DEBUG
+                        return                                                  #__WITH_PARANOIA_DEBUG
+                fi                                                              #__WITH_PARANOIA_DEBUG
+        else
+                _Logger "\e[41mLogger function called without proper loglevel [$level].\e[0m" "\e[41mLogger function called without proper loglevel [$level].\e[0m" true
+                _Logger "Value was: $prefix$value" "Value was: $prefix$value" true
+        fi
+}
+#### Logger SUBSET END ####
+
+# Portable child (and grandchild) kill function tester under Linux, BSD and MacOS X
+function KillChilds {
+        local pid="${1}" # Parent pid to kill childs
+        local self="${2:-false}" # Should parent be killed too ?
+
+        # Paranoid checks, we can safely assume that $pid shouldn't be 0 nor 1
+        if [ $(IsInteger "$pid") -eq 0 ] || [ "$pid" == "" ] || [ "$pid" == "0" ] || [ "$pid" == "1" ]; then
+                Logger "Bogus pid given [$pid]." "CRITICAL"
+                return 1
+        fi
+
+        if kill -0 "$pid" > /dev/null 2>&1; then
+                # Warning: pgrep is not native on cygwin, have this checked in CheckEnvironment
+                if children="$(pgrep -P "$pid")"; then
+                        if [[ "$pid" == *"$children"* ]]; then
+                                Logger "Bogus pgrep implementation." "CRITICAL"
+                                children="${children/$pid/}"
+                        fi
+                        for child in $children; do
+                                Logger "Launching KillChilds \"$child\" true" "DEBUG"   #__WITH_PARANOIA_DEBUG
+                                KillChilds "$child" true
+                        done
+                fi
+        fi
+
+        # Try to kill nicely, if not, wait 15 seconds to let Trap actions happen before killing
+        if [ "$self" == true ]; then
+                # We need to check for pid again because it may have disappeared after recursive function call
+                if kill -0 "$pid" > /dev/null 2>&1; then
+                        kill -s TERM "$pid"
+                        Logger "Sent SIGTERM to process [$pid]." "DEBUG"
+                        if [ $? != 0 ]; then
+                                sleep 15
+                                Logger "Sending SIGTERM to process [$pid] failed." "DEBUG"
+                                kill -9 "$pid"
+                                if [ $? != 0 ]; then
+                                        Logger "Sending SIGKILL to process [$pid] failed." "DEBUG"
+                                        return 1
+                                fi      # Simplify the return 0 logic here
+                        else
+                                return 0
+                        fi
+                else
+                        return 0
+                fi
+        else
+                return 0
+        fi
+}
+
+function KillAllChilds {
+        local pids="${1}" # List of parent pids to kill separated by semi-colon
+        local self="${2:-false}" # Should parent be killed too ?
+
+        __CheckArguments 1 $# "$@"      #__WITH_PARANOIA_DEBUG
+
+        local errorcount=0
+
+        IFS=';' read -a pidsArray <<< "$pids"
+        for pid in "${pidsArray[@]}"; do
+                KillChilds $pid $self
+                if [ $? != 0 ]; then
+                        errorcount=$((errorcount+1))
+                        fi
+        done
+        return $errorcount
+}
+
+# osync/obackup/pmocr script specific mail alert function, use SendEmail function for generic mail sending
+function SendAlert {
+        local runAlert="${1:-false}" # Specifies if current message is sent while running or at the end of a run
+
+        __CheckArguments 0-1 $# "$@"    #__WITH_PARANOIA_DEBUG
+
+        local attachment
+        local attachmentFile
+        local subject
+        local body
+
+        if [ "$DESTINATION_MAILS" == "" ]; then
+                return 0
+        fi
+
+        if [ "$_DEBUG" == "yes" ]; then
+                Logger "Debug mode, no warning mail will be sent." "NOTICE"
+                return 0
+        fi
+
+        eval "cat \"$LOG_FILE\" $COMPRESSION_PROGRAM > $ALERT_LOG_FILE"
+        if [ $? != 0 ]; then
+                attachment=false
+        else
+                attachment=true
+        fi
+        if [ -e "$RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP" ]; then
+                if [ "$MAIL_BODY_CHARSET" != "" ] && type iconv > /dev/null 2>&1; then
+                        iconv -f UTF-8 -t $MAIL_BODY_CHARSET "$RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP" > "$RUN_DIR/$PROGRAM._Logger.iconv.$SCRIPT_PID.$TSTAMP"
+                        body="$MAIL_ALERT_MSG"$'\n\n'"$(cat $RUN_DIR/$PROGRAM._Logger.iconv.$SCRIPT_PID.$TSTAMP)"
+                else
+                        body="$MAIL_ALERT_MSG"$'\n\n'"$(cat $RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP)"
+                fi
+        fi
+
+        if [ $ERROR_ALERT == true ]; then
+                subject="Error alert for $INSTANCE_ID"
+        elif [ $WARN_ALERT == true ]; then
+                subject="Warning alert for $INSTANCE_ID"
+        else
+                subject="Alert for $INSTANCE_ID"
+        fi
+
+        if [ $runAlert == true ]; then
+                subject="Currently runing - $subject"
+        else
+                subject="Finished run - $subject"
+        fi
+
+        if [ "$attachment" == true ]; then
+                attachmentFile="$ALERT_LOG_FILE"
+        fi
+
+        SendEmail "$subject" "$body" "$DESTINATION_MAILS" "$attachmentFile" "$SENDER_MAIL" "$SMTP_SERVER" "$SMTP_PORT" "$SMTP_ENCRYPTION" "$SMTP_USER" "$SMTP_PASSWORD"
+
+        # Delete tmp log file
+        if [ "$attachment" == true ]; then
+                if [ -f "$ALERT_LOG_FILE" ]; then
+                        rm -f "$ALERT_LOG_FILE"
+                fi
+        fi
+}
+
+# Generic email sending function.
+# Usage (linux / BSD), attachment is optional, can be "/path/to/my.file" or ""
+# SendEmail "subject" "Body text" "receiver@example.com receiver2@otherdomain.com" "/path/to/attachment.file"
+# Usage (Windows, make sure you have mailsend.exe in executable path, see http://github.com/muquit/mailsend)
+# attachment is optional but must be in windows format like "c:\\some\path\\my.file", or ""
+# smtp_server.domain.tld is mandatory, as is smtpPort (should be 25, 465 or 587)
+# encryption can be set to tls, ssl or none
+# smtpUser and smtpPassword are optional
+# SendEmail "subject" "Body text" "receiver@example.com receiver2@otherdomain.com" "/path/to/attachment.file" "senderMail@example.com" "smtpServer.domain.tld" "smtpPort" "encryption" "smtpUser" "smtpPassword"
+function SendEmail {
+        local subject="${1}"
+        local message="${2}"
+        local destinationMails="${3}"
+        local attachment="${4}"
+        local senderMail="${5}"
+        local smtpServer="${6}"
+        local smtpPort="${7}"
+        local encryption="${8}"
+        local smtpUser="${9}"
+        local smtpPassword="${10}"
+
+        __CheckArguments 3-10 $# "$@"   #__WITH_PARANOIA_DEBUG
+
+        local mail_no_attachment=
+        local attachment_command=
+
+        local encryption_string=
+        local auth_string=
+
+        if [ ! -f "$attachment" ]; then
+                attachment_command="-a $attachment"
+                mail_no_attachment=1
+        else
+                mail_no_attachment=0
+        fi
+
+        if [ "$LOCAL_OS" == "Busybox" ] || [ "$LOCAL_OS" == "Android" ]; then
+                if [ "$smtpPort" == "" ]; then
+                        Logger "Missing smtp port, assuming 25." "WARN"
+                        smtpPort=25
+                fi
+                if type sendmail > /dev/null 2>&1; then
+                        if [ "$encryption" == "tls" ]; then
+                                echo -e "Subject:$subject\r\n$message" | $(type -p sendmail) -f "$senderMail" -H "exec openssl s_client -quiet -tls1_2 -starttls smtp -connect $smtpServer:$smtpPort" -au"$smtpUser" -ap"$smtpPassword" "$destinationMails"
+                        elif [ "$encryption" == "ssl" ]; then
+                                echo -e "Subject:$subject\r\n$message" | $(type -p sendmail) -f "$senderMail" -H "exec openssl s_client -quiet -connect $smtpServer:$smtpPort" -au"$smtpUser" -ap"$smtpPassword" "$destinationMails"
+                        else
+                                echo -e "Subject:$subject\r\n$message" | $(type -p sendmail) -f "$senderMail" -S "$smtpServer:$smtpPort" -au"$smtpUser" -ap"$smtpPassword" "$destinationMails"
+                        fi
+
+                        if [ $? != 0 ]; then
+                                Logger "Cannot send alert mail via $(type -p sendmail) !!!" "WARN"
+                                # Don't bother try other mail systems with busybox
+                                return 1
+                        else
+                                return 0
+                        fi
+                else
+                        Logger "Sendmail not present. Won't send any mail" "WARN"
+                        return 1
+                fi
+        fi
+
+        if type mutt > /dev/null 2>&1 ; then
+                # We need to replace spaces with comma in order for mutt to be able to process multiple destinations
+                echo "$message" | $(type -p mutt) -x -s "$subject" "${destinationMails// /,}" $attachment_command
+                if [ $? != 0 ]; then
+                        Logger "Cannot send mail via $(type -p mutt) !!!" "WARN"
+                else
+                        Logger "Sent mail using mutt." "NOTICE"
+                        return 0
+                fi
+        fi
+
+        if type mail > /dev/null 2>&1 ; then
+                # We need to detect which version of mail is installed
+                if ! $(type -p mail) -V > /dev/null 2>&1; then
+                        # This may be MacOS mail program
+                        attachment_command=""
+                elif [ "$mail_no_attachment" -eq 0 ] && $(type -p mail) -V | grep "GNU" > /dev/null; then
+                        attachment_command="-A $attachment"
+                elif [ "$mail_no_attachment" -eq 0 ] && $(type -p mail) -V > /dev/null; then
+                        attachment_command="-a$attachment"
+                else
+                        attachment_command=""
+                fi
+
+                echo "$message" | $(type -p mail) $attachment_command -s "$subject" "$destinationMails"
+                if [ $? != 0 ]; then
+                        Logger "Cannot send mail via $(type -p mail) with attachments !!!" "WARN"
+                        echo "$message" | $(type -p mail) -s "$subject" "$destinationMails"
+                        if [ $? != 0 ]; then
+                                Logger "Cannot send mail via $(type -p mail) without attachments !!!" "WARN"
+                        else
+                                Logger "Sent mail using mail command without attachment." "NOTICE"
+                                return 0
+                        fi
+                else
+                        Logger "Sent mail using mail command." "NOTICE"
+                        return 0
+                fi
+        fi
+
+        if type sendmail > /dev/null 2>&1 ; then
+                echo -e "Subject:$subject\r\n$message" | $(type -p sendmail) "$destinationMails"
+                if [ $? != 0 ]; then
+                        Logger "Cannot send mail via $(type -p sendmail) !!!" "WARN"
+                else
+                        Logger "Sent mail using sendmail command without attachment." "NOTICE"
+                        return 0
+                fi
+        fi
+
+        # Windows specific
+        if type "mailsend.exe" > /dev/null 2>&1 ; then
+                if [ "$senderMail" == "" ]; then
+                        Logger "Missing sender email." "ERROR"
+                        return 1
+                fi
+                if [ "$smtpServer" == "" ]; then
+                        Logger "Missing smtp port." "ERROR"
+                        return 1
+                fi
+                if [ "$smtpPort" == "" ]; then
+                        Logger "Missing smtp port, assuming 25." "WARN"
+                        smtpPort=25
+                fi
+                if [ "$encryption" != "tls" ] && [ "$encryption" != "ssl" ]  && [ "$encryption" != "none" ]; then
+                        Logger "Bogus smtp encryption, assuming none." "WARN"
+                        encryption_string=
+                elif [ "$encryption" == "tls" ]; then
+                        encryption_string=-starttls
+                elif [ "$encryption" == "ssl" ]:; then
+                        encryption_string=-ssl
+                fi
+                if [ "$smtpUser" != "" ] && [ "$smtpPassword" != "" ]; then
+                        auth_string="-auth -user \"$smtpUser\" -pass \"$smtpPassword\""
+                fi
+                $(type mailsend.exe) -f "$senderMail" -t "$destinationMails" -sub "$subject" -M "$message" -attach "$attachment" -smtp "$smtpServer" -port "$smtpPort" $encryption_string $auth_string
+                if [ $? != 0 ]; then
+                        Logger "Cannot send mail via $(type mailsend.exe) !!!" "WARN"
+                else
+                        Logger "Sent mail using mailsend.exe command with attachment." "NOTICE"
+                        return 0
+                fi
+        fi
+
+        # pfSense specific
+        if [ -f /usr/local/bin/mail.php ]; then
+                echo "$message" | /usr/local/bin/mail.php -s="$subject"
+                if [ $? != 0 ]; then
+                        Logger "Cannot send mail via /usr/local/bin/mail.php (pfsense) !!!" "WARN"
+                else
+                        Logger "Sent mail using pfSense mail.php." "NOTICE"
+                        return 0
+                fi
+        fi
+
+        # If function has not returned 0 yet, assume it is critical that no alert can be sent
+        Logger "Cannot send mail (neither mutt, mail, sendmail, sendemail, mailsend (windows) or pfSense mail.php could be used)." "ERROR" # Is not marked critical because execution must continue
+}
+
+#### TrapError SUBSET ####
+function TrapError {
+        local job="$0"
+        local line="$1"
+        local code="${2:-1}"
+
+        if [ $_LOGGER_SILENT == false ]; then
+                (>&2 echo -e "\e[45m/!\ ERROR in ${job}: Near line ${line}, exit code ${code}\e[0m")
+        fi
+}
+#### TrapError SUBSET END ####
+
+# Quick and dirty performance logger only used for debugging
+function _PerfProfiler {                                                                                                #__WITH_PARANOIA_DEBUG
+        local perfString                                                                                                #__WITH_PARANOIA_DEBUG
+	local i														#__WITH_PARANOIA_DEBUG
+                                                                                                                        #__WITH_PARANOIA_DEBUG
+        perfString=$(ps -p $$ -o args,pid,ppid,%cpu,%mem,time,etime,state,wchan)                                        #__WITH_PARANOIA_DEBUG
+                                                                                                                        #__WITH_PARANOIA_DEBUG
+        for i in $(pgrep -P $$); do                                                                                     #__WITH_PARANOIA_DEBUG
+                perfString="$perfString\n"$(ps -p $i -o args,pid,ppid,%cpu,%mem,time,etime,state,wchan | tail -1)       #__WITH_PARANOIA_DEBUG
+        done                                                                                                            #__WITH_PARANOIA_DEBUG
+                                                                                                                        #__WITH_PARANOIA_DEBUG
+        if type iostat > /dev/null 2>&1; then                                                                           #__WITH_PARANOIA_DEBUG
+                perfString="$perfString\n"$(iostat)                                                                     #__WITH_PARANOIA_DEBUG
+        fi                                                                                                              #__WITH_PARANOIA_DEBUG
+                                                                                                                        #__WITH_PARANOIA_DEBUG
+        Logger "PerfProfiler:\n$perfString" "PARANOIA_DEBUG"                                                            #__WITH_PARANOIA_DEBUG
+}
+
+function IsInteger {
+	local value="${1}"
+	if [[ $value =~ ^[0-9]+$ ]]; then
+		echo 1
+	else
+		echo 0
+	fi
+}
+
+function IsNumericExpand {
+        eval "local value=\"${1}\"" # Needed eval so variable variables can be processed
+
+        if [[ $value =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
+                echo 1
+        else
+                echo 0
+        fi
+}
+
+_OFUNCTIONS_SPINNER="|/-\\"
+function Spinner {
+        if [ $_LOGGER_SILENT == true ] || [ "$_LOGGER_ERR_ONLY" == true ]; then
+                return 0
+        else
+                printf " [%c]  \b\b\b\b\b\b" "$_OFUNCTIONS_SPINNER"
+                #printf "\b\b\b\b\b\b"
+                _OFUNCTIONS_SPINNER=${_OFUNCTIONS_SPINNER#?}${_OFUNCTIONS_SPINNER%%???}
+                return 0
+        fi
+}
+
+## Main asynchronous execution function
+## This function can monitor given pids as background processes, and stop them if max execution time is reached. Suitable for multiple synchronous processes.
+## It can also take a list of commands to execute in parallel, and stop them if max execution time is reached.
+
+## Function has 8 execution modes
+
+        # WaitForTaskCompletion mode: Monitor given pids as background processes, stop them if max execution time is reached. Suitaable for multiple synhronous processes.
+        # 1 : WaitForTaskCompletion, semi-colon separated list of pids to monitor
+        # 2 : WaitForTaskCompletion, list of pids to monior, from file, one per line
+
+        # Example of improved wait $! emulation
+        # ExecTasks "some_identifier" 0 0 0 0 1 1800 true false true true 1 $!
+        # Example: monitor two sleep processes, warn if execution time is higher than 10 seconds, stop after 20 seconds
+        # sleep 15 &
+        # pid=$!
+        # sleep 20 &
+        # pid2=$!
+        # ExecTasks "some_identifier" 0 0 10 20 1 1800 true true false false 1 "$pid;$pid2"
+
+        # ParallelExecMode: Take list of commands to execute in parallel, stop them if max execution time is reached.
+        # Also take optional conditional arguments to verifiy before execution main commands. Conditional command exit code 0 means ready to execute. Other exit codes will ignore/postpone main command.
+        # 3 : ParallelExec, semi-colon separated list of commands to execute in parallel, no conditions
+        # 4 : ParallelExec, semi-colon separated list of commands to execute in parallel , semi-colon separated list of conditional commands, ignoring main commands on condition failures
+        # 5 : ParallelExec, semi-colon separated list of commands, semi-colon separated list of conditional commands, postponing main commands on condition failures
+        # 6 : ParallelExec, list of commands from file, one per line, no conditions
+        # 7 : ParallelExec, list of commands from file, one per line, list of conditional commands from file, one per line, ignoring main commands on condition failures
+        # 8 : ParallelExec, list of commands from file, one per line, list of conditional commands from file, one per line, postponing main commands on condition failures
+
+        # Exmaple: execute four du commands, only if directories exist, warn if execution takes more than 300 seconds, stop if takes longer than 900 seconds. Execute max 3 commands in parallel.
+        # commands="du -csh /var;du -csh /etc;du -csh /home;du -csh /usr"
+        # conditions="[ -d /var ];[ -d /etc ];[ -d /home];[ -d /usr]"
+        # ExecTasks "some_identifier" 0 0 300 900 1 1800 true true false false 4 "$commands" "$conditions" 3
+
+## ofunctions.sh subfunction requirements:
+## Spinner
+## Logger
+## JoinString
+## KillChilds
+
+function ExecTasks {
+        local id="${1:-base}"                   # Optional ID in order to identify global variables from this run (only bash variable names, no '-'). Global variables are WAIT_FOR_TASK_COMPLETION_$id and HARD_MAX_EXEC_TIME_REACHED_$id
+        #TODO: not implemented yet
+        local softPerProcessTime="${2:-0}"
+        local hardPerProcessTime="${3:-0}"
+        local softMaxTime="${4:-0}"             # If process(es) with pid(s) $pids take longer than $softMaxTime seconds, will log a warning, unless $softMaxTime equals 0.
+        local hardMaxTime="${5:-0}"             # If process(es) with pid(s) $pids take longer than $hardMaxTime seconds, will stop execution, unless $hardMaxTime equals 0.
+        local sleepTime="${6:-.05}"             # Seconds between each state check, the shorter this value, the snappier it will be, but as a tradeoff cpu power will be used (general values between .05 and 1).
+        local keepLogging="${7:-0}"             # Every keepLogging seconds, an alive message is logged. Setting this value to zero disables any alive logging.
+        local counting="${8:-true}"             # Count time since function has been launched (true), or since script has been launched (false)
+        local spinner="${9:-true}"              # Show spinner (true), do not show anything (false)
+        local noTimeErrorLog="${10:-false}"     # Log errors when reaching soft / hard max time (false), do not log errors on those triggers (true)
+        #TODO not fully implemented
+        local noErrorLogAtAll="${11:-false}"    # Do not log errros at all (false)
+        local execTasksMode="${12:-1}"          # In which mode the function should work, see above
+        local mainInput="${13}"                 # Contains list of pids / commands or filepath to list of pids / commands
+        local auxInput="${14}"                  # Contains list of conditional commands or filepath to list of conditional commands
+        local numberOfProcesses="${15:-2}"      # Number of simultaneous commands to run in ParallExec mode
+
+        local i
+
+        Logger "${FUNCNAME[0]} called in $execTasksMode mode by [${FUNCNAME[0]} < ${FUNCNAME[1]} < ${FUNCNAME[2]} < ${FUNCNAME[3]} < ${FUNCNAME[4]} ...]." "PARANOIA_DEBUG"     #__WITH_PARANOIA_DEBUG
+        __CheckArguments 13-15 $# "$@"                                                                                                                                          #__WITH_PARANOIA_DEBUG
+
+        # Since ExecTasks takes up to 15 arguments, do a quick preflight check in DEBUG mode
+        if [ "$_DEBUG" == "yes" ]; then
+                declare -a booleans=(counting spinner noTimeErrorLog noErrorLogAtAll)
+                for i in "${num_vars[@]}"; do
+                        test="if [ $i != false ] && [ $i != true ]; then Logger \"Bogus $i value [\$$i] given to ${FUNCNAME[0]}.\" \"CRITICAL\"; exit 1; fi"
+                        eval "$test"
+                done
+                declare -a integers=(softPerProcessTime hardPerProcessTime softMaxTime hardMaxTime keepLogging execTasksMode numberOfProcesses)
+                for i in "${integers[@]}"; do
+                        test="if [ $(IsNumericExpand \"\$$i\") -eq 0 ]; then Logger \"Bogus $i value [\$$i] given to ${FUNCNAME[0]}.\" \"CRITICAL\"; exit 1; fi"
+                        eval "$test"
+                done
+        fi
+
+        # ParallelExec specific variables
+        local auxItemCount=0            # Number of conditional commands
+        local commandsArray=()          # Array containing commands
+        local commandsConditionArray=() # Array containing conditional commands
+        local currentCommand            # Variable containing currently processed command
+        local currentCommandCondition   # Variable containing currently processed conditional command
+        local commandsArrayPid          # Array containing pids of commands currently run
+        local postPoneIfConditionFails  # Boolean to check if command needs to be postponed if condition command fails
+
+        # Common variables
+        local pid                       # Current pid working on
+        local pidState                  # State of the process
+        local mainItemCount=0           # number of given items (pids or commands)
+        local readFromFile              # Should we read pids / commands from a file (true)
+        local counter=0
+        local log_ttime=0               # local time instance for comparaison
+
+        local seconds_begin=$SECONDS    # Seconds since the beginning of the script
+        local exec_time=0               # Seconds since the beginning of this function
+
+        local retval=0                  # return value of monitored pid process
+	local subRetval=0		# return value of condition commands
+        local errorcount=0              # Number of pids that finished with errors
+        local pidsArray                 # Array of currently running pids
+        local newPidsArray              # New array of currently running pids for next iteration
+        local pidsTimeArray             # Array containing execution begin time of pids
+        local executeCommand            # Boolean to check if currentCommand can be executed given a condition
+
+        local hasPids=false             # Are any valable pids given to function ?              #__WITH_PARANOIA_DEBUG
+
+        local functionMode
+
+        if [ $counting == true ]; then
+                local softAlert=false # Does a soft alert need to be triggered, if yes, send an alert once
+        else
+                local softAlert=false
+        fi
+
+        # Initialise global variable
+        eval "WAIT_FOR_TASK_COMPLETION_$id=\"\""
+        eval "HARD_MAX_EXEC_TIME_REACHED_$id=false"
+
+        case $execTasksMode in
+                1)
+                IFS=';' read -r -a pidsArray <<< "$mainInput"
+                mainItemCount=${#pidsArray[@]}
+                readFromFile=false
+                functionMode=WaitForTaskCompletion
+                # Force while condition to be true
+                counter=$mainItemCount
+                Logger "Running ${FUNCNAME[0]} mode 1 for [$mainItemCount] pids." "PARANOIA_DEBUG"              #__WITH_PARANOIA_DEBUG
+                ;;
+                2)
+                if [ -f "$mainInput" ]; then
+                        mainItemCount=$(wc -l < "$mainInput")
+                        readFromFile=true
+                else
+                        Logger "Cannot read file [$mainInput]." "WARN"
+                fi
+                functionMode=WaitForTaskCompletion
+                # Force while condition to be true
+                counter=$mainItemCount
+                Logger "Running ${FUNCNAME[0]} mode 2 for [$mainItemCount] pids." "PARANOIA_DEBUG"              #__WITH_PARANOIA_DEBUG
+                ;;
+                3)
+                IFS=';' read -r -a commandsArray <<< "$mainInput"
+                mainItemCount=${#commandsArray[@]}
+                readFromFile=false
+                functionMode=ParallelExec
+                Logger "Running ${FUNCNAME[0]} mode 3 for [$mainItemCount] commands." "PARANOIA_DEBUG"          #__WITH_PARANOIA_DEBUG
+                ;;
+                4)
+                IFS=';' read -r -a commandsArray <<< "$mainInput"
+                mainItemCount=${#commandsArray[@]}
+                IFS=';' read -r -a commandsConditionArray <<< "$auxInput"
+                auxItemCount=${#commandsConditionArray[@]}
+                readFromFile=false
+                postPoneIfConditionFails=false
+                functionMode=ParallelExec
+                Logger "Running ${FUNCNAME[0]} mode 4 for [$mainItemCount] commands and [$auxItemCount] conditional commands." "PARANOIA_DEBUG"         #__WITH_PARANOIA_DEBUG
+                ;;
+                5)
+                IFS=';' read -r -a commandsArray <<< "$mainInput"
+                mainItemCount=${#commandsArray[@]}
+                IFS=';' read -r -a commandsConditionArray <<< "$auxInput"
+                auxItemCount=${#commandsConditionArray[@]}
+                readFromFile=false
+                postPoneIfConditionFails=true
+                functionMode=ParallelExec
+                Logger "Running ${FUNCNAME[0]} mode 5 for [$mainItemCount] commands and [$auxItemCount] conditional commands." "PARANOIA_DEBUG"         #__WITH_PARANOIA_DEBUG
+                ;;
+                6)
+                if [ -f "$mainInput" ]; then
+                        mainItemCount=$(wc -l < "$mainInput")
+                        readFromFile=true
+                else
+                        Logger "Cannot read file [$mainInput]." "WARN"
+                fi
+                functionMode=ParallelExec
+                Logger "Running ${FUNCNAME[0]} mode 6 for [$mainItemCount] commands." "PARANOIA_DEBUG"          #__WITH_PARANOIA_DEBUG
+                ;;
+                7)
+                if [ -f "$mainInput" ]; then
+                        mainItemCount=$(wc -l < "$mainInput")
+                        readFromFile=true
+                else
+                        Logger "Cannot read file [$mainInput]." "WARN"
+                fi
+                if [ -f "$auxInput" ]; then
+                        auxItemCount=$(wc -l < "$auxInput")
+                else
+                        Logger "Cannot read file [$auxInput]." "WARN"
+                fi
+                postPoneIfConditionFails=false
+                functionMode=ParallelExec
+                Logger "Running ${FUNCNAME[0]} mode 7 for [$mainItemCount] commands and [$auxItemCount] conditional commands." "PARANOIA_DEBUG"         #__WITH_PARANOIA_DEBUG
+                ;;
+                8)
+                if [ -f "$mainInput" ]; then
+                        mainItemCount=$(wc -l < "$mainInput")
+                        readFromFile=true
+                else
+                        Logger "Cannot read file [$mainInput]." "WARN"
+                fi
+                if [ -f "$auxInput" ]; then
+                        auxItemCount=$(wc -l < "$auxInput")
+                else
+                        Logger "Cannot read file [$auxInput]." "WARN"
+                fi
+                postPoneIfConditionFails=true
+                functionMode=ParallelExec
+                Logger "Running ${FUNCNAME[0]} mode 8 for [$mainItemCount] commands and [$auxItemCount] conditional commands." "PARANOIA_DEBUG"         #__WITH_PARANOIA_DEBUG
+                ;;
+                *)
+                Logger "Unknown exec mode for ${FUNCNAME}." "CRITICAL"
+                exit 1
+        esac
+
+
+        #while [ ${#pidsArray[@]} -gt 0 ]; do
+        # The counter -lt mainItemCount has to be false for WaitForTaskCompletion modes
+        while [ ${#pidsArray[@]} -gt 0 ] || [ $counter -lt $mainItemCount ]; do
+                newPidsArray=()
+
+                if [ $spinner == true ]; then
+                        Spinner
+                fi
+                if [ $counting == true ]; then
+                        exec_time=$((SECONDS - seconds_begin))
+                else
+                        exec_time=$SECONDS
+                fi
+
+                if [ $keepLogging -ne 0 ]; then
+                        if [ $((($exec_time + 1) % $keepLogging)) -eq 0 ]; then
+                                if [ $log_ttime -ne $exec_time ]; then # Fix when sleep time lower than 1 second
+                                        log_ttime=$exec_time
+                                        if [ $functionMode == "Wait" ]; then
+                                                Logger "Current tasks still running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
+                                        elif [ $functionMode == "ParallelExec" ]; then
+                                                Logger "There are $((mainItemCount-counter)) / $mainItemCount tasks in the queue. Currently, ${#pidsArray[@]} tasks running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
+                                        fi
+                                fi
+                        fi
+                fi
+
+                if [ $exec_time -gt $softMaxTime ]; then
+                        if [ "$softAlert" != true ] && [ $softMaxTime -ne 0 ] && [ $noTimeErrorLog != true ]; then
+                                Logger "Max soft execution time exceeded for task [$id] with pids [$(joinString , ${pidsArray[@]})]." "WARN"
+                                softAlert=true
+                                SendAlert true
+                        fi
+                fi
+
+                if [ $exec_time -gt $hardMaxTime ] && [ $hardMaxTime -ne 0 ]; then
+                        if [ $noTimeErrorLog != true ]; then
+                                Logger "Max hard execution time exceeded for task [$id] with pids [$(joinString , ${pidsArray[@]})]. Stopping task execution." "ERROR"
+                        fi
+                        for pid in "${pidsArray[@]}"; do
+                                KillChilds $pid true
+                                if [ $? == 0 ]; then
+                                        Logger "Task with pid [$pid] stopped successfully." "NOTICE"
+                                else
+                                        Logger "Could not stop task with pid [$pid]." "ERROR"
+                                fi
+                                errorcount=$((errorcount+1))
+                        done
+                        if [ $noTimeErrorLog != true ]; then
+                                SendAlert true
+                        fi
+                        eval "HARD_MAX_EXEC_TIME_REACHED_$id=true"
+                        if [ $functionMode == "WaitForTaskCompletion" ]; then
+                                return $errorcount
+                        elif [ $functionMode == "ParallelExec" ]; then
+                                return $((mainItemCount - counter + ${#pidsArray[@]}))
+                        fi
+                fi
+
+                # The following execution bloc is only needed in ParallelExec mode since WaitForTaskCompletion does not execute commands, but only monitors them
+                if [ $functionMode == "ParallelExec" ]; then
+                        while [ $counter -lt "$mainItemCount" ] && [ ${#pidsArray[@]} -lt $numberOfProcesses ]; do
+                                if [ $readFromFile == true ]; then
+                                        currentCommand=$(awk 'NR == num_line {print; exit}' num_line=$((counter+1)) "$mainInput")
+                                        if [ $auxItemCount -ne 0 ]; then
+                                                currentCommandCondition=$(awk 'NR == num_line {print; exit}' num_line=$((counter+1)) "$auxInput")
+                                        fi
+                                else
+                                        currentCommand="${commandsArray[$counter]}"
+                                        if [ $auxItemCount -ne 0 ]; then
+                                                currentCommandCondition="${commandsConditionArray[$counter]}"
+                                        fi
+                                fi
+                                executeCommand=false
+                                if [ $auxItemCount -ne 0 ]; then
+                                        Logger "Checking condition [$currentCommandCondition] for command [$currentCommand]." "DEBUG"
+                                        eval "$currentCommandCondition" &
+                                        ExecTasks "subConditionCheck" 0 0 1800 3600 1 $KEEP_LOGGING true true true true 1 $!
+                                        subRetval=$?
+                                        if [ $subRetval -ne 0 ]; then
+                                                if [ $postPoneIfConditionFails == true ]; then
+                                                        Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]. Postponing command." "NOTICE"
+                                                        if [ $readFromFile == true ]; then
+                                                                # TODO: we should not write to the original file, but create a copy instead we can write postponed commands to
+                                                                echo "$currentCommand" >> "$mainInput"
+                                                                echo "$currentCommandCondition" >> "$auxInput"
+                                                        else
+                                                                commandsArray+=($currentCommand)
+                                                                commandsConditionArray+=($currentCommandCondition)
+                                                        fi
+                                                        mainItemCount=$((mainItemCount+1))
+
+                                                        # Trivial sleeptime so postponed commands will not stack too fast
+                                                        sleep $sleepTime
+                                                else
+                                                        Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]. Ignoring command." "NOTICE"
+                                                fi
+                                        else
+                                                executeCommand=true
+                                        fi
+                                else
+                                        executeCommand=true
+                                fi
+
+                                if [ $executeCommand == true ]; then
+                                        Logger "Running command [$currentCommand]." "DEBUG"
+                                        eval "$currentCommand" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$id.$SCRIPT_PID.$TSTAMP" 2>&1 &
+                                        pid=$!
+                                        pidsArray+=($pid)
+                                        commandsArrayPid[$pid]="$currentCommand"
+                                        #TODO not implemented
+                                        pidsTimeArray[$pid]=$((SECONDS - seconds_begin))
+                                else
+                                        Logger "Skipping command [$currentCommand]." "DEBUG"
+                                fi
+                                counter=$((counter+1))
+                        done
+                fi
+
+                for pid in "${pidsArray[@]}"; do
+                        if [ $(IsInteger $pid) -eq 1 ]; then
+                                if kill -0 $pid > /dev/null 2>&1; then
+                                        # Handle uninterruptible sleep state or zombies by ommiting them from running process array (How to kill that is already dead ? :)
+                                        pidState="$(eval $PROCESS_STATE_CMD)"
+                                        if [ "$pidState" != "D" ] && [ "$pidState" != "Z" ]; then
+                                                #TODO: implement pidsTimeArray[$pid] check here
+                                                newPidsArray+=($pid)
+                                        fi
+                                else
+                                        # pid is dead, get its exit code from wait command
+                                        wait $pid
+                                        retval=$?
+                                        if [ $retval -ne 0 ]; then
+                                                Logger "${FUNCNAME[0]} called by [$id] finished monitoring pid [$pid] [$currentCommand] with exitcode [$retval]." "ERROR"
+                                                errorcount=$((errorcount+1))
+                                                # Welcome to variable variable bash hell
+                                                if [ "$(eval echo \"\$WAIT_FOR_TASK_COMPLETION_$id\")" == "" ]; then
+                                                        eval "WAIT_FOR_TASK_COMPLETION_$id=\"$pid:$retval\""
+                                                else
+                                                        eval "WAIT_FOR_TASK_COMPLETION_$id=\";$pid:$retval\""
+                                                fi
+                                        else
+                                                Logger "${FUNCNAME[0]} called by [$id] finished monitoring pid [$pid] [$currentCommand] with exitcode [$retval]." "DEBUG"
+                                        fi
+                                fi
+                                hasPids=true                                    ##__WITH_PARANOIA_DEBUG
+                        fi
+                done
+
+                if [ $hasPids == false ]; then                                  ##__WITH_PARANOIA_DEBUG
+                        Logger "No valable pids given." "ERROR"                 ##__WITH_PARANOIA_DEBUG
+                fi                                                              ##__WITH_PARANOIA_DEBUG
+                pidsArray=("${newPidsArray[@]}")
+
+                # Trivial wait time for bash to not eat up all CPU
+                sleep $sleepTime
+
+                if [ "$_PERF_PROFILER" == "yes" ]; then                         ##__WITH_PARANOIA_DEBUG
+                        _PerfProfiler                                           ##__WITH_PARANOIA_DEBUG
+                fi                                                              ##__WITH_PARANOIA_DEBUG
+        done
+
+        Logger "${FUNCNAME[0]} ended for [$id] using [$mainItemCount] subprocesses with [$errorcount] errors." "PARANOIA_DEBUG" #__WITH_PARANOIA_DEBUG
+
+        # Return exit code if only one process was monitored, else return number of errors
+        # As we cannot return multiple values, a global variable WAIT_FOR_TASK_COMPLETION contains all pids with their return value
+
+        if [ $mainItemCount -eq 1 ]; then
+                return $retval
+        else
+                return $errorcount
+        fi
+}
+
+function CleanUp {
+	__CheckArguments 0 $# "$@"      #__WITH_PARANOIA_DEBUG
+
+	if [ "$_DEBUG" != "yes" ]; then
+		rm -f "$RUN_DIR/$PROGRAM."*".$SCRIPT_PID.$TSTAMP"
+		# Fix for sed -i requiring backup extension for BSD & Mac (see all sed -i statements)
+		rm -f "$RUN_DIR/$PROGRAM."*".$SCRIPT_PID.$TSTAMP.tmp"
+	fi
+}
+
+#__BEGIN_WITH_PARANOIA_DEBUG
+function __CheckArguments {
+        # Checks the number of arguments of a function and raises an error if some are missing
+
+        if [ "$_DEBUG" == "yes" ]; then
+                local numberOfArguments="${1}" # Number of arguments the tested function should have, can be a number of a range, eg 0-2 for zero to two arguments
+                local numberOfGivenArguments="${2}" # Number of arguments that have been passed
+
+                local minArgs
+                local maxArgs
+
+                # All arguments of the function to check are passed as array in ${3} (the function call waits for $@)
+                # If any of the arguments contains spaces, bash things there are two aguments
+                # In order to avoid this, we need to iterate over ${3} and count
+
+                callerName="${FUNCNAME[1]}"
+
+                local iterate=3
+                local fetchArguments=true
+                local argList=""
+                local countedArguments
+                while [ $fetchArguments == true ]; do
+                        cmd='argument=${'$iterate'}'
+                        eval $cmd
+                        if [ "$argument" == "" ]; then
+                                fetchArguments=false
+                        else
+                                argList="$argList[Argument $((iterate-2)): $argument] "
+                                iterate=$((iterate+1))
+                        fi
+                done
+
+                countedArguments=$((iterate-3))
+
+                if [ $(IsInteger "$numberOfArguments") -eq 1 ]; then
+                        minArgs=$numberOfArguments
+                        maxArgs=$numberOfArguments
+                else
+                        IFS='-' read minArgs maxArgs <<< "$numberOfArguments"
+                fi
+
+                Logger "Entering function [$callerName]." "PARANOIA_DEBUG"
+
+                if ! ([ $countedArguments -ge $minArgs ] && [ $countedArguments -le $maxArgs ]); then
+                        Logger "Function $callerName may have inconsistent number of arguments. Expected min: $minArgs, max: $maxArgs, count: $countedArguments, bash seen: $numberOfGivenArguments." "ERROR"
+                        Logger "$callerName arguments: $argList" "ERROR"
+                else
+                        if [ ! -z "$argList" ]; then
+                                Logger "$callerName arguments: $argList" "PARANOIA_DEBUG"
+                        fi
+                fi
+        fi
+}
+
+#__END_WITH_PARANOIA_DEBUG
+
+############################################ END OF OFUNCTIONS CODE
+
+function TrapQuit {
+        local exitcode
+
+        # Get ERROR / WARN alert flags from subprocesses that call Logger
+        if [ -f "$RUN_DIR/$PROGRAM.Logger.warn.$SCRIPT_PID.$TSTAMP" ]; then
+                WARN_ALERT=true
+        fi
+        if [ -f "$RUN_DIR/$PROGRAM.Logger.error.$SCRIPT_PID.$TSTAMP" ]; then
+                ERROR_ALERT=true
+        fi
+
+        if [ $ERROR_ALERT == true ]; then
+                Logger "$PROGRAM finished with errors." "ERROR"
+                if [ "$_DEBUG" != "yes" ]
+                then
+                        SendAlert
+                else
+                        Logger "Debug mode, no alert mail will be sent." "NOTICE"
+                fi
+                exitcode=1
+        elif [ $WARN_ALERT == true ]; then
+                Logger "$PROGRAM finished with warnings." "WARN"
+                if [ "$_DEBUG" != "yes" ]
+                then
+                        SendAlert
+                else
+                        Logger "Debug mode, no alert mail will be sent." "NOTICE"
+                fi
+                exitcode=2      # Warning exit code must not force daemon mode to quit
+        else
+                Logger "$PROGRAM finished." "ALWAYS"
+                exitcode=0
+        fi
+        CleanUp
+        KillChilds $SCRIPT_PID > /dev/null 2>&1
+
+        exit $exitcode
+}
+
+# Takes as many file arguments as needed
+function InterleaveFiles {
+
+	local counter=0
+	local hasLine=true
+	local i
+
+	while [ $hasLine == true ]; do
+		hasLine=false
+		for i in "$@"; do
+			line=$(awk 'NR == num_line {print; exit}' num_line=$((counter+1)) "$i")
+			if [ -n "$line" ]; then
+				echo "$line"
+			hasLine=true
+			fi
+		done
+		counter=$((counter+1))
+	done
+}
+
+function ListClients {
+	local backupDir="${1}"
+	local configFile="${2}"
+
+	__CheckArguments 2 $# "$@"      #__WITH_PARANOIA_DEBUG
+
+	local clientIsIncluded
+	local clientIsExcluded
+	local excludeArray
+
+	local client
+	local configString
+
+	local i
+
+	if [ -f "$configFile" ]; then
+		configString="-c \"$configFile\""
+	fi
+
+	# File 'backup_stats' is there only when a backup is finished
+	find "$backupDir" -mindepth 3 -maxdepth 3 -type f -name "backup_stats" | grep -e '.*' > /dev/null
+	if [ $? != 0 ]; then
+		Logger "The directory [$backupDir] does not seem to be a @name@ folder. Please check the path. Additionnaly, protocol 2 directores need to specify the dedup group directory and the client subfolder." "ERROR"
+	fi
+
+	# Using both @name@ -a S list and find method in order to find maximum backup clients
+	cmd="$BACKUP_EXECUTABLE $configString -a S | grep \"last backup\" | awk '{print \$1}' > \"$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP\""
+	Logger "Running cmd [$cmd]." "DEBUG"
+	eval "$cmd" &
+	ExecTasks "${FUNCNAME[0]}_lastbackup" 0 0 1800 3600 1 $KEEP_LOGGING true true false false 1 $!
+	if [ $? != 0 ]; then
+		Logger "Enumerating @name@ clients via [$BACKUP_EXECUTABLE $configString -a S] failed." "ERROR"
+	else
+		Logger "@name@ method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP)" "DEBUG"
+	fi
+
+	#TODO: sed expressions are GNU and won't probably work on BSD nor Mac
+	# First exp removes everything before last '/'
+	find "$backupDir" -mindepth 1 -maxdepth 1 -type d | sed -e "s/\(.*\)\/\(.*\)/\2/g" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
+
+	while IFS=$'\n' read -r client; do
+		find "$backupDir$client" -mindepth 2 -maxdepth 2 -type f -name "backup_stats" | grep -e '.*' > /dev/null
+		if [ $? == 0 ]; then
+			echo "$client" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
+		fi
+	done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
+
+	if [ ! -f "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" ]; then
+		touch "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
+	fi
+
+	Logger "Detection method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP)" "DEBUG"
+
+	# Merge all clients found by @name@ executable and manual check
+	sort "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP" "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" | uniq > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-4.$SCRIPT_PID.$TSTAMP"
+
+	while IFS=$'\n' read -r client; do
+		clientIsIncluded=false
+		clientIsExcluded=false
+
+		IFS=',' read -a includeArray <<< "$INCLUDE_CLIENTS"
+		for i in "${includeArray[@]}"; do
+			echo "$client" | grep -e "^"$i"$" > /dev/null 2>&1
+			if [ $? == 0 ]; then
+				clientIsIncluded=true
+			fi
+		done
+
+		IFS=',' read -a excludeArray <<< "$EXCLUDE_CLIENTS"
+		for i in "${excludeArray[@]}"; do
+			echo "$client" | grep -e "^"$i"$" > /dev/null 2>&1
+			if [ $? == 0 ]; then
+				clientIsExcluded=true
+			fi
+		done
+
+		if ([ $clientIsIncluded == false ] && [ $clientIsExcluded == true ]); then
+			Logger "Ommiting client [$client]." "NOTICE"
+		else
+			if [ -f "$backupDir$client/current/timestamp" ]; then
+				Logger "Found client [$client]." "NOTICE"
+				CLIENT_LIST+=("$client")
+			else
+				Logger "Client [$client] does not have any backups." "WARN"
+			fi
+		fi
+
+	done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-4.$SCRIPT_PID.$TSTAMP"
+}
+
+function IsClientIdle {
+	local client="${1}"
+	local configFile="${2}"
+
+	__CheckArguments 2 $# "$@"      #__WITH_PARANOIA_DEBUG
+
+	local exitCode
+	local configString
+
+        if [ -f "$configFile" ]; then
+                configString="-c \"$configFile\""
+        fi
+
+	Logger "Checking if client [$client] is currently idle." "DEBUG"
+
+	cmd="$BACKUP_EXECUTABLE $configString -a S -C $client | grep \"Status: idle\" > /dev/null 2>&1"
+	ExecTasks "${FUNCNAME[0]}_idle" 0 0 120 300 1 $KEEP_LOGGING true true false false 1 $!
+	exitCode=$?
+
+	if [ $exitCode -ne 0 ]; then
+		Logger "Client [$client] is currently backing up." "NOTICE"
+		return $exitCode
+	else
+		return $exitCode
+	fi
+}
+
+function VerifyBackups {
+	local backupDir="${1}"
+	local numberToVerify="${2}"
+	local configFile="${3}"
+
+	__CheckArguments 3-4 $# "$@"      #__WITH_PARANOIA_DEBUG
+
+	local backupNumber
+	local exitCode
+	local client
+
+	local configString
+	local interleaveFileArgs=()
+	local interleaveConditionsFileArgs=()
+
+	#TODO: ParallelExec should be able to get soft and hard exec times per thread and not only per whole execution
+	Logger "Running backup verification" "NOTICE"
+
+	if [ -f "$configFile" ]; then
+		configString="-c \"$configFile\""
+	fi
+
+	for client in "${CLIENT_LIST[@]}"; do
+		# Only backups containing file backup_stats are valid
+		find "$backupDir$client" -mindepth 2 -maxdepth 2 -type f -name "backup_stats" | sort -nr | head -n $numberToVerify | sed -e 's/.*\([0-9]\{7\}\).*/\1/' > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP"
+		Logger "Can check $(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP | wc -l) backups for [$client]." "NOTICE"
+		while IFS=$'\n' read -r backupNumber; do
+			#TODO: sed expressions won't probably work on BSD nor Mac
+			# sed here removes all lines containing only block logs (64 chars + number)
+			Logger "Preparing verification of backup [$backupNumber] for client [$client]." "NOTICE"
+			echo "$BACKUP_EXECUTABLE $configString -C $client -a v -b $backupNumber | sed '/^[BbfFvud]\{64\} [0-9]\+$/d' >> \"$LOG_FILE\" 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP"
+			echo "$BACKUP_EXECUTABLE $configString -a S -C $client | grep \"Status: idle\" > /dev/null 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.1.$client.$SCRIPT_PID.$TSTAMP"
+		done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP"
+
+		if [ -f "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP" ]; then
+			interleaveFileArgs+=("$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP")
+		fi
+
+		if [ -f "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.1.$client.$SCRIPT_PID.$TSTAMP" ]; then
+			interleaveConditionsFileArgs+=("$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.1.$client.$SCRIPT_PID.$TSTAMP")
+		fi
+	done
+
+	InterleaveFiles "${interleaveFileArgs[@]}" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
+	InterleaveFiles "${interleaveConditionsFileArgs[@]}" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.1.$SCRIPT_PID.$TSTAMP"
+
+	Logger "Executing parallel commands\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP)" "DEBUG"
+	ExecTasks "${FUNCNAME[0]}" 0 0 $SOFT_MAX_EXEC_TIME $HARD_MAX_EXEC_TIME 10 $KEEP_LOGGING true true false false 8 "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.1.$SCRIPT_PID.$TSTAMP" $PARELLEL_VERIFY_CONCURRENCY
+	exitCode=$?
+	if [ $exitCode -ne 0 ]; then
+	Logger "Client backup verification produced errors [$exitCode]." "ERROR"
+	else
+		Logger "Client backup verification succeed." "NOTICE"
+	fi
+
+	Logger "Backup verification done." "NOTICE"
+}
+
+function ListOutdatedClients {
+	local backupDir="${1}"
+	local oldDays="${2}"
+
+	__CheckArguments 2 $# "$@"      #__WITH_PARANOIA_DEBUG
+
+	local found=false
+
+	Logger "Checking for outdated clients." "NOTICE"
+
+	for client in "${CLIENT_LIST[@]}"; do
+		recentBackups=$(find "$backupDir$client" -maxdepth 2 -name "backup_stats"  -and ! -path "*working*" -ctime -$oldDays | wc -l)
+		if [ $recentBackups -le 0 ]; then
+			Logger "Client [$client] has no backups newer than [$oldDays] days." "ERROR"
+			found=true
+		fi
+	done
+
+	if [ $found == false ]; then
+		Logger "No outdated clients found." "NOTICE"
+	else
+		Logger "Outdated client checks done." "NOTICE"
+	fi
+}
+
+function UnstripVSS {
+	local path="${1}"
+
+	__CheckArguments 1 $# "$@"      #__WITH_PARANOIA_DEBUG
+
+	local exitCode=0
+
+	if ! type vss_strip > /dev/null 2>&1; then
+		Logger "Could not find vss_strip binary. Please check your path variable." "CRITICAL"
+		exit 1
+	fi
+
+	find "$path" -type f -print0 | while IFS= read -r -d $'\0' file; do
+		Logger "Unstripping file [$file]." "NOTICE"
+		mv -f "$file" "$file.old"
+		if [ $? -ne 0 ]; then
+			Logger "Could not move [$file] to [$file.old] for processing." "WARN"
+			exitCode=2
+			continue
+		else
+			vss_strip -i "$file.old" -o "$file"
+			if [ $? -ne 0 ]; then
+				Logger "Could not vss_strip [$file.old] to [$file]." "WARN"
+				exitCode=2
+				mv -f "$file.old" "$file"
+				if [ $? -ne 0 ]; then
+					Logger "Coult not move back [$file.old] to [$file]." "WARN"
+				fi
+			else
+				rm -f "$file.old"
+				if [ $? -ne 0 ]; then
+					Logger "Could not delete temporary file [$file.old]." "WARN"
+					exitCode=2
+				continue
+				fi
+			fi
+		fi
+	done
+
+	return $exitCode
+}
+
+function VerifyService {
+	local serviceName="${1}"
+	local serviceType="${2}"
+
+	__CheckArguments 2 $# "$@"      #__WITH_PARANOIA_DEBUG
+
+	local serviceNameArray
+	local serviceStatusCommand
+	local serviceStartCommand
+
+	local i
+
+	IFS=',' read -a serviceNameArray <<< "$serviceName"
+	for i in "${serviceNameArray[@]}"; do
+		if [ "$serviceType" == "initv" ]; then
+			serviceStatusCommand="service $i status"
+			serviceStartCommand="service $i start"
+		elif [ "$serviceType" == "systemd" ]; then
+			serviceStatusCommand="systemctl status $i"
+			serviceStartCommand="systemctl start $i"
+		else
+			serviceStatusCommand="service $i status"
+			serviceStartCommand="systemctl start $i"
+			Logger "No valid service type given [$serviceType]. Trying default initV style." "ERROR"
+		fi
+
+		eval "$serviceStatusCommand" > /dev/null 2>&1 &
+		ExecTasks "${FUNCNAME[0]}_statuscmd" 0 0 120 300 1 $KEEP_LOGGING true true false false 1 $!
+		if [ $? -ne 0 ]; then
+			Logger "Service [$i] is not started. Trying to start it." "WARN"
+			eval "$serviceStartCommand" > /dev/null 2>&1 &
+			ExecTasks "${FUNCNAME[0]}_startcmd" 0 0 120 300 1 $KEEP_LOGGING true true false false 1 $!
+			if [ $? -ne 0 ]; then
+				Logger "Cannot start service [$i]." "CRITICAL"
+				SendAlert
+			else
+				Logger "Service [$i] was successfuly started." "WARN"
+				SendAlert
+			fi
+		else
+			Logger "Service [$i] is running." "NOTICE"
+		fi
+	done
+}
+
+function Init {
+	# Set error exit code if a piped command fails
+	set -o pipefail
+	set -o errtrace
+
+	trap TrapQuit TERM EXIT HUP QUIT
+}
+
+function Usage {
+
+	if [ "$IS_STABLE" != "yes" ]; then
+		echo -e "\e[93mThis is an unstable dev build. Please use with caution.\e[0m"
+	fi
+	echo "$PROGRAM $PROGRAM_VERSION $PROGRAM_BUILD"
+	echo "$AUTHOR"
+	echo "$CONTACT"
+	echo ""
+	echo "Usage:"
+	echo "$0 [OPTIONS]"
+	echo ""
+	echo "[OPTIONS]"
+	echo "-d, --backup-dir=\"\"                The directory where the client backup directories are"
+	echo "-o, --check-outdated-clients=n     Check for clients that don't have backups newer than n days"
+	echo "-v, --verify-last-backups=n        Verify the last n backups of all clients"
+	echo "-i, --include-clients=\"\"           Comma separated list of clients to include. This list takes grep -e compatible regular expressions, includes prevail excludes"
+	echo "-e, --exclude-clients=\"\"           Comma separated list of clients to exclude. This list takes grep -e compatible regular expressions"
+	echo "-c, --config-file=\"\"               Path to optional @name@ client configuration file (defaults to /etc/@name@/@name@.conf)"
+	echo "-s, --vss-strip-path=\"\"            Run vss_strip for all files in given path"
+	echo "-j, --verify-service=\"\"            Comma separated list of @name@ services to check and restart if they aren't running"
+	echo ""
+	echo "Examples:"
+	echo "$0 -d /path/to/@name@/protocol1 -v 3 -c /etc/@name@/@name@.conf"
+	echo "$0 -d /path/to/@name@/protocol2/global/clients --check-outdated-clients7 --exclude-clients=restoreclient,@name@-ui.local"
+	echo "$0 --vss-strip-path=/path/to/restored/files"
+	echo "$0 -j @name@.service" 
+	echo "Exclude via regex all clients beginning with 'cli' and otherclient1/2:"
+	echo "$0 --backup-dir=/path/to/@name@/protocol1 --exclude-clients=cli.*,otherclient1,otherclient2"
+	echo ""
+	echo "Additionnal options"
+	echo "--no-maxtime                       Don't stop checks after the configured maximal time in script"
+	echo "-s, --silent                       Don't output to stdout, log file only"
+	echo "--errors-only                      Don't output anything but errors."
+	echo ""
+	echo "--destination-mails=\"\"             Space separated list of email adresses where to send warning and error mails"
+	echo "--instance-id=\"\"                   Arbitrary identifier for log files and alert mails"
+	exit 128
+}
+
+
+#### SCRIPT ENTRY POINT
+DESTINATION_MAILS=""
+no_maxtime=false
+ERROR_ALERT=false
+WARN_ALERT=false
+CONFIG_FILE=""
+BACKUP_DIR=""
+VERIFY_BACKUPS=""
+INCLUDE_CLIENTS=""
+EXCLUDE_CLIENTS=""
+OUTDATED_DAYS=""
+CLIENT_LIST=()
+VSS_STRIP_DIR=""
+VERIFY_SERVICE=""
+
+function GetCommandlineArguments {
+	local isFirstArgument=true
+	if [ $# -eq 0 ]
+	then
+		Usage
+	fi
+	while [ $# -gt 0 ]; do
+		## Options name is $1, argument is $2 unless there is a separator other than space
+		case $1 in
+			--instance-id=*)
+			INSTANCE_ID="${1##*=}"
+			;;
+			--silent)
+			_LOGGER_SILENT=true
+			;;
+			--verbose)
+			_LOGGER_VERBOSE=true
+			;;
+			--no-maxtime)
+			no_maxtime=true
+			;;
+			--help|-h|--version)
+			Usage
+			;;
+			--backup-dir=*)
+			BACKUP_DIR="${1##*=}"
+			;;
+			-d)
+			BACKUP_DIR="${2}"
+			shift
+			;;
+			--check-outdated-clients=*)
+			OUTDATED_DAYS="${1##*=}"
+			;;
+			-o)
+			OUTDATED_DAYS="${2}"
+			shift
+			;;
+			--verify-last-backups=*)
+			VERIFY_BACKUPS="${1##*=}"
+			;;
+			-v)
+			VERIFY_BACKUPS="${2}"
+			shift
+			;;
+			--include-clients=*)
+			INCLUDE_CLIENTS="${1##*=}"
+			;;
+			-i)
+			INCLUDE_CLIENTS="${2}"
+			shift
+			;;
+			--exclude-clients=*)
+			EXCLUDE_CLIENTS="${1##*=}"
+			;;
+			-e)
+			EXCLUDE_CLIENTS="${2}"
+			shift
+			;;
+			--config-file=*)
+			CONFIG_FILE="${1##*=}"
+			;;
+			-c)
+			CONFIG_FILE="${2}"
+			shift
+			;;
+			--vss-strip-path=*)
+			VSS_STRIP_DIR="${1##*=}"
+			;;
+			-s)
+			VSS_STRIP_DIR="${2}"
+			shift
+			;;
+			-j)
+			VERIFY_SERVICE="${2}"
+			shift
+			;;
+			--verify-service=*)
+			VERIFY_SERVICE="${1##*=}"
+			;;
+			--errors-only)
+			_LOGGER_ERR_ONLY=true
+			;;
+			--destination-mails=*)
+			DESTINATION_MAILS="${1##*=}"
+			;;
+			--no-maxtime)
+			SOFT_MAX_EXEC_TIME=0
+			HARD_MAX_EXEC_TIME=0
+			;;
+			*)
+			if [ $isFirstArgument == false ]; then
+				Logger "Unknown option '${1}'" "CRITICAL"
+				Usage
+			fi
+			;;
+		esac
+		shift
+		isFirstArgument=false
+	done
+}
+
+GetCommandlineArguments "$@"
+Init
+
+if [ "$LOGFILE" == "" ]; then
+	if [ -w /var/log ]; then
+		LOG_FILE="/var/log/$PROGRAM.$INSTANCE_ID.log"
+	elif ([ "$HOME" != "" ] && [ -w "$HOME" ]); then
+		LOG_FILE="$HOME/$PROGRAM.$INSTANCE_ID.log"
+	else
+		LOG_FILE="./$PROGRAM.$INSTANCE_ID.log"
+	fi
+else
+	LOG_FILE="$LOGFILE"
+fi
+if [ ! -w "$(dirname $LOG_FILE)" ]; then
+	echo "Cannot write to log [$(dirname $LOG_FILE)]."
+else
+	Logger "Script begin, logging to [$LOG_FILE]." "DEBUG"
+fi
+
+DATE=$(date)
+Logger "-------------------------------------------------------------" "NOTICE"
+Logger "$DATE - $PROGRAM $PROGRAM_VERSION script begin." "ALWAYS"
+Logger "-------------------------------------------------------------" "NOTICE"
+
+if [ "$VSS_STRIP_DIR" != "" ]; then
+	if [ -d "$VSS_STRIP_DIR" ]; then
+		UnstripVSS "$VSS_STRIP_DIR"
+		exit $?
+	else
+		Logger "Bogus path given to unstrip [$VSS_STRIP_DIR]." "CRITICAL"
+		exit 1
+	fi
+fi
+
+if [ "$VERIFY_SERVICE" != "" ]; then
+	VerifyService "$VERIFY_SERVICE" "$SERVICE_TYPE"
+fi
+
+if [ "$BACKUP_DIR" != "" ]; then
+	if [ ! -d "$BACKUP_DIR" ]; then
+		Logger "Backup dir [$BACKUP_DIR] doesn't exist." "CRITICAL"
+		exit 1
+	else
+		# Make sure there is only one trailing slash on path
+		BACKUP_DIR="${BACKUP_DIR%/}/"
+	fi
+
+	if [ "$CONFIG_FILE" != "" ]; then
+		if [ ! -f "$CONFIG_FILE" ]; then
+			Logger "Bogus configuration file [$CONFIG_FILE] given." "CRITICAL"
+			exit 1
+		fi
+	fi
+
+	ListClients "$BACKUP_DIR" "$CONFIG_FILE"
+
+	if [ "$VERIFY_BACKUPS" != "" ]; then
+		if [ $(IsInteger "$VERIFY_BACKUPS") -ne 0 ]; then
+			VerifyBackups "$BACKUP_DIR" $VERIFY_BACKUPS "$CONFIG_FILE"
+		else
+			Logger "Bogus --verify-last-backups value [$VERIFY_BACKUPS]." "CRITICAL"
+			exit 1
+		fi
+	fi
+
+	if [ "$OUTDATED_DAYS" != "" ]; then
+		if [ $(IsInteger "$OUTDATED_DAYS") -ne 0 ]; then
+			ListOutdatedClients "$BACKUP_DIR" $OUTDATED_DAYS
+		else
+			Logger "Bogus --check-outdated-clients value [$OUTDATED_DAYS]." "CRITICAL"
+			exit 1
+		fi
+	fi
+fi

@@ -98,7 +98,7 @@ dist_script_SCRIPTS = \
 	configs/server/timer_script \
 	configs/server/notify_script \
 	configs/server/ssl_extra_checks_script \
-	configs/server/burp_tool.sh
+	configs/server/backup_tool_script.in
 
 EXTRA_script_SCRIPTS = summary_script
 
@@ -464,6 +464,10 @@ $(PACKAGE_TARNAME)_ca:
 summary_script:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/summary_script.in >$@
+
+backup_tool_script:
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/backup_tool_script.in >$@
 
 manpages/bedup.8:
 	$(AM_V_at)rm -f $@

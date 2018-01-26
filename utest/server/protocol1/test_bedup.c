@@ -1,6 +1,7 @@
 #include "../../test.h"
 #include "../../../src/alloc.h"
 #include "../../../src/fsops.h"
+#include "../../../src/prepend.h"
 #include "../../../src/server/protocol1/bedup.h"
 #include "../../builders/build_file.h"
 
@@ -137,6 +138,54 @@ START_TEST(test_bedup_non_burp_simple_link)
 }
 END_TEST
 
+START_TEST(test_bedup_non_burp_link_above_max_links)
+{
+	int i=0;
+	int count=0;
+	char **entries=NULL;
+	char *fullpath=NULL;
+	int ones=0;
+	int twos=0;
+	const char *argv[]={"utest", "-n", "-l", "-m", "2", BASE};
+	const char *file1=BASE "/file1";
+	const char *file2=BASE "/file2";
+	const char *file3=BASE "/file3";
+	const char *file4=BASE "/file4";
+	const char *file5=BASE "/file5";
+	const char *content="my content";
+	setup();
+	build_file(file1, content);
+	build_file(file2, content);
+	build_file(file3, content);
+	build_file(file4, content);
+	build_file(file5, content);
+	fail_unless(!run_bedup(ARR_LEN(argv), (char **)argv));
+
+	fail_unless(!entries_in_directory_alphasort(BASE,
+		&entries, &count, 1/*atime*/));
+	fail_unless(count==5);
+	for(i=0; i<count; i++)
+	{
+		struct stat stat;
+		free_w(&fullpath);
+		fail_unless((fullpath=prepend_s(BASE, entries[i]))!=NULL);
+		fail_unless(!lstat(fullpath, &stat));
+		switch(stat.st_nlink)
+		{
+			case 1: ones++; break;
+			case 2: twos++; break;
+			default: fail_unless(0==1);
+		}
+		free_w(&(entries[i]));
+	}
+	free_w(&fullpath);
+	free_v((void **)&entries);
+	fail_unless(ones==1);
+	fail_unless(twos==4);
+	tear_down();
+}
+END_TEST
+
 Suite *suite_server_protocol1_bedup(void)
 {
 	Suite *s;
@@ -158,6 +207,7 @@ Suite *suite_server_protocol1_bedup(void)
 	tcase_add_test(tc_core, test_bedup_version);
 	tcase_add_test(tc_core, test_bedup_non_burp_simple);
 	tcase_add_test(tc_core, test_bedup_non_burp_simple_link);
+	tcase_add_test(tc_core, test_bedup_non_burp_link_above_max_links);
 	suite_add_tcase(s, tc_core);
 
 	return s;

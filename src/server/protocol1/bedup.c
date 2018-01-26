@@ -300,9 +300,12 @@ static void reset_old_file(struct file *oldfile, struct file *newfile,
 {
 	//printf("reset %s with %s %d\n", oldfile->path, newfile->path,
 	//	info->st_nlink);
-	oldfile->nlink=info->st_nlink;
+	struct file *next;
+
+	next=oldfile->next;
 	free_w(&oldfile->path);
-	oldfile->path=newfile->path;
+	memcpy(oldfile, newfile, sizeof(struct file));
+	oldfile->next=next;
 	newfile->path=NULL;
 }
 
@@ -334,6 +337,12 @@ static int check_files(struct mystruct *find, struct file *newfile,
 		{
 			// Same device, same inode, therefore these two files
 			// are hardlinked to each other already.
+			found++;
+			break;
+		}
+		if(newfile->nlink>=maxlinks) {
+			// This new file file has enough links. Just leave it
+			// as it is to avoid undoing all these hardlinks.
 			found++;
 			break;
 		}

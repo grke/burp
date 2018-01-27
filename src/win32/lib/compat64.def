@@ -2,7 +2,7 @@ LIBRARY compat.dll
 EXPORTS
  
 ; compat.o
-_Z11win32_utimePKcP7utimbuf
+_Z11win32_utimePKcP4stat
 _Z11strncasecmpPKcS0_i
 _Z11win32_cgetsPci
 _Z11win32_chdirPKc

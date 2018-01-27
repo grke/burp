@@ -2015,16 +2015,19 @@ pid_t forkchild_no_wait(struct fzp **sin, struct fzp **sout, struct fzp **serr,
 	return do_forkchild(sin, sout, serr, path, argv, 0 /* do not wait */);
 }
 
-int win32_utime(const char *fname, struct utimbuf *times)
+int win32_utime(const char *fname, struct stat *statp)
 {
+	FILETIME cre;
 	FILETIME acc;
 	FILETIME mod;
 	char tmpbuf[5000];
 
 	conv_unix_to_win32_path(fname, tmpbuf, 5000);
 
-	cvt_utime_to_ftime(times->actime, acc);
-	cvt_utime_to_ftime(times->modtime, mod);
+	// We save creation date in st_ctime.
+	cvt_utime_to_ftime(statp->st_ctime, cre);
+	cvt_utime_to_ftime(statp->st_atime, acc);
+	cvt_utime_to_ftime(statp->st_mtime, mod);
 
 	HANDLE h=INVALID_HANDLE_VALUE;
 
@@ -2070,7 +2073,7 @@ int win32_utime(const char *fname, struct utimbuf *times)
 		return -1;
 	}
 
-	int rval=SetFileTime(h, NULL, &acc, &mod)?0:-1;
+	int rval=SetFileTime(h, &cre, &acc, &mod)?0:-1;
 	CloseHandle(h);
 	if(rval==-1) errno=b_errno_win32;
 	return rval;

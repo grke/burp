@@ -1,3 +1,14 @@
+2018-02-01 Changes in burp-2.1.28:
+  * Set Windows creation time on restore.
+  * From gfa-:
+    - Fix for bedup junk files.
+  * Unit test for bedup maximum hardlink code.
+  * librsync_max_size option - only use librsync on files less than the
+    given size.
+  * Reopen syslog for child processes after fork.
+  * Add a docs/restoring.txt file.
+  * Tweak ratelimit man page descriptions.
+
 2018-01-01 Changes in burp-2.1.26:
   * On non-Windows, strip vss on restore with the '-x' option.
   * Make 'burp -a m' work on a Windows console.

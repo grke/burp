@@ -323,7 +323,7 @@ Run as a particular group. This can be overridden by the client configuration fi
 Set the file creation umask. Default is 0022.
 .TP
 \fBratelimit=[Mb/s]\fR
-Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can.
+Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can. If you want the server's sending speed to be limited, you will also need to set this option on the server side.
 .TP
 \fBnetwork_timeout=[s]\fR
 Set the network timeout in seconds. If no data is sent or received over a period of this length, @name@ will give up. The default is 7200 seconds (2 hours).
@@ -556,7 +556,7 @@ Run as a particular user (not supported on Windows).
 Run as a particular group (not supported on Windows).
 .TP
 \fBratelimit=[Mb/s]\fR
-Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can.
+Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can. If you want the client's sending speed to be limited, you will also need to set this option on the client side.
 .TP
 \fBnetwork_timeout=[s]\fR
 Set the network timeout in seconds. If no data is sent or received over a period of this length, @name@ will give up. The default is 7200 seconds (2 hours).

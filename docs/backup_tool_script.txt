@@ -47,8 +47,11 @@ Run vss_strip for all files in /tmp/burp_restore
 Check that burp service is running
 /usr/local/share/burp/scripts/backup_tool_script -j burp
 
-Example of full configuration, which checks the service health, checks for outdated clients, verifies last 5 backups, and sends a report to an email address specifying a trivial instance name 
-/usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf --destination-mails=backupadmin@example.com --instance-id=burp_checks
+Check for warnings in last backups
+/usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backups/dir -w
+
+Example of full configuration, which checks the service health, checks for outdated clients, verifies last 5 backups, checks for warning in last backups, and sends a report to an email address specifying a trivial instance name 
+/usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf -w --destination-mails=backupadmin@example.com --instance-id=burp_checks
 
 You can check the full syntax simply by running the script without any arguments.
 
@@ -71,7 +74,7 @@ Once you have found the right settings for your usage, you may schedule the scri
 Example on RHEL / CentOS, add the following line to /etc/crontab in order to run the script every day at 10am.
 Considering that backups may occur nightly depending on your configuration, it would make sense to run verifications out of the backup timeframe:
 
-00 10 * * * root /usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf --destination-mails=backupadmin@example.com --instance-id=burp_checks
+00 10 * * * root /usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf -w --destination-mails=backupadmin@example.com --instance-id=burp_checks
 
 On Ubuntu, you'll need to remove the "root" username on the crontab line.
 

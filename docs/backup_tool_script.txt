@@ -3,10 +3,11 @@ Backup verification script
 
 backup_tool_script is a script to check backup sanity
 
-backup_tool_script can verify a given number of backups for each client. It can run verifiy operations in parallel, interleaving different clients in order to prevent performance bottlenecks on the storage.
+backup_tool_script can verify a given number of backups for each client. It can run verifiy operations in parallel, interleaving different clients in order to prevent performance bottlenecks on backend storage.
 Verify operations are timed in order to stop them after a given amount of time, leaving the system performance ready for backup operations.
 The script can also list clients that have outdated backups. It uses two different methods to list clients in order to detect rogue clients.
 It can also ensure that the server service is running properly, relaunch it if needed, on a scheduled basis.
+It can list all last backups containing warning messages as a summary.
 The script can send a warning / error when problems are found, even while operating.
 backup_tool_script can also launch vss_strip for each file found in a given directory.
 
@@ -72,11 +73,23 @@ Scheduling
 
 Once you have found the right settings for your usage, you may schedule the script by adding a cron entry.
 Example on RHEL / CentOS, add the following line to /etc/crontab in order to run the script every day at 10am.
-Considering that backups may occur nightly depending on your configuration, it would make sense to run verifications out of the backup timeframe:
 
 00 10 * * * root /usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf -w --destination-mails=backupadmin@example.com --instance-id=burp_checks
 
 On Ubuntu, you'll need to remove the "root" username on the crontab line.
+
+Scheduling considerations
+-------------------------
+
+The tool can detect that a backup is currently running and will postpone verifications, but considering that backups may occur nightly depending on your configuration,
+it would make more sense to run verifications out of the backup timeframe.
+Be aware that running the verifications while performing backups, backup numbers may change, so verifications may fail.
+This is especially true when trying to check more backups than the actual retention policy.
+
+Example: keeping 7 daily backups with 'keep 7'
+If you launch backup_tool_script with -v 7, if the verification happens while backing up, the 7th backup may be deleted after successful creation of the new up to date backup,
+and backup_tool_script will fail verifying the 7th backup it listed on script start.
+In order to avoid this, verify the last 6 backups when having 7 rotating copies, or simply let backup_tool_script run only when no backups are currently running.
 
 Logs
 ----

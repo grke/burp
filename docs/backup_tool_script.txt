@@ -20,8 +20,13 @@ To begin with, modify thez script and configure the following variables:
 
 INSTANCE_ID: Some unique string to identify the instance of the script, given that you may run multiple versions with different settings
 MAIL_ALERT_MSG: The warning / error email subject
-SOFT_MAX_EXEC_TIME: Amount of time in seconds after which a warning message is sent to inform that the verification process takes too long
-HARD_MAX_EXEC_TIME: Amount of time in seconds after which all verification operations are forcefully stopped
+SOFT_MAX_EXEC_TIME_PER_VERIFY: Amount of time for each verification process (in seconds) after which a warning message is sent to inform that the single verification process takes too long
+HARD_MAX_EXEC_TIME_PER_VERIFY: Amount of time for each verification process (in seconds) after which the verification process is forcefully stopped
+SOFT_MAX_EXEC_TIME: Amount of global time (in seconds) after which a warning message is sent to inform that the verification processes takes too long
+HARD_MAX_EXEC_TIME: Amount of global time (in seconds) after which all verification operations are forcefully stopped
+POSTPONE: If client isn't idle, should we postpone it's verification (YES/NO)
+POSTPONE_TIME: Amount of time (in seconds) after which a postponed verification is tried again
+POSTPONE_RETRY: Number of times a postponed verification is retried
 BACKUP_EXECUTABLE: Name of the burp executable, don't change it until you have reasons to
 SERVICE_TYPE: Which service system your are using. Can be set to "initv" or "systemd"
 PARALLEL_VERIFY_CONCURRENCY: How many simultaneous verify operations will be launched

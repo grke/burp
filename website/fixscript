@@ -68,6 +68,7 @@ timerscript=content/docs/timer_script.content
 workingdir=content/docs/working_dir.content
 burp_ca=content/docs/burp_ca.content
 serverbasics=content/docs/server-basics.content
+restoring=content/docs/restoring.content
 baremetal=content/docs/baremetal-windows.content
 baremetalhirens=content/docs/baremetal-windows-hirens.content
 baremetalubuntu=content/docs/baremetal-ubuntu.content
@@ -89,6 +90,7 @@ generic_page "$timerscript" "../docs/timer_script.txt"
 generic_page "$workingdir" "../docs/working_dir.txt"
 generic_page "$burp_ca" "../docs/burp_ca.txt"
 generic_page "$serverbasics" "../docs/server-basics.txt"
+generic_page "$restoring" "../docs/restoring.txt"
 generic_page "$baremetal" "../docs/baremetal-windows7and8.txt"
 generic_page "$baremetalhirens" "../docs/baremetal-windows7-hirens.txt"
 generic_page "$baremetalubuntu" "../docs/baremetal-ubuntu.txt"

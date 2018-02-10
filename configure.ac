@@ -12,6 +12,14 @@ AC_CONFIG_SRCDIR([src/prog.c])
 AM_INIT_AUTOMAKE([foreign -Wall dist-bzip2 no-dist-gzip tar-ustar subdir-objects 1.11])
 AM_SILENT_RULES([yes])
 
+dnl Check for pkg-config
+PKG_PROG_PKG_CONFIG
+if test x"${PKG_CONFIG}" = "x" ; then
+	echo ""
+	echo "  Error!  You must install pkg-config to continue compiling."
+	exit 1
+fi
+
 AC_LANG([C])
 
 : ${CFLAGS="-Wall -g -O2"}

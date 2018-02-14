@@ -9,6 +9,7 @@ The script can also list clients that have outdated backups. It uses two differe
 It can also ensure that the server service is running properly, relaunch it if needed, on a scheduled basis.
 It can list all last backups containing warning messages as a summary.
 The script can send a warning / error when problems are found, even while operating.
+The script can also check disk quotas and send a warning when quotas are exceeded.
 backup_tool_script can also launch vss_strip for each file found in a given directory.
 
 Usage
@@ -16,7 +17,7 @@ Usage
 
 You will find the script in /usr/local/share/burp/scripts/backup_tool_script
 
-To begin with, modify thez script and configure the following variables:
+To begin with, modify the script and configure the following variables:
 
 INSTANCE_ID: Some unique string to identify the instance of the script, given that you may run multiple versions with different settings
 MAIL_ALERT_MSG: The warning / error email subject
@@ -55,6 +56,9 @@ Check that burp service is running
 
 Check for warnings in last backups
 /usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backups/dir -w
+
+Check for exceeded quotas in last backups
+/usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backups/dir -q
 
 Example of full configuration, which checks the service health, checks for outdated clients, verifies last 5 backups, checks for warning in last backups, and sends a report to an email address specifying a trivial instance name 
 /usr/local/share/burp/scripts/backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp -c /etc/burp/burp.conf -w --destination-mails=backupadmin@example.com --instance-id=burp_checks
@@ -95,6 +99,24 @@ Example: keeping 7 daily backups with 'keep 7'
 If you launch backup_tool_script with -v 7, if the verification happens while backing up, the 7th backup may be deleted after successful creation of the new up to date backup,
 and backup_tool_script will fail verifying the 7th backup it listed on script start.
 In order to avoid this, verify the last 6 backups when having 7 rotating copies, or simply let backup_tool_script run only when no backups are currently running.
+
+Client emails
+-------------
+
+You may want to send an email directly to a client whenever no recent backups are found or disk quotas exceed.
+In this case, you have to add an email address to the client configuration file.
+
+Exmaple client in /etc/burp/clientconfdir/test.local
+
+include /some/path
+label = email_address : some@example.com
+
+With this additional information, the script can send an email directly to the client address.
+In order to send an alert on exceeded quota, add the '-A' parameter or '--client-alert-quotas'
+In order to send an alert on outdated backups, add the '-a' parameter or '--client-alert-outdated'
+
+Additionnaly, you may want to customize the messages sent. Please see the configuration header in the file in order to customize the emails.
+You may use placeholders for clientname, disk quotas statistics and outdated clients.
 
 Logs
 ----

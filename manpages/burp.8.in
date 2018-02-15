@@ -292,11 +292,11 @@ When set to 0, delta differencing will not take place. That is, when a file chan
 \fBcompression=zlib[0-9] (or gzip[0-9])\fR
 Choose the level of zlib compression for files stored in backups. Setting 0 or zlib0 turns compression off. The default is zlib9. This option can be overridden by the client configuration files in clientconfdir on the server. 'gzip' is a synonym of 'zlib'.
 .TP
-\fBhard_quota=[b/Kb/Mb/Gb]\fR
-Do not back up the client if the estimated size of all files is greater than the specified size. Example: 'hard_quota = 100Gb'. Set to 0 (the default) to have no limit.
+\fBhard_quota=[B/KB/MB/GB]\fR
+Do not back up the client if the estimated size of all files is greater than the specified size. Example: 'hard_quota = 100GB'. Set to 0 (the default) to have no limit.
 .TP
-\fBsoft_quota=[b/Kb/Mb/Gb]\fR
-A warning will be issued when the estimated size of all files is greater than the specified size and smaller than hard_quota. Example: 'soft_quota = 95Gb'. Set to 0 (the default) to have no warning.
+\fBsoft_quota=[B/KB/MB/GB]\fR
+A warning will be issued when the estimated size of all files is greater than the specified size and smaller than hard_quota. Example: 'soft_quota = 95GB'. Set to 0 (the default) to have no warning.
 .TP
 \fBversion_warn=[0|1]\fR
 When this is on, which is the default, a warning will be issued when the client version does not match the server version. This option can be overridden by the client configuration files in clientconfdir on the server.

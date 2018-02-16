@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
 PROGRAM_VERSION=0.4.0
-PROGRAM_BUILD=2018021401
+PROGRAM_BUILD=2018021601
 AUTHOR="(C) 2017-2018 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=yes
 
-#TODO
+#TODO backup_tool_script specific
 # postponed arrays / files grow a lot. Consider having them "rolling"
+# command line arguments don't take -AaqV for example
+# Check if label = email_address : mail can take multiple email addresses
+# ExecTasks returns an error code when subprogram returns exitcode 2 (should be able to give a list of acceptable error codes (eg @name@ exit code 3), or warning (@name@ exit code 2)
+
+#TODO ofunctions specific
+# update spinner
+# add checkRFC function (and use it for --destination-mails)
+# ExecTasks still needs some better call argument list
+# ExecTasks sub function relocate
 # SendMail and SendEmail convert functions inverted, check on osync and obackup
 
 ## backup_tool_script - A script to check @name@ backup sanity
@@ -17,9 +26,11 @@ IS_STABLE=yes
 ## The script can also list clients that have outdated backups. It uses two different methods to list clients in order to detect rogue clients.
 ## It can also ensure that the @name@ server service is running properly, relaunch it if needed, on a scheduled basis.
 ## The script can send a warning / error when problems are found, even while operating.
+## The script can send a warning / error when disk quotas exceed, even while operating.
 ## backup_tool_script can also launch vss_strip for each file found in a given directory.
+## The script can also send mails directly to the client, if an email address is given in client config file as 'label = email_address : some@example.com'
 
-## When exiting, backup_tool_script ensures that no forked @name@ processes remain, without touching processes that didn't belong to backup_tool_script.
+## When exiting, backup_tool_script ensures that no forked @name@ processes remain, without touching other @name@ processes that didn't belong to backup_tool_script.
 
 ## Set an unique identifier for the script which will be used for logs and alert mails
 INSTANCE_ID="base"
@@ -35,7 +46,7 @@ SOFT_MAX_EXEC_TIME=36000
 HARD_MAX_EXEC_TIME=43200
 
 # Verify operations checks
-## When a client isn't idle, should be postpone verification process
+## When a client isn't idle, should we postpone verification process
 POSTPONE=yes
 ## When postponed, how much time (in seconds) before next try (defauls to 1 hour)
 POSTPONE_TIME=3600
@@ -45,7 +56,7 @@ POSTPONE_RETRY=2
 ## Backup executable (can be set to /usr/sbin/@name@, /usr/local/sbin/@name@, or autodetect via $(type -p @name@))
 BACKUP_EXECUTABLE=@sbindir@/@name@
 
-## Burp service type (can be "initv" or "systemd")
+## @name@ service type (can be "initv" or "systemd")
 SERVICE_TYPE=systemd
 
 ## How many simultaneous verify operations should be launched (please check I/O and CPU usage before increasing this)
@@ -54,7 +65,7 @@ PARELLEL_VERIFY_CONCURRENCY=2
 # ------------ Mail alert settings -------------
 
 ## General alert mail subject
-MAIL_ALERT_MSG="Execution of $PROGRAM (@name@) instance $INSTANCE_ID on $(date) has warnings/errors."
+MAIL_ALERT_MSG="Execution of $PROGRAM instance $INSTANCE_ID on $(date) has warnings/errors."
 
 ## Optional change of mail body encoding (using iconv)
 ## By default, all mails are sent in UTF-8 format without header (because of maximum compatibility of all platforms)
@@ -64,7 +75,7 @@ MAIL_BODY_CHARSET="ISO-8859-1"
 # ------------ Client specific alert email template --------------
 
 ## Email subject
-CLIENT_ALERT_SUBJECT="@name@ Backup program alert"
+CLIENT_ALERT_SUBJECT="@name@ backup - Warning about your backup"
 
 ## Valid message body placeholders are
 ## [NUMBERDAYS] is the number of days we check.
@@ -598,6 +609,18 @@ function _PerfProfiler {                                                        
 	Logger "PerfProfiler:\n$perfString" "PARANOIA_DEBUG"                                                            #__WITH_PARANOIA_DEBUG
 }
 
+# Checks email address validity
+function checkRFC822 {
+	local mail="${1}"
+	local rfc822="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
+
+	if [[ $mail =~ $rfc822 ]]; then
+		echo 1
+	else
+		echo 0
+	fi
+}
+
 function IsInteger {
 	local value="${1}"
 	if [[ $value =~ ^[0-9]+$ ]]; then
@@ -623,7 +646,6 @@ function Spinner {
 		return 0
 	else
 		printf " [%c]  \b\b\b\b\b\b" "$_OFUNCTIONS_SPINNER"
-		#printf "\b\b\b\b\b\b"
 		_OFUNCTIONS_SPINNER=${_OFUNCTIONS_SPINNER#?}${_OFUNCTIONS_SPINNER%%???}
 		return 0
 	fi
@@ -1353,9 +1375,9 @@ function ListClients {
 	eval "$cmd" &
 	ExecTasks "${FUNCNAME[0]}_lastbackup" 0 0 1800 3600 1 $KEEP_LOGGING true true false false 1 $!
 	if [ $? != 0 ]; then
-		Logger "Enumerating @name@ clients via [$BACKUP_EXECUTABLE $configString -a S] failed." "ERROR"
+		Logger "Enumerating @name@ clients via [$BACKUP_EXECUTABLE $configString -a S] failed. Check provided @name@ client config file." "ERROR"
 	else
-		Logger "Burp method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP)" "DEBUG"
+		Logger "@name@ method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP)" "DEBUG"
 	fi
 
 	#TODO: sed expressions are GNU and won't probably work on BSD nor Mac
@@ -1413,9 +1435,13 @@ function ListClients {
 						clientEmail="${clientEmail#*:}"
 						# Remove eventual spaces
 						clientEmail="${clientEmail/ /}"
-						CLIENT_EMAIL["$client"]="$clientEmail"
+						if [ $(checkRFC822 "$clientEmail") -eq 1 ]; then 
+							CLIENT_EMAIL["$client"]="$clientEmail"
+						else
+							Logger "Client [$client] has a bogus mail address [$clientEmail]." "WARN"
+						fi
 					else
-						Logger "Cannot find email address for client [$client]." "ERROR"
+						Logger "Client [$client] has no mail address set." "NOTICE"
 					fi
 				elif [ "$CLIENT_ALERTS" == true ]; then
 					Logger "Cannot find client config file [$clientConfDir/$client] to fetch email address." "ERROR"
@@ -1534,8 +1560,12 @@ function ListOutdatedClients {
 			if [ $CLIENTS_ALERT_OUTDATED == true ]; then
 				clientAlertBody="${CLIENT_ALERT_BODY_OUTDATED/"[CLIENT]"/$client}"
 				clientAlertBody="${clientAlertBody/"[NUMBERDAYS]"/$oldDays}"
-				SendEmail "$CLIENT_ALERT_SUBJECT" "$clientAlertBody" "${CLIENT_EMAIL[$client]}"
-				Logger "Sent outdated client mail to [${CLIENT_EMAIL[$client]}]." "NOTICE"
+				if [ "${CLIENT_EMAIL[$client]}" != "" ]; then
+					SendEmail "$CLIENT_ALERT_SUBJECT" "$clientAlertBody" "${CLIENT_EMAIL[$client]}"
+					Logger "Sent outdated client mail to [${CLIENT_EMAIL[$client]}]." "NOTICE"
+				else
+					Logger "Client [$client] does not have a mail address. Cannot send notification." "ERROR"
+				fi
 			fi
 			found=true
 		fi
@@ -1567,20 +1597,25 @@ function ListQuotaExceedClients {
 		if zcat "$lastBackupDir/log.gz" | grep quota > /dev/null 2>&1; then
 			bytesEstimated=$(zcat "$lastBackupDir/log.gz" | grep "Bytes estimated")
 			bytesEstimated="${bytesEstimated##*:}"
+			# Remove leading spaces
+			bytesEstimated="${bytesEstimated# *}"
 			quotaExceed=$(zcat "$lastBackupDir/log.gz" | grep "quota")
 			quotaExceed="${quotaExceed##*:}"
 			quotaDiff="$bytesEstimated /$quotaExceed)"
 
 			Logger "Client [$client] quota exceed ($quotaDiff)." "WARN"
 
-
 			if [ $CLIENTS_ALERT_QUOTAS == true ]; then
 				clientAlertBody="${CLIENT_ALERT_BODY_QUOTA/"[CLIENT]"/$client}"
 				clientAlertBody="${clientAlertBody/"[QUOTAEXCEED]"/$quotaDiff}"
-				SendEmail "$CLIENT_ALERT_SUBJECT" "$clientAlertBody" "${CLIENT_EMAIL[$client]}"
-				Logger "Sent quota exceeded mail to [${CLIENT_EMAIL[$client]}]." "NOTICE"
+				if [ "${CLIENT_EMAIL[$client]}" != "" ]; then
+					SendEmail "$CLIENT_ALERT_SUBJECT" "$clientAlertBody" "${CLIENT_EMAIL[$client]}"
+					Logger "Sent quota exceeded mail to [${CLIENT_EMAIL[$client]}]." "NOTICE"
+				else
+					Logger "Client [$client] does not have a mail address. Cannot send notification" "ERROR"
+				fi
 			fi
-			foune=true
+			found=true
 		fi
 	done
 
@@ -1937,6 +1972,13 @@ Logger "---------------------------------------------------------------------" "
 Logger "$DATE - $PROGRAM $PROGRAM_VERSION script begin." "ALWAYS"
 Logger "---------------------------------------------------------------------" "NOTICE"
 Logger "Instance [$INSTANCE_ID] launched as $LOCAL_USER@$LOCAL_HOST (PID $SCRIPT_PID)" "NOTICE"
+
+if [ $no_maxtime == true ]; then
+	SOFT_MAX_EXEC_TIME_PER_VERIFY=0
+	HARD_MAX_EXEC_TIME_PER_VERIFY=0
+	SOFT_MAX_EXEC_TIME=0
+	HARD_MAX_EXEC_TIME=0
+fi
 
 if ! type -p "$BACKUP_EXECUTABLE" > /dev/null 2>&1; then
 	Logger "Cannot find [$BACKUP_EXECUTABLE]. Please modify binary path in $0 script header." "CRITICAL"

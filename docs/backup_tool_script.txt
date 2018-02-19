@@ -71,7 +71,7 @@ Client inclusions and exclusions
 You may want to include / exclude some clients on the checks.
 backup_tool_script uses grep compatible regular expressions to do so. Inclusions are evaluated before exclusions.
 
-Exmaple: include all clients which names begin with "servers", and exclude everything else:
+Example: include all clients which names begin with "servers", and exclude everything else:
 /usr/local/share/burp/scripts/backup_tool_script -i servers.* -e ".*" -d /path/to/clients/backup/dir
 
 Example: exclude all clients which names begin with customerX:

@@ -86,7 +86,7 @@ CLIENT_ALERT_SUBJECT="@name@ backup - Warning about your backup"
 ## Message sent directly to client email address when no recent backups are found.
 CLIENT_ALERT_BODY_OUTDATED="Hello,
 
-Your @name@ backup has not been done successfully since [NUMBERDAYS] day(s) for client [CLIENT].
+Your @name@ backup has no newer entries than [NUMBERDAYS] day(s) for client [CLIENT].
 Please leave your computer online enough time for a backup to occur.
 Contact your system administrator for further information.
 

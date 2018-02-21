@@ -608,7 +608,11 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 
 struct asfd *asfd_alloc(void)
 {
-	return (struct asfd *)calloc_w(1, sizeof(struct asfd), __func__);
+	struct asfd *asfd;
+	asfd=(struct asfd *)calloc_w(1, sizeof(struct asfd), __func__);
+	if(asfd)
+		asfd->fd=-1;
+	return asfd;
 }
 
 void asfd_close(struct asfd *asfd)

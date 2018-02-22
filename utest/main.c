@@ -51,7 +51,9 @@ int main(void)
 	// These do not compile for Windows.
 	srunner_add_suite(sr, suite_client_delete());
 	srunner_add_suite(sr, suite_client_find());
+#ifdef HAVE_NCURSES
 	srunner_add_suite(sr, suite_client_monitor_status_client_ncurses());
+#endif
 	srunner_add_suite(sr, suite_client_monitor_json_input());
 	srunner_add_suite(sr, suite_lock());
 

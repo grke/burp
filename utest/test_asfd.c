@@ -152,6 +152,7 @@ END_TEST
 
 START_TEST(test_setup_asfd_ncurses_stdin)
 {
+#ifdef HAVE_NCURSES
 	struct async *as;
 	struct asfd *asfd;
 	as=setup();
@@ -159,6 +160,7 @@ START_TEST(test_setup_asfd_ncurses_stdin)
 	checks(asfd, ASFD_STREAM_NCURSES_STDIN, fileno(stdin), /*port*/-1,
 		/*ssl*/NULL, "stdin", ASFD_FD_UNSET, /*attempt_read*/1);
 	tear_down(&as);
+#endif
 }
 END_TEST
 
@@ -194,8 +196,8 @@ Suite *suite_asfd(void)
 	tcase_add_test(tc_core, test_setup_asfd_linebuf_write);
 	tcase_add_test(tc_core, test_setup_asfd_stdin);
 	tcase_add_test(tc_core, test_setup_asfd_stdout);
-	tcase_add_test(tc_core, test_setup_asfd_ncurses_stdin);
 	tcase_add_test(tc_core, test_setup_asfd_twice);
+	tcase_add_test(tc_core, test_setup_asfd_ncurses_stdin);
 	suite_add_tcase(s, tc_core);
 
 	return s;

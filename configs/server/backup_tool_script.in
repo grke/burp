@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
 PROGRAM_VERSION=0.4.0
-PROGRAM_BUILD=2018021902
+PROGRAM_BUILD=2018022301
 AUTHOR="(C) 2017-2018 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=yes
@@ -42,7 +42,7 @@ POSTPONE_TIME=3600
 BACKUP_EXECUTABLE=@sbindir@/@name@
 
 ## @name@ service type (can be "initv" or "systemd")
-SERVICE_TYPE=systemd
+SERVICE_TYPE=initv
 
 ## How many simultaneous verify operations should be launched (please check I/O and CPU usage before increasing this)
 PARELLEL_VERIFY_CONCURRENCY=2
@@ -71,7 +71,7 @@ CLIENT_ALERT_SUBJECT="@name@ backup - Warning about your backup"
 ## Message sent directly to client email address when no recent backups are found.
 CLIENT_ALERT_BODY_OUTDATED="Hello,
 
-Your @name@ backup has no newer entries than [NUMBERDAYS] day(s) for client [CLIENT].
+No valid backup sets found in the last [NUMBERDAYS] day(s) for client [CLIENT].
 Please leave your computer online enough time for a backup to occur.
 Contact your system administrator for further information.
 
@@ -362,7 +362,7 @@ function SendAlert {
 		attachment=true
 	fi
 
-	body="$MAIL_ALERT_MSG"$'\n\n'"$(cat $RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP)"
+	body="$MAIL_ALERT_MSG"$'\n\n'"Last 1000 lines of log"$'\n\n'"$(tail -n 1000 $RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP)"
 
 	if [ $ERROR_ALERT == true ]; then
 		subject="Error alert for $INSTANCE_ID"
@@ -421,12 +421,20 @@ function SendEmail {
 	local encryption_string=
 	local auth_string=
 
+	local i
+
 	if [ ! -f "$attachment" ]; then
 		attachment_command="-a $attachment"
 		mail_no_attachment=1
 	else
 		mail_no_attachment=0
 	fi
+
+	for i in "${destinationMails}"; do
+		if [ $(CheckRFC822 "$i") -ne 1 ]; then
+			Logger "Given email [$i] does not seem to be valid." "WARN"
+		fi
+	done
 
 	# Prior to sending an email, convert its body if needed
 	if [ "$MAIL_BODY_CHARSET" != "" ]; then
@@ -595,7 +603,7 @@ function _PerfProfiler {                                                        
 }
 
 # Checks email address validity
-function checkRFC822 {
+function CheckRFC822 {
 	local mail="${1}"
 	local rfc822="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
 
@@ -628,20 +636,20 @@ function IsNumericExpand {
 ## Modified version of http://stackoverflow.com/a/8574392
 ## Usage: [ $(ArrayContains "needle" "${haystack[@]}") -eq 1 ]
 function ArrayContains () {
-	local needle="${1}"
-	local haystack="${2}"
-	local e
+        local needle="${1}"
+        local haystack="${2}"
+        local e
 
-	if [ "$needle" != "" ] && [ "$haystack" != "" ]; then
-		for e in "${@:2}"; do
-			if [ "$e" == "$needle" ]; then
-				echo 1
-				return
-			fi
-		done
-	fi
-	echo 0
-	return
+        if [ "$needle" != "" ] && [ "$haystack" != "" ]; then
+                for e in "${@:2}"; do
+                        if [ "$e" == "$needle" ]; then
+                                echo 1
+                                return
+                        fi
+                done
+        fi
+        echo 0
+        return
 }
 
 
@@ -657,94 +665,40 @@ function Spinner {
 }
 
 ## Main asynchronous execution function
-## This function can monitor given pids as background processes, and stop them if max execution time is reached. Suitable for multiple synchronous processes.
-## It can also take a list of commands to execute in parallel, and stop them if max execution time is reached.
+## Function can work in:
+## WaitForTaskCompletion mode: monitors given pid in background, and stops them if max execution time is reached. Suitable for multiple synchronous pids to monitor and wait for
+## ParallExec mode: takes list of commands to execute in parallel per batch, and stops them if max execution time is reahed.
 
-## Function has 8 execution modes
+## Example of improved wait $!
+## ExecTasks $! "some_identifier" false 0 0 0 0 true 1 1800 false
+## Example: monitor two sleep processes, warn if execution time is higher than 10 seconds, stop after 20 seconds
+## sleep 15 &
+## pid=$!
+## sleep 20 &
+## pid2=$!
+## ExecTasks "some_identifier" 0 0 10 20 1 1800 true true false false 1 "$pid;$pid2"
 
-	# WaitForTaskCompletion mode: Monitor given pids as background processes, stop them if max execution time is reached. Suitaable for multiple synhronous processes.
-	# 1 : WaitForTaskCompletion, semi-colon separated list of pids to monitor
-	# 2 : WaitForTaskCompletion, list of pids to monior, from file, one per line
+## Example of parallel execution of four commands, only if directories exist. Warn if execution takes more than 300 seconds. Stop if takes longer than 900 seconds. Exeute max 3 commands in parallel.
+## commands="du -csh /var;du -csh /etc;du -csh /home;du -csh /usr"
+## conditions="[ -d /var ];[ -d /etc ];[ -d /home];[ -d /usr]"
+## ExecTasks "$commands" "some_identifier" false 0 0 300 900 true 1 1800 true false false 3 "$conditions"
 
-	# Example of improved wait $! emulation
-	# ExecTasks "some_identifier" 0 0 0 0 1 1800 true false true true 1 $!
-	# Example: monitor two sleep processes, warn if execution time is higher than 10 seconds, stop after 20 seconds
-	# sleep 15 &
-	# pid=$!
-	# sleep 20 &
-	# pid2=$!
-	# ExecTasks "some_identifier" 0 0 10 20 1 1800 true true false false 1 "$pid;$pid2"
+## Bear in mind that given commands and conditions need to be quoted
 
-	# ParallelExecMode: Take list of commands to execute in parallel, stop them if max execution time is reached.
-	# Also take optional conditional arguments to verifiy before execution main commands. Conditional command exit code 0 means ready to execute. Other exit codes will ignore/postpone main command.
-	# 3 : ParallelExec, semi-colon separated list of commands to execute in parallel, no conditions
-	# 4 : ParallelExec, semi-colon separated list of commands to execute in parallel , semi-colon separated list of conditional commands, ignoring main commands on condition failures
-	# 5 : ParallelExec, semi-colon separated list of commands, semi-colon separated list of conditional commands, postponing main commands on condition failures
-	# 6 : ParallelExec, list of commands from file, one per line, no conditions
-	# 7 : ParallelExec, list of commands from file, one per line, list of conditional commands from file, one per line, ignoring main commands on condition failures
-	# 8 : ParallelExec, list of commands from file, one per line, list of conditional commands from file, one per line, postponing main commands on condition failures
-
-	# Exmaple: execute four du commands, only if directories exist, warn if execution takes more than 300 seconds, stop if takes longer than 900 seconds. Execute max 3 commands in parallel.
-	# commands="du -csh /var;du -csh /etc;du -csh /home;du -csh /usr"
-	# conditions="[ -d /var ];[ -d /etc ];[ -d /home];[ -d /usr]"
-	# ExecTasks "some_identifier" 0 0 300 900 1 1800 true true false false 4 "$commands" "$conditions" 3
-	# Bear in mind that given commands and conditions need to be quoted
-
-## ofunctions.sh subfunction requirements:
+## ExecTasks has the following ofunctions subfunction requirements:
 ## Spinner
 ## Logger
 ## JoinString
 ## KillChilds
 
-# Wrapper function for ExecTasks
-function WaitForPids {
-	local id="${1:-base}"                           # Optional ID in order to identify global variables from this run (only bash variable names, no '-'). Global variables are WAIT_FOR_TASK_COMPLETION_$id and HARD_MAX_EXEC_TIME_REACHED_$id
-	local mainInput="${13}"                         # Contains list of pids / commands or filepath to list of pids / commands
-	local softMaxTime="${4:-0}"                     # If process(es) with pid(s) $pids take longer than $softMaxTime seconds, will log a warning, unless $softMaxTime equals 0.
-	local hardMaxTime="${5:-0}"                     # If process(es) with pid(s) $pids take longer than $hardMaxTime seconds, will stop execution, unless $hardMaxTime equals 0.
-	local sleepTime="${6:-.05}"                     # Seconds between each state check, the shorter this value, the snappier it will be, but as a tradeoff cpu power will be used (general values between .05 and 1).
-	local keepLogging="${7:-0}"                     # Every keepLogging seconds, an alive message is logged. Setting this value to zero disables any alive logging.
-	local counting="${8:-true}"                     # Count time since function has been launched (true), or since script has been launched (false)
-	local spinner="${9:-true}"                      # Show spinner (true), do not show anything (false)
-	local noTimeErrorLog="${10:-false}"             # Log errors when reaching soft / hard max time (false), do not log errors on those triggers (true)
-	local noErrorLogsAtAll="${11:-false}"           # Do not log any errors at all (useful for recursive condition calls)
-
-	ExecTasks "$id" "WaitForPids" "$mainInput" "" "" "" "" "" "" "$softMaxTime" "$hardMaxTime" "$sleepTime" "$keepLogging" "$counting" "$spinner" "$noTimeErrorLog" "$noErrorLogsAtAll"
-	return $?
-}
-
-# Wrapper function for ExecTasks
-function ParallelExec {
-	local id="${1:-base}"                           # Optional ID in order to identify global variables from this run (only bash variable names, no '-'). Global variables are WAIT_FOR_TASK_COMPLETION_$id and HARD_MAX_EXEC_TIME_REACHED_$id
-	local mainInput="${13}"                         # Contains list of pids / commands or filepath to list of pids / commands
-	local auxInput="${14}"                          # Contains list of conditional commands or filepath to list of conditional commands
-	local numberOfProcesses="${15:-2}"              # Number of simultaneous commands to run in ParallExec mode
-	local maxPostponeRetries="${16:-3}"             # If command gets postponed because of its condition, how many times do we retry on failed condition
-	local minTimeBetweenRetries="${17:-300}"        # Time between postponed commands retries
-	local softPerProcessTime="${2:-0}"
-	local hardPerProcessTime="${3:-0}"
-	local softMaxTime="${4:-0}"                     # If process(es) with pid(s) $pids take longer than $softMaxTime seconds, will log a warning, unless $softMaxTime equals 0.
-	local hardMaxTime="${5:-0}"                     # If process(es) with pid(s) $pids take longer than $hardMaxTime seconds, will stop execution, unless $hardMaxTime equals 0.
-	local sleepTime="${6:-.05}"                     # Seconds between each state check, the shorter this value, the snappier it will be, but as a tradeoff cpu power will be used (general values between .05 and 1).
-	local keepLogging="${7:-0}"                     # Every keepLogging seconds, an alive message is logged. Setting this value to zero disables any alive logging.
-	local counting="${8:-true}"                     # Count time since function has been launched (true), or since script has been launched (false)
-	local spinner="${9:-true}"                      # Show spinner (true), do not show anything (false)
-	local noTimeErrorLog="${10:-false}"             # Log errors when reaching soft / hard max time (false), do not log errors on those triggers (true)
-	local noErrorLogsAtAll="${11:-false}"           # Do not log any errors at all (useful for recursive condition calls)
-
-	ExecTasks "$id" "ParallelExec" "$mainInput" "$auxInput" "$numberOfProcesses" "$maxPostponeRetries" "$minTimeBetweenRetries" "$softPerProcessTIme" "$hardPerProcessTime" "$softMaxTime" "$hardMaxTime" "$sleepTime" "$keepLogging" "$counting" "$spinner" "$noTimeErrorLog" "$noErrorLogsAtAll" 
-	return $?
-}
-
-#ExecTasks "$mainInput" "$id" $readFromFile $softPerProcessTime $hardPerProcessTime $softMaxTime $hardMaxTime $counting $sleepTime $keepLogging $spinner $noTimeErrorLog $noErrorLogsAtAll $numberOfProcesses $auxInput $maxPostponeRetries $minTimeBetweenRetries $validExitCodes
+## Full call
+##ExecTasks "$mainInput" "$id" $readFromFile $softPerProcessTime $hardPerProcessTime $softMaxTime $hardMaxTime $counting $sleepTime $keepLogging $spinner $noTimeErrorLog $noErrorLogsAtAll $numberOfProcesses $auxInput $maxPostponeRetries $minTimeBetweenRetries $validExitCodes
 
 function ExecTasks {
 	# Mandatory arguments
-
 	local mainInput="${1}"				# Contains list of pids / commands separated by semicolons or filepath to list of pids / commands
 
 	# Optional arguments
-
 	local id="${2:-base}"                           # Optional ID in order to identify global variables from this run (only bash variable names, no '-'). Global variables are WAIT_FOR_TASK_COMPLETION_$id and HARD_MAX_EXEC_TIME_REACHED_$id
 	local readFromFile="${3:-false}"		# Is mainInput / auxInput a semicolon separated list (true) or a filepath (false)
 	local softPerProcessTime="${4:-0}"		# Max time (in seconds) a pid or command can run before a warning is logged, unless set to 0
@@ -759,7 +713,6 @@ function ExecTasks {
 	local noErrorLogsAtAll="${13:-false}"		# Do not log any errros at all (useful for recursive ExecTasks checks)
 
 	# Parallelism specific arguments
-
 	local numberOfProcesses="${14:-0}"		# Number of simulanteous commands to run, given as mainInput. Set to 0 by default (WaitForTaskCompletion mode). Setting this value enables ParallelExec mode.
 	local auxInput="${15}"				# Contains list of commands separated by semicolons or filepath fo list of commands. Exit code of those commands decide whether main commands will be executed or not
 	local maxPostponeRetries="${16:-3}"		# If a conditional command fails, how many times shall we try to postpone the associated main command. Set this to 0 to disable postponing
@@ -904,7 +857,7 @@ function ExecTasks {
 
 		if [ $exec_time -gt $softMaxTime ]; then
 			if [ "$softAlert" != true ] && [ $softMaxTime -ne 0 ] && [ $noTimeErrorLog != true ]; then
-				Logger "Max soft execution time exceeded for task [$id] with pids [$(joinString , ${pidsArray[@]})]." "WARN"
+				Logger "Max soft execution time [$softMaxTime] exceeded for task [$id] with pids [$(joinString , ${pidsArray[@]})]." "WARN"
 				softAlert=true
 				SendAlert true
 			fi
@@ -912,7 +865,7 @@ function ExecTasks {
 
 		if [ $exec_time -gt $hardMaxTime ] && [ $hardMaxTime -ne 0 ]; then
 			if [ $noTimeErrorLog != true ]; then
-				Logger "Max hard execution time exceeded for task [$id] with pids [$(joinString , ${pidsArray[@]})]. Stopping task execution." "ERROR"
+				Logger "Max hard execution time [$hardMaxTime] exceeded for task [$id] with pids [$(joinString , ${pidsArray[@]})]. Stopping task execution." "ERROR"
 			fi
 			for pid in "${pidsArray[@]}"; do
 				KillChilds $pid true
@@ -951,7 +904,10 @@ function ExecTasks {
 						pidsTimeArray[$pid]=$((SECONDS - seconds_begin))
 						if [ ${pidsTimeArray[$pid]} -gt $softPerProcessTime ]; then
 							if [ "$softAlert" != true ] && [ $softPerProcessTime -ne 0 ] && [ $noTimeErrorLog != true ]; then
-								Logger "Max soft execution time exceeded for pid [$pid] (optional command [${commandsArrayPid[$pid]}])." "WARN"
+								Logger "Max soft execution time [$softPerProcessTime] exceeded for pid [$pid]." "WARN"
+								if [ "${commandsArrayPid[$pid]}]" != "" ]; then
+									Logger "Command was [${commandsArrayPid[$pid]}]]." "WARN"
+								fi
 								softAlert=true
 								SendAlert true
 							fi
@@ -960,7 +916,10 @@ function ExecTasks {
 
 						if [ ${pidsTimeArray[$pid]} -gt $hardPerProcessTime ] && [ $hardPerProcessTime -ne 0 ]; then
 							if [ $noTimeErrorLog != true ] && [ $noErrorLogsAtAll != true ]; then
-								Logger "Max hard execution time exceeded for pid [$pid] (optional command [${commandsArrayPid[$pid]}]). Stopping command execution." "ERROR"
+								Logger "Max hard execution time [$hardPerProcessTime] exceeded for pid [$pid]. Stopping command execution." "ERROR"
+								if [ "${commandsArrayPid[$pid]}]" != "" ]; then
+									Logger "Command was [${commandsArrayPid[$pid]}]]." "WARN"
+								fi
 							fi
 							KillChilds $pid true
 							if [ $? == 0 ]; then
@@ -1075,7 +1034,6 @@ function ExecTasks {
 					postponedExecTime="${currentCommand%%@*}"
 					postponedExecTime=$((SECONDS-postponedExecTime))
 					# Get everything after first '@'
-					#WIP temp is not beautiful
 					temp="${currentCommand#*@}"
 					# Get first value before '@'
 					postponedRetryCount="${temp%%@*}"
@@ -1270,6 +1228,8 @@ function TrapQuit {
 	CleanUp
 	KillChilds $SCRIPT_PID > /dev/null 2>&1
 
+	Logger "Elapsed [$SECONDS] seconds." "DEBUG"
+
 	exit $exitcode
 }
 
@@ -1329,8 +1289,6 @@ function ListClients {
 	cmd="$BACKUP_EXECUTABLE $configString -a S | grep \"last backup\" | awk '{print \$1}' > \"$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP\""
 	Logger "Running cmd [$cmd]." "DEBUG"
 	eval "$cmd" &
-	#ExecTasks "$mainInput" "$id" $readFromFile $softPerProcessTime $hardPerProcessTime $softMaxTime $hardMaxTime $counting $sleepTime $keepLogging $spinner $noTimeErrorLog $noErrorLogsAtAll $numberOfProcesses $auxInput $maxPostponeRetries $minTimeBetweenRetries $validExitCodes
-	#ExecTasks "${FUNCNAME[0]}_lastbackup" 0 0 1800 3600 1 $KEEP_LOGGING true true false false 1 $!
 	ExecTasks $! "${FUNCNAME[0]}_lastbackup" false 0 0 1800 3600 true $SLEEP_TIME $KEEP_LOGGING
 	if [ $? != 0 ]; then
 		Logger "Enumerating @name@ clients via [$BACKUP_EXECUTABLE $configString -a S] failed. Check provided @name@ client config file." "ERROR"
@@ -1338,8 +1296,8 @@ function ListClients {
 		Logger "@name@ method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP)" "DEBUG"
 	fi
 
-	#TODO: sed expressions are GNU and won't probably work on BSD nor Mac
 	# First exp removes everything before last '/'
+	# sed tested on linux and BSD (should work on MacOS too)
 	find "$backupDir" -mindepth 1 -maxdepth 1 -type d | sed -e "s/\(.*\)\/\(.*\)/\2/g" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
 
 	while IFS=$'\n' read -r client; do
@@ -1394,7 +1352,7 @@ function ListClients {
 						# Remove eventual spaces
 						clientEmail="${clientEmail/ /}"
 						for j in $clientEmail; do
-							if [ $(checkRFC822 "$j") -eq 1 ]; then 
+							if [ $(CheckRFC822 "$j") -eq 1 ]; then 
 								if [ "${CLIENT_EMAIL["$client"]}" == "" ]; then
 									CLIENT_EMAIL["$client"]="$j"
 								else
@@ -1434,8 +1392,6 @@ function IsClientIdle {
 	Logger "Checking if client [$client] is currently idle." "DEBUG"
 
 	cmd="$BACKUP_EXECUTABLE $configString -a S -C $client | grep \"Status: idle\" > /dev/null 2>&1"
-	#ExecTasks "$mainInput" "$id" $readFromFile $softPerProcessTime $hardPerProcessTime $softMaxTime $hardMaxTime $counting $sleepTime $keepLogging $spinner $noTimeErrorLog $noErrorLogsAtAll $numberOfProcesses $auxInput $maxPostponeRetries $minTimeBetweenRetries $validExitCodes
-	#ExecTasks "${FUNCNAME[0]}_idle" 0 0 120 300 1 $KEEP_LOGGING true true false false 1 $!
 	ExecTasks $! "${FUNCNAME[0]}_idle" false 0 0 120 300 true $SLEEP_TIME $KEEP_LOGGING
 	exitCode=$?
 
@@ -1475,10 +1431,10 @@ function VerifyBackups {
 		find "$backupDir$client" -mindepth 2 -maxdepth 2 -type f -name "backup_stats" | sort -nr | head -n $numberToVerify | sed -e 's/.*\([0-9]\{7\}\).*/\1/' > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP"
 		Logger "Can check $(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP | wc -l) backups for [$client]." "NOTICE"
 		while IFS=$'\n' read -r backupNumber; do
-			#TODO: sed expressions won't probably work on BSD nor Mac
 			# sed here removes all lines containing only block logs (64 chars + number)
+			# sed regex isn't complete (lacks \+$ because BSD / macOS sed does not like extended regex)
 			Logger "Preparing verification of backup [$backupNumber] for client [$client]." "NOTICE"
-			echo "$BACKUP_EXECUTABLE $configString -C $client -a v -b $backupNumber | sed '/^[BbfFvud]\{64\} [0-9]\+$/d' >> \"$LOG_FILE\" 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP"
+			echo "$BACKUP_EXECUTABLE $configString -C $client -a v -b $backupNumber | sed '/^[BbfFvud]\{64\} [0-9]/d' >> \"$LOG_FILE\" 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP"
 			echo "$BACKUP_EXECUTABLE $configString -a S -C $client | grep \"Status: idle\" > /dev/null 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.1.$client.$SCRIPT_PID.$TSTAMP"
 		done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP"
 
@@ -1495,13 +1451,6 @@ function VerifyBackups {
 	InterleaveFiles "${interleaveConditionsFileArgs[@]}" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.1.$SCRIPT_PID.$TSTAMP"
 
 	Logger "Executing parallel commands\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP)" "DEBUG"
-	#if [ "$POSTPONE" != "no" ]; then
-	#	ExecTasks "${FUNCNAME[0]}" $SOFT_MAX_EXEC_TIME_PER_VERIFY $HARD_MAX_EXEC_TIME_PER_VERIFY $SOFT_MAX_EXEC_TIME $HARD_MAX_EXEC_TIME 1 $KEEP_LOGGING true true false false 8 "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.1.$SCRIPT_PID.$TSTAMP" $PARELLEL_VERIFY_CONCURRENCY $POSTPONE_RETRY $POSTPONE_TIME "${safeExitCodes[@]}"
-	#else
-	#	ExecTasks "${FUNCNAME[0]}" $SOFT_MAX_EXEC_TIME_PER_VERIFY $HARD_MAX_EXEC_TIME_PER_VERIFY $SOFT_MAX_EXEC_TIME $HARD_MAX_EXEC_TIME 1 $KEEP_LOGGING true true false false 6 "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" "" $PARELLEL_VERIFY_CONCURRENCY "${safeExitCodes[@]}"
-	#fi
-	#ExecTasks "$mainInput" "$id" $readFromFile $softPerProcessTime $hardPerProcessTime $softMaxTime $hardMaxTime $counting $sleepTime $keepLogging $spinner $noTimeErrorLog $noErrorLogsAtAll $numberOfProcesses $auxInput $maxPostponeRetries $minTimeBetweenRetries $validExitCodes
-	# Passing safeExitCodes array as litteral string. Has to go through eval to be an array again
 	ExecTasks "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" "${FUNCNAME[0]}" true $SOFT_MAX_EXEC_TIME_PER_VERIFY $HARD_MAX_EXEC_TIME_PER_VERIFY $SOFT_MAX_EXEC_TIME $HARD_MAX_EXEC_TIME true $SLEEP_TIME $KEEP_LOGGING true false false $PARELLEL_VERIFY_CONCURRENCY "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.1.$SCRIPT_PID.$TSTAMP" $POSTPONE_RETRY $POSTPONE_TIME "$safeExitCodes"
 	exitCode=$?
 	if [ $exitCode -ne 0 ]; then
@@ -1702,15 +1651,11 @@ function VerifyService {
 			serviceStartCommand="systemctl start $i"
 			Logger "No valid service type given [$serviceType]. Trying default initV style." "ERROR"
 		fi
-		#ExecTasks "$mainInput" "$id" $readFromFile $softPerProcessTime $hardPerProcessTime $softMaxTime $hardMaxTime $counting $sleepTime $keepLogging $spinner $noTimeErrorLog $noErrorLogsAtAll $numberOfProcesses $auxInput $maxPostponeRetries $minTimeBetweenRetries $validExitCodes
-
 		eval "$serviceStatusCommand" > /dev/null 2>&1 &
 		ExecTasks $! "${FUNCNAME[0]}_statuscmd" false 0 0 120 300 true $SLEEP_TIME $KEEP_LOGGING
-		#ExecTasks "${FUNCNAME[0]}_statuscmd" 0 0 120 300 1 $KEEP_LOGGING true true false false 1 $!
 		if [ $? -ne 0 ]; then
 			Logger "Service [$i] is not started. Trying to start it." "WARN"
 			eval "$serviceStartCommand" > /dev/null 2>&1 &
-			#ExecTasks "${FUNCNAME[0]}_startcmd" 0 0 120 300 1 $KEEP_LOGGING true true false false 1 $!
 			ExecTasks $! "${FUNCNAME[0]}_startcmd" false 0 0 120 300 true $SLEEP_TIME $KEEP_LOGGING
 			if [ $? -ne 0 ]; then
 				Logger "Cannot start service [$i]." "CRITICAL"

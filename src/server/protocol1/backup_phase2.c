@@ -119,7 +119,7 @@ static int start_to_receive_new_file(struct asfd *asfd,
 	char *rpath=NULL;
 	int istreedata=0;
 
-//logp("start to receive: %s\n", sb->path.buf);
+//logp("start to receive: %s\n", iobuf_to_printable(&sb->path));
 
 	if(!(rpath=set_new_datapth(sdirs, cconfs, sb, dpth, &istreedata)))
 		goto end;
@@ -193,7 +193,7 @@ static enum processed_e process_changed_file(struct asfd *asfd,
 		logp("could not start signature job.\n");
 		goto end;
 	}
-	//logp("sig begin: %s\n", p1b->protocol1->datapth.buf);
+	//logp("sig begin: %s\n", iobuf_to_printable(7p1b->protocol1->datapth));
 	if(!(p1b->protocol1->infb=rs_filebuf_new(NULL,
 		p1b->protocol1->sigfzp,
 		NULL, blocklen, -1)))
@@ -386,7 +386,7 @@ static int relink_deleted_hardlink_master(
 printf("newdatapth_full: %s\n", newdatapth_full);
 printf("relinkpath_full: %s\n", relinkpath_full);
 printf("newdatapth: %s\n", newdatapth);
-printf("hbdatapth: %s\n", hb->protocol1->datapth.buf);
+printf("hbdatapth: %s\n", iobuf_to_printable(&hb->protocol1->datapth));
 printf("sdirs->currentdata: %s\n", sdirs->currentdata);
 */
 
@@ -488,8 +488,8 @@ static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 	  && cb->statp.st_ctime==p1b->statp.st_ctime)
 	{
 		// got an unchanged file
-		//logp("got unchanged file: %s %c %c\n",
-		//	cb->path.buf, cb->path.cmd, p1b->path.cmd);
+		//logp("got unchanged file: %s %c\n",
+		//	iobuf_to_printable(&cb->path), p1b->path.cmd);
 		return process_unchanged_file(p1b, cb, ucmanio, cconfs);
 	}
 
@@ -521,7 +521,7 @@ static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 	}
 
 	// Got a changed file.
-	//logp("got changed file: %s\n", p1b->path.buf);
+	//logp("got changed file: %s\n", iobuf_to_printable(&p1b->path));
 
 	// If either old or new is encrypted, or librsync is off, we need to
 	// get a new file.
@@ -574,12 +574,12 @@ static enum processed_e maybe_process_file(struct asfd *asfd,
 				ucmanio, hmanio, cconfs);
 		else if(pcmp>0)
 		{
-			//logp("ahead: %s\n", p1b->path.buf);
+			//logp("ahead: %s\n", iobuf_to_printable(&p1b->path));
 			// ahead - need to get the whole file
 			return process_new(cconfs, p1b, ucmanio);
 		}
 	}
-	//logp("behind: %s\n", p1b->path.buf);
+	//logp("behind: %s\n", iobuf_to_printable(&p1b->path));
 	// Behind - need to read more from the old manifest.
 	// Count a deleted file - it was in the old manifest
 	// but not the new.
@@ -718,7 +718,8 @@ static int deal_with_receive_end_file(struct asfd *asfd, struct sdirs *sdirs,
 
 	if(fzp_close(&(rb->protocol1->fzp)))
 	{
-		logp("error closing delta for %s in receive\n", rb->path.buf);
+		logp("error closing delta for %s in receive\n",
+			iobuf_to_printable(&rb->path));
 		goto end;
 	}
 	iobuf_move(&rb->endfile, rbuf);

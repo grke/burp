@@ -170,7 +170,7 @@ static int add_to_blks_list(struct asfd *asfd, struct conf **confs,
 			if(rabin_close_file(sb, asfd))
 			{
 				logp("Failed to close file %s\n",
-					sb->path.buf);
+					iobuf_to_printable(&sb->path));
 				return -1;
 			}
 			slist->last_requested=sb->next;

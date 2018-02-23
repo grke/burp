@@ -206,7 +206,7 @@ static int hard_link_substitution(struct asfd *asfd,
 				{
 					logw(asfd, cntr,
 					  "%s: Missing block %s:%d",
-					  need_data->path.buf,
+					  iobuf_to_printable(&need_data->path),
 					  fulldatpath+strlen(sdirs->data)+1,
 					  datno);
 					continue;
@@ -257,7 +257,8 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	struct conf **cconfs, struct sbuf *need_data, const char *manifest,
 	struct slist *slist)
 {
-	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify", sb->path.buf);
+	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify",
+	//  iobuf_to_printable(&sb->path));
 	if(write_status(cntr_status, sb->path.buf, get_cntr(cconfs)))
 		return -1;
 
@@ -547,7 +548,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				{
 					logw(asfd, cntr,
 					  "%s: Missing block %s:%d",
-					  need_data->path.buf,
+					  iobuf_to_printable(&need_data->path),
 					  fulldatpath+strlen(sdirs->data)+1,
 					  datno);
 					continue;

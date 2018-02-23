@@ -425,7 +425,8 @@ static int strip_path_components(struct asfd *asfd,
 		{
 			char msg[256]="";
 			snprintf(msg, sizeof(msg),
-			  "Stripped too many components: %s", sb->path.buf);
+				"Stripped too many components: %s",
+				iobuf_to_printable(&sb->path));
 			if(restore_interrupt(asfd, sb, msg, cntr, protocol))
 				return -1;
 			return 0;
@@ -436,7 +437,8 @@ static int strip_path_components(struct asfd *asfd,
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
-			"Stripped too many components: %s", sb->path.buf);
+			"Stripped too many components: %s",
+			iobuf_to_printable(&sb->path));
 		if(restore_interrupt(asfd, sb, msg, cntr, protocol))
 			return -1;
 		return 0;

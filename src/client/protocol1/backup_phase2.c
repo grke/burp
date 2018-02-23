@@ -240,7 +240,8 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(lstat(sb->path.buf, &sb->statp))
 #endif
 	{
-		logw(asfd, cntr, "Path has vanished: %s\n", sb->path.buf);
+		logw(asfd, cntr, "Path has vanished: %s\n",
+			iobuf_to_printable(&sb->path));
 		if(forget_file(asfd, sb, confs)) goto error;
 		goto end;
 	}
@@ -284,7 +285,8 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 			&extrameta, &elen, cntr))
 		{
 			logw(asfd, cntr,
-				"Meta data error for %s\n", sb->path.buf);
+				"Meta data error for %s\n",
+				iobuf_to_printable(&sb->path));
 			goto end;
 		}
 		if(extrameta)
@@ -300,7 +302,8 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		else
 		{
 			logw(asfd, cntr,
-				"No meta data after all: %s\n", sb->path.buf);
+				"No meta data after all: %s\n",
+				iobuf_to_printable(&sb->path));
 			goto end;
 		}
 	}
@@ -317,7 +320,8 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 			&bytes, &sentbytes, cntr))
 		{
 			logp("error in sig/delta for %s (%s)\n",
-				sb->path.buf, sb->protocol1->datapth.buf);
+				iobuf_to_printable(&sb->path),
+				iobuf_to_printable(&sb->protocol1->datapth));
 			goto end;
 		}
 		cntr_add(cntr, CMD_FILE_CHANGED, 1);

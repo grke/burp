@@ -48,7 +48,7 @@ static int set_higher_datapth(struct sbuf *sb, struct dpth *dpth)
 		sb->protocol1->datapth.buf))
 	{
 		logp("unable to set datapath: %s\n",
-			sb->protocol1->datapth.buf);
+			iobuf_to_printable(&sb->protocol1->datapth));
 		return -1;
 	}
 	return 0;
@@ -258,7 +258,8 @@ int get_last_good_entry(struct manio *manio, struct iobuf *result,
 			default:
 				if(result->buf)
 					logp("Error after %s in %s()\n",
-						result->buf, __func__);
+						iobuf_to_printable(result),
+						__func__);
 				// Treat error in changed manio as
 				// OK - could have been a short write.
 				iobuf_free_content(&lastpath);
@@ -336,7 +337,8 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	man_off_t_free(&pos);
 	if(chb->buf)
 	{
-		logp("  last good entry:    %s\n", chb->buf);
+		logp("  last good entry:    %s\n",
+			iobuf_to_printable(chb));
 		// Now need to go to the appropriate places in p1manio and
 		// unchanged.
 		if(forward_past_entry(p1manio, chb, protocol, &p1pos))

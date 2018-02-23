@@ -386,7 +386,7 @@ static enum append_ret asfd_append_all_to_write_buffer(struct asfd *asfd,
 			return APPEND_ERROR;
 	}
 	append_to_write_buffer(asfd, wbuf->buf, wbuf->len);
-//printf("append %d: %s\n", wbuf->len, iobuf_to_printable(wbuf));
+//printf("append %s\n", iobuf_to_printable(wbuf));
 	wbuf->len=0;
 	return APPEND_OK;
 }

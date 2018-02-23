@@ -121,7 +121,8 @@ static void setup_phase2_ok_file_request_missing_file(struct asfd *asfd)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "backupphase2");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 	asfd_mock_read(asfd, &r, 0, CMD_FILE, "some file");
-	asfd_assert_write(asfd, &w, 0, CMD_WARNING, "some file has vanished\n");
+	asfd_assert_write(asfd, &w, 0, CMD_WARNING,
+		"f:0009:some file has vanished\n");
 	base64_from_uint64(1, buf);
 	asfd_assert_write(asfd, &w, 0, CMD_INTERRUPT, buf);
 	asfd_mock_read(asfd, &r, 0, CMD_ERROR, "some error");
@@ -305,7 +306,8 @@ static void setup_asfds_happy_path_missing_file_index(struct asfd *asfd,
 				char buf[32]="";
 				char warn[256]="";
 				snprintf(warn, sizeof(warn),
-					"%s has vanished\n", s->path.buf);
+					"%s has vanished\n",
+					iobuf_to_printable(&s->path));
 				asfd_assert_write(asfd, &w, 0, CMD_WARNING,
 					warn);
 				base64_from_uint64(s->protocol2->index, buf);

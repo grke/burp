@@ -180,7 +180,8 @@ int verify_file(struct asfd *asfd, struct sbuf *sb,
 	  || !(cp=strrchr(sb->endfile.buf, ':')))
 	{
 		logw(asfd, cntr,
-			"%s has no md5sum!\n", sb->protocol1->datapth.buf);
+			"%s has no md5sum!\n",
+			iobuf_to_printable(&sb->protocol1->datapth));
 		return 0;
 	}
 	cp++;
@@ -232,9 +233,11 @@ int verify_file(struct asfd *asfd, struct sbuf *sb,
 	{
 		logp("%s %s\n", newsum, cp);
 		logw(asfd, cntr, "md5sum for '%s (%s)' did not match!\n",
-			sb->path.buf, sb->protocol1->datapth.buf);
+			iobuf_to_printable(&sb->path),
+			iobuf_to_printable(&sb->protocol1->datapth));
 		logp("md5sum for '%s (%s)' did not match!\n",
-			sb->path.buf, sb->protocol1->datapth.buf);
+			iobuf_to_printable(&sb->path),
+			iobuf_to_printable(&sb->protocol1->datapth));
 		return 0;
 	}
 
@@ -371,7 +374,8 @@ int restore_file(struct asfd *asfd, struct bu *bu,
 		// Because the client does not expect another cmd after
 		// the warning.
 		if(hlwarn) logw(asfd, cntr, "restore found %s in %s\n",
-			sb->path.buf, hlwarn->basename);
+			iobuf_to_printable(&sb->path),
+			hlwarn->basename);
 		ret=0; // All OK.
 		break;
 	}
@@ -379,7 +383,8 @@ int restore_file(struct asfd *asfd, struct bu *bu,
 	if(!b)
 	{
 		logw(asfd, cntr, "restore could not find %s (%s)\n",
-			sb->path.buf, sb->protocol1->datapth.buf);
+			iobuf_to_printable(&sb->path),
+			iobuf_to_printable(&sb->protocol1->datapth));
 		ret=0; // Carry on to subsequent files.
 	}
 end:

@@ -21,7 +21,8 @@ static void setup_not_found_message(struct asfd *asfd, struct sbuf *sb)
 	int w=0;
 	char msg[256]="";
 	snprintf(msg, sizeof(msg), "restore could not find %s (%s)\n",
-		sb->path.buf, sb->protocol1->datapth.buf);
+		iobuf_to_printable(&sb->path),
+		iobuf_to_printable(&sb->protocol1->datapth));
 	asfd_assert_write(asfd, &w, 0, CMD_WARNING, msg);
 }
 
@@ -38,7 +39,7 @@ static void setup_no_md5sum(struct asfd *asfd, struct sbuf *sb)
 	int w=0;
 	char msg[256]="";
 	snprintf(msg, sizeof(msg), "%s has no md5sum!\n",
-		sb->protocol1->datapth.buf);
+		iobuf_to_printable(&sb->protocol1->datapth));
 	asfd_assert_write(asfd, &w, 0, CMD_WARNING, msg);
 }
 
@@ -47,7 +48,8 @@ static void setup_md5sum_no_match(struct asfd *asfd, struct sbuf *sb)
 	int w=0;
 	char msg[256]="";
 	snprintf(msg, sizeof(msg), "md5sum for '%s (%s)' did not match!\n",
-		sb->path.buf, sb->protocol1->datapth.buf);
+		iobuf_to_printable(&sb->path),
+		iobuf_to_printable(&sb->protocol1->datapth));
 	asfd_assert_write(asfd, &w, 0, CMD_WARNING, msg);
 }
 

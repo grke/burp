@@ -238,7 +238,8 @@ int restore_switch_protocol1(struct asfd *asfd, struct sbuf *sb,
 		default:
 			// Other cases (dir/links/etc) are handled in the
 			// calling function.
-			logp("unknown cmd: %c\n", sb->path.cmd);
+			logp("unknown cmd: %s\n",
+				iobuf_to_printable(&sb->path));
 			return -1;
 	}
 }

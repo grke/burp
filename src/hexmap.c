@@ -111,3 +111,8 @@ char *uint64_to_savepathstr_with_sig_uint(uint64_t bytes, uint16_t *sig)
 	*sig |= b[7];
         return str;
 }
+
+uint64_t uint64_to_savepath_hash_key(uint64_t bytes)
+{
+	return bytes & 0xFFFFFFFFFFFF0000;
+}

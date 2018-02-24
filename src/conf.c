@@ -472,6 +472,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
           return sc_str(c[o], 0, 0, "ca_crl");
         case OPT_CA_CRL_CHECK:
           return sc_int(c[o], 0, 0, "ca_crl_check");
+	case OPT_RBLK_MEMORY_MAX:
+	  return sc_u64(c[o], 256*1024*1024, // 256 Mb.
+		CONF_FLAG_CC_OVERRIDE, "rblk_memory_max");
 	case OPT_MONITOR_LOGFILE:
 	  return sc_str(c[o], 0, 0, "monitor_logfile");
 	case OPT_MONITOR_EXE:

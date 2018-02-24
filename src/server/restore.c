@@ -7,6 +7,7 @@
 #include "../cntr.h"
 #include "../cstat.h"
 #include "../handy.h"
+#include "../hexmap.h"
 #include "../linkhash.h"
 #include "../lock.h"
 #include "../log.h"
@@ -146,6 +147,16 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	struct conf **cconfs, struct sbuf *need_data, const char *manifest,
 	struct slist *slist);
 
+static void log_missing_block(struct asfd *asfd, struct cntr *cntr,
+	struct blk *blk, struct sbuf *need_data)
+{
+	uint16_t datno=0;
+	char *savepathstr;
+	savepathstr=uint64_to_savepathstr_with_sig_uint(blk->savepath, &datno);
+	logw(asfd, cntr, "%s: Missing block %s:%d\n",
+		iobuf_to_printable(&need_data->path), savepathstr, datno);
+}
+
 // Used when restoring a hard link that we have not restored the destination
 // for. Read through the manifest from the beginning and substitute the path
 // and data to the new location.
@@ -164,8 +175,6 @@ static int hard_link_substitution(struct asfd *asfd,
 	int pcmp;
 	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
-	char *fulldatpath=NULL;
-	uint16_t datno=0;
 
 	if(!(manio=manio_open(manifest, "rb", protocol))
 	  || !(need_data=sbuf_alloc(protocol))
@@ -200,15 +209,11 @@ static int hard_link_substitution(struct asfd *asfd,
 			if(blk->got_save_path)
 			{
 				blk->got_save_path=0;
-				fulldatpath=rblk_get_fulldatpath(sdirs->data,
-					blk, &datno);
-				if(rblk_retrieve_data(fulldatpath, blk, datno))
+				if(rblk_retrieve_data(asfd, cntr,
+					blk, sdirs->data))
 				{
-					logw(asfd, cntr,
-					  "%s: Missing block %s:%d",
-					  iobuf_to_printable(&need_data->path),
-					  fulldatpath+strlen(sdirs->data)+1,
-					  datno);
+					log_missing_block(asfd, cntr,
+						blk, need_data);
 					continue;
 				}
 			}
@@ -431,8 +436,6 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
 	struct iobuf interrupt;
-	char *fulldatpath=NULL;
-	uint16_t datno=0;
 
 	iobuf_init(&interrupt);
 
@@ -542,15 +545,11 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			if(blk->got_save_path)
 			{
 				blk->got_save_path=0;
-				fulldatpath=rblk_get_fulldatpath(sdirs->data,
-					blk, &datno);
-				if(rblk_retrieve_data(fulldatpath, blk, datno))
+				if(rblk_retrieve_data(asfd, cntr,
+					blk, sdirs->data))
 				{
-					logw(asfd, cntr,
-					  "%s: Missing block %s:%d",
-					  iobuf_to_printable(&need_data->path),
-					  fulldatpath+strlen(sdirs->data)+1,
-					  datno);
+					log_missing_block(asfd, cntr,
+						blk, need_data);
 					continue;
 				}
 			}
@@ -612,9 +611,8 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 	  || !(slist=slist_alloc()))
 		goto end;
 
-	if(get_protocol(cconfs)==PROTO_2
-	  && rblk_init())
-		goto end;
+	if(get_protocol(cconfs)==PROTO_2)
+		rblks_init(get_uint64_t(cconfs[OPT_RBLK_MEMORY_MAX]));
 
 	if(restore_stream(asfd, sdirs, slist,
 		bu, manifest, regex,
@@ -630,7 +628,7 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 end:
 	slist_free(&slist);
 	linkhash_free();
-	rblk_free();
+	rblks_free();
 	return ret;
 }
 

@@ -478,6 +478,9 @@ You can have multiple labels, and they can be overridden in the client configura
 .TP
 \fBenabled=[0|1]\fR
 Set this to 0 if you want to disable all clients. The default is 1. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
+.TP
+\fBrblk_memory_max=[b/Kb/Mb/Gb]\fR
+The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256Mb. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 

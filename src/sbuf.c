@@ -9,7 +9,6 @@
 #include "log.h"
 #include "msg.h"
 #include "protocol2/blk.h"
-#include "server/protocol2/rblk.h"
 
 struct sbuf *sbuf_alloc(enum protocol protocol)
 {

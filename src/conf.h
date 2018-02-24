@@ -127,6 +127,7 @@ enum conf_opt
 	OPT_CA_CRL,
 	OPT_PASSWORD_CHECK,
 	OPT_MANUAL_DELETE,
+	OPT_RBLK_MEMORY_MAX,
 	OPT_MONITOR_LOGFILE, // An ncurses client option, from command line.
 	OPT_MONITOR_BROWSE_CACHE,
 	OPT_MONITOR_EXE,

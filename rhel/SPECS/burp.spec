@@ -7,7 +7,7 @@ URL:		http://burp.grke.org/
 Source0:	https://github.com/grke/burp/archive/burp-%{version}.tar.gz
 Source1:	burp.init
 Source2:	burp.service
-BuildRequires:	librsync-devel, zlib-devel, openssl-devel, ncurses-devel, libacl-devel, uthash, autoconf, automake, libtool, pkgconfig
+BuildRequires:	librsync-devel, zlib-devel, openssl-devel, ncurses-devel, libacl-devel, uthash-devel, autoconf, automake, libtool, pkgconfig
 Requires:	openssl-perl
 
 %define _unpackaged_files_terminate_build 0

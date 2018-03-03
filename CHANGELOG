@@ -1,3 +1,15 @@
+2018-03-04 Changes in burp-2.1.30:
+  * Revert "reopen syslog for child processes after fork".
+  * Use iobuf_to_printable everywhere that iobufs are printed.
+  * Don't run ncurses utests if you don't HAVE_NCURSES.
+  * Bug fix for some utests accidentally closing stdin.
+  * Protocol 2: Hash table for rblk lookups on restore/verify.
+    Add rblk_memory_max option for configuring its size.
+  * From deajan:
+    - Replaced bits (b) with bytes (B) for quotas in man page.
+  * From John Stoffel:
+    - configure check for pkg-config.
+
 2018-02-01 Changes in burp-2.1.28:
   * Set Windows creation time on restore.
   * From gfa-:

@@ -564,12 +564,14 @@ overwrite:
 
 	!insertmacro MUI_HEADER_TEXT "Install ${PACKAGE_TARNAME} (page 1 of 4)" ""
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 2" "State" "$ConfigServerAddress"
-	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigClientName"
-	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 8" "State" "$ConfigPassword"
+	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigServerPort"
+	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 8" "State" "$ConfigClientName"
+	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 11" "State" "$ConfigPassword"
 	!insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage1.ini"
 	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerAddress "ConfigPage1.ini" "Field 2" State
-	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigClientName "ConfigPage1.ini" "Field 5" State
-	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPage1.ini" "Field 8" State
+	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerPort "ConfigPage1.ini" "Field 5" State
+	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigClientName "ConfigPage1.ini" "Field 8" State
+	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPage1.ini" "Field 11" State
 
 end:
 

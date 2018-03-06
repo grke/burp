@@ -190,14 +190,12 @@ Function .onInit
 	StrCpy $ConfigServerAddress		"10.0.0.1"
 	StrCpy $ConfigServerPort              "4971"
 	StrCpy $ConfigClientName 	"clientname"
-	nsExec::ExecToStack '"$SYSDIR\cmd.exe" /c hostname'
-	Pop $R0
-	Pop $R1
-	StrCpy $R1 "$R1" -2
-	${If} $R0 == 0 
-	${AndIf} $R1 != ""
-		StrCpy $ConfigClientName $R1
+	Push $R0
+	ReadEnvStr $R0 COMPUTERNAME
+	${If} "$R0" != ""
+		StrCpy $ConfigClientName "$R0"
 	${EndIf}
+        Pop $R0
 	StrCpy $ConfigPassword                "abcdefgh"
 	StrCpy $ConfigPoll                    "20"
 	StrCpy $ConfigNoPowerMode		"0"

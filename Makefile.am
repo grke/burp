@@ -11,6 +11,7 @@ EXTRA_DIST = \
 	configs/client/burp.conf.in \
 	configs/server/burp.conf.in \
 	configs/server/summary_script.in \
+	configs/server/backup_tool_script.in \
 	configs/certs/CA/CA.cnf.in \
 	configs/certs/CA/burp_ca.in \
 	debian \
@@ -44,6 +45,7 @@ dist_doc_DATA = \
 	docs/tests.txt \
 	docs/timer_script.txt \
 	docs/working_dir.txt \
+	docs/backup_tool_script.txt \
 	src/protocol1/backup_phases.txt \
 	src/protocol1/readwrite.txt
 
@@ -98,7 +100,8 @@ dist_script_SCRIPTS = \
 	configs/server/notify_script \
 	configs/server/ssl_extra_checks_script
 
-EXTRA_script_SCRIPTS = summary_script
+EXTRA_script_SCRIPTS = summary_script \
+	backup_tool_script
 
 EXTRA_scriptdir = $(scriptdir)
 
@@ -462,6 +465,10 @@ $(PACKAGE_TARNAME)_ca:
 summary_script:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/summary_script.in >$@
+
+backup_tool_script:
+	$(AM_V_at)rm -f $@
+	$(AM_V_GEN)$(do_subst) <$(srcdir)/configs/server/backup_tool_script.in >$@
 
 manpages/bedup.8:
 	$(AM_V_at)rm -f $@

@@ -110,7 +110,7 @@ following are the command line options are available.
 /poll=[minutes]                  Set the poll interval.
 /nopowermode                     Forces scheduled backup to execute regardless
                                  of the computer not being plugged into AC
-                                 (usefull for laptops with long lasting batteries)
+                                 (useful for laptops with long lasting batteries)
 /overwrite                       Allow existing client configuration to be
                                  overwritten.
 /skippages                       Skip installer configuration pages but keep

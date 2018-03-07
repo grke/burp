@@ -190,11 +190,20 @@ Function .onInit
 	StrCpy $ConfigServerAddress		"10.0.0.1"
 	StrCpy $ConfigServerPort              "4971"
 	StrCpy $ConfigClientName 	"clientname"
-	Push $R0
-	ReadEnvStr $R0 COMPUTERNAME
-	${If} "$R0" != ""
-		StrCpy $ConfigClientName "$R0"
-	${EndIf}
+        Push $R0
+        ; Try to get hostname via system call that supports lower/uppercase
+        nsExec::ExecToStack '"$SYSDIR\cmd.exe" /c hostname'
+        Pop $R0
+        Pop $R1
+        ${If} $R0 == 0
+        ${AndIf} $R1 != ""
+                StrCpy $ConfigClientName $R1
+        ${Else}
+                ReadEnvStr $R0 COMPUTERNAME
+                ${If} "$R0" != ""
+                        StrCpy $ConfigClientName "$R0"
+                ${EndIf}
+        ${EndIf}
         Pop $R0
 	StrCpy $ConfigPassword                "abcdefgh"
 	StrCpy $ConfigPoll                    "20"

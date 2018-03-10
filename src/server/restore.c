@@ -300,7 +300,7 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	}
 }
 
-int restore_ent(struct asfd *asfd,
+static int restore_ent(struct asfd *asfd,
 	struct sbuf **sb,
 	struct slist *slist,
 	struct bu *bu,

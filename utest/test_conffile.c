@@ -259,6 +259,7 @@ START_TEST(test_client_includes_excludes)
 		"include=/a\n"
 		"include=/a/b/c/d\n"
 		"cross_filesystem=/mnt/x\n"
+		"cross_filesystem=/mnt/y/\n"
 	;
 	struct strlist *s;
 	struct conf **confs=NULL;
@@ -294,6 +295,7 @@ START_TEST(test_client_includes_excludes)
 	assert_strlist(&s, "/a/b/c", 0);
 	assert_strlist(&s, "/a/b/c/d", 0);
 	assert_strlist(&s, "/mnt/x", 0);
+	assert_strlist(&s, "/mnt/y", 0);
 	assert_strlist(&s, NULL, 0);
 	tear_down(NULL, &confs);
 }

@@ -18,6 +18,7 @@
 /autoconf/mkinstalldirs
 /autoconf/test-driver
 /autom4te.cache
+/backup_tool_script
 /burp
 /burp_ca
 /burp-coverage/

@@ -671,7 +671,7 @@ int regenerate_client_dindex(struct sdirs *sdirs)
 	char *dfiles_regenerating=NULL;
 	struct fzp *fzp=NULL;
 
-	if(bu_get_list_with_working(sdirs, &bu_list, NULL))
+	if(bu_get_list_with_working(sdirs, &bu_list))
 		goto end;
 
 	for(bu=bu_list; bu; bu=bu->next)

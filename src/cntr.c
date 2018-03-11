@@ -954,7 +954,7 @@ int cntr_send_sdirs(struct asfd *asfd,
 	// FIX THIS:
 	// It would be better just to set up the correct 'bu' entry instead
 	// of loading everything and then looking through the list.
-	if(bu_get_list_with_working(sdirs, &bu_list, NULL))
+	if(bu_get_list_with_working(sdirs, &bu_list))
 		goto end;
 	for(bu=bu_list; bu; bu=bu->next)
 		if((bu->flags & BU_WORKING)

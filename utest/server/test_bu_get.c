@@ -240,16 +240,12 @@ static void assert_bu_list_with_working(struct sdirs *sdirs,
 	struct sd *s, unsigned int len)
 {
 	struct bu *bu_list=NULL;
-	struct cstat cstat;
 	struct cntr cntr;
 	if(sdirs->protocol==PROTO_2)
 		proto2_hack(s, len);
-	memset(&cstat, 0, sizeof(cstat));
 	memset(&cntr, 0, sizeof(cntr));
-	cstat.run_status=run_status;
-	cstat.cntrs=&cntr;
 	cntr.cntr_status=cntr_status;
-	fail_unless(!bu_get_list_with_working(sdirs, &bu_list, &cstat));
+	fail_unless(!bu_get_list_with_working(sdirs, &bu_list));
 	do_assert_bu_list(bu_list, s, len);
 	bu_list_free(&bu_list);
 }

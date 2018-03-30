@@ -1,3 +1,23 @@
+2018-04-01 Changes in burp-2.2.0:
+  * 643: Protocol 2 restore load only up to the block that is needed.
+  * 680: Strip trailing slashes from cross_filesystem option.
+  * 689: Make list show working/finishing backups.
+  * 707: Fix superfluous newlines on file vanished warnings.
+  * From deajan:
+         - 661: Add backup_tool_script housekeeping script.
+  * All the fixes from burp-2.1.32.
+
+2018-04-01 Changes in burp-2.1.32:
+  * 696: Tests for some Windows installer command line switches, and
+         use of hostname for cname.
+  * 698: Fix for 'could not open current/incexc' warning on first backup.
+  * 699: Remove use of strcasestr so that AIX is happy.
+  * From deajan:
+    - 701: Fix for broken Windows installer command line switches.
+    - Man page tweak for rblk_memory_max.
+  * From jirib:
+    - spec file tweak for uthash.
+
 2018-03-04 Changes in burp-2.1.30:
   * Revert "reopen syslog for child processes after fork".
   * Use iobuf_to_printable everywhere that iobufs are printed.

@@ -27,11 +27,13 @@ static void checks(struct asfd *asfd,
 	enum asfd_fdtype fdtype,
 	int attempt_reads)
 {
+	char fulldesc[256];
+	snprintf(fulldesc, sizeof(fulldesc), "%s %d", desc, fd);
 	fail_unless(asfd->streamtype==streamtype);
 	fail_unless(asfd->fd==fd);
 	fail_unless(asfd->port==port);
 	fail_unless(asfd->ssl==ssl);
-	fail_unless(!strcmp(asfd->desc, desc));
+	fail_unless(!strcmp(asfd->desc, fulldesc));
 	fail_unless(asfd->fdtype==fdtype);
 	fail_unless(asfd->attempt_reads==attempt_reads);
 }

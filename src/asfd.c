@@ -533,6 +533,13 @@ static void asfd_set_timeout(struct asfd *asfd, int max_network_timeout)
 	asfd->network_timeout=asfd->max_network_timeout;
 }
 
+static char *get_asfd_desc(const char *desc, int fd)
+{
+	char r[256]="";
+	snprintf(r, sizeof(r), "%s %d", desc, fd);
+	return strdup_w(r, __func__);
+}
+
 static int asfd_init(struct asfd *asfd, const char *desc,
 	struct async *as, int afd, int port,
 	SSL *assl, enum asfd_streamtype streamtype)
@@ -601,7 +608,7 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 	if(!(asfd->rbuf=iobuf_alloc())
 	  || asfd_alloc_buf(asfd, &asfd->readbuf)
 	  || asfd_alloc_buf(asfd, &asfd->writebuf)
-	  || !(asfd->desc=strdup_w(desc, __func__)))
+	  || !(asfd->desc=get_asfd_desc(desc, asfd->fd)))
 		return -1;
 	return 0;
 }

@@ -59,7 +59,6 @@ using namespace std;
 #define __out OUT
 #define __RPC_unique_pointer
 #define __RPC_string
-#define __RPC__out_ecount_part(x, y)
 #define __RPC__deref_inout_opt
 #define __RPC__out
 
@@ -216,7 +215,7 @@ VSSClientGeneric::~VSSClientGeneric()
 	if(m_hLib) FreeLibrary(m_hLib);
 }
 
-static BOOL system_error(void)
+static BOOL bsystem_error(void)
 {
 	errno=ENOSYS;
 	return FALSE;
@@ -234,7 +233,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 	if(!(p_CreateVssBackupComponents && p_VssFreeSnapshotProperties))
 	{
 		fprintf(stderr, "%s error\n", __func__);
-		return system_error();
+		return bsystem_error();
 	}
 
 	HRESULT hr;
@@ -405,7 +404,7 @@ BOOL VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
 	// szDriveLetters.
 	// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/vss/base/ivssbackupcomponents_startsnapshotset.asp
 
-	if(!m_pVssObject || m_bBackupIsInitialized) return system_error();
+	if(!m_pVssObject || m_bBackupIsInitialized) return bsystem_error();
 
 	m_uidCurrentSnapshotSet=GUID_NULL;
 
@@ -514,12 +513,12 @@ BOOL VSSClientGeneric::CloseBackup()
 BOOL VSSClientGeneric::QuerySnapshotSet(GUID snapshotSetID)
 {
 	if(!(p_CreateVssBackupComponents && p_VssFreeSnapshotProperties))
-		return system_error();
+		return bsystem_error();
 
 	memset(m_szShadowCopyName,0,sizeof(m_szShadowCopyName));
 
 	if(snapshotSetID==GUID_NULL || m_pVssObject==NULL)
-		return system_error();
+		return bsystem_error();
 
 	IVssBackupComponents *pVss=(IVssBackupComponents*)m_pVssObject;
 

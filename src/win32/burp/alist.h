@@ -106,8 +106,7 @@ inline void * alist::operator [](int index) const
 
 inline bool alist::empty() const
 {
-	// Check for null pointer.
-	return this?num_items==0:true;
+	return num_items==0;
 }
 
 /* This allows us to do explicit initialization, allowing us to mix C++ classes
@@ -133,9 +132,7 @@ inline alist::~alist()
 
 inline int alist::size() const
 {
-   /* Check for null pointer, which allows test on size to succeed even if
-      nothing put in */
-   return this?num_items:0;
+   return num_items;
 }
 
 inline void alist::grow(int num)

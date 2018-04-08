@@ -10,8 +10,10 @@
 #define _REENTRANT    1
 #define _THREAD_SAFE  1
 #define _POSIX_PTHREAD_SEMANTICS 1
+#define __STDC_FORMAT_MACROS 1
 
 // System includes.
+#include <inttypes.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -20,8 +22,6 @@
 #include <string.h>
 #include <time.h>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #include <dirent.h>
 #include <fcntl.h>

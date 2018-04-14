@@ -2,18 +2,20 @@
 #
 # Some useful wrapping to help the vms test script with automatic builds and
 # testing.
+set -e
+set -x
 
 tarfile=$(ls burp-*.tar.bz2)
 dir=${tarfile%*.tar.bz2}
 
 if [ "$1" = "burp-main" ] ; then
-	$dir/test/vms $tarfile $dir || exit 1
+	$dir/test/vms $tarfile
 elif [ "$1" = "burp-i386" ] ; then
-	$dir/test/vms_i386 $tarfile $dir || exit 1
+	$dir/test/vms_i386 $tarfile $dir
 elif [ "$1" = "burp-freebsd" ] ; then
-	$dir/test/vms_freebsd $tarfile $dir || exit 1
+	$dir/test/vms_freebsd $tarfile $dir
 elif [ "$1" = "burp-netbsd" ] ; then
-	$dir/test/vms_netbsd $tarfile $dir || exit 1
+	$dir/test/vms_netbsd $tarfile $dir
 else
 	echo "Do not know what sort of build to do"
 	exit 1

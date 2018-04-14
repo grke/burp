@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
+DIR=$(dirname "$0")
+cd "$DIR" || exit 1
+
 myscript=$(basename $0)
-if [ ! -f "$myscript" ] ; then
-	echo "Please run $myscript whilst standing in the same directory" 1>&2
-	exit 1
-fi
 
 server="$1"
 client="$2"

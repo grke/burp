@@ -307,7 +307,7 @@ Function InstallCommonFiles
 		File "${SRC_DIR}\libpcre-1.dll"
 		File "${SRC_DIR}\libyajl.dll"
 		File "${SRC_DIR}\zlib1.dll"
-		File "${SRC_DIR}\libgcc_s_sjlj-1.dll"
+		File "${SRC_DIR}\${LIBGCC_DLL}"
 		File "${SRC_DIR}\compat.dll"
 		File "${SRC_DIR}\libcheck-0.dll"
 		File "${SRC_DIR}\openssl.exe"

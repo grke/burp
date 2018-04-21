@@ -180,14 +180,11 @@ static enum processed_e process_changed_file(struct asfd *asfd,
 
 	blocklen=get_librsync_block_len(cb->endfile.buf);
 	if(!(p1b->protocol1->sigjob=
-#ifdef RS_DEFAULT_STRONG_LEN
-		rs_sig_begin(blocklen, RS_DEFAULT_STRONG_LEN)
-#else
-		// This is for librsync-1.0.0. RS_DEFAULT_STRONG_LEN was 8 in
-		// librsync-0.9.7.
-		rs_sig_begin(blocklen, 8,
-		  rshash_to_magic_number(get_e_rshash(cconfs[OPT_RSHASH])))
+		rs_sig_begin(blocklen, PROTO1_RS_STRONG_LEN
+#ifndef RS_DEFAULT_STRONG_LEN
+		  , rshash_to_magic_number(get_e_rshash(cconfs[OPT_RSHASH]))
 #endif
+		)
 	))
 	{
 		logp("could not start signature job.\n");

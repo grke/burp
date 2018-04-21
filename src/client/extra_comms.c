@@ -234,7 +234,7 @@ int extra_comms_client(struct async *as, struct conf **confs,
 			goto end;
 	}
 
-#ifndef RS_DEFAULT_STRONG_LEN
+#ifdef RS_BLAKE2_SIG_MAGIC
 	if(server_supports(feat, ":rshash=blake2:"))
 	{
 		set_e_rshash(confs[OPT_RSHASH], RSHASH_BLAKE2);

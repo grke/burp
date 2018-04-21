@@ -151,7 +151,7 @@ static const char *get_features(enum protocol protocol, int srestore,
 	int old_version=0;
 	static char features[256]="";
 
-#ifndef RS_DEFAULT_STRONG_LEN
+#ifdef RS_BLAKE2_SIG_MAGIC
 	snprintf(rshash, sizeof(rshash), "rshash=blake2:");
 #endif
 	if(protocol==PROTO_AUTO)
@@ -454,25 +454,25 @@ static void setup_autoupgrade(struct asfd *asfd,
 static void setup_rshash_blake2(struct asfd *asfd,
 	struct conf **confs, struct conf **cconfs)
 {
-#ifdef RS_DEFAULT_STRONG_LEN
+#ifdef RS_BLAKE2_SIG_MAGIC
+	setup_simple(asfd, confs, cconfs, "rshash=blake2", /*srestore*/0);
+#else
 	int r=0; int w=0;
 	setup_send_features_proto_begin(asfd, confs, cconfs,
 		PROTO_AUTO, &r, &w, PACKAGE_VERSION, /*srestore*/0);
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "rshash=blake2");
-#else
-	setup_simple(asfd, confs, cconfs, "rshash=blake2", /*srestore*/0);
 #endif
 }
 
 static void checks_rshash_blake2(struct conf **confs, struct conf **cconfs,
 	const char *incexc, int srestore)
 {
-#ifdef RS_DEFAULT_STRONG_LEN
-	fail_unless(get_e_rshash(confs[OPT_RSHASH])==RSHASH_UNSET);
-	fail_unless(get_e_rshash(cconfs[OPT_RSHASH])==RSHASH_UNSET);
-#else
+#ifdef RS_BLAKE2_SIG_MAGIC
 	fail_unless(get_e_rshash(confs[OPT_RSHASH])==RSHASH_BLAKE2);
 	fail_unless(get_e_rshash(cconfs[OPT_RSHASH])==RSHASH_BLAKE2);
+#else
+	fail_unless(get_e_rshash(confs[OPT_RSHASH])==RSHASH_UNSET);
+	fail_unless(get_e_rshash(cconfs[OPT_RSHASH])==RSHASH_UNSET);
 #endif
 }
 
@@ -780,10 +780,10 @@ START_TEST(test_server_extra_comms)
 	run_test(0, setup_autoupgrade,
 		NULL);
 
-#ifdef RS_DEFAULT_STRONG_LEN
-	run_test(-1, setup_rshash_blake2, checks_rshash_blake2);
-#else
+#ifdef RS_BLAKE2_SIG_MAGIC
 	run_test(0, setup_rshash_blake2, checks_rshash_blake2);
+#else
+	run_test(-1, setup_rshash_blake2, checks_rshash_blake2);
 #endif
 	run_test(0, setup_counters_ok, checks_counters_ok);
 	run_test(0, setup_msg, checks_msg);

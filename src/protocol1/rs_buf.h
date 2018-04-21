@@ -85,4 +85,6 @@ rs_result rs_loadsig_fzp(struct fzp *fzp,
 extern rs_magic_number rshash_to_magic_number(enum rshash r);
 #endif
 
+#define PROTO1_RS_STRONG_LEN 16
+
 #endif

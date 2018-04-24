@@ -24,7 +24,7 @@ You will see the following screen.
 </p>
 
 <p>If you already have a burp installation on the Windows machine, the next
-three screens will be skipped. It will go straight to the 'installing' screen
+four screens will be skipped. It will go straight to the 'installing' screen
 and the new version of burp will be installed without changing the current
 configuration files.</p>
 
@@ -49,6 +49,9 @@ matching 'password' line.
 <p>
 <img src="/images/windows-installer/page3.jpg">
 </p>
+<p>
+<img src="/images/windows-installer/page4.jpg">
+</p>
 
 <p>
 Burp will install its files to:
@@ -60,10 +63,10 @@ language settings).
 </p>
 
 <p>
-<img src="/images/windows-installer/page4.jpg">
+<img src="/images/windows-installer/page5.jpg">
 </p>
 <p>
-<img src="/images/windows-installer/page5.jpg">
+<img src="/images/windows-installer/page6.jpg">
 </p>
 
 <p>
@@ -71,8 +74,6 @@ If you need to change client configuration settings, the file can be found at:
 <pre>
 C:/Program Files/Burp/burp.conf
 </pre>
-It will be configured to backup "C:/Users", if it existed at installation
-time, or otherwise "C:/Documents and Settings".
 </p>
 
 

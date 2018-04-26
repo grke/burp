@@ -242,11 +242,15 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	{
 		logw(asfd, cntr, "Path has vanished: %s\n",
 			iobuf_to_printable(&sb->path));
-		if(forget_file(asfd, sb, confs)) goto error;
+		forget++;
 		goto end;
 	}
 
-	if(size_checks(asfd, sb, confs)) forget++;
+	if(size_checks(asfd, sb, confs))
+	{
+		forget++;
+		goto end;
+	}
 
 	sb->compression=in_exclude_comp(get_strlist(confs[OPT_EXCOM]),
 		sb->path.buf, conf_compression);
@@ -258,13 +262,10 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 		if(bfd->open_for_send(bfd, asfd,
 			sb->path.buf, sb->winattr,
 			get_int(confs[OPT_ATIME]), cntr, PROTO_1))
-				forget++;
-	}
-
-	if(forget)
-	{
-		if(forget_file(asfd, sb, confs)) goto error;
-		goto end;
+		{
+			forget++;
+			goto end;
+		}
 	}
 
 	if(sb->path.cmd==CMD_METADATA
@@ -287,6 +288,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 			logw(asfd, cntr,
 				"Meta data error for %s\n",
 				iobuf_to_printable(&sb->path));
+			forget++;
 			goto end;
 		}
 		if(extrameta)
@@ -304,6 +306,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 			logw(asfd, cntr,
 				"No meta data after all: %s\n",
 				iobuf_to_printable(&sb->path));
+			forget++;
 			goto end;
 		}
 	}
@@ -322,6 +325,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 			logp("error in sig/delta for %s (%s)\n",
 				iobuf_to_printable(&sb->path),
 				iobuf_to_printable(&sb->protocol1->datapth));
+			forget++;
 			goto end;
 		}
 		cntr_add(cntr, CMD_FILE_CHANGED, 1);
@@ -353,6 +357,8 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 
 end:
 	ret=0;
+	if(forget && forget_file(asfd, sb, confs))
+		ret=-1;
 error:
 #ifdef HAVE_WIN32
 	// If using Windows do not close bfd - it needs

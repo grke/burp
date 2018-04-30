@@ -1,3 +1,20 @@
+2018-05-01 Changes in burp-2.2.2:
+  * 645: Update burp-cross-tools Windows libraries to use docker (thanks to
+    josvo for hints):
+    - binutils-2.29.1
+    - gcc-7.3.0
+    - gmp-6.1.2
+    - isl-0.18
+    - mingw-w64-v5.0.3
+    - mpc-1.1.0
+    - mpfr-4.0.1
+  * From deajan:
+    - 703: Add server port to Windows installer.
+    - 693: Update Windows to librsync-2.0.2.
+  * 693: Increase protocol1 strong length from 8 to 16.
+  * 713: Fix for slow down after xattr warnings.
+  * Add file descriptor number to asfd->desc, for better logging.
+    
 2018-04-01 Changes in burp-2.2.0:
   * 643: Protocol 2 restore load only up to the block that is needed.
   * 680: Strip trailing slashes from cross_filesystem option.

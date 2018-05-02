@@ -48,13 +48,13 @@ function docker_run()
 	ssh $ssh_opts "$host" "docker run --name burp --rm -v ~/burp:/burp -v ~/.ssh:/root/.ssh --expose 4998-4999 -p 4998:4998 -p 4999:4999 -w /burp burp-cross-tools $@"
 }
 
-#docker_run "./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var --with-coverage"
-#docker_run "make coverage"
+docker_run "./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var --with-coverage"
+docker_run "make coverage"
 
-#scp -r $ssh_opts "$host:burp/burp-coverage" .
+scp -r $ssh_opts "$host:burp/burp-coverage" .
 
-#docker_run "make -C test clean"
-#docker_run "make -C test test"
+docker_run "make -C test clean"
+docker_run "make -C test test"
 docker_run "./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var"
 ssh $ssh_opts "$host" "ln -sfT /burp-cross-tools/cross-tools burp/burp-cross-tools"
 ssh $ssh_opts "$host" "ln -sfT /burp-cross-tools/depkgs burp/burp-depkgs"

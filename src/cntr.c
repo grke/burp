@@ -629,14 +629,16 @@ int cntr_stats_to_file(struct cntr *cntr,
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
 	  || !(wfd=setup_asfd_linebuf_write(as, "stats file", &fd)))
-			goto end;
+	{
+		close_fd(&fd);
+		goto end;
+	}
 
 	if(json_cntr(wfd, cntr))
 		goto end;
 
 	ret=0;
 end:
-	close_fd(&fd);
 	free_w(&path);
 	async_free(&as);
 	asfd_free(&wfd);

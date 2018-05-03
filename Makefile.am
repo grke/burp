@@ -405,12 +405,8 @@ coverage: check
 if WITH_COVERAGE
 	$(AM_V_GEN)$(LCOV) -q --capture --no-external -d . -b . --output-file burp-coverage.info
 	$(AM_V_GEN)$(LCOV) -r burp-coverage.info \
-		src/yajl/* \
-		utest/* \
-		utest/*/* \
-		utest/*/*/* \
-		utest/*/*/*/* \
-		utest/*/*/*/*/* \
+		'*/src/yajl/*' \
+		'*/utest/*' \
 			--output-file burp-coverage-clean.info
 	$(AM_V_GEN)$(GENHTML) -q burp-coverage-clean.info --output-directory burp-coverage
 else

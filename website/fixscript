@@ -81,6 +81,7 @@ contributors=content/html/contributors.content
 retention=content/docs/retention.content
 addremove=content/docs/add-remove.content
 tests=content/docs/tests.content
+backuptoolscript=content/docs/backup_tool_script.content
 
 generic_page "$quickstart" "../README"
 generic_page "$debugging" "../docs/debug.txt"
@@ -102,6 +103,7 @@ generic_page "$changelog" "../CHANGELOG"
 generic_page "$contributors" "../CONTRIBUTORS"
 generic_page "$retention" "../docs/retention.txt"
 generic_page "$addremove" "../docs/add-remove.txt"
+generic_page "$backuptoolscript" "../docs/backup_tool_script.txt"
 generic_page_no_conversion "$tests" "../docs/tests.txt"
 
 mkdir -p html/txt

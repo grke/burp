@@ -33,6 +33,8 @@
 <li><A HREF="docs/monitor.html">Status monitor</A> -
 	An explanation of how the status monitor works, and the format of its
 	interface.
+<li><A HREF="docs/backup_tool_script.html">Backup tool script</A> -
+	A script to check backup sanity, with additional features.
 <li><A HREF="docs/baremetal-ubuntu.html">Bare metal restore for Ubuntu</A> -
 	Restoring Ubuntu from nothing.
 <li><A HREF="docs/baremetal-windows.html">Bare metal restore for Windows 7 and 8</A> -

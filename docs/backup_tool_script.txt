@@ -87,7 +87,8 @@ Launch backup verification for last 7 backups for each client:
 
   backup_tool_script -d /path/to/clients/backups/dir -v 7
 
-Run with a different client configuration file (default is /etc/burp/burp.conf) and check for clients that don't have backups newer than 5 days:
+Run with a different client configuration file (default is /etc/burp/burp.conf)
+and check for clients that don't have backups newer than 5 days:
 
   backup_tool_script -c /etc/burp/burp-client.conf \
     -d /path/to/clients/backup/dir -o 5

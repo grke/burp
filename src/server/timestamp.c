@@ -74,5 +74,7 @@ long timestamp_to_long(const char *buf)
 	if(!strptime(b+1, DEFAULT_TIMESTAMP_FORMAT, &tm)
 	  && !strptime(b+1, DEFAULT_TIMESTAMP_FORMAT_OLD, &tm))
 		return 0;
+	// Unset dst so that mktime has to figure it out.
+	tm.tm_isdst=-1;
 	return (long)mktime(&tm);
 }

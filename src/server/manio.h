@@ -5,6 +5,10 @@
 #include "../conf.h"
 #include "sdirs.h"
 
+#define MANIO_MODE_READ		"rb"
+#define MANIO_MODE_WRITE	"wb"
+#define MANIO_MODE_APPEND	"ab"
+
 struct blk;
 struct sbuf;
 

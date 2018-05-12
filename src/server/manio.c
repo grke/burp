@@ -13,10 +13,6 @@
 #include "protocol2/champ_chooser/champ_chooser.h"
 #include "protocol2/dpth.h"
 
-#define MANIO_MODE_READ		"rb"
-#define MANIO_MODE_WRITE	"wb"
-#define MANIO_MODE_APPEND	"ab"
-
 static void man_off_t_free_content(man_off_t *offset)
 {
 	if(!offset) return;
@@ -639,7 +635,10 @@ man_off_t *manio_tell(struct manio *manio)
 	man_off_t *offset=NULL;
 	if(!manio->fzp)
 	{
-		logp("manio_tell called on null fzp\n");
+		logp("%s called on null fzp\n", __func__);
+		if(manio->offset && manio->offset->fpath)
+			logp("manio->offset->fpath: %s\n",
+				manio->offset->fpath);
 		goto error;
 	}
 	if(!(offset=man_off_t_alloc())

@@ -321,10 +321,13 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	struct cntr *cntr=get_cntr(cconfs);
 	int compression=get_int(cconfs[OPT_COMPRESSION]);
 
-	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
-	  || !(cmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
-	  || !(umanio=manio_open_phase2(sdirs->unchanged, "rb", protocol)))
-		goto end;
+	if(!(p1manio=manio_open_phase1(sdirs->phase1data,
+		MANIO_MODE_READ, protocol))
+	  || !(cmanio=manio_open_phase2(sdirs->changed,
+		MANIO_MODE_READ, protocol))
+	  || !(umanio=manio_open_phase2(sdirs->unchanged,
+		MANIO_MODE_READ, protocol)))
+			goto end;
 
 	if(!(chb=iobuf_alloc()))
 		return NULL;
@@ -357,9 +360,15 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	{
 		logp("  nothing previously transferred\n");
 		if(!(p1pos=manio_tell(p1manio)))
+		{
+			logp("Could not get p1pos in %s\n", __func__);
 			goto error;
+		}
 		if(!(pos=manio_tell(umanio)))
+		{
+			logp("Could not get pos in %s\n", __func__);
 			goto error;
+		}
 		if(manio_close_and_truncate(&umanio, pos, compression))
 			goto error;
 	}

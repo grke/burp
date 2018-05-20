@@ -14,7 +14,12 @@
 #include "rubble.h"
 #include "timestamp.h"
 
-int append_to_resume_file(const char *path)
+static char *get_resume_path(const char *path)
+{
+	return prepend_s(path, "resumed");
+}
+
+static int append_to_resume_file(const char *path)
 {
 	int ret=-1;
 	char tstmp[48]="";
@@ -25,12 +30,32 @@ int append_to_resume_file(const char *path)
 		/*bufforfile*/NULL, /*bs*/0,
 		/*format*/NULL))
 			goto end;
-	if(!(resume_path=prepend_s(path, "resumed")))
+	if(!(resume_path=get_resume_path(path)))
 		goto end;
 	ret=timestamp_write(resume_path, tstmp);
 end:
 	free_w(&resume_path);
 	return ret;
+}
+
+static int resume_count(const char *path)
+{
+	int count=-1;
+	char buf[256]="";
+	struct fzp *fzp=NULL;
+	char *resume_path=NULL;
+
+	if(!(resume_path=get_resume_path(path)))
+		goto end;
+	if(!(fzp=fzp_open(resume_path, "rb")))
+		goto end;
+	count=0;
+	while(fzp_gets(fzp, buf, sizeof(buf)))
+		count++;
+end:
+	fzp_close(&fzp);
+	free_w(&resume_path);
+	return count;
 }
 
 static int incexc_matches(const char *fullrealwork, const char *incexc)
@@ -193,6 +218,8 @@ static int recover_working(struct async *as,
 	char *logpath=NULL;
 	struct stat statp;
 	char *phase1datatmp=NULL;
+	int resume_attempts=0;
+	int max_resume_attempts=get_int(cconfs[OPT_MAX_RESUME_ATTEMPTS]);
 	enum recovery_method recovery_method=get_e_recovery_method(
 		cconfs[OPT_WORKING_DIR_RECOVERY_METHOD]);
 
@@ -217,6 +244,28 @@ static int recover_working(struct async *as,
 		// ...phase 1 did not complete - delete everything.
 		logp("Phase 1 has not completed.\n");
 		recovery_method=RECOVERY_METHOD_DELETE;
+	}
+	else
+	{
+		append_to_resume_file(sdirs->working);
+
+		if(max_resume_attempts>0)
+		{
+			logp("max_resume_attempts: %d\n", max_resume_attempts);
+			if((resume_attempts=resume_count(sdirs->working))<0)
+				goto end;
+			if(resume_attempts > max_resume_attempts)
+			{
+				logp("no resume attempts remaining, will delete\n");
+				recovery_method=RECOVERY_METHOD_DELETE;
+			}
+			else
+			{
+				logp("resume attempts: %d\n", resume_attempts);
+				logp("remaining resume attempts: %d\n",
+					max_resume_attempts - resume_attempts);
+			}
+		}
 	}
 
 	if(recovery_method==RECOVERY_METHOD_DELETE)

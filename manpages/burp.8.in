@@ -329,12 +329,15 @@ Set the network send rate limit, in Mb/s. If this option is not given, @name@ wi
 Set the network timeout in seconds. If no data is sent or received over a period of this length, @name@ will give up. The default is 7200 seconds (2 hours).
 .TP
 \fBworking_dir_recovery_method=[resume|delete]\fR
-This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir
-on the server. Options are...
+This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir on the server.
+Options are...
 .TP
 \fBdelete:\fR Just delete the old working directory.
 .TP
-\fBresume:\fR Continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'delete'.
+\fBresume:\fR Continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'delete'. See also the 'resume attempts' option.
+.TP
+\fBmax_resume_attempts=[number]\fR
+If working_dir_recovery_method is 'resume', this option tells the server how many times to attempt to resume before giving up and deleting the working directory. The default is 0, which means to never give up.
 .TP
 \fBclient_can_delete=[0|1]\fR
 Turn this off to prevent clients from deleting backups with the '\-a delete' option. The default is that clients can delete backups. Restore clients can override this setting.

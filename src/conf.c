@@ -722,6 +722,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_WORKING_DIR_RECOVERY_METHOD:
 	  return sc_rec(c[o], RECOVERY_METHOD_DELETE,
 		CONF_FLAG_CC_OVERRIDE, "working_dir_recovery_method");
+	case OPT_MAX_RESUME_ATTEMPTS:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "max_resume_attempts");
 	case OPT_RSHASH:
 	  return sc_rsh(c[o], RSHASH_UNSET,
 		CONF_FLAG_CC_OVERRIDE, "");

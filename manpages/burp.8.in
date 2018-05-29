@@ -482,8 +482,8 @@ You can have multiple labels, and they can be overridden in the client configura
 \fBenabled=[0|1]\fR
 Set this to 0 if you want to disable all clients. The default is 1. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
 .TP
-\fBrblk_memory_max=[b/Kb/Mb/Gb]\fR
-The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256Mb. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
+\fBrblk_memory_max=[B/KB/MB/GB]\fR
+The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256MB. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -700,11 +700,11 @@ File systems to include into the backup. Case insensitive. You can have multiple
 
 Note that on SunOS systems \fBinclude_fs\fR and \fBexclude_fs\fR will do a case sensitive compare of the string descriptors of the file systems instead of the numeric IDs (see \fBf_basetype\fR member is \fBstruct statvfs\fR).
 .TP
-\fBmin_file_size=[b/Kb/Mb/Gb]\fR
-Do not back up files that are less than the specified size. Example: 'min_file_size = 10Mb'. Set to 0 (the default) to have no limit.
+\fBmin_file_size=[B/KB/MB/GB]\fR
+Do not back up files that are less than the specified size. Example: 'min_file_size = 10MB'. Set to 0 (the default) to have no limit.
 .TP
-\fBmax_file_size=[b/Kb/Mb/Gb]\fR
-Do not back up files that are greater than the specified size. Example: 'max_file_size = 10Mb'. Set to 0 (the default) to have no limit.
+\fBmax_file_size=[B/KB/MB/GB]\fR
+Do not back up files that are greater than the specified size. Example: 'max_file_size = 10MB'. Set to 0 (the default) to have no limit.
 .TP
 \fBcross_filesystem=[path]\fR
 Allow backups to cross a particular filesystem mountpoint.

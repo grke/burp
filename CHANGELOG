@@ -1,3 +1,14 @@
+2018-06-01 Changes in burp-2.2.4:
+  * 718: '[b/Kb/Mb/Gb]' -> '[B/KB/MB/GB]' in man page.
+  * 716: '0000000 never' instead of 'never' in status monitor.
+  * 710: max_resume_attempts option - if exceeded, delete working dir.
+  * 714: DST mktime fix.
+  * 715: Edit backup_tool_script.txt for spelling and formatting, put on
+         the website.
+  * 700: Attempt to fix "stats file: had an exception".
+  * Add more logging around manio_tell when resuming.
+  * Fix/run code coverage.
+
 2018-05-01 Changes in burp-2.2.2:
   * 645: Update burp-cross-tools Windows libraries to use docker (thanks to
     josvo for hints):
@@ -14,7 +25,7 @@
   * 693: Increase protocol1 strong length from 8 to 16.
   * 713: Fix for slow down after xattr warnings.
   * Add file descriptor number to asfd->desc, for better logging.
-    
+
 2018-04-01 Changes in burp-2.2.0:
   * 643: Protocol 2 restore load only up to the block that is needed.
   * 680: Strip trailing slashes from cross_filesystem option.

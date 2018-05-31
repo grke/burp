@@ -719,7 +719,7 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	{
 		const char *server=get_string(c[OPT_SERVER]);
 		logp("ssl_peer_cn unset\n");
-		if(!server)
+		if(server)
 		{
 			logp("falling back to '%s'\n", server);
 			if(set_string(c[OPT_SSL_PEER_CN], server))

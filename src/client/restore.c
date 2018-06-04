@@ -21,7 +21,7 @@ int restore_interrupt(struct asfd *asfd,
 	struct sbuf *sb, const char *msg, struct cntr *cntr,
 	enum protocol protocol)
 {
-	int ret=0;
+	int ret=-1;
 	char *path=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 
@@ -29,21 +29,31 @@ int restore_interrupt(struct asfd *asfd,
 	{
 		cntr_add(cntr, CMD_WARNING, 1);
 		logp("WARNING: %s\n", msg);
-		if(asfd->write_str(asfd, CMD_WARNING, msg)) goto end;
+		if(asfd->write_str(asfd, CMD_WARNING, msg))
+			goto end;
+	}
+
+	if(!iobuf_is_filedata(&sb->path)
+	  && !iobuf_is_vssdata(&sb->path))
+	{
+		// Do not need to do anything.
+		ret=0;
+		goto end;
 	}
 
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
-	if(!iobuf_is_filedata(&sb->path)
-	  && !iobuf_is_vssdata(&sb->path))
-		return 0;
 
 	if(protocol==PROTO_1)
 		path=sb->protocol1->datapth.buf;
 	else if(protocol==PROTO_2)
 		path=sb->path.buf;
 
-	if(!path) return 0;
+	if(!path)
+	{
+		ret=0;
+		goto end;
+	}
 
 	if(asfd->write_str(asfd, CMD_INTERRUPT, path))
 		goto end;
@@ -53,8 +63,9 @@ int restore_interrupt(struct asfd *asfd,
 	{
 		iobuf_free_content(rbuf);
 		if(asfd->read(asfd))
-			goto end;
-		if(!rbuf->len) continue;
+			goto end; // Error.
+		if(!rbuf->len)
+			continue;
 
 		switch(rbuf->cmd)
 		{

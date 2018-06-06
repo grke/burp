@@ -88,11 +88,9 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Could not transfer file in: %s", rpath);
-		if(restore_interrupt(asfd, sb, msg, cntr, PROTO_1))
-			ret=-1;
-		ret=0;
+		return restore_interrupt(asfd, sb, msg, cntr, PROTO_1);
 	}
-	return ret;
+	return 0;
 }
 
 static int restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,

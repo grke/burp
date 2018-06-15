@@ -880,6 +880,8 @@ static char *conf_data_to_str(struct conf *conf)
 {
 	size_t l=256;
 	char *ret=NULL;
+	if(!conf->field || !*conf->field)
+		return NULL;
 	if(!(ret=(char *)calloc_w(1, l, __func__))) return ret;
 	*ret='\0';
 	switch(conf->conf_type)
@@ -935,7 +937,8 @@ static char *conf_data_to_str(struct conf *conf)
 				get_mode_t(conf));
 			break;
 		case CT_SSIZE_T:
-			// FIX THIS
+			snprintf(ret, l, "%32s: %" PRIu64 "\n", conf->field,
+				get_uint64_t(conf));
 			break;
 		case CT_CNTR:
 			break;

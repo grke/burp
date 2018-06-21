@@ -1,3 +1,11 @@
+2018-06-22 Changes in burp-2.2.6:
+  * 726: Fix 'burp -t' missing fields.
+  * 720: Bug fix for falling back to server name when ssl_peer_cn
+    is not set
+  * 721: Take note of restore_interrupt return correctly.
+  * 721: restore_interrupt should return error.
+  * 723: Make iobuf_to_printable accept newlines.
+
 2018-06-01 Changes in burp-2.2.4:
   * 718: '[b/Kb/Mb/Gb]' -> '[B/KB/MB/GB]' in man page.
   * 716: '0000000 never' instead of 'never' in status monitor.

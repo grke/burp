@@ -401,11 +401,7 @@ static void check_rshash(struct conf **confs,
 	enum action action, const char *incexc)
 {
 	fail_unless(get_e_rshash(confs[OPT_RSHASH])==
-#ifdef RS_BLAKE2_SIG_MAGIC
 		RSHASH_BLAKE2
-#else
-		RSHASH_MD4
-#endif
 	);
 }
 
@@ -413,9 +409,7 @@ static void setup_rshash(struct asfd *asfd, struct conf **confs)
 {
 	int r=0; int w=0;
 	setup_extra_comms_begin(asfd, &r, &w, "rshash=blake2");
-#ifdef RS_BLAKE2_SIG_MAGIC
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "rshash=blake2");
-#endif
 	setup_extra_comms_end(asfd, &r, &w);
 }
 

@@ -719,7 +719,7 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	{
 		const char *server=get_string(c[OPT_SERVER]);
 		logp("ssl_peer_cn unset\n");
-		if(!server)
+		if(server)
 		{
 			logp("falling back to '%s'\n", server);
 			if(set_string(c[OPT_SSL_PEER_CN], server))
@@ -872,6 +872,14 @@ static int finalise_start_dirs(struct conf **c)
 	return 0;
 }
 
+static int finalise_fschg_dirs(struct conf **c)
+{
+	struct strlist *s;
+	for(s=get_strlist(c[OPT_FSCHGDIR]); s; s=s->next)
+		strip_trailing_slashes(&s->path);
+	return 0;
+}
+
 // The glob stuff should only run on the client side.
 static int finalise_glob(struct conf **c)
 {
@@ -908,7 +916,9 @@ int reeval_glob(struct conf **c)
 		return -1;
 
 	if(finalise_incexc_dirs(c)
-	  || finalise_start_dirs(c)) return -1;
+	  || finalise_start_dirs(c)
+	  || finalise_fschg_dirs(c))
+		return -1;
 
 	return 0;
 }
@@ -1042,8 +1052,9 @@ static int conf_finalise(struct conf **c)
 {
 	enum burp_mode burp_mode=get_e_burp_mode(c[OPT_BURP_MODE]);
 	int s_script_notify=0;
-	if(finalise_fstypes(c, OPT_EXCFS)) return -1;
-	if(finalise_fstypes(c, OPT_INCFS)) return -1;
+	if(finalise_fstypes(c, OPT_EXCFS)
+	  || finalise_fstypes(c, OPT_INCFS))
+		return -1;
 
 	strlist_compile_regexes(get_strlist(c[OPT_INCREG]));
 	strlist_compile_regexes(get_strlist(c[OPT_EXCREG]));
@@ -1053,12 +1064,16 @@ static int conf_finalise(struct conf **c)
 	set_max_ext(get_strlist(c[OPT_EXCOM]));
 
 	if(burp_mode==BURP_MODE_CLIENT
-	  && finalise_glob(c)) return -1;
+	  && finalise_glob(c))
+		return -1;
 
 	if(finalise_incexc_dirs(c)
-	  || finalise_start_dirs(c)) return -1;
+	  || finalise_start_dirs(c)
+	  || finalise_fschg_dirs(c))
+		return -1;
 
-	if(finalise_keep_args(c)) return -1;
+	if(finalise_keep_args(c))
+		return -1;
 
 	if(burp_mode==BURP_MODE_SERVER)
 	{

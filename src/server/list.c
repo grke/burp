@@ -46,7 +46,7 @@ int list_server_init(
 	protocol=p;
 	backup=backup_str;
 	browsedir=browsedir_str;
-	if(bu_get_list(s, &bu_list))
+	if(bu_get_list_with_working(s, &bu_list))
 		goto error;
 	if(regex_str
 	  && *regex_str
@@ -228,15 +228,29 @@ end:
 	return ret;
 }
 
+static char *get_extradesc(struct bu *bu)
+{
+	if(bu->flags & BU_WORKING)
+		return strdup_w(" (working)", __func__);
+	else if(bu->flags & BU_FINISHING)
+		return strdup_w(" (finishing)", __func__);
+	// Protocol2 backups are all deletable, so do not mention it.
+	else if(bu->flags & BU_DELETABLE && protocol==1)
+		return strdup_w(" (deletable)", __func__);
+	return strdup_w("", __func__);
+}
+
 static int send_backup_name_to_client(struct bu *bu)
 {
+	int ret;
 	char msg[64]="";
-	snprintf(msg, sizeof(msg), "%s%s",
-		bu->timestamp,
-		// Protocol2 backups are all deletable, so do not mention it.
-		protocol==PROTO_1
-		&& (bu->flags & BU_DELETABLE)?" (deletable)":"");
-	return asfd_write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
+	char *extradesc;
+	if(!(extradesc=get_extradesc(bu)))
+		return -1;
+	snprintf(msg, sizeof(msg), "%s%s", bu->timestamp, extradesc);
+	ret=asfd_write_wrapper_str(asfd, CMD_TIMESTAMP, msg);
+	free_w(&extradesc);
+	return ret;
 }
 
 static int list_all_backups(void)

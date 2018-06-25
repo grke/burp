@@ -168,8 +168,9 @@ int compare_dindexes_and_unlink_datafiles(const char *dindex_old,
 					break;
 				case 0: if(nbuf.cmd!=CMD_SAVE_PATH)
 					{
-						logp("unknown cmd in %s: %c\n",
-							__func__, nbuf.cmd);
+						logp("unknown cmd in %s: %s\n",
+							__func__,
+							iobuf_to_printable(&nbuf));
 						goto end;
 					}
 					if(blk_set_from_iobuf_savepath(&nblk,

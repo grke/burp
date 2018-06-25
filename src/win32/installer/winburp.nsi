@@ -190,14 +190,21 @@ Function .onInit
 	StrCpy $ConfigServerAddress		"10.0.0.1"
 	StrCpy $ConfigServerPort              "4971"
 	StrCpy $ConfigClientName 	"clientname"
-	nsExec::ExecToStack '"$SYSDIR\cmd.exe" /c hostname'
-	Pop $R0
-	Pop $R1
-	StrCpy $R1 "$R1" -2
-	${If} $R0 == 0 
-	${AndIf} $R1 != ""
-		StrCpy $ConfigClientName $R1
-	${EndIf}
+        Push $R0
+        ; Try to get hostname via system call that supports lower/uppercase
+        nsExec::ExecToStack '"$SYSDIR\cmd.exe" /c hostname'
+        Pop $R0
+        Pop $R1
+        ${If} $R0 == 0
+        ${AndIf} $R1 != ""
+                StrCpy $ConfigClientName $R1
+        ${Else}
+                ReadEnvStr $R0 COMPUTERNAME
+                ${If} "$R0" != ""
+                        StrCpy $ConfigClientName "$R0"
+                ${EndIf}
+        ${EndIf}
+        Pop $R0
 	StrCpy $ConfigPassword                "abcdefgh"
 	StrCpy $ConfigPoll                    "20"
 	StrCpy $ConfigNoPowerMode		"0"
@@ -300,7 +307,7 @@ Function InstallCommonFiles
 		File "${SRC_DIR}\libpcre-1.dll"
 		File "${SRC_DIR}\libyajl.dll"
 		File "${SRC_DIR}\zlib1.dll"
-		File "${SRC_DIR}\libgcc_s_sjlj-1.dll"
+		File "${SRC_DIR}\${LIBGCC_DLL}"
 		File "${SRC_DIR}\compat.dll"
 		File "${SRC_DIR}\libcheck-0.dll"
 		File "${SRC_DIR}\openssl.exe"
@@ -564,12 +571,14 @@ overwrite:
 
 	!insertmacro MUI_HEADER_TEXT "Install ${PACKAGE_TARNAME} (page 1 of 4)" ""
 	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 2" "State" "$ConfigServerAddress"
-	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigClientName"
-	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 8" "State" "$ConfigPassword"
+	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 5" "State" "$ConfigServerPort"
+	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 8" "State" "$ConfigClientName"
+	!insertmacro MUI_INSTALLOPTIONS_WRITE "ConfigPage1.ini" "Field 11" "State" "$ConfigPassword"
 	!insertmacro MUI_INSTALLOPTIONS_DISPLAY "ConfigPage1.ini"
 	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerAddress "ConfigPage1.ini" "Field 2" State
-	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigClientName "ConfigPage1.ini" "Field 5" State
-	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPage1.ini" "Field 8" State
+	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigServerPort "ConfigPage1.ini" "Field 5" State
+	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigClientName "ConfigPage1.ini" "Field 8" State
+	!InsertMacro MUI_INSTALLOPTIONS_READ $ConfigPassword "ConfigPage1.ini" "Field 11" State
 
 end:
 

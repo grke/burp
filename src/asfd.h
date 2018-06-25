@@ -63,6 +63,7 @@ struct asfd
 	char *readbuf;
 	size_t readbuflen;
 	int read_blocked_on_write;
+	size_t bufmaxsize;
 
 	int dowrite;
 	char *writebuf;

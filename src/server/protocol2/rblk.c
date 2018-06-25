@@ -5,149 +5,211 @@
 #include "../../hexmap.h"
 #include "../../iobuf.h"
 #include "../../log.h"
+#include "../../prepend.h"
 #include "../../protocol2/blk.h"
 #include "rblk.h"
 
-#define RBLK_MAX	10
+static ssize_t rblk_mem=0;
+static ssize_t rblk_mem_max=0;
 
 // For retrieving stored data.
 struct rblk
 {
-	char *datpath;
+	uint64_t hash_key;
 	struct iobuf readbuf[DATA_FILE_SIG_MAX];
-	uint16_t readbuflen;
+	uint16_t rlen;
+	struct fzp *fzp;
+	UT_hash_handle hh;
 };
 
-static struct rblk *rblks=NULL;
-
-int rblk_init(void)
+static void rblk_free_content(struct rblk *rblk)
 {
-	rblks=(struct rblk *)calloc_w(RBLK_MAX, sizeof(struct rblk), __func__);
-	if(!rblks) return -1;
-	return 0;
-}
-
-void rblk_free(void)
-{
-	if(!rblks) return;
-	for(int i=0; i<RBLK_MAX; i++)
+	for(int j=0; j<rblk->rlen; j++)
 	{
-		free_w(&rblks[i].datpath);
-		for(int j=0; j<DATA_FILE_SIG_MAX; j++)
-			iobuf_free_content(&rblks[i].readbuf[j]);
+		rblk_mem-=rblk->readbuf[j].len;
+		iobuf_free_content(&rblk->readbuf[j]);
 	}
-	free_v((void **)&rblks);
+	fzp_close(&rblk->fzp);
 }
 
-static int load_rblk(struct rblk *rblks, int ind, const char *datpath)
+static void rblk_free(struct rblk **rblk)
 {
-	int r;
+/*
+uint16_t datno;
+char *x;
+x=uint64_to_savepathstr_with_sig_uint((*rblk)->hash_key, &datno);
+logp("close: %s\n", x);
+*/
+	rblk_free_content(*rblk);
+	rblk_mem-=sizeof(struct rblk);
+	free_v((void **)rblk);
+}
+
+static struct rblk *rblk_hash=NULL;
+
+static struct rblk *rblk_hash_find(uint64_t savepath)
+{
+	struct rblk *rblk;
+	HASH_FIND_INT(rblk_hash, &savepath, rblk);
+	return rblk;
+}
+
+static void rblk_hash_add(struct rblk *rblk)
+{
+	HASH_ADD_INT(rblk_hash, hash_key, rblk);
+}
+
+static struct rblk *rblk_alloc(void)
+{
+	struct rblk *rblk;
+	rblk=(struct rblk *)calloc_w(1, sizeof(struct rblk), __func__);
+	if(rblk)
+		rblk_mem+=sizeof(struct rblk);
+	return rblk;
+}
+
+void rblks_init(ssize_t rblk_memory_max)
+{
+	rblk_mem_max=rblk_memory_max;
+}
+
+void rblks_free(void)
+{
+	struct rblk *tmp;
+	struct rblk *rblk;
+
+	HASH_ITER(hh, rblk_hash, rblk, tmp)
+	{
+		HASH_DEL(rblk_hash, rblk);
+		rblk_free(&rblk);
+	}
+	rblk_hash=NULL;
+}
+
+static int rblks_free_one_except(struct rblk *keep)
+{
+	uint64_t before=rblk_mem;
+	struct rblk *tmp;
+	struct rblk *rblk;
+
+	HASH_ITER(hh, rblk_hash, rblk, tmp)
+	{
+		if(rblk==keep)
+			continue;
+		HASH_DEL(rblk_hash, rblk);
+		rblk_free(&rblk);
+		break;
+	}
+	if(before!=rblk_mem)
+		return 0;
+	return -1;
+}
+
+static int rblk_init(struct rblk *rblk, struct blk *blk,
+	uint64_t hash_key, const char *datpath, const char *savepathstr)
+{
+	int ret=-1;
+	char *fulldatpath=NULL;
+
+	rblk->hash_key=hash_key;
+	if(!(fulldatpath=prepend_s(datpath, savepathstr)))
+		goto end;
+	logp("open: %s\n", savepathstr);
+	if(!(rblk->fzp=fzp_open(fulldatpath, "rb")))
+		goto end;
+	ret=0;
+end:
+	free_w(&fulldatpath);
+	return ret;
+}
+
+static int rblk_load_more_chunks(struct rblk *rblk, uint16_t datno_target)
+{
 	int ret=-1;
 	int done=0;
-	struct fzp *fzp=NULL;
 	struct iobuf rbuf;
 
 	iobuf_init(&rbuf);
 
-	free_w(&rblks[ind].datpath);
-	if(!(rblks[ind].datpath=strdup_w(datpath, __func__)))
-		goto end;
-
-	logp("swap %d to: %s\n", ind, datpath);
-
-	if(!(fzp=fzp_open(datpath, "rb")))
-		goto end;
-	for(r=0; r<DATA_FILE_SIG_MAX; r++)
-	{
-		switch(iobuf_fill_from_fzp_data(&rbuf, fzp))
+	for(
+		;
+		rblk->rlen<DATA_FILE_SIG_MAX && rblk->rlen<=datno_target;
+		rblk->rlen++
+	) {
+		switch(iobuf_fill_from_fzp_data(&rbuf, rblk->fzp))
 		{
-			case 0: if(rbuf.cmd!=CMD_DATA)
+			case 0:
+				if(rbuf.cmd!=CMD_DATA)
 				{
 					logp("unknown cmd in %s: %c\n",
 						__func__, rbuf.cmd);
 					goto end;
 				}
-				iobuf_free_content(&rblks[ind].readbuf[r]);
-				iobuf_move(&rblks[ind].readbuf[r], &rbuf);
+				iobuf_move(&rblk->readbuf[rblk->rlen], &rbuf);
+				rblk_mem+=rblk->readbuf[rblk->rlen].len;
 				continue;
-			case 1: done++;
+			case 1:
+				done++;
 				break;
-			default: goto end;
+			default:
+				goto end;
 		}
-		if(done) break;
+		if(done)
+			break;
 	}
-	rblks[ind].readbuflen=r;
 	ret=0;
 end:
-	fzp_close(&fzp);
 	return ret;
 }
 
-static struct rblk *get_rblk(struct rblk *rblks, const char *datpath)
+int rblk_retrieve_data(struct asfd *asfd, struct cntr *cntr,
+	struct blk *blk, const char *datpath)
 {
-	static int current_ind=0;
-	static int last_swap_ind=0;
-	int ind=current_ind;
+	uint16_t datno=0;
+	uint64_t hash_key;
+	char *savepathstr;
+	struct rblk *rblk=NULL;
 
-	while(1)
+	hash_key=uint64_to_savepath_hash_key(blk->savepath);
+	savepathstr=uint64_to_savepathstr_with_sig_uint(blk->savepath, &datno);
+
+	if(!(rblk=rblk_hash_find(hash_key)))
 	{
-		if(!rblks[ind].datpath)
+		if(!(rblk=rblk_alloc())
+		  || rblk_init(rblk, blk, hash_key, datpath, savepathstr))
 		{
-			if(load_rblk(rblks, ind, datpath)) return NULL;
-			last_swap_ind=ind;
-			current_ind=ind;
-			return &rblks[current_ind];
+			rblk_free(&rblk);
+			return -1;
 		}
-		else if(!strcmp(rblks[ind].datpath, datpath))
-		{
-			current_ind=ind;
-			return &rblks[current_ind];
-		}
-		ind++;
-		if(ind==RBLK_MAX) ind=0;
-		if(ind==current_ind)
-		{
-			// Went through all RBLK_MAX entries.
-			// Replace the oldest one.
-			ind=last_swap_ind+1;
-			if(ind==RBLK_MAX) ind=0;
-			if(load_rblk(rblks, ind, datpath)) return NULL;
-			last_swap_ind=ind;
-			current_ind=ind;
-			return &rblks[current_ind];
-		}
-	}
-}
-
-char *rblk_get_fulldatpath(const char *datpath,
-	struct blk *blk, uint16_t *datno)
-{
-	static char fulldatpath[256]="";
-	snprintf(fulldatpath, sizeof(fulldatpath), "%s/%s", datpath,
-		uint64_to_savepathstr_with_sig_uint(blk->savepath, datno));
-	return fulldatpath;
-}
-
-int rblk_retrieve_data(const char *fulldatpath,
-	struct blk *blk, uint16_t datno)
-{
-	struct rblk *rblk;
-
-	if(!(rblk=get_rblk(rblks, fulldatpath)))
-	{
-		return -1;
+		rblk_hash_add(rblk);
 	}
 
-//	printf("lookup: %s (%s)\n", fulldatpath, cp);
-	if(datno>rblk->readbuflen)
+	if(datno>=rblk->rlen)
 	{
-		logp("dat index %d is greater than readbuflen: %d\n",
-			datno, rblk->readbuflen);
+		// Need to load more from this data file.
+		if(rblk_load_more_chunks(rblk, datno))
+			return -1;
+	}
+
+	while(rblk_mem>rblk_mem_max)
+	{
+		if(rblks_free_one_except(rblk))
+		{
+			logw(asfd, cntr, "rblk_memory_max is too low!\n");
+			break;
+		}
+	}
+
+// printf("lookup: %s (%u)\n", savepathstr, datno);
+	if(datno>=rblk->rlen)
+	{
+		logp("datno %d is greater than rlen: %d\n",
+			datno, rblk->rlen);
 		return -1;
 	}
 	blk->data=rblk->readbuf[datno].buf;
 	blk->length=rblk->readbuf[datno].len;
-//	printf("length: %d\n", blk->length);
+// printf("length: %d\n", blk->length);
 
         return 0;
 }

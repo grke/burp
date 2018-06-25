@@ -1,3 +1,104 @@
+2018-06-22 Changes in burp-2.2.6:
+  * 726: Fix 'burp -t' missing fields.
+  * 720: Bug fix for falling back to server name when ssl_peer_cn
+    is not set
+  * 721: Take note of restore_interrupt return correctly.
+  * 721: restore_interrupt should return error.
+  * 723: Make iobuf_to_printable accept newlines.
+
+2018-06-01 Changes in burp-2.2.4:
+  * 718: '[b/Kb/Mb/Gb]' -> '[B/KB/MB/GB]' in man page.
+  * 716: '0000000 never' instead of 'never' in status monitor.
+  * 710: max_resume_attempts option - if exceeded, delete working dir.
+  * 714: DST mktime fix.
+  * 715: Edit backup_tool_script.txt for spelling and formatting, put on
+         the website.
+  * 700: Attempt to fix "stats file: had an exception".
+  * Add more logging around manio_tell when resuming.
+  * Fix/run code coverage.
+
+2018-05-01 Changes in burp-2.2.2:
+  * 645: Update burp-cross-tools Windows libraries to use docker (thanks to
+    josvo for hints):
+    - binutils-2.29.1
+    - gcc-7.3.0
+    - gmp-6.1.2
+    - isl-0.18
+    - mingw-w64-v5.0.3
+    - mpc-1.1.0
+    - mpfr-4.0.1
+  * From deajan:
+    - 703: Add server port to Windows installer.
+    - 693: Update Windows to librsync-2.0.2.
+  * 693: Increase protocol1 strong length from 8 to 16.
+  * 713: Fix for slow down after xattr warnings.
+  * Add file descriptor number to asfd->desc, for better logging.
+
+2018-04-01 Changes in burp-2.2.0:
+  * 643: Protocol 2 restore load only up to the block that is needed.
+  * 680: Strip trailing slashes from cross_filesystem option.
+  * 689: Make list show working/finishing backups.
+  * 707: Fix superfluous newlines on file vanished warnings.
+  * From deajan:
+         - 661: Add backup_tool_script housekeeping script.
+  * All the fixes from burp-2.1.32.
+
+2018-04-01 Changes in burp-2.1.32:
+  * 696: Tests for some Windows installer command line switches, and
+         use of hostname for cname.
+  * 698: Fix for 'could not open current/incexc' warning on first backup.
+  * 699: Remove use of strcasestr so that AIX is happy.
+  * From deajan:
+    - 701: Fix for broken Windows installer command line switches.
+    - Man page tweak for rblk_memory_max.
+  * From jirib:
+    - spec file tweak for uthash.
+
+2018-03-04 Changes in burp-2.1.30:
+  * Revert "reopen syslog for child processes after fork".
+  * Use iobuf_to_printable everywhere that iobufs are printed.
+  * Don't run ncurses utests if you don't HAVE_NCURSES.
+  * Bug fix for some utests accidentally closing stdin.
+  * Protocol 2: Hash table for rblk lookups on restore/verify.
+    Add rblk_memory_max option for configuring its size.
+  * From deajan:
+    - Replaced bits (b) with bytes (B) for quotas in man page.
+  * From John Stoffel:
+    - configure check for pkg-config.
+
+2018-02-01 Changes in burp-2.1.28:
+  * Set Windows creation time on restore.
+  * From gfa-:
+    - Fix for bedup junk files.
+  * Unit test for bedup maximum hardlink code.
+  * librsync_max_size option - only use librsync on files less than the
+    given size.
+  * Reopen syslog for child processes after fork.
+  * Add a docs/restoring.txt file.
+  * Tweak ratelimit man page descriptions.
+
+2018-01-01 Changes in burp-2.1.26:
+  * On non-Windows, strip vss on restore with the '-x' option.
+  * Make 'burp -a m' work on a Windows console.
+  * Monitor detect from storage when server side protocol unset.
+  * Tweak man page 'backup_script_pre' section.
+  * Fix all utests for openbsd 6.2.
+  * Fewer warnings about the last backup on restore/verify.
+  * Different setsockopt parameters for bulk packets with ipv6.
+  * Log the return code of SSL_get_verify_result when it fails, so that
+    we have a chance of knowing why "Certificate doesn't verify".
+  * Make it a fatal error when bedup's do_hardlink() fails. Unlink the
+    temporary path when bedup's do_rename() fails. This should stop
+    bedup generating lots of mess when these things happen.
+  * From Pablo Estigarribia:
+    - Add additional entries to fstypes.
+  * From BobRyanConsulting:
+    - Add cifs entry to fstypes.
+  * Note in docs/timer_script.txt about the internal timer_script.
+  * Add Windows build tools to its own repo, and make the scripts download
+    the sources: https://github.com/grke/burp-cross-tools
+  * Make burp work with the new Windows build tools.
+
 2017-12-01 Changes in burp-2.1.24:
   * Internalise the timer script.
   * Protocol2: Log a warning when a block cannot be retrieved during

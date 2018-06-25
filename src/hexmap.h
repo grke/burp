@@ -14,5 +14,6 @@ extern uint64_t savepathstr_with_sig_to_uint64(const char *savepathstr);
 extern char *uint64_to_savepathstr(uint64_t bytes);
 extern char *uint64_to_savepathstr_with_sig(uint64_t bytes);
 extern char *uint64_to_savepathstr_with_sig_uint(uint64_t bytes, uint16_t *sig);
+extern uint64_t uint64_to_savepath_hash_key(uint64_t bytes);
 
 #endif

@@ -629,14 +629,16 @@ int cntr_stats_to_file(struct cntr *cntr,
 	if(!(as=async_alloc())
 	  || as->init(as, 0)
 	  || !(wfd=setup_asfd_linebuf_write(as, "stats file", &fd)))
-			goto end;
+	{
+		close_fd(&fd);
+		goto end;
+	}
 
 	if(json_cntr(wfd, cntr))
 		goto end;
 
 	ret=0;
 end:
-	close_fd(&fd);
 	free_w(&path);
 	async_free(&as);
 	asfd_free(&wfd);
@@ -954,7 +956,7 @@ int cntr_send_sdirs(struct asfd *asfd,
 	// FIX THIS:
 	// It would be better just to set up the correct 'bu' entry instead
 	// of loading everything and then looking through the list.
-	if(bu_get_list_with_working(sdirs, &bu_list, NULL))
+	if(bu_get_list_with_working(sdirs, &bu_list))
 		goto end;
 	for(bu=bu_list; bu; bu=bu->next)
 		if((bu->flags & BU_WORKING)

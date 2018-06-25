@@ -472,6 +472,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
           return sc_str(c[o], 0, 0, "ca_crl");
         case OPT_CA_CRL_CHECK:
           return sc_int(c[o], 0, 0, "ca_crl_check");
+	case OPT_RBLK_MEMORY_MAX:
+	  return sc_u64(c[o], 256*1024*1024, // 256 Mb.
+		CONF_FLAG_CC_OVERRIDE, "rblk_memory_max");
 	case OPT_MONITOR_LOGFILE:
 	  return sc_str(c[o], 0, 0, "monitor_logfile");
 	case OPT_MONITOR_EXE:
@@ -644,6 +647,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_LIBRSYNC:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "librsync");
+	case OPT_LIBRSYNC_MAX_SIZE:
+	  return sc_u64(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "librsync_max_size");
 	case OPT_COMPRESSION:
 	  return sc_int(c[o], 9,
 		CONF_FLAG_CC_OVERRIDE, "compression");
@@ -716,6 +722,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_WORKING_DIR_RECOVERY_METHOD:
 	  return sc_rec(c[o], RECOVERY_METHOD_DELETE,
 		CONF_FLAG_CC_OVERRIDE, "working_dir_recovery_method");
+	case OPT_MAX_RESUME_ATTEMPTS:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "max_resume_attempts");
 	case OPT_RSHASH:
 	  return sc_rsh(c[o], RSHASH_UNSET,
 		CONF_FLAG_CC_OVERRIDE, "");
@@ -871,6 +880,8 @@ static char *conf_data_to_str(struct conf *conf)
 {
 	size_t l=256;
 	char *ret=NULL;
+	if(!conf->field || !*conf->field)
+		return NULL;
 	if(!(ret=(char *)calloc_w(1, l, __func__))) return ret;
 	*ret='\0';
 	switch(conf->conf_type)
@@ -926,7 +937,8 @@ static char *conf_data_to_str(struct conf *conf)
 				get_mode_t(conf));
 			break;
 		case CT_SSIZE_T:
-			// FIX THIS
+			snprintf(ret, l, "%32s: %" PRIu64 "\n", conf->field,
+				get_uint64_t(conf));
 			break;
 		case CT_CNTR:
 			break;

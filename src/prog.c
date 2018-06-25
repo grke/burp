@@ -71,8 +71,10 @@ static void usage_client(void)
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -t             Dry-run to test config file syntax.\n");
 	printf("  -v             Print version and exit.\n");
-#ifndef HAVE_WIN32
+#ifdef HAVE_WIN32
 	printf("  -x             Do not use the Windows VSS API when restoring.\n");
+#else
+	printf("  -x             Strip Windows VSS data when restoring.\n");
 	printf("Options to use with '-a S':\n");
 	printf("  -C <client>   Show a particular client.\n");
 	printf("  -b <number>   Show listable files in a particular backup (requires -C).\n");
@@ -389,11 +391,9 @@ int real_main(int argc, char *argv[])
 	{
 		// Try to output everything in JSON.
 		log_set_json(1);
-#ifndef HAVE_WIN32
 		// Need to do this so that processes reading stdout get the
 		// result of the printfs of logp straight away.
-		setlinebuf(stdout);
-#endif
+		setvbuf(stdout, NULL, _IONBF, 0);
 	}
 
 	if(!(confs=confs_alloc()))

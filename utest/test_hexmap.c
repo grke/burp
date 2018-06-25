@@ -157,6 +157,32 @@ START_TEST(test_uint64_to_savepathstr_with_sig_uint)
 }
 END_TEST
 
+struct savepathhashkey
+{
+	uint64_t bytes;
+	uint64_t hash_key;
+};
+
+static struct savepathhashkey savepathhashkey[] = {
+	{ 0x0000000000000000, 0x0000000000000000 },
+	{ 0xABD234F2348349DF, 0xABD234F234830000 },
+	{ 0x0123179123909822, 0x0123179123900000 },
+	{ 0xFFFFFFFFFFFF0000, 0xFFFFFFFFFFFF0000 },
+	{ 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFF0000 },
+};
+
+START_TEST(test_uint64_to_savepath_hash_key)
+{
+	hexmap_init();
+	FOREACH(savepathhashkey)
+	{
+		uint64_t hash_key;
+		hash_key=uint64_to_savepath_hash_key(savepathhashkey[i].bytes);
+		fail_unless(savepathhashkey[i].hash_key==hash_key);
+	}
+}
+END_TEST
+
 Suite *suite_hexmap(void)
 {
 	Suite *s;
@@ -173,6 +199,7 @@ Suite *suite_hexmap(void)
 	tcase_add_test(tc_core, test_uint64_to_savepathstr);
 	tcase_add_test(tc_core, test_uint64_to_savepathstr_with_sig);
 	tcase_add_test(tc_core, test_uint64_to_savepathstr_with_sig_uint);
+	tcase_add_test(tc_core, test_uint64_to_savepath_hash_key);
 	suite_add_tcase(s, tc_core);
 
 	return s;

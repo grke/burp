@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl require a recent autoconf
 AC_PREREQ([2.61])
 
-AC_INIT([Burp],[2.1.24],[https://github.com/grke/burp/issues],[burp],[http://burp.grke.net/])
+AC_INIT([Burp],[2.2.6],[https://github.com/grke/burp/issues],[burp],[http://burp.grke.net/])
 AC_CONFIG_AUX_DIR([autoconf])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -11,6 +11,14 @@ AC_CONFIG_SRCDIR([src/prog.c])
 
 AM_INIT_AUTOMAKE([foreign -Wall dist-bzip2 no-dist-gzip tar-ustar subdir-objects 1.11])
 AM_SILENT_RULES([yes])
+
+dnl Check for pkg-config
+PKG_PROG_PKG_CONFIG
+if test x"${PKG_CONFIG}" = "x" ; then
+	echo ""
+	echo "  Error!  You must install pkg-config to continue compiling."
+	exit 1
+fi
 
 AC_LANG([C])
 

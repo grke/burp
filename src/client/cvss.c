@@ -214,17 +214,6 @@ int win32_enable_backup_privileges()
 	return ret;
 }
 
-// This is the shape of the Windows VSS header structure.
-// It is size 20. Using sizeof(struct bsid) seems to give 24, I guess due to
-// some alignment issue.
-struct bsid {
-	int32_t dwStreamId;
-	int32_t dwStreamAttributes;
-	int64_t Size;
-	int32_t dwStreamNameSize;
-};
-#define bsidsize	20
-
 static int ensure_read(BFILE *bfd, char *buf, size_t s, int print_err)
 {
 	ssize_t got=0;

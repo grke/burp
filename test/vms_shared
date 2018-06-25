@@ -144,10 +144,10 @@ get_summary()
         windows=$(echo "$details" | grep windows | cut -f 2 -d " ")
         freebsd=$(echo "$details" | grep freebsd | cut -f 2 -d " ")
         netbsd=$(echo "$details" | grep netbsd | cut -f 2 -d " ")
-        ubuntu=$(echo "$details" | grep ubuntu | cut -f 2 -d " ")
+        debian=$(echo "$details" | grep debian | cut -f 2 -d " ")
         echo "freebsd: $freebsd"
         echo " netbsd: $netbsd"
-        echo " ubuntu: $ubuntu"
+        echo " debian: $debian"
         echo "windows: $windows"
 }
 

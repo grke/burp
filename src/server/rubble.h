@@ -1,8 +1,6 @@
 #ifndef _RUBBLE_H
 #define _RUBBLE_H
 
-extern int append_to_resume_file(const char *path);
-
 // Return 0 if there is no rubble.
 extern int check_for_rubble(struct sdirs *sdirs);
 

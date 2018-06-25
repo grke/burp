@@ -2,6 +2,7 @@
 #include "alloc.h"
 #include "attribs.h"
 #include "berrno.h"
+#include "bfile.h"
 #include "log.h"
 
 #ifdef HAVE_DARWIN_OS
@@ -414,6 +415,11 @@ static ssize_t bfile_write(struct BFILE *bfd, void *buf, size_t count)
 
 #else
 
+static void bfile_set_vss_strip(struct BFILE *bfd, int vss_strip)
+{
+	bfd->vss_strip=vss_strip;
+}
+
 static int bfile_close(struct BFILE *bfd, struct asfd *asfd)
 {
 	if(!bfd || bfd->mode==BF_CLOSED) return 0;
@@ -446,6 +452,11 @@ static int bfile_open(struct BFILE *bfd,
 		bfd->mode=BF_READ;
 	if(!(bfd->path=strdup_w(fname, __func__)))
 		return -1;
+	if(bfd->vss_strip)
+	{
+		memset(&bfd->mysid, 0, sizeof(struct mysid));
+		bfd->mysid.needed_s=bsidsize;
+	}
 	return 0;
 }
 
@@ -454,8 +465,67 @@ static ssize_t bfile_read(struct BFILE *bfd, void *buf, size_t count)
 	return read(bfd->fd, buf, count);
 }
 
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
+static ssize_t bfile_write_vss_strip(struct BFILE *bfd, void *buf, size_t count)
+{
+	size_t mycount;
+	struct mysid *mysid;
+	struct bsid *sid;
+
+	mysid=&bfd->mysid;
+	sid=&mysid->sid;
+	void *cp=buf;
+	mycount=count;
+
+	while(mycount)
+	{
+		if(mysid->needed_s)
+		{
+			size_t sidlen=bsidsize-mysid->needed_s;
+			int got=min(mysid->needed_s, mycount);
+
+			memcpy(sid+sidlen, cp, got);
+
+			cp+=got;
+			mycount-=got;
+			mysid->needed_s-=got;
+
+			if(!mysid->needed_s)
+				mysid->needed_d=sid->Size+sid->dwStreamNameSize;
+		}
+		if(mysid->needed_d)
+		{
+			size_t wrote;
+			int got=min(mysid->needed_d, mycount);
+
+			if(sid->dwStreamId==1)
+			{
+				if((wrote=write(bfd->fd, cp, got))<=0)
+					return -1;
+			}
+			else
+				wrote=got;
+
+			cp+=wrote;
+			mycount-=wrote;
+			mysid->needed_d-=wrote;
+			if(!mysid->needed_d)
+				mysid->needed_s=bsidsize;
+		}
+	}
+
+	return count;
+}
+
 static ssize_t bfile_write(struct BFILE *bfd, void *buf, size_t count)
 {
+	if(bfd->vss_strip)
+		return bfile_write_vss_strip(bfd, buf, count);
+
 	return write(bfd->fd, buf, count);
 }
 
@@ -512,6 +582,8 @@ void bfile_setup_funcs(struct BFILE *bfd)
 	bfd->open_for_send=bfile_open_for_send;
 #ifdef HAVE_WIN32
 	bfd->set_win32_api=bfile_set_win32_api;
+#else
+	bfd->set_vss_strip=bfile_set_vss_strip;
 #endif
 }
 

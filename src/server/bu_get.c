@@ -1,7 +1,6 @@
 #include "../burp.h"
 #include "../alloc.h"
 #include "../bu.h"
-#include "../cstat.h"
 #include "../fsops.h"
 #include "../log.h"
 #include "../prepend.h"
@@ -34,7 +33,7 @@ static void have_backup_file_name_w(struct bu *bu,
 }
 
 static int maybe_add_ent(const char *dir, const char *d_name,
-	struct bu **bu_list, uint16_t flags, struct cstat *cstat,
+	struct bu **bu_list, uint16_t flags,
 	int include_working)
 {
 	int ret=-1;
@@ -149,7 +148,7 @@ static void setup_indices(struct bu *bu_list, enum protocol protocol)
 }
 
 static int do_bu_get_list(struct sdirs *sdirs,
-	struct bu **bu_list, struct cstat *cstat, int include_working)
+	struct bu **bu_list, int include_working)
 {
 	int i=0;
 	int n=0;
@@ -205,7 +204,7 @@ static int do_bu_get_list(struct sdirs *sdirs,
 			flags|=BU_FINISHING;
 		}
 		if(maybe_add_ent(dir, dp[i]->d_name, bu_list, flags,
-			cstat, include_working)) goto end;
+			include_working)) goto end;
 	}
 
 	setup_indices(*bu_list, sdirs->protocol);
@@ -223,13 +222,12 @@ end:
 
 int bu_get_list(struct sdirs *sdirs, struct bu **bu_list)
 {
-	return do_bu_get_list(sdirs, bu_list, NULL, 0/*include_working*/);
+	return do_bu_get_list(sdirs, bu_list, 0/*include_working*/);
 }
 
-int bu_get_list_with_working(struct sdirs *sdirs, struct bu **bu_list,
-	struct cstat *cstat)
+int bu_get_list_with_working(struct sdirs *sdirs, struct bu **bu_list)
 {
-	return do_bu_get_list(sdirs, bu_list, cstat, 1/*include_working*/);
+	return do_bu_get_list(sdirs, bu_list, 1/*include_working*/);
 }
 
 int bu_get_current(struct sdirs *sdirs, struct bu **bu_list)
@@ -239,5 +237,5 @@ int bu_get_current(struct sdirs *sdirs, struct bu **bu_list)
 	if(get_link(sdirs->client, "current", real, sizeof(real)))
 		return -1;
 	return maybe_add_ent(sdirs->client, real, bu_list, BU_CURRENT,
-		NULL, 0/*include_working*/);
+		0/*include_working*/);
 }

@@ -13,6 +13,25 @@
 #include "../restore.h"
 #include "restore.h"
 
+int write_protocol2_data(struct asfd *asfd,
+	struct BFILE *bfd, struct blk *blk, int vss_restore)
+{
+	if(bfd->mode==BF_CLOSED)
+		logp("Got data without an open file\n");
+	else
+	{
+		int w;
+		if((w=bfd->write(bfd, blk->data, blk->length))<=0)
+		{
+			logp("%s(): error when appending %d: %d\n",
+					__func__, blk->length, w);
+			asfd->write_str(asfd, CMD_ERROR, "write failed");
+			return -1;
+		}
+	}
+	return 0;
+}
+
 static int start_restore_file(struct asfd *asfd,
 	struct BFILE *bfd,
 	struct sbuf *sb,

@@ -180,7 +180,7 @@ static int is_printable(struct iobuf *iobuf)
 {
 	size_t l;
 	for(l=0; l<iobuf->len; l++)
-		if(!isprint(iobuf->buf[l]))
+		if(!isprint(iobuf->buf[l]) && iobuf->buf[l]!='\n')
 			return 0;
 	return 1;
 }

@@ -181,7 +181,7 @@ static void setup_writes_from_slist(struct asfd *asfd,
 		{
 			struct iobuf wbuf;
 			char empty_sig[12]={'r', 's', 0x01, '6',
-				0, 0x02, 0, 0, 0, 0, 0, 0x08};
+				0, 0x02, 0, 0, 0, 0, 0, 0x10};
 			iobuf_set(&wbuf, CMD_APPEND,
 				empty_sig, sizeof(empty_sig));
 			asfd_assert_write_iobuf(asfd, w, 0, &wbuf);

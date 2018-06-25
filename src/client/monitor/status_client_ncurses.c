@@ -73,7 +73,7 @@ static void print_line(const char *string, int row, int col)
 static char *get_bu_str(struct bu *bu)
 {
 	static char ret[38];
-	if(!bu) snprintf(ret, sizeof(ret), "never");
+	if(!bu) snprintf(ret, sizeof(ret), "%07d never", 0);
 	else if(!bu->bno) snprintf(ret, sizeof(ret), "%s", bu->timestamp);
 	else snprintf(ret, sizeof(ret), "%07" PRIu64 " %s",
 		bu->bno, bu->timestamp);

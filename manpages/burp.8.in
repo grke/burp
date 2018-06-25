@@ -103,8 +103,11 @@ For use with restores \- strip a number of leading path components.
 \fB\-t\fR \fB\fR
 Dry-run mode to test config file syntax.
 .TP
-\fB\-x\fR
-For Windows clients only - do not use the Windows VSS API on restore. Give this option when you are restoring a backup that contains no VSS information.
+\fB\-x\fR (on Windows)
+On restore, do not use the Windows VSS API on restore - give this option when you are restoring a backup that contains no VSS data.
+.TP
+\fB\-x\fR (on non-Windows)
+On restore, strip the Windows VSS data - give this option when you are restoring a backup that contains VSS data.
 .TP
 \fB\-a s\fR \fB\fR
 Run this to connect to a running server to get a live monitor of the status of all your backup clients. The live monitor requires ncurses support at compile time.
@@ -289,14 +292,17 @@ On the server, the number of times that a single file can be hardlinked. The bed
 \fBlibrsync=[0|1]\fR
 When set to 0, delta differencing will not take place. That is, when a file changes, the server will request the whole new file. The default is 1. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
+\fBlibrsync_max_size=[B/KB/MB/GB]\fR
+Only use librsync when a file is less than the given size. Both the most recently backed up version of a file and the version to be backed up are checked. The default is 0, which means the option is off. This option can be overridden by the client configuration files in clientconfdir on the server.
+.TP
 \fBcompression=zlib[0-9] (or gzip[0-9])\fR
 Choose the level of zlib compression for files stored in backups. Setting 0 or zlib0 turns compression off. The default is zlib9. This option can be overridden by the client configuration files in clientconfdir on the server. 'gzip' is a synonym of 'zlib'.
 .TP
-\fBhard_quota=[b/Kb/Mb/Gb]\fR
-Do not back up the client if the estimated size of all files is greater than the specified size. Example: 'hard_quota = 100Gb'. Set to 0 (the default) to have no limit.
+\fBhard_quota=[B/KB/MB/GB]\fR
+Do not back up the client if the estimated size of all files is greater than the specified size. Example: 'hard_quota = 100GB'. Set to 0 (the default) to have no limit.
 .TP
-\fBsoft_quota=[b/Kb/Mb/Gb]\fR
-A warning will be issued when the estimated size of all files is greater than the specified size and smaller than hard_quota. Example: 'soft_quota = 95Gb'. Set to 0 (the default) to have no warning.
+\fBsoft_quota=[B/KB/MB/GB]\fR
+A warning will be issued when the estimated size of all files is greater than the specified size and smaller than hard_quota. Example: 'soft_quota = 95GB'. Set to 0 (the default) to have no warning.
 .TP
 \fBversion_warn=[0|1]\fR
 When this is on, which is the default, a warning will be issued when the client version does not match the server version. This option can be overridden by the client configuration files in clientconfdir on the server.
@@ -317,18 +323,21 @@ Run as a particular group. This can be overridden by the client configuration fi
 Set the file creation umask. Default is 0022.
 .TP
 \fBratelimit=[Mb/s]\fR
-Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can.
+Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can. If you want the server's sending speed to be limited, you will also need to set this option on the server side.
 .TP
 \fBnetwork_timeout=[s]\fR
 Set the network timeout in seconds. If no data is sent or received over a period of this length, @name@ will give up. The default is 7200 seconds (2 hours).
 .TP
 \fBworking_dir_recovery_method=[resume|delete]\fR
-This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir
-on the server. Options are...
+This option tells the server what to do when it finds the working directory of an interrupted backup (perhaps somebody pulled the plug on the server, or something). This can be overridden by the client configurations files in clientconfdir on the server.
+Options are...
 .TP
 \fBdelete:\fR Just delete the old working directory.
 .TP
-\fBresume:\fR Continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'delete'.
+\fBresume:\fR Continue the previous backup from the point at which it left off. NOTE: If the client has changed its include/exclude configuration since the backup was interrupted, the recovery method will automatically switch to 'delete'. See also the 'resume attempts' option.
+.TP
+\fBmax_resume_attempts=[number]\fR
+If working_dir_recovery_method is 'resume', this option tells the server how many times to attempt to resume before giving up and deleting the working directory. The default is 0, which means to never give up.
 .TP
 \fBclient_can_delete=[0|1]\fR
 Turn this off to prevent clients from deleting backups with the '\-a delete' option. The default is that clients can delete backups. Restore clients can override this setting.
@@ -472,6 +481,9 @@ You can have multiple labels, and they can be overridden in the client configura
 .TP
 \fBenabled=[0|1]\fR
 Set this to 0 if you want to disable all clients. The default is 1. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
+.TP
+\fBrblk_memory_max=[B/KB/MB/GB]\fR
+The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256MB. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -550,7 +562,7 @@ Run as a particular user (not supported on Windows).
 Run as a particular group (not supported on Windows).
 .TP
 \fBratelimit=[Mb/s]\fR
-Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can.
+Set the network send rate limit, in Mb/s. If this option is not given, @name@ will send data as fast as it can. If you want the client's sending speed to be limited, you will also need to set this option on the client side.
 .TP
 \fBnetwork_timeout=[s]\fR
 Set the network timeout in seconds. If no data is sent or received over a period of this length, @name@ will give up. The default is 7200 seconds (2 hours).
@@ -688,11 +700,11 @@ File systems to include into the backup. Case insensitive. You can have multiple
 
 Note that on SunOS systems \fBinclude_fs\fR and \fBexclude_fs\fR will do a case sensitive compare of the string descriptors of the file systems instead of the numeric IDs (see \fBf_basetype\fR member is \fBstruct statvfs\fR).
 .TP
-\fBmin_file_size=[b/Kb/Mb/Gb]\fR
-Do not back up files that are less than the specified size. Example: 'min_file_size = 10Mb'. Set to 0 (the default) to have no limit.
+\fBmin_file_size=[B/KB/MB/GB]\fR
+Do not back up files that are less than the specified size. Example: 'min_file_size = 10MB'. Set to 0 (the default) to have no limit.
 .TP
-\fBmax_file_size=[b/Kb/Mb/Gb]\fR
-Do not back up files that are greater than the specified size. Example: 'max_file_size = 10Mb'. Set to 0 (the default) to have no limit.
+\fBmax_file_size=[B/KB/MB/GB]\fR
+Do not back up files that are greater than the specified size. Example: 'max_file_size = 10MB'. Set to 0 (the default) to have no limit.
 .TP
 \fBcross_filesystem=[path]\fR
 Allow backups to cross a particular filesystem mountpoint.
@@ -758,6 +770,7 @@ Additionally, the following options can be overridden here for each client:
 \fBmanual_delete\fR
 \fBworking_dir_recovery_method\fR
 \fBlibrsync\fR
+\fBlibrsync_max_size\fR
 \fBversion_warn\fR
 \fBpath_length_warn\fR
 \fBsyslog\fR

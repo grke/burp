@@ -54,7 +54,7 @@ int authorise_client(struct asfd *asfd,
 	if(rbuf->cmd==CMD_WARNING) // special case for the version warning
 	{
 		//logw(conf->p1cntr, rbuf->buf);
-		logp("WARNING: %s\n", rbuf->buf);
+		logp("WARNING: %s\n", iobuf_to_printable(rbuf));
 		cntr_add(cntr, rbuf->cmd, 0);
 		iobuf_free_content(rbuf);
 		if(asfd->read(asfd))

@@ -10,8 +10,10 @@
 #define _REENTRANT    1
 #define _THREAD_SAFE  1
 #define _POSIX_PTHREAD_SEMANTICS 1
+#define __STDC_FORMAT_MACROS 1
 
 // System includes.
+#include <inttypes.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
@@ -20,8 +22,6 @@
 #include <string.h>
 #include <time.h>
 
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -164,5 +164,16 @@
 		#error byte order not supported
 	#endif
 #endif
+
+// This is the shape of the Windows VSS header structure.
+// It is size 20 on disk. Using sizeof(struct bsid) gives 24 in memory.
+struct bsid
+{
+	int32_t dwStreamId;
+	int32_t dwStreamAttributes;
+	int64_t Size;
+	int32_t dwStreamNameSize;
+};
+#define bsidsize        20
 
 #endif

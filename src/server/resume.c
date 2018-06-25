@@ -48,7 +48,7 @@ static int set_higher_datapth(struct sbuf *sb, struct dpth *dpth)
 		sb->protocol1->datapth.buf))
 	{
 		logp("unable to set datapath: %s\n",
-			sb->protocol1->datapth.buf);
+			iobuf_to_printable(&sb->protocol1->datapth));
 		return -1;
 	}
 	return 0;
@@ -258,7 +258,8 @@ int get_last_good_entry(struct manio *manio, struct iobuf *result,
 			default:
 				if(result->buf)
 					logp("Error after %s in %s()\n",
-						result->buf, __func__);
+						iobuf_to_printable(result),
+						__func__);
 				// Treat error in changed manio as
 				// OK - could have been a short write.
 				iobuf_free_content(&lastpath);
@@ -320,10 +321,13 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	struct cntr *cntr=get_cntr(cconfs);
 	int compression=get_int(cconfs[OPT_COMPRESSION]);
 
-	if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
-	  || !(cmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
-	  || !(umanio=manio_open_phase2(sdirs->unchanged, "rb", protocol)))
-		goto end;
+	if(!(p1manio=manio_open_phase1(sdirs->phase1data,
+		MANIO_MODE_READ, protocol))
+	  || !(cmanio=manio_open_phase2(sdirs->changed,
+		MANIO_MODE_READ, protocol))
+	  || !(umanio=manio_open_phase2(sdirs->unchanged,
+		MANIO_MODE_READ, protocol)))
+			goto end;
 
 	if(!(chb=iobuf_alloc()))
 		return NULL;
@@ -336,7 +340,8 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	man_off_t_free(&pos);
 	if(chb->buf)
 	{
-		logp("  last good entry:    %s\n", chb->buf);
+		logp("  last good entry:    %s\n",
+			iobuf_to_printable(chb));
 		// Now need to go to the appropriate places in p1manio and
 		// unchanged.
 		if(forward_past_entry(p1manio, chb, protocol, &p1pos))
@@ -355,9 +360,15 @@ static man_off_t *do_resume_work(struct sdirs *sdirs,
 	{
 		logp("  nothing previously transferred\n");
 		if(!(p1pos=manio_tell(p1manio)))
+		{
+			logp("Could not get p1pos in %s\n", __func__);
 			goto error;
+		}
 		if(!(pos=manio_tell(umanio)))
+		{
+			logp("Could not get pos in %s\n", __func__);
 			goto error;
+		}
 		if(manio_close_and_truncate(&umanio, pos, compression))
 			goto error;
 	}

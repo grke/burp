@@ -259,6 +259,7 @@ START_TEST(test_client_includes_excludes)
 		"include=/a\n"
 		"include=/a/b/c/d\n"
 		"cross_filesystem=/mnt/x\n"
+		"cross_filesystem=/mnt/y/\n"
 	;
 	struct strlist *s;
 	struct conf **confs=NULL;
@@ -294,6 +295,7 @@ START_TEST(test_client_includes_excludes)
 	assert_strlist(&s, "/a/b/c", 0);
 	assert_strlist(&s, "/a/b/c/d", 0);
 	assert_strlist(&s, "/mnt/x", 0);
+	assert_strlist(&s, "/mnt/y", 0);
 	assert_strlist(&s, NULL, 0);
 	tear_down(NULL, &confs);
 }
@@ -716,7 +718,9 @@ START_TEST(test_clientconfdir_conf)
 		"keep=4\n"
 		"keep=7\n"
 		"working_dir_recovery_method=resume\n"
+		"max_resume_attempts=5\n"
 		"librsync=0\n"
+		"librsync_max_size=10Mb\n"
 		"version_warn=0\n"
 		"path_length_warn=0\n"
 		"syslog=1\n"
@@ -752,7 +756,9 @@ START_TEST(test_clientconfdir_conf)
 	assert_include(&s, NULL);
 	fail_unless(get_e_recovery_method(
 	  cconfs[OPT_WORKING_DIR_RECOVERY_METHOD])==RECOVERY_METHOD_RESUME);
+	fail_unless(get_int(cconfs[OPT_MAX_RESUME_ATTEMPTS])==5);
 	fail_unless(get_int(cconfs[OPT_LIBRSYNC])==0);
+	fail_unless(get_uint64_t(cconfs[OPT_LIBRSYNC_MAX_SIZE])==10485760);
 	fail_unless(get_int(cconfs[OPT_VERSION_WARN])==0);
 	fail_unless(get_int(cconfs[OPT_PATH_LENGTH_WARN])==0);
 	fail_unless(get_int(cconfs[OPT_SYSLOG])==1);

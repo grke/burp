@@ -67,7 +67,8 @@ int rabin_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
 #endif
 	{
 		// This file is no longer available.
-		logw(asfd, cntr, "%s has vanished\n", sb->path.buf);
+		logw(asfd, cntr, "%s has vanished\n",
+			iobuf_to_printable(&sb->path));
 		return 0;
 	}
 	sb->compression=get_int(confs[OPT_COMPRESSION]);
@@ -83,7 +84,8 @@ int rabin_open_file(struct sbuf *sb, struct asfd *asfd, struct cntr *cntr,
 		get_int(confs[OPT_ATIME]), cntr, PROTO_2))
 	{
 		logw(asfd, get_cntr(confs),
-			"Could not open %s\n", sb->path.buf);
+			"Could not open %s\n",
+			iobuf_to_printable(&sb->path));
 		return 0;
 	}
 	return 1;

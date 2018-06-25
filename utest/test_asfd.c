@@ -27,11 +27,13 @@ static void checks(struct asfd *asfd,
 	enum asfd_fdtype fdtype,
 	int attempt_reads)
 {
+	char fulldesc[256];
+	snprintf(fulldesc, sizeof(fulldesc), "%s %d", desc, fd);
 	fail_unless(asfd->streamtype==streamtype);
 	fail_unless(asfd->fd==fd);
 	fail_unless(asfd->port==port);
 	fail_unless(asfd->ssl==ssl);
-	fail_unless(!strcmp(asfd->desc, desc));
+	fail_unless(!strcmp(asfd->desc, fulldesc));
 	fail_unless(asfd->fdtype==fdtype);
 	fail_unless(asfd->attempt_reads==attempt_reads);
 }
@@ -152,6 +154,7 @@ END_TEST
 
 START_TEST(test_setup_asfd_ncurses_stdin)
 {
+#ifdef HAVE_NCURSES
 	struct async *as;
 	struct asfd *asfd;
 	as=setup();
@@ -159,6 +162,7 @@ START_TEST(test_setup_asfd_ncurses_stdin)
 	checks(asfd, ASFD_STREAM_NCURSES_STDIN, fileno(stdin), /*port*/-1,
 		/*ssl*/NULL, "stdin", ASFD_FD_UNSET, /*attempt_read*/1);
 	tear_down(&as);
+#endif
 }
 END_TEST
 
@@ -194,8 +198,8 @@ Suite *suite_asfd(void)
 	tcase_add_test(tc_core, test_setup_asfd_linebuf_write);
 	tcase_add_test(tc_core, test_setup_asfd_stdin);
 	tcase_add_test(tc_core, test_setup_asfd_stdout);
-	tcase_add_test(tc_core, test_setup_asfd_ncurses_stdin);
 	tcase_add_test(tc_core, test_setup_asfd_twice);
+	tcase_add_test(tc_core, test_setup_asfd_ncurses_stdin);
 	suite_add_tcase(s, tc_core);
 
 	return s;

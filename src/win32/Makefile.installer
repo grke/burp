@@ -7,9 +7,11 @@ include ../Makefile.inc
 ifeq ($(WIN64),yes)
   SSL_DLL := libssl-1_1-x64.dll
   CRYPTO_DLL := libcrypto-1_1-x64.dll
+  LIBGCC_DLL := libgcc_s_seh-1.dll
 else
   SSL_DLL := libssl-1_1.dll
   CRYPTO_DLL := libcrypto-1_1.dll
+  LIBGCC_DLL := libgcc_s_sjlj-1.dll
 endif
 
 DEFINES := \
@@ -22,6 +24,7 @@ DEFINES := \
 	-DBITS=$(BITS) \
 	-DSSL_DLL=$(SSL_DLL) \
 	-DCRYPTO_DLL=$(CRYPTO_DLL) \
+	-DLIBGCC_DLL=$(LIBGCC_DLL) \
 
 INSTALL_EXE := $(BUILDDIR)/release$(BITS)/$(PACKAGE_TARNAME)-win$(BITS)-installer-$(PACKAGE_VERSION).exe
 
@@ -42,7 +45,7 @@ DEPKGS_BINARIES := \
 	openssl.exe
 
 MINGW_LIBS := \
-	libgcc_s_sjlj-1.dll
+	$(LIBGCC_DLL)
 
 DOC_FILES :=
 

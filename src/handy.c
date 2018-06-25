@@ -477,6 +477,8 @@ int receive_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 	bfile_init(bfd, 0, cntr);
 #ifdef HAVE_WIN32
 	bfd->set_win32_api(bfd, 0);
+#else
+	bfd->set_vss_strip(bfd, 0);
 #endif
 	if(bfd->open(bfd, asfd, path,
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,

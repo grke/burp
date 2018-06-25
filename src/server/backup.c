@@ -176,9 +176,6 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 			goto error;
 
 		set_cntr_bno(cntr, sdirs);
-
-		if(append_to_resume_file(sdirs->working))
-			goto error;
 	}
 	else
 	{

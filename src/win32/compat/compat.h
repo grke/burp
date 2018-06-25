@@ -373,7 +373,7 @@ void openlog(const char *ident, int option, int facility);
 	#define ffs __builtin_ffs
 #endif
 
-int win32_utime(const char *fname, struct utimbuf *times);
+int win32_utime(const char *fname, struct stat *statp);
 
 int win32_ftruncate(int fd, int64_t length);
 

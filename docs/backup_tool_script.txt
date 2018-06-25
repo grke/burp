@@ -1,0 +1,224 @@
+Backup verification script
+--------------------------
+
+backup_tool_script is a script to check backup sanity.
+
+backup_tool_script can verify a given number of backups for each client. It can
+run verify operations in parallel, interleaving different clients in order to
+prevent performance bottlenecks on backend storage.
+
+Some features:
+
+ * Run verify operations, but stop after a given amount of time, leaving the
+   system ready for backup operations.
+ * List clients that have outdated backups. It uses two different methods to
+   list clients in order to detect rogues.
+ * Ensure that the server service is running properly, relaunch it if needed,
+   on a scheduled basis.
+ * Summarise all most recent backups containing warning messages.
+ * Send a warning / error when problems are found, even while operating.
+ * Check disk quotas and send a warning when quotas are exceeded.
+ * Launch vss_strip for each file found in a given directory.
+
+
+Usage
+-----
+
+You will find the script here:
+
+  /usr/local/share/burp/scripts/backup_tool_script
+
+To begin with, modify the script and configure the following variables:
+
+INSTANCE_ID:
+  Some unique string to identify the instance of the script, given
+  that you may run multiple versions with different settings.
+
+MAIL_ALERT_MSG:
+  The warning / error email subject.
+
+SOFT_MAX_EXEC_TIME_PER_VERIFY:
+  Amount of time for each verification process (in seconds), after which a
+  warning message is sent.
+
+HARD_MAX_EXEC_TIME_PER_VERIFY:
+  Amount of time for each verification process (in seconds), after which the
+  process is forcefully stopped.
+
+SOFT_MAX_EXEC_TIME:
+  Amount of global time (in seconds), after which a warning message is sent.
+
+HARD_MAX_EXEC_TIME:
+  Amount of global time (in seconds), after which all verification operations
+  are forcefully stopped.
+
+POSTPONE:
+  If client isn't idle, should we postpone it's verification (YES/NO).
+
+POSTPONE_TIME:
+  Amount of time (in seconds) after which a postponed verification is tried
+  again.
+
+POSTPONE_RETRY:
+  Number of times a postponed verification is retried.
+
+BACKUP_EXECUTABLE:
+  Path to the burp executable.
+
+SERVICE_TYPE:
+  Which service system your are using. Can be set to "initv" or "systemd".
+
+PARALLEL_VERIFY_CONCURRENCY:
+  How many simultaneous verify operations will be launched.
+
+
+Syntax examples
+---------------
+
+The path given to backup_tool_script must be the path that leads to every
+client directory, regardless of protocol 1 or 2 usage (for protocol 2, you'll
+have to dive into dedup group directory).
+
+Check for clients that don't have backups newer than 3 days:
+
+  backup_tool_script -d /path/to/clients/backups/dir -o 3
+
+Launch backup verification for last 7 backups for each client:
+
+  backup_tool_script -d /path/to/clients/backups/dir -v 7
+
+Run with a different client configuration file (default is /etc/burp/burp.conf)
+and check for clients that don't have backups newer than 5 days:
+
+  backup_tool_script -c /etc/burp/burp-client.conf \
+    -d /path/to/clients/backup/dir -o 5
+
+Run vss_strip for all files in /tmp/burp_restore:
+
+  backup_tool_script -s /tmp/burp_restore
+
+Check that the burp service is running:
+
+  backup_tool_script -j burp
+
+Check for warnings in most recent backups:
+
+  backup_tool_script -d /path/to/clients/backups/dir -w
+
+Check for exceeded quotas in most recent backups:
+
+  backup_tool_script -d /path/to/clients/backups/dir -q
+
+Example of full configuration, which checks the service health, checks for
+outdated clients, verifies the most recent 5 backups, checks for warning in the
+most recent backups, and sends a report to an email address specifying a
+trivial instance name:
+
+  backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp \
+    -c /etc/burp/burp.conf -w --destination-mails=backupadmin@example.com \
+    --instance-id=burp_checks
+
+You can check the full syntax simply by running the script without any
+arguments.
+
+
+Client inclusions and exclusions
+--------------------------------
+
+You may want to include / exclude some clients on the checks.
+backup_tool_script uses grep compatible regular expressions to do so.
+Inclusions are evaluated before exclusions.
+
+Example - Include all clients which names begin with "servers", and exclude
+everything else:
+
+  backup_tool_script -i servers.* -e ".*" -d /path/to/clients/backup/dir
+
+Example - Exclude all clients which names begin with customerX:
+
+  /usr/local/share/burp/scripts/backup_tool_script -e customerX.* \
+    -d /path/to/clients/backup/dir
+
+
+Scheduling
+----------
+
+Once you have found the right settings for your usage, you may schedule the
+script by adding a cron entry.
+
+Example - On RHEL / CentOS, add the following line to /etc/crontab in order to
+run the script every day at 10am:
+
+  00 10 * * * root /usr/local/share/burp/scripts/backup_tool_script <args here>
+
+On Ubuntu, you'll need to remove the "root" username on the crontab line.
+
+
+Scheduling considerations
+-------------------------
+
+The tool can detect that a backup is currently running and will postpone
+verifications, but considering that backups may occur nightly depending on your
+configuration, it would make more sense to run verifications out of the backup
+timeframe.
+Be aware that if you run the verifications while performing backups, backup
+numbers may change, so verifications may fail.
+This is especially true when trying to check more backups than the actual
+retention policy.
+
+Example - keeping 7 daily backups with 'keep 7':
+If you launch backup_tool_script with -v 7, if the verification happens while
+backing up, the 7th backup may be deleted after successful creation of the new
+up to date backup, and backup_tool_script will fail verifying the 7th backup it
+listed on script start.
+In order to avoid this, verify the last 6 backups when having 7 rotating
+copies, or simply let backup_tool_script run only when no backups are currently
+running.
+
+
+Client emails
+-------------
+
+You may want to send an email directly whenever no recent backups are found or
+disk quotas exceed.
+In this case, you have to add an email address to the client configuration
+file.
+
+Exmaple in /etc/burp/clientconfdir/test.local:
+
+  include /some/path
+  label = email_address : some@example.com
+
+With this additional information, the script can send an email directly to the
+client address.
+In order to send an alert on exceeded quota, add the '-A' parameter or
+'--client-alert-quotas'.
+In order to send an alert on outdated backups, add the '-a' parameter or
+'--client-alert-outdated'.
+
+Additionally, you may want to customize the messages sent. Please see the
+configuration header in the file in order to customize the emails.
+You may use placeholders for clientname, disk quotas statistics and outdated
+clients.
+
+
+Logs
+----
+
+By default, backup_tool_script logs to:
+
+  /var/log/backup_tool_script.[instance-id].log
+
+If /var/log is not writable, it will log to:
+
+  ${HOME}
+
+
+Customisation and development
+-----------------------------
+
+As of today, the script should work on all linux platforms.
+Some work is needed to make some regular expressions work on *BSD.
+Feel free to fork and help. :)
+
+Orsiris de Jong

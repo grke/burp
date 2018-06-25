@@ -248,10 +248,12 @@ int logw(struct asfd *asfd, struct cntr *cntr, const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf), fmt, ap);
 	if(asfd
 	  && asfd->as
-	  && asfd->as->doing_estimate) printf("\nWARNING: %s", buf);
+	  && asfd->as->doing_estimate)
+		printf("\nWARNING: %s", buf);
 	else
 	{
-		if(asfd) r=asfd->write_str(asfd, CMD_WARNING, buf);
+		if(asfd)
+			r=asfd->write_str(asfd, CMD_WARNING, buf);
 		logp("WARNING: %s", buf);
 	}
 	va_end(ap);
@@ -308,7 +310,7 @@ int log_incexcs_buf(const char *incexc)
 
 void log_recvd(struct iobuf *iobuf, struct cntr *cntr, int print)
 {
-	int newline=0;
+	int l;
 	const char *prefix="unset";
 	switch(iobuf->cmd)
 	{
@@ -316,8 +318,13 @@ void log_recvd(struct iobuf *iobuf, struct cntr *cntr, int print)
 		case CMD_WARNING: prefix="WARNING"; break;
 		default: break;
 	}
-	if(iobuf->buf[iobuf->len]!='\n')
-		newline=1;
-	logp("%s: %s%s", prefix, iobuf->buf, newline?"\n":"");
+	// Strip any trailing newlines.
+	for(l=iobuf->len-1; l>=0; l--)
+	{
+		if(iobuf->buf[l]!='\n')
+			break;
+		iobuf->buf[l]='\0';
+	}
+	logp("%s: %s\n", prefix, iobuf->buf);
 	cntr_add(cntr, iobuf->cmd, print);
 }

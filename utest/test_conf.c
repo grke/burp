@@ -109,6 +109,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_PORT_VERIFY:
 		case OPT_PORT_LIST:
 		case OPT_PORT_DELETE:
+		case OPT_MAX_RESUME_ATTEMPTS:
 			fail_unless(get_int(c[o])==0);
 			break;
 		case OPT_DAEMON:
@@ -198,7 +199,11 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_SOFT_QUOTA:
 		case OPT_MIN_FILE_SIZE:
 		case OPT_MAX_FILE_SIZE:
+		case OPT_LIBRSYNC_MAX_SIZE:
 			fail_unless(get_uint64_t(c[o])==0);
+			break;
+		case OPT_RBLK_MEMORY_MAX:
+			fail_unless(get_uint64_t(c[o])==256*1024*1024);
 			break;
 		case OPT_WORKING_DIR_RECOVERY_METHOD:
 			fail_unless(get_e_recovery_method(c[o])==

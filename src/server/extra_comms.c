@@ -169,7 +169,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 			goto end;
 	}
 
-#ifndef RS_DEFAULT_STRONG_LEN
+#ifdef RS_BLAKE2_SIG_MAGIC
 	if(append_to_feat(&feat, "rshash=blake2:"))
 		goto end;
 #endif
@@ -393,12 +393,12 @@ static int extra_comms_read(struct async *as,
 		}
 		else if(!strncmp_w(rbuf->buf, "rshash=blake2"))
 		{
-#ifdef RS_DEFAULT_STRONG_LEN
-			logp("Client is trying to use librsync hash blake2, but server does not support it.\n");
-			goto end;
-#else
+#ifdef RS_BLAKE2_SIG_MAGIC
 			set_e_rshash(cconfs[OPT_RSHASH], RSHASH_BLAKE2);
 			set_e_rshash(globalcs[OPT_RSHASH], RSHASH_BLAKE2);
+#else
+			logp("Client is trying to use librsync hash blake2, but server does not support it.\n");
+			goto end;
 #endif
 		}
 		else if(!strncmp_w(rbuf->buf, "msg"))

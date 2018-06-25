@@ -9,7 +9,6 @@
 #include "log.h"
 #include "msg.h"
 #include "protocol2/blk.h"
-#include "server/protocol2/rblk.h"
 
 struct sbuf *sbuf_alloc(enum protocol protocol)
 {
@@ -108,7 +107,8 @@ int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp)
 		char *cp;
 		if(!(cp=strchr(sb->attr.buf, ' ')))
 		{
-			logp("Strange attributes: %s\n", sb->attr.buf);
+			logp("Strange attributes: %s\n",
+				iobuf_to_printable(&sb->attr));
 			return -1;
 		}
 		if(send_msg_fzp(fzp, CMD_ATTRIBS,

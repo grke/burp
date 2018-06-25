@@ -62,16 +62,42 @@ static void get_current_day_and_hour_and_unixtime(
 	*h=hour;
 }
 
+static void strtolower(char *str)
+{
+	char *cp;
+	for(cp=str; *cp; cp++)
+		*cp=tolower(*cp);
+}
+
 static int check_timebands(const char *day_now, const char *hour_now,
 	struct strlist *timebands)
 {
+	char *lower_tb=NULL;
 	int in_timeband=0;
 	struct strlist *t;
+	char *lower_day_now=NULL;
+	char *lower_hour_now=NULL;
+
+	if(!(lower_day_now=strdup_w(day_now, __func__))
+	  || !(lower_hour_now=strdup_w(hour_now, __func__)))
+	{
+		free_w(&lower_day_now);
+		free_w(&lower_hour_now);
+		return -1;
+	}
+	strtolower(lower_day_now);
+	strtolower(lower_hour_now);
+
 	for(t=timebands; t; t=t->next)
 	{
-		if(!strcasecmp(t->path, "always")
-		  || (strcasestr(t->path, day_now)
-		    && strcasestr(t->path, hour_now)))
+		free_w(&lower_tb);
+		if(!(lower_tb=strdup_w(t->path, __func__)))
+			return -1;
+		strtolower(lower_tb);
+
+		if(!strcmp(lower_tb, "always")
+		  || (strstr(lower_tb, lower_day_now)
+		    && strstr(lower_tb, lower_hour_now)))
 		{
 			logp("In timeband: %s\n", t->path);
 			in_timeband=1;
@@ -79,6 +105,8 @@ static int check_timebands(const char *day_now, const char *hour_now,
 		else
 			logp("Out of timeband: %s\n", t->path);
 	}
+	free_w(&lower_tb);
+
 	return in_timeband;
 }
 
@@ -178,10 +206,13 @@ int run_timer_internal(
 			goto end;
 	}
 
-	if(!check_timebands(day_now, hour_now, timebands))
+	switch(check_timebands(day_now, hour_now, timebands))
 	{
-		ret=1;
-		goto end;
+		case 0:
+			ret=1;
+			goto end;
+		case -1: // Error;
+			goto end;
 	}
 
 	if(is_dir_stat(sdirs->current)<=0)

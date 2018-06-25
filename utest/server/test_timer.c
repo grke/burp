@@ -269,6 +269,8 @@ static void run_test(struct data *d)
 	cleanup();
 
 	fail_unless(strptime(d->time_now, DEFAULT_TIMESTAMP_FORMAT, &tm)!=NULL);
+	// Unset dst so that mktime has to figure it out.
+	tm.tm_isdst=-1;
 	time_now=mktime(&tm);
 	strftime(day_now, sizeof(day_now), "%a", &tm);
 	strftime(hour_now, sizeof(hour_now), "%H", &tm);

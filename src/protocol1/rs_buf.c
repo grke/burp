@@ -434,8 +434,10 @@ rs_magic_number rshash_to_magic_number(enum rshash r)
 {
 	switch(r)
 	{
-		case RSHASH_BLAKE2: return RS_BLAKE2_SIG_MAGIC;
-		default: return RS_MD4_SIG_MAGIC;
+		case RSHASH_BLAKE2:
+			return RS_BLAKE2_SIG_MAGIC;
+		default:
+			return RS_MD4_SIG_MAGIC;
 	}
 }
 #endif

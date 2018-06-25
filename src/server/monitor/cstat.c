@@ -332,7 +332,7 @@ int reload_from_clientdir(struct cstat **clist)
 // FIX THIS: should probably not load everything each time.
 //		if(bu_get_current(sdirs, &c->bu))
 //			goto error;
-		if(bu_get_list_with_working(sdirs, &c->bu, c))
+		if(bu_get_list_with_working(sdirs, &c->bu))
 			goto error;
 		reloaded++;
 	}
@@ -362,7 +362,7 @@ int cstat_set_backup_list(struct cstat *cstat)
 
 	if(!cstat->permitted) return 0;
 
-	if(bu_get_list_with_working((struct sdirs *)cstat->sdirs, &bu, cstat))
+	if(bu_get_list_with_working((struct sdirs *)cstat->sdirs, &bu))
 	{
 		//logp("error when looking up current backups\n");
 		return 0;

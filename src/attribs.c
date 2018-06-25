@@ -278,10 +278,7 @@ int attribs_set_file_times(struct asfd *asfd,
 
 	// The mingw64 utime() appears not to work on read-only files.
 	// Use the utime() from bacula instead.
-	struct utimbuf ut;
-	ut.actime=statp->st_atime;
-	ut.modtime=statp->st_mtime;
-	e=win32_utime(path, &ut);
+	e=win32_utime(path, statp);
 #elif HAVE_LUTIMES
 	struct timeval t[2];
 	t[0].tv_sec = statp->st_atime;

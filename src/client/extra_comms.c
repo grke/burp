@@ -234,7 +234,6 @@ int extra_comms_client(struct async *as, struct conf **confs,
 			goto end;
 	}
 
-#ifdef RS_BLAKE2_SIG_MAGIC
 	if(server_supports(feat, ":rshash=blake2:"))
 	{
 		set_e_rshash(confs[OPT_RSHASH], RSHASH_BLAKE2);
@@ -243,7 +242,6 @@ int extra_comms_client(struct async *as, struct conf **confs,
 			goto end;
 	}
 	else
-#endif
 		set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")

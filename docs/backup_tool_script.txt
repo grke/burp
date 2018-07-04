@@ -1,11 +1,11 @@
 Backup verification script
 --------------------------
 
-backup_tool_script is a script to check backup sanity.
+backup_tool_script is a script to check backup sanity on the server.
 
 backup_tool_script can verify a given number of backups for each client. It can
-run verify operations in parallel, interleaving different clients in order to
-prevent performance bottlenecks on backend storage.
+run verify operations in parallel, interleaving different client backups in
+order to prevent performance bottlenecks on backend storage.
 
 Some features:
 
@@ -27,6 +27,12 @@ Usage
 You will find the script here:
 
   /usr/local/share/burp/scripts/backup_tool_script
+
+Even though it is installed on both client(s) and server, it is intended
+for use by a system administrator on the host running the burp server, as it
+needs access to the backup storage backend, the server process and its
+configuration files. In a standard installation, it needs elevated (root)
+privileges (e.g. sudo backup_tool_script ...).
 
 To begin with, modify the script and configure the following variables:
 

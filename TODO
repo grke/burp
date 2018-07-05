@@ -19,3 +19,15 @@ roughly in order of most important to least.
 * Make Windows EFS work.
 
 * Make Windows 'image' backups work.
+
+
+List of things that are not recorded as issues on GitHub:
+
+* Add diff with next backup, i.e.
+    burp -a d
+        Report  the  differences  between  the  current backup and the backup
+        that will be made next.
+    burp -a d -b 2 -b n
+        Report  the  differences between backup 1 and the backup that will be
+        made next (use -a D for more verbosity).
+

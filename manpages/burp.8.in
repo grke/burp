@@ -186,17 +186,8 @@ Long list the top level directory of backup 1.
 \fB@name@ \-a L \-b 1 \-d '/home/graham'\fR
 Long list the /home/graham directory of backup 1. These '\-d' versions of the list function provide the ability to 'browse' backups.
 .TP
-\fB@name@ \-a d\fR
-Report the differences between the current backup and the backup that will be made next. DIFF OPTIONS NOT FULLY IMPLEMENTED YET.
-.TP
-\fB@name@ \-a D\fR
-A more verbose report of the differences between the current backup and the backup that will be made next.
-.TP
 \fB@name@ \-a d \-b 1 \-b 2\fR
 Report the differences between backups 1 and 2 (use \-a D for more verbosity).
-.TP
-\fB@name@ \-a d \-b 2 \-b n\fR
-Report the differences between backup 1 and the backup that will be made next (use \-a D for more verbosity).
 .TP
 \fB@name@ \-C altclient \-a L\fR
 Long list the top level directory of backup 1 on client 'altclient'.

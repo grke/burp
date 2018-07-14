@@ -1226,6 +1226,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 error:
 	ret=-1;
+	if(p1b)
+		logp("  last tried file:    %s\n",
+			iobuf_to_printable(&p1b->path));
 end:
 	if(manio_close(&chmanio))
 	{

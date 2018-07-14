@@ -1015,6 +1015,12 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 
 	ret=0;
 end:
+	if(ret)
+	{
+		if(slist && slist->head)
+			logp("  last tried file: %s\n",
+				iobuf_to_printable(&slist->head->path));
+	}
 	logp("End backup\n");
 	sbuf_free(&csb);
 	slist_free(&slist);

@@ -6,7 +6,7 @@ AUTHOR="(C) 2017-2018 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=yes
 
-## backup_tool_script - A script to check @name@ backup sanity
+## backup_tool_script - A script to check @name@ backup sanity on the server
 
 ## backup_tool_script can verify a given number of backups for each client. It can run verifiy operations in parallel.
 ## Verify operations are timed in order to stop them after a given amount of time, leaving the system performance ready for backup operations.

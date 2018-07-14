@@ -138,6 +138,9 @@ Log file for status monitor - useful for debugging.
 \fB@name@ \-a b\fR
 Runs a backup.
 .TP
+\fB@name@ \-a t\fR
+Timed backup. The same as '@name@ \-a b', except that a script is run on the server before deciding to go ahead. The intention is that this command will be run on a repeating cron job with a short interval, and that the server will decide when it is time for a new backup.
+.TP
 \fB@name@ \-a l\fR
 Lists the available backups and dates.
 .TP
@@ -156,6 +159,18 @@ Lists all the files in backup number 1 that match the regular expression 'myrege
 \fB@name@ \-a L \-b 1 \-r myregex\fR
 Long lists all the files in backup number 1 that match the regular expression 'myregex'. This is like doing an 'ls \-l'.
 .TP
+\fB@name@ \-a L \-b 1 \-d ''\fR
+Long list the top level directory of backup 1.
+.TP
+\fB@name@ \-a L \-b 1 \-d '/home/graham'\fR
+Long list the /home/graham directory of backup 1. These '\-d' versions of the list function provide the ability to 'browse' backups.
+.TP
+\fB@name@ \-C altclient \-a L\fR
+Long list the top level directory of backup 1 of client 'altclient'.
+.TP
+\fB@name@ \-a r\fR
+Restores all the files in the most recent backup to their original location.
+.TP
 \fB@name@ \-a r \-b 1 \-r myregex\fR
 Restores all the files in backup number 1 that match the regular expression 'myregex' back to their original location.
 .TP
@@ -165,8 +180,8 @@ Restores all the files in backup number 1 that match the regular expression 'myr
 \fB@name@ \-a r \-b 1 \-r myregex \-d /tmp/restoredir \-s 2\fR
 Restores all the files in backup number 1 that match the regular expression 'myregex' into the directory /tmp/restoredir and strip 2 leading path components.
 .TP
-\fB@name@ \-a r\fR
-Restores all the files in the most recent backup to their original location.
+\fB@name@ \-C altclient \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
+Restores all the files in backup number 1 of client 'altclient' that match the regular expression 'myregex' into the directory /tmp/restoredir.
 .TP
 \fB@name@ \-a v\fR
 Verifies the most recent backup.
@@ -177,32 +192,8 @@ Verifies everything in backup number 1 that matches the regular expression 'myre
 \fB@name@ \-a delete \-b 1\fR
 Deletes backup number 1. Note that @name@ will not delete backup directories that other backup directories depend upon.
 .TP
-\fB@name@ \-a t\fR
-Timed backup. The same as '@name@ \-a b', except that a script is run on the server before deciding to go ahead. The intention is that this command will be run on a repeating cron job with a short interval, and that the server will decide when it is time for a new backup.
-.TP
-\fB@name@ \-a L \-b 1 \-d ''\fR
-Long list the top level directory of backup 1.
-.TP
-\fB@name@ \-a L \-b 1 \-d '/home/graham'\fR
-Long list the /home/graham directory of backup 1. These '\-d' versions of the list function provide the ability to 'browse' backups.
-.TP
-\fB@name@ \-a d\fR
-Report the differences between the current backup and the backup that will be made next. DIFF OPTIONS NOT FULLY IMPLEMENTED YET.
-.TP
-\fB@name@ \-a D\fR
-A more verbose report of the differences between the current backup and the backup that will be made next.
-.TP
 \fB@name@ \-a d \-b 1 \-b 2\fR
 Report the differences between backups 1 and 2 (use \-a D for more verbosity).
-.TP
-\fB@name@ \-a d \-b 2 \-b n\fR
-Report the differences between backup 1 and the backup that will be made next (use \-a D for more verbosity).
-.TP
-\fB@name@ \-C altclient \-a L\fR
-Long list the top level directory of backup 1 on client 'altclient'.
-.TP
-\fB@name@ \-C altclient \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
-Restores all the files in backup number 1 from client 'altclient' that match the regular expression 'myregex' into the directory /tmp/restoredir.
 .TP
 \fB@name@ \-a s\fR
 Run the ncurses status monitor.
@@ -210,7 +201,7 @@ Run the ncurses status monitor.
 \fB@name@ \-a S\fR
 Print a status monitor snapshot, summarising all clients.
 .TP
-\fB@name@ \-a S \-C testclient\fR
+\fB@name@ \-C testclient \-a S\fR
 Print a status monitor snapshot, showing client 'testclient' only.
 
 .SH SERVER CONFIGURATION FILE OPTIONS

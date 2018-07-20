@@ -68,6 +68,9 @@
 /* Define to 1 if you have `alloca', as a function or macro. */
 #define HAVE_ALLOCA 1
 
+/* Define to 1 if librsync supports RS_BLAKE2_SIG_MAGIC */
+#define HAVE_BLAKE2 1
+
 /* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
    */
 #define HAVE_DIRENT_H 1

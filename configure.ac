@@ -279,6 +279,31 @@ AC_CHECK_HEADERS([librsync.h],
 AC_SUBST([RSYNC_LIBS])
 
 
+dnl --------------------------------------------------------------------------
+dnl Check whether librsync has RS_BLAKE2_SIG_MAGIC
+dnl --------------------------------------------------------------------------
+
+AC_MSG_CHECKING([whether librsync has RS_BLAKE2_SIG_MAGIC])
+AC_COMPILE_IFELSE(
+  [AC_LANG_PROGRAM(
+    [[
+      #include <librsync.h>
+    ]],
+    [[
+      int x=RS_BLAKE2_SIG_MAGIC;
+      return x;
+    ]]
+  )],
+  [
+    enable_blake2=yes
+    AC_MSG_RESULT([yes])
+    AC_DEFINE([HAVE_BLAKE2], [1], [Define to 1 if librsync supports RS_BLAKE2_SIG_MAGIC])
+  ],
+  [
+    AC_MSG_RESULT([no])
+  ]
+)
+
 dnl -----------------------------------------------------------
 dnl Check whether libncurses is available
 dnl -----------------------------------------------------------

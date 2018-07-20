@@ -169,7 +169,7 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 			goto end;
 	}
 
-#ifdef RS_BLAKE2_SIG_MAGIC
+#ifdef HAVE_BLAKE2
 	if(append_to_feat(&feat, "rshash=blake2:"))
 		goto end;
 #endif
@@ -393,7 +393,7 @@ static int extra_comms_read(struct async *as,
 		}
 		else if(!strncmp_w(rbuf->buf, "rshash=blake2"))
 		{
-#ifdef RS_BLAKE2_SIG_MAGIC
+#ifdef HAVE_BLAKE2
 			set_e_rshash(cconfs[OPT_RSHASH], RSHASH_BLAKE2);
 			set_e_rshash(globalcs[OPT_RSHASH], RSHASH_BLAKE2);
 #else

@@ -64,7 +64,7 @@ keep = 4
 keep = 12
 
 This guarantees to keep 7 backups in a row, plus 4 on multiples of 7, plus
-12 on multiples of 4*12.
+12 on multiples of 4*7.
 
 
 At the end of a successful backup, burp takes the 'keep' settings and the list

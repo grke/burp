@@ -25,13 +25,23 @@ static int log_script_output(struct asfd *asfd, struct fzp **fzp,
 			// logm and low will also log to stdout.
 			if(is_stderr) logw(asfd, confs?get_cntr(confs):NULL,
 				"%s", buf);
-			else logm(asfd, confs, "%s", buf);
+			else
+				logm(asfd, confs, "%s", buf);
 		}
 		else
 		{
-			// logc does not print a prefix
-			if(do_logp) logp("%s", buf);
-			else logc("%s", buf);
+			if(do_logp)
+			{
+				if(is_stderr)
+					logp("WARNING: %s", buf);
+				else
+					logp("MESSAGE: %s", buf);
+			}
+			else
+			{
+				// logc does not print a prefix
+				logc("%s", buf);
+			}
 		}
 	}
 	if(fzp_eof(*fzp)) fzp_close(fzp);

@@ -182,9 +182,11 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 			args[a++]="reserved5";
 		}
 		args[a++]=NULL;
+		// At this point, the server may have closed the connection,
+		// so cannot log remotely.
 		if(run_script(asfd,
 			args, get_strlist(confs[OPT_B_SCRIPT_POST_ARG]),
-			confs, 1, 1, 1))
+			confs, 1, 1, /*log_remote*/ 0))
 				ret=CLIENT_ERROR;
 	}
 
@@ -386,7 +388,7 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 		args[a++]=NULL;
 		if(run_script(asfd,
 			args, get_strlist(confs[OPT_R_SCRIPT_POST_ARG]),
-			confs, 1, 1, 1))
+			confs, 1, 1, /*log_remote*/ 0))
 				ret=CLIENT_ERROR;
 	}
 

@@ -1,3 +1,14 @@
+2018-08-01 Changes in burp-2.2.8:
+  * Do not try to log remotely with client side post_scripts.
+  * 693: Fix RS_BLAKE2_SIG_MAGIC detection.
+  * 734: Fix typo in retention doc.
+  * 728: On error in protocol2, print the last tried file.
+  * 731: Minor documentation update from Iznohak:
+    - Remove references to yajl.
+    - Clarify usage of backup_tool_script on the burp server.
+    - Remove unimplemented diff options.
+    - Reorder man page examples and group them by action.
+
 2018-06-22 Changes in burp-2.2.6:
   * 726: Fix 'burp -t' missing fields.
   * 720: Bug fix for falling back to server name when ssl_peer_cn

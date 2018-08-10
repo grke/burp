@@ -8,7 +8,7 @@
 #define ARR_LEN(array) (sizeof((array))/sizeof((array)[0]))
 #define FOREACH(array) for(unsigned int i=0; i<ARR_LEN(array); i++)
 
-#define MIN_SERVER_CONF_NO_PORTS		\
+#define MIN_SERVER_CONF_NO_LISTEN		\
 	"mode=server\n"				\
 	"lockfile=/lockfile/path\n"		\
 	"ssl_cert=/ssl/cert/path\n"		\
@@ -20,9 +20,9 @@
 	"keep=10\n"				\
 
 #define MIN_SERVER_CONF				\
-	MIN_SERVER_CONF_NO_PORTS		\
-	"port=1234\n"				\
-	"status_port=12345\n"			\
+	MIN_SERVER_CONF_NO_LISTEN		\
+	"listen=0.0.0.0:1234\n"			\
+	"listen_status=0.0.0.0:12345\n"		\
 
 #define MIN_CLIENT_CONF_NO_PORTS		\
 	"mode=client\n"				\

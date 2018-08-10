@@ -465,15 +465,15 @@ maybe_add_protocol2_on()
 		append_client 'protocol = 2'
 }
 
-add_server_status_address_off()
+add_server_listen_status_off()
 {
-	sed_rep_server '/^status_address = .*/d' "$serverconf"
+	sed_rep_server '/^listen_status = .*/d' "$serverconf"
 }
 
-add_server_status_address_on()
+add_server_listen_status_on()
 {
-	add_server_status_address_off
-	append_server "status_address = 127.0.0.1"
+	add_server_listen_status_off
+	append_server "listen_status = 127.0.0.1:4999"
 }
 
 add_server_breakpoint_off()
@@ -555,8 +555,7 @@ pre_tweaks_server()
 {
 	start_script_server
 	sed_rep_server 's#= /#= '"$target"'/#g'
-	sed_rep_server 's/port = 4971/port = 4998/g'
-	sed_rep_server 's/port = 4972/port = 4999/g'
+	sed_rep_server 's/listen = 0.0.0.0:4971/listen = 0.0.0.0:4998/g'
 	sed_rep_server 's#^CA_DIR.*#CA_DIR = '"$target"'/etc/burp/CA#g' "$target/etc/burp/CA.cnf"
 	sed_rep_server 's/^stdout = .*/stdout = 1/g'
 	sed_rep_server 's/^syslog = .*/syslog = 0/g'
@@ -656,7 +655,7 @@ add_normal_settings()
 	add_server_breakpoint_off
 	add_client_breakpoint_off
 	add_recovery_method_resume
-	add_server_status_address_on
+	add_server_listen_status_on
 
 	# Windows options
 	if [ -n "$SPLIT_VSS" ] ; then

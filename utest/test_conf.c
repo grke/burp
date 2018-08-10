@@ -14,8 +14,6 @@ static void check_default(struct conf **c, enum conf_opt o)
 			break;
 		case OPT_LOCKFILE:
 		case OPT_PIDFILE:
-		case OPT_ADDRESS:
-		case OPT_STATUS_ADDRESS:
 		case OPT_SSL_CERT_CA:
 		case OPT_SSL_CERT:
 		case OPT_SSL_KEY:
@@ -188,6 +186,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_LABEL:
 		case OPT_PORT:
 		case OPT_STATUS_PORT:
+		case OPT_LISTEN:
+		case OPT_LISTEN_STATUS:
 		case OPT_MAX_CHILDREN:
 		case OPT_MAX_STATUS_CHILDREN:
 			fail_unless(get_strlist(c[o])==NULL);

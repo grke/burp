@@ -541,12 +541,11 @@ static char *get_asfd_desc(const char *desc, int fd)
 }
 
 static int asfd_init(struct asfd *asfd, const char *desc,
-	struct async *as, int afd, int port,
+	struct async *as, int afd, const char *listen,
 	SSL *assl, enum asfd_streamtype streamtype)
 {
 	asfd->as=as;
 	asfd->fd=afd;
-	asfd->port=port;
 	asfd->ssl=assl;
 	asfd->streamtype=streamtype;
 	asfd->rlsleeptime=10000;
@@ -608,7 +607,8 @@ static int asfd_init(struct asfd *asfd, const char *desc,
 	if(!(asfd->rbuf=iobuf_alloc())
 	  || asfd_alloc_buf(asfd, &asfd->readbuf)
 	  || asfd_alloc_buf(asfd, &asfd->writebuf)
-	  || !(asfd->desc=get_asfd_desc(desc, asfd->fd)))
+	  || !(asfd->desc=get_asfd_desc(desc, asfd->fd))
+	  || !(asfd->listen=strdup_w(listen, __func__)))
 		return -1;
 	return 0;
 }
@@ -655,6 +655,7 @@ static void asfd_free_content(struct asfd *asfd)
 	free_w(&asfd->writebuf);
 	free_w(&asfd->desc);
 	free_w(&asfd->client);
+	free_w(&asfd->listen);
 	incoming_free(&asfd->in);
 	blist_free(&asfd->blist);
 }
@@ -667,7 +668,7 @@ void asfd_free(struct asfd **asfd)
 }
 
 static struct asfd *do_setup_asfd(struct async *as,
-	const char *desc, int *fd, int port,
+	const char *desc, int *fd, const char *listen,
 	SSL *ssl, enum asfd_streamtype streamtype)
 {
 	struct asfd *asfd=NULL;
@@ -680,7 +681,7 @@ static struct asfd *do_setup_asfd(struct async *as,
 
 	set_non_blocking(*fd);
 	if(!(asfd=asfd_alloc())
-	  || asfd_init(asfd, desc, as, *fd, port, ssl, streamtype))
+	  || asfd_init(asfd, desc, as, *fd, listen, ssl, streamtype))
 		goto error;
 	*fd=-1;
 	as->asfd_add(as, asfd);
@@ -693,21 +694,21 @@ error:
 struct asfd *setup_asfd_ssl(struct async *as,
 	const char *desc, int *fd, SSL *ssl)
 {
-	return do_setup_asfd(as, desc, fd, /*port*/-1,
+	return do_setup_asfd(as, desc, fd, /*listen*/"",
 		ssl, ASFD_STREAM_STANDARD);
 }
 
 struct asfd *setup_asfd(struct async *as,
-	const char *desc, int *fd, int port)
+	const char *desc, int *fd, const char *listen)
 {
-	return do_setup_asfd(as, desc, fd, port,
+	return do_setup_asfd(as, desc, fd, listen,
 		/*ssl*/NULL, ASFD_STREAM_STANDARD);
 }
 
 static struct asfd *setup_asfd_linebuf(struct async *as,
 	const char *desc, int *fd)
 {
-	return do_setup_asfd(as, desc, fd, -1,
+	return do_setup_asfd(as, desc, fd, /*listen*/"",
 		/*ssl*/NULL, ASFD_STREAM_LINEBUF);
 }
 
@@ -753,7 +754,7 @@ struct asfd *setup_asfd_ncurses_stdin(struct async *as)
 	int fd=fileno(stdin);
 	if(fd<0)
 		return fileno_error(__func__);
-	return do_setup_asfd(as, "stdin", &fd, -1,
+	return do_setup_asfd(as, "stdin", &fd, /*listen*/"",
 		/*ssl=*/NULL, ASFD_STREAM_NCURSES_STDIN);
 }
 

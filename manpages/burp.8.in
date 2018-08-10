@@ -213,17 +213,11 @@ Read additional configuration files.
 \fBmode=server\fR
 Required to run in server mode.
 .TP
-\fBaddress=[address]\fR
-Defines the main TCP address that the server listens on. The default is either '::' or '0.0.0.0', dependent upon compile time options.
+\fBlisten=[address]:[port]\fR
+Defines the main TCP address and port that the server listens on. The default is either '::' or '0.0.0.0', dependent upon compile time options. Specify multiple 'listen' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_children' value.
 .TP
-\fBport=[port number]\fR
-Defines the main TCP port that the server listens on. Specify multiple 'port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_children' value.
-.TP
-\fBstatus_address=[address|localhost]\fR
-Defines the main TCP address that the server listens on for status requests. The default is special value 'localhost' that includes both '::1' (if available) and '127.0.0.1' (always).
-.TP
-\fBstatus_port=[port number]\fR
-Defines the TCP port that the server listens on for status requests. Comment this out to have no status server. Specify multiple 'status_port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_status_children' value.
+\fBlisten_status=[address]:[port]\fR
+Defines the main TCP address and port that the server listens on for status requests. Specify multiple 'listen_status' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_status_children' value. Comment out to have no status server.
 .TP
 \fBcname_lowercase=[0|1]\fR
 Whether to force lowercase cname when looking-up in clientconfdir. This also affects the fqdn lookup on the client (see client configuration options for details). The default is 0. When set to 1 the name provided by the client while authenticating will be lowercased.
@@ -378,10 +372,10 @@ Choose the level of zlib compression over SSL. Setting 0 or zlib0 turns SSL comp
 Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-dsaparam \-out dhfile.pem 2048
 .TP
 \fBmax_children=[number]\fR
-Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5. Specify multiple 'max_children' entries on separate lines if you have configured multiple port entries.
+Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5. Specify multiple 'max_children' entries on separate lines if you have configured multiple 'listen' entries.
 .TP
 \fBmax_status_children=[number]\fR
-Defines the number of status child processes to fork (the number of status clients that can simultaneously connect. The default is 5. Specify multiple 'max_status_children' entries on separate lines if you have configured multiple status_port entries.
+Defines the number of status child processes to fork (the number of status clients that can simultaneously connect. The default is 5. Specify multiple 'max_status_children' entries on separate lines if you have configured multiple 'listen_status' entries.
 .TP
 \fBmax_storage_subdirs=[number]\fR
 Defines the number of subdirectories in the data storage areas. The maximum number of subdirectories that ext3 allows is 32000. If you do not set this option, it defaults to 30000.

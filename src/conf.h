@@ -102,10 +102,8 @@ enum conf_opt
 	OPT_CNAME_FQDN, // use fqdn cname, client or server option
 
 	// Server options.
-	OPT_ADDRESS,
-	OPT_PORT,
-	OPT_STATUS_ADDRESS,
-	OPT_STATUS_PORT,
+	OPT_LISTEN,
+	OPT_LISTEN_STATUS,
 	OPT_DIRECTORY,
 	OPT_TIMESTAMP_FORMAT,
 	OPT_CLIENTCONFDIR,
@@ -134,6 +132,8 @@ enum conf_opt
 
 	// Client options.
 	OPT_CNAME, // set on the server when client connects
+	OPT_PORT,
+	OPT_STATUS_PORT,
 	OPT_PORT_BACKUP,
 	OPT_PORT_RESTORE,
 	OPT_PORT_VERIFY,

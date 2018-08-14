@@ -16,9 +16,6 @@
 #include "main.h"
 #include "monitor/status_server.h"
 
-// FIX THIS: Should be able to configure multiple addresses and ports.
-#define LISTEN_SOCKETS	32
-
 static int hupreload=0;
 static int hupreload_logged=0;
 static int gentleshutdown=0;
@@ -78,7 +75,7 @@ static void *get_in_addr(struct sockaddr *sa)
 }
 
 static void log_listen_socket(const char *desc,
-	struct addrinfo *rp, struct strlist *port)
+	struct addrinfo *rp, const char *port, int max_children)
 {
 #ifdef HAVE_IPV6
 	char addr[INET6_ADDRSTRLEN]="";
@@ -88,18 +85,29 @@ static void log_listen_socket(const char *desc,
 	inet_ntop(rp->ai_family, get_in_addr((struct sockaddr *)rp->ai_addr),
 		addr, sizeof(addr));
 	logp("%s %s:%s (max %d)\n",
-		desc, addr, port->path, (int)port->flag);
+		desc, addr, port, max_children);
 }
 
-static int init_listen_socket(const char *address, struct strlist *port,
+static int init_listen_socket(struct strlist *address,
 	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
 {
-	int i;
 	int fd=-1;
 	int gai_ret;
 	struct addrinfo hints;
-	struct addrinfo *rp=NULL;
 	struct addrinfo *info=NULL;
+	struct asfd *newfd=NULL;
+	char *a=NULL;
+	char *port=NULL;
+
+	if(!(a=strdup_w(address->path, __func__)))
+		goto error;
+	if(!(port=strrchr(a, ':')))
+	{
+		logp("Could not parse '%s'\n", address->path);
+		goto error;
+	}
+	*port='\0';
+	port++;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family=AF_UNSPEC;
@@ -108,97 +116,73 @@ static int init_listen_socket(const char *address, struct strlist *port,
 	hints.ai_flags=AI_NUMERICHOST;
 	hints.ai_flags|=AI_PASSIVE;
 
-	if((gai_ret=getaddrinfo(address, port->path, &hints, &info)))
+	if((gai_ret=getaddrinfo(a, port, &hints, &info)))
 	{
-		logp("unable to getaddrinfo on port %s: %s\n",
-			port->path, gai_strerror(gai_ret));
-		return -1;
+		logp("unable to getaddrinfo on %s: %s\n",
+			address->path, gai_strerror(gai_ret));
+		goto error;
 	}
 
-	i=0;
-	for(rp=info; rp && i<LISTEN_SOCKETS; rp=rp->ai_next)
+	// Just try to use the first one in info, it should be good enough.
+	fd=socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+	if(fd<0)
 	{
-                struct asfd *newfd;
-
-		close_fd(&fd);
-
-		fd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if(fd<0)
-		{
-			logp("unable to create socket on port %s: %s\n",
-				port->path, strerror(errno));
-			continue;
-		}
-		set_keepalive(fd, 1);
+		logp("unable to create socket on %s: %s\n",
+			address->path, strerror(errno));
+		goto error;
+	}
+	set_keepalive(fd, 1);
 #ifdef HAVE_IPV6
-		if(rp->ai_family==AF_INET6)
-		{
-			// Attempt to say that it should not listen on IPv6
-			// only.
-			int optval=0;
-			setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
-				&optval, sizeof(optval));
-		}
-#endif
-		reuseaddr(fd);
-		if(bind(fd, rp->ai_addr, rp->ai_addrlen))
-		{
-			logp("unable to bind socket on port %s: %s\n",
-				port->path, strerror(errno));
-			continue;
-		}
-
-		// Say that we are happy to accept connections.
-		if(listen(fd, 5)<0)
-		{
-			logp("could not listen on %s: %s\n",
-				port->path, strerror(errno));
-			continue;
-		}
-		log_listen_socket(desc, rp, port);
-                if(!(newfd=setup_asfd(mainas, desc, &fd, atoi(port->path))))
-			continue;
-                newfd->fdtype=fdtype;
-
-		fd=-1;
-		i++;
-	}
-
-	freeaddrinfo(info);
-
-	if(!i)
+	if(info->ai_family==AF_INET6)
 	{
-		logp("could not listen on address: %s\n", address);
-#ifdef HAVE_IPV6
-		if(strchr(address, ':'))
-			logp("maybe check whether your OS has IPv6 enabled.\n");
+		// Attempt to say that it should not listen on IPv6
+		// only.
+		int optval=0;
+		setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY,
+			&optval, sizeof(optval));
+	}
 #endif
-		return -1;
+	reuseaddr(fd);
+	if(bind(fd, info->ai_addr, info->ai_addrlen))
+	{
+		logp("unable to bind socket on %s: %s\n",
+			address->path, strerror(errno));
+		goto error;
 	}
 
+	// Say that we are happy to accept connections.
+	if(listen(fd, 5)<0)
+	{
+		logp("could not listen on address %s: %s\n",
+			address->path, strerror(errno));
+		goto error;
+	}
+
+	log_listen_socket(desc, info, port, address->flag);
+	if(!(newfd=setup_asfd(mainas, desc, &fd, address->path)))
+		goto end;
+	newfd->fdtype=fdtype;
+
+	goto end;
+error:
+	free_w(&a);
+	if(info)
+		freeaddrinfo(info);
+	return -1;
+end:
+	free_w(&a);
+	if(info)
+		freeaddrinfo(info);
 	return 0;
 }
 
-static int init_listen_sockets(const char *address, struct strlist *ports,
+static int init_listen_sockets(struct strlist *addresses,
 	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
 {
-	struct strlist *p;
-	if(!strcmp(address, "localhost")) {
-		// If we only support "localhost" here, we can skip
-		// gethostbyname call due to RFC 6761.
-#ifdef HAVE_IPV6
-		address="::1";
-		for(p=ports; p; p=p->next)
-			// Ignore errors for IPv6 attempt.
-			init_listen_socket(address, p, mainas, fdtype, desc);
-#endif
-		address="127.0.0.1";
-	}
-	for(p=ports; p; p=p->next)
-	{
-		if(init_listen_socket(address, p, mainas, fdtype, desc))
+	struct strlist *a;
+	for(a=addresses; a; a=a->next)
+		if(init_listen_socket(a, mainas, fdtype, desc))
 			return -1;
-	}
 	return 0;
 }
 
@@ -319,7 +303,7 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	{
 		is_status_server=1;
 		if(!setup_asfd(as, "status server parent socket", &status_rfd,
-			/*port*/-1))
+			/*listen*/""))
 				goto end;
 	}
 
@@ -344,15 +328,15 @@ end:
 	return ret;
 }
 
-static struct strlist *find_port_in_conf(struct conf **confs,
-	enum conf_opt port_opt, int port)
+static struct strlist *find_listen_in_conf(struct conf **confs,
+	enum conf_opt listen_opt, const char *listen)
 {
-	struct strlist *p;
-	for(p=get_strlist(confs[port_opt]); p; p=p->next)
-		if(port==atoi(p->path))
-			return p;
-	logp("Could not find port %d in %s confs\n",
-		port, confs[port_opt]->field);
+	struct strlist *l;
+	for(l=get_strlist(confs[listen_opt]); l; l=l->next)
+		if(!strcmp(listen, l->path))
+			return l;
+	logp("Could not find %s in %s confs\n",
+		listen, confs[listen_opt]->field);
 	return NULL;
 }
 
@@ -360,21 +344,21 @@ static int chld_check_counts(struct conf **confs, struct asfd *asfd)
 {
 	long count=0;
 	struct asfd *a;
-	struct strlist *port;
-	enum conf_opt port_opt;
+	struct strlist *listen;
+	enum conf_opt listen_opt;
 
 	switch(asfd->fdtype)
 	{
 		case ASFD_FD_SERVER_LISTEN_MAIN:
-			port_opt=OPT_PORT;
-			if(!(port=find_port_in_conf(confs,
-				port_opt, asfd->port)))
+			listen_opt=OPT_LISTEN;
+			if(!(listen=find_listen_in_conf(confs,
+				listen_opt, asfd->listen)))
 					return -1;
 			break;
 		case ASFD_FD_SERVER_LISTEN_STATUS:
-			port_opt=OPT_STATUS_PORT;
-			if(!(port=find_port_in_conf(confs,
-				port_opt, asfd->port)))
+			listen_opt=OPT_LISTEN_STATUS;
+			if(!(listen=find_listen_in_conf(confs,
+				listen_opt, asfd->listen)))
 					return -1;
 			break;
 		default:
@@ -385,13 +369,13 @@ static int chld_check_counts(struct conf **confs, struct asfd *asfd)
 
 	for(a=asfd->as->asfd; a; a=a->next)
 		if(a!=asfd
-		  && asfd->port==a->port)
+		  && !strcmp(asfd->listen, a->listen))
 			count++;
 
-	logp("%d/%d child processes running on %s %d\n",
-		(int)count, (int)port->flag,
-		confs[port_opt]->field, asfd->port);
-	if(count<port->flag)
+	logp("%d/%d child processes running on %s %s\n",
+		(int)count, (int)listen->flag,
+		confs[listen_opt]->field, asfd->listen);
+	if(count<listen->flag)
 		logp("Child %d available\n", (int)count+1);
 	else
 	{
@@ -404,12 +388,12 @@ static int chld_check_counts(struct conf **confs, struct asfd *asfd)
 
 static struct asfd *setup_parent_child_pipe(struct async *as,
 	const char *desc,
-	int *fd_to_use, int *fd_to_close, pid_t childpid, int port,
+	int *fd_to_use, int *fd_to_close, pid_t childpid, const char *listen,
 	enum asfd_fdtype fdtype)
 {
 	struct asfd *newfd;
 	close_fd(fd_to_close);
-	if(!(newfd=setup_asfd(as, desc, fd_to_use, port)))
+	if(!(newfd=setup_asfd(as, desc, fd_to_use, listen)))
 		return NULL;
 	newfd->pid=childpid;
 	newfd->fdtype=fdtype;
@@ -424,20 +408,20 @@ static int setup_parent_child_pipes(struct asfd *asfd,
 	switch(asfd->fdtype)
 	{
 		case ASFD_FD_SERVER_LISTEN_MAIN:
-			logp("forked child on port %d: %d\n",
-				asfd->port, childpid);
+			logp("forked child on %s: %d\n",
+				asfd->listen, childpid);
 			if(!(newfd=setup_parent_child_pipe(as,
 				"pipe from child",
-				rfd, wfd, childpid, asfd->port,
+				rfd, wfd, childpid, asfd->listen,
 				ASFD_FD_SERVER_PIPE_READ)))
 					return -1;
 			return 0;
 		case ASFD_FD_SERVER_LISTEN_STATUS:
-			logp("forked status child on port %d: %d\n",
-				asfd->port, childpid);
+			logp("forked status child on %s: %d\n",
+				asfd->listen, childpid);
 			if(!(newfd=setup_parent_child_pipe(as,
 				"pipe to status child",
-				wfd, rfd, childpid, asfd->port,
+				wfd, rfd, childpid, asfd->listen,
 				ASFD_FD_SERVER_PIPE_WRITE)))
 					return -1;
 			newfd->attempt_reads=0;
@@ -717,10 +701,8 @@ static int run_server(struct conf **confs, const char *conffile)
 	int found_normal_child=0;
 	struct asfd *asfd=NULL;
 	struct async *mainas=NULL;
-	struct strlist *ports=get_strlist(confs[OPT_PORT]);
-	const char *address=get_string(confs[OPT_ADDRESS]);
-	struct strlist *status_ports=get_strlist(confs[OPT_STATUS_PORT]);
-	const char *status_address=get_string(confs[OPT_STATUS_ADDRESS]);
+	struct strlist *addresses=get_strlist(confs[OPT_LISTEN]);
+	struct strlist *addresses_status=get_strlist(confs[OPT_LISTEN_STATUS]);
 
 	if(!(ctx=ssl_initialise_ctx(confs)))
 	{
@@ -737,9 +719,9 @@ static int run_server(struct conf **confs, const char *conffile)
 	  || mainas->init(mainas, 0))
 		goto end;
 
-	if(init_listen_sockets(address, ports, mainas,
+	if(init_listen_sockets(addresses, mainas,
 		ASFD_FD_SERVER_LISTEN_MAIN, "server")
-	  || init_listen_sockets(status_address, status_ports, mainas,
+	  || init_listen_sockets(addresses_status, mainas,
 		ASFD_FD_SERVER_LISTEN_STATUS, "server status"))
 			goto end;
 

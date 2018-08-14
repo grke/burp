@@ -45,7 +45,7 @@ struct asfd
 	struct async *as;
 	char *desc;
 	enum asfd_streamtype streamtype;
-	int port;
+	char *listen;
 
 	int network_timeout;
 	int max_network_timeout;
@@ -120,7 +120,7 @@ extern void asfd_close(struct asfd *asfd); // Maybe should be in the struct.
 extern void asfd_free(struct asfd **asfd);
 
 extern struct asfd *setup_asfd(struct async *as,
-	const char *desc, int *fd, int port);
+	const char *desc, int *fd, const char *listen);
 extern struct asfd *setup_asfd_ssl(struct async *as,
 	const char *desc, int *fd, SSL *ssl);
 extern struct asfd *setup_asfd_linebuf_read(struct async *as,

@@ -424,25 +424,9 @@ static void burp_ca_conf_problem(const char *conf_path,
 	conf_problem(conf_path, msg, r);
 }
 
-#ifdef HAVE_IPV6
-// These should work for IPv4 connections too.
-#define DEFAULT_ADDRESS_MAIN	"::"
-#else
-// Fall back to IPv4 address if IPv6 is not compiled in.
-#define DEFAULT_ADDRESS_MAIN	"0.0.0.0"
-#endif
-
-#define DEFAULT_ADDRESS_STATUS	"localhost"
-
 static int server_conf_checks(struct conf **c, const char *path, int *r)
 {
-	if(!get_strlist(c[OPT_PORT]))
-		conf_problem(path, "port unset", r);
-
 	// FIX THIS: Most of this could be done by flags.
-	if(!get_string(c[OPT_ADDRESS])
-	  && set_string(c[OPT_ADDRESS], DEFAULT_ADDRESS_MAIN))
-			return -1;
 	if(!get_string(c[OPT_DIRECTORY]))
 		conf_problem(path, "directory unset", r);
 	if(!get_string(c[OPT_DEDUP_GROUP]))
@@ -456,11 +440,6 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 	if(get_string(c[OPT_ENCRYPTION_PASSWORD]))
 		conf_problem(path,
 		  "encryption_password should not be set on the server!", r);
-	if(!get_string(c[OPT_STATUS_ADDRESS])
-	  && set_string(c[OPT_STATUS_ADDRESS], DEFAULT_ADDRESS_STATUS))
-			return -1;
-	if(!get_strlist(c[OPT_STATUS_PORT])) // carry on if not set.
-		logp("%s: status_port unset", path);
 	if(!get_strlist(c[OPT_KEEP]))
 		conf_problem(path, "keep unset", r);
 	if(get_int(c[OPT_MAX_HARDLINKS])<2)
@@ -713,8 +692,6 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	}
 	if(!get_string(c[OPT_SERVER]))
 		conf_problem(path, "server unset", r);
-	if(!get_strlist(c[OPT_STATUS_PORT])) // carry on if not set.
-		logp("%s: status_port unset\n", path);
 	if(!get_string(c[OPT_SSL_PEER_CN]))
 	{
 		const char *server=get_string(c[OPT_SERVER]);
@@ -980,38 +957,68 @@ static int setup_script_arg_overrides(struct conf *c,
 	  || setup_script_arg_override(c, post_args);
 }
 
-static int finalise_server_ports(struct conf **c,
-	enum conf_opt port_opt, enum conf_opt max_children_opt)
+static int listen_config_ok(const char *l)
 {
-	struct strlist *p;
+	int port;
+	const char *c=NULL;
+	const char *cp=NULL;
+
+	for(c=l; *c; c++)
+		if(!isalnum(*c) && *c!=':' && *c!='.')
+			return 0;
+
+	if(!(cp=strrchr(l, ':')))
+		return 0;
+	if(l==cp)
+		return 0;
+	cp++;
+	if(!strlen(cp) || strlen(cp)>5)
+		return 0;
+	port=atoi(cp);
+	if(port<=0 || port>65535)
+		return 0;
+
+	return 1;
+}
+
+static int finalise_server_max_children(struct conf **c,
+	enum conf_opt listen_opt, enum conf_opt max_children_opt)
+{
+	struct strlist *l;
 	struct strlist *mc;
 	long max_children=5;
 
-	for(p=get_strlist(c[port_opt]),
-	   mc=get_strlist(c[max_children_opt]); p; p=p->next)
+	for(l=get_strlist(c[listen_opt]),
+	   mc=get_strlist(c[max_children_opt]); l; l=l->next)
 	{
+		if(!listen_config_ok(l->path))
+		{
+			logp("Could not parse %s config '%s'\n",
+				c[listen_opt]->field, l->path);
+			return -1;
+		}
 		if(mc)
 		{
 			if((max_children=atol(mc->path))<=0)
 			{
 				logp("%s too low for %s %s\n",
 					c[max_children_opt]->field,
-					c[port_opt]->field,
-					p->path);
+					c[listen_opt]->field,
+					l->path);
 				return -1;
 			}
-			p->flag=max_children;
-	
+			l->flag=max_children;
+
 			mc=mc->next;
 		}
 		else
 		{
 			logp("%s %s defaulting to %s %lu\n",
-				c[port_opt]->field,
-				p->path,
+				c[listen_opt]->field,
+				l->path,
 				c[max_children_opt]->field,
 				max_children);
-			p->flag=max_children;
+			l->flag=max_children;
 		}
 	}
 
@@ -1077,10 +1084,15 @@ static int conf_finalise(struct conf **c)
 
 	if(burp_mode==BURP_MODE_SERVER)
 	{
-		if(finalise_server_ports(c,
-			OPT_PORT, OPT_MAX_CHILDREN)
-		  || finalise_server_ports(c,
-			OPT_STATUS_PORT, OPT_MAX_STATUS_CHILDREN))
+		if(!get_strlist(c[OPT_LISTEN]))
+		{
+			logp("Need at least one 'listen' config.\n");
+			return -1;
+		}
+		if(finalise_server_max_children(c,
+			OPT_LISTEN, OPT_MAX_CHILDREN)
+		  || finalise_server_max_children(c,
+			OPT_LISTEN_STATUS, OPT_MAX_STATUS_CHILDREN))
 				return -1;
 	}
 	if(burp_mode==BURP_MODE_CLIENT)

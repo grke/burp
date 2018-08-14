@@ -98,6 +98,17 @@ static void assert_strlist(struct strlist **s, const char *path, int flag)
 	*s=(*s)->next;
 }
 
+static void check_listen(struct conf **confs,
+	const char *listen, int max_children,
+	const char *listen_status, int max_status_children)
+{
+	struct strlist *s;
+	s=get_strlist(confs[OPT_LISTEN]);
+	assert_strlist(&s, listen, max_children);
+	s=get_strlist(confs[OPT_LISTEN_STATUS]);
+	assert_strlist(&s, listen_status, max_status_children);
+}
+
 static void check_ports(struct conf **confs,
 	const char *port, int max_children,
 	const char *status_port, int max_status_children)
@@ -368,7 +379,7 @@ START_TEST(test_server_conf)
 	build_file(CONFFILE, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(CONFFILE, confs));
 	fail_unless(get_e_burp_mode(confs[OPT_BURP_MODE])==BURP_MODE_SERVER);
-	check_ports(confs, "1234", 5, "12345", 5);
+	check_listen(confs, "0.0.0.0:1234", 5, "0.0.0.0:12345", 5);
 	ck_assert_str_eq(get_string(confs[OPT_LOCKFILE]), "/lockfile/path");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT]), "/ssl/cert/path");
 	ck_assert_str_eq(get_string(confs[OPT_SSL_CERT_CA]), "/cert_ca/path");
@@ -387,13 +398,13 @@ START_TEST(test_server_port_conf_one_max_child)
 {
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
-		"port=1234\n"
-		"status_port=12345\n"
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_LISTEN
+		"listen=0.0.0.0:1234\n"
+		"listen_status=0.0.0.0:12345\n"
 		"max_children=12\n"
 		"max_status_children=21\n");
 	fail_unless(!conf_load_global_only(CONFFILE, confs));
-	check_ports(confs, "1234", 12, "12345", 21);
+	check_listen(confs, "0.0.0.0:1234", 12, "0.0.0.0:12345", 21);
 	tear_down(NULL, &confs);
 }
 END_TEST
@@ -402,7 +413,7 @@ START_TEST(test_server_port_conf_too_many_max_child)
 {
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_LISTEN
 		"port=1234\n"
 		"max_children=12\n"
 		"max_children=21\n");
@@ -417,19 +428,19 @@ START_TEST(test_server_port_conf_few_max_child)
 	struct strlist *s;
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
-		"port=1234\n"
-		"port=2345\n"
-		"port=3456\n"
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_LISTEN
+		"listen=0.0.0.0:1234\n"
+		"listen=1.1.1.1:2345\n"
+		"listen=9.8.7.6:3456\n"
 		"max_children=12\n"
 		"max_children=21\n");
 	fail_unless(!conf_load_global_only(CONFFILE, confs));
 
-	s=get_strlist(confs[OPT_PORT]);
-	assert_strlist(&s, "1234", 12);
-	assert_strlist(&s, "2345", 21);
-	assert_strlist(&s, "3456", 21); // takes the previous as default
-	fail_unless(get_strlist(confs[OPT_STATUS_PORT])==NULL);
+	s=get_strlist(confs[OPT_LISTEN]);
+	assert_strlist(&s, "0.0.0.0:1234", 12);
+	assert_strlist(&s, "1.1.1.1:2345", 21);
+	assert_strlist(&s, "9.8.7.6:3456", 21); // takes the previous as default
+	fail_unless(get_strlist(confs[OPT_LISTEN_STATUS])==NULL);
 	tear_down(NULL, &confs);
 }
 END_TEST
@@ -439,29 +450,29 @@ START_TEST(test_server_port_conf_complex)
 	struct strlist *s;
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
-		"port=1234\n"
-		"port=2345\n"
-		"port=3456\n"
+	build_file(CONFFILE, MIN_SERVER_CONF_NO_LISTEN
+		"listen=0.0.0.0:1234\n"
+		"listen=1.1.1.1:2345\n"
+		"listen=9.8.7.6:3456\n"
 		"max_children=12\n"
 		"max_children=21\n"
 		"max_children=37\n"
-		"status_port=987\n"
-		"status_port=654\n"
-		"status_port=321\n"
+		"listen_status=::1:987\n"
+		"listen_status=127.0.0.1:654\n"
+		"listen_status=1abc:2323::9999:321\n"
 		"max_status_children=4\n"
 		"max_status_children=5\n"
 		"max_status_children=6\n");
 	fail_unless(!conf_load_global_only(CONFFILE, confs));
 
-	s=get_strlist(confs[OPT_PORT]);
-	assert_strlist(&s, "1234", 12);
-	assert_strlist(&s, "2345", 21);
-	assert_strlist(&s, "3456", 37);
-	s=get_strlist(confs[OPT_STATUS_PORT]);
-	assert_strlist(&s, "987", 4);
-	assert_strlist(&s, "654", 5);
-	assert_strlist(&s, "321", 6);
+	s=get_strlist(confs[OPT_LISTEN]);
+	assert_strlist(&s, "0.0.0.0:1234", 12);
+	assert_strlist(&s, "1.1.1.1:2345", 21);
+	assert_strlist(&s, "9.8.7.6:3456", 37);
+	s=get_strlist(confs[OPT_LISTEN_STATUS]);
+	assert_strlist(&s, "::1:987", 4);
+	assert_strlist(&s, "127.0.0.1:654", 5);
+	assert_strlist(&s, "1abc:2323::9999:321", 6);
 	tear_down(NULL, &confs);
 }
 END_TEST
@@ -836,8 +847,7 @@ START_TEST(test_strlist_reset)
 	struct strlist *s;
 	struct conf **confs=NULL;
 	setup(&confs, NULL);
-	build_file(CONFFILE, MIN_SERVER_CONF_NO_PORTS
-		"port=1234\n"
+	build_file(CONFFILE, MIN_SERVER_CONF
 		"timer_arg = /ignored/timer/arg1\n"
 		"timer_arg = /ignored/timer/arg2\n"
 		"timer_arg := /timer/arg3\n"

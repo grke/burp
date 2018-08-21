@@ -8,6 +8,7 @@
 #include "hexmap.h"
 #include "lock.h"
 #include "log.h"
+#include "strlist.h"
 #include "server/main.h"
 #include "server/protocol1/bedup.h"
 #include "server/protocol2/bsigs.h"
@@ -24,6 +25,7 @@ static void usage_server(void)
 	printf("  -a c          Run as a stand-alone champion chooser.\n");
 	printf("  -c <path>     Path to conf file (default: %s).\n", config_default_path());
 	printf("  -d <path>     a single client in the status monitor.\n");
+	printf("  -o <option>   Override a given configuration option (you can use this flag several times).\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
@@ -62,6 +64,7 @@ static void usage_client(void)
 	printf("  -b <number>    Backup number (default: the most recent backup).\n");
 	printf("  -c <path>      Path to conf file (default: %s).\n", config_default_path());
 	printf("  -d <directory> Directory to restore to, or directory to list.\n");
+	printf("  -o <option>    Override a given configuration option (you can use this flag several times).\n");
 	printf("  -f             Allow overwrite during restore.\n");
 	printf("  -h|-?          Print this text and exit.\n");
 	printf("  -i             Print index of symbols and exit.\n");
@@ -286,6 +289,7 @@ int real_main(int argc, char *argv[])
 	const char *conffile=config_default_path();
 	const char *orig_client=NULL;
 	const char *logfile=NULL;
+	struct strlist *option_override=NULL;
 	// The orig_client is the original client that the normal client
 	// would like to restore from.
 #ifndef HAVE_WIN32
@@ -305,7 +309,7 @@ int real_main(int argc, char *argv[])
 		return run_bsparse(argc, argv);
 #endif
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:fFghil:nq:Qr:s:tvxjz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:o:fFghil:nq:Qr:s:tvxjz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -348,6 +352,9 @@ int real_main(int argc, char *argv[])
 				break;
 			case 'n':
 				forking=0;
+				break;
+			case 'o':
+				strlist_add(&option_override, optarg, 0);
 				break;
 			case 'q':
 				randomise=atoi(optarg);
@@ -401,6 +408,29 @@ int real_main(int argc, char *argv[])
 
 	if(reload(confs, conffile, 1))
 		goto end;
+
+	if(option_override)
+	{
+		struct strlist *oo=NULL;
+		int line=0;
+		for(oo=option_override; oo; oo=oo->next)
+		{
+			line++;
+			char *opt = strdup(oo->path);
+			if((ret=conf_parse_line(confs, "", oo->path, line)))
+			{
+				logp("Unable to parse option '%s'\n", opt);
+				free(opt);
+				goto end;
+			}
+			free(opt);
+		}
+		if((ret=conf_finalise(confs)))
+		{
+			logp("Unable to parse your configuration\n");
+			goto end;
+		}
+	}
 
 	// Dry run to test config file syntax.
 	if(test_confs)
@@ -524,6 +554,7 @@ end:
 	lock_release(lock);
 	lock_free(&lock);
 	confs_free(&confs);
+	strlists_free(&option_override);
 	return ret;
 }
 

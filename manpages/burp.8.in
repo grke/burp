@@ -592,7 +592,7 @@ Set this to enable client side file Blowfish encryption. If you do not want encr
 Set this to 0 if you do not want include_glob settings to be evaluated after the pre script is run. The default is 1.
 .TP
 \fBbackup_script_pre=[path]\fR
-Path to a script to run before a backup. It is not run if the server decides it is not yet time for a backup. The arguments to it are 'pre', 'reserved2' to 'reserved5', and then arguments defined by backup_script_pre_arg - unless the option 'backup_script_reserved_args' is off, then only arguments defined by backup_script_pre_arg are passed to it. If the execution of the script fail (ie. when its return code is different than 0), then the backup is aborted.
+Path to a script to run before a backup. It is not run if the server decides it is not yet time for a backup. The arguments to it are 'pre', 'reserved2' to 'reserved5', and then arguments defined by backup_script_pre_arg - unless the option 'backup_script_reserved_args' is off, then only arguments defined by backup_script_pre_arg are passed to it. If the script fails (ie. when the return code is not 0), then the backup is aborted.
 .TP
 \fBbackup_script_pre_arg=[string]\fR
 A user-definable argument to the backup pre script. You can have many of these.

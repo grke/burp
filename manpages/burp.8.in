@@ -663,7 +663,7 @@ Path to exclude from the backup. You can have multiple exclude lines. Use forwar
 Include paths that match the glob expression. For example, '/home/*/Documents' will include '/home/user1/Documents' and '/home/user2/Documents' if directories 'user1' and 'user2' exist in '/home'. The Windows implementation currently limit the expression to contain only one '*'.
 .TP
 \fBinclude_regex=[regular expression]\fR
-Not implemented.
+Include paths that match the regular expression. You need at least one 'include' or 'include_glob' option to have files to be matched against the regex. If you have at least one 'include_regex' line, then any path NOT matching the regex will be excluded from your backup.
 .TP
 \fBexclude_regex=[regular expression]\fR
 Exclude paths that match the regular expression.

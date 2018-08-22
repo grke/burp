@@ -787,6 +787,12 @@ static int finalise_incexc_dirs(struct conf **c)
 		if(incexc_munge(c, s)) return -1;
 	for(s=get_strlist(c[OPT_EXCLUDE]); s; s=s->next)
 		if(incexc_munge(c, s)) return -1;
+	if(get_strlist(c[OPT_INCREG]) &&
+	   !(get_strlist(c[OPT_INCLUDE]) || get_strlist(c[OPT_INCGLOB])))
+	{
+		logp("Need at least one 'include' or 'include_glob' for the 'include_regex' to work.\n");
+		return -1;
+	}
 	return 0;
 }
 

@@ -137,7 +137,7 @@ static int restore_metadata(
 		size_t metalen=0;
 		char *metadata=NULL;
 		if(S_ISDIR(sb->statp.st_mode)
-		  && restore_dir(asfd, sb, fname, act, cntr, PROTO_2))
+		  && restore_dir(asfd, sb, fname, act, /*cntr*/NULL, PROTO_2))
 			return -1;
 
 		// Read in the metadata...

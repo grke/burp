@@ -138,7 +138,12 @@ static int restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 
 	if(!(ret=do_restore_file_or_get_meta(asfd, bfd, sb, fname,
 		metadata, metalen, cntr, rpath, encyption_password)))
+	{
+		// Only add to counters if we are not doing metadata. The
+		// actual metadata restore comes a bit later.
+		if(!metadata)
 			cntr_add(cntr, sb->path.cmd, 1);
+	}
 end:
 	free_w(&rpath);
 	if(ret) logp("restore_file error\n");
@@ -167,8 +172,9 @@ static int restore_metadata(struct asfd *asfd,
 		goto end;
 	}
 
+	// Create the directory, but do not add to the counts.
 	if(S_ISDIR(sb->statp.st_mode)
-	  && restore_dir(asfd, sb, fname, act, cntr, PROTO_1))
+	  && restore_dir(asfd, sb, fname, act, /*cntr*/NULL, PROTO_1))
 		goto end;
 
 	// Read in the metadata...

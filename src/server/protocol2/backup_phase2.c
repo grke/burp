@@ -864,6 +864,8 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 	struct cntr *cntr=NULL;
 	struct sbuf *csb=NULL;
 	uint64_t file_no=1;
+	int fail_on_warning=0;
+	struct cntr_ent *warn_ent=NULL;
 
 	if(!as)
 	{
@@ -892,6 +894,10 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 		goto end;
 	}
 	cntr=get_cntr(confs);
+	fail_on_warning=get_int(confs[OPT_FAIL_ON_WARNING]);
+	if(cntr)
+		warn_ent=cntr->ent[CMD_WARNING];
+
 	if(get_int(confs[OPT_BREAKPOINT])>=2000
 	  && get_int(confs[OPT_BREAKPOINT])<3000)
 	{
@@ -928,6 +934,9 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 	memset(&wbuf, 0, sizeof(struct iobuf));
 	while(!(end_flags&END_BACKUP))
 	{
+		if(check_fail_on_warning(fail_on_warning, warn_ent))
+			goto end;
+
 		if(write_status(CNTR_STATUS_BACKUP,
 			csb && csb->path.buf?csb->path.buf:"", cntr))
 				goto end;
@@ -1012,6 +1021,9 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 		goto end;
 	}
 	if(dpth_release_all(dpth)) goto end;
+
+	if(check_fail_on_warning(fail_on_warning, warn_ent))
+		goto end;
 
 	ret=0;
 end:

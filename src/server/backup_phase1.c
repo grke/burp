@@ -26,7 +26,14 @@ int backup_phase1_server_all(struct async *as,
 	struct asfd *asfd=as->asfd;
 	struct manio *manio=NULL;
 	enum protocol protocol=get_protocol(confs);
-	struct cntr *cntr=get_cntr(confs);
+	struct cntr *cntr;
+	int fail_on_warning=0;
+	struct cntr_ent *warn_ent=NULL;
+
+	cntr=get_cntr(confs);
+	fail_on_warning=get_int(confs[OPT_FAIL_ON_WARNING]);
+	if(cntr)
+		warn_ent=cntr->ent[CMD_WARNING];
 
 	logp("Begin phase1 (file system scan)\n");
 
@@ -39,6 +46,10 @@ int backup_phase1_server_all(struct async *as,
 	while(1)
 	{
 		sbuf_free_content(sb);
+
+		if(check_fail_on_warning(fail_on_warning, warn_ent))
+			goto error;
+
 		switch(sbuf_fill_from_net(sb, asfd, NULL, cntr))
 		{
 			case 0: break;
@@ -65,6 +76,9 @@ int backup_phase1_server_all(struct async *as,
 	}
 
 end:
+	if(check_fail_on_warning(fail_on_warning, warn_ent))
+		goto error;
+
 	if(manio_close(&manio))
 	{
 		logp("error closing %s in backup_phase1_server\n", phase1tmp);

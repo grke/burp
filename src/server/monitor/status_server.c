@@ -189,6 +189,16 @@ void dump_cbno(struct cstat *clist, const char *msg)
 }
 */
 
+static int response_marker_start(struct asfd *srfd, const char *buf)
+{
+	return json_send_msg(srfd, "response-start", buf);
+}
+
+static int response_marker_end(struct asfd *srfd, const char *buf)
+{
+	return json_send_msg(srfd, "response-end", buf);
+}
+
 static int parse_client_data(struct asfd *srfd,
 	struct cstat *clist, int monitor_browse_cache, long *peer_version)
 {
@@ -201,10 +211,11 @@ static int parse_client_data(struct asfd *srfd,
 	const char *cp=NULL;
 	struct cstat *cstat=NULL;
         struct bu *bu=NULL;
+	static int response_markers=0;
+	const char *cmd_result=NULL;
 //logp("got client data: '%s'\n", srfd->rbuf->buf);
 
 	cp=srfd->rbuf->buf;
-
 	command=get_str(&cp, "j:", 0);
 	client=get_str(&cp, "c:", 0);
 	backup=get_str(&cp, "b:", 0);
@@ -219,25 +230,43 @@ static int parse_client_data(struct asfd *srfd,
 		if(!strcmp(command, "pretty-print-on"))
 		{
 			json_set_pretty_print(1);
-			if(json_send_warn(srfd, "Pretty print on"))
-				goto error;
+			cmd_result="Pretty print on";
 		}
 		else if(!strcmp(command, "pretty-print-off"))
 		{
 			json_set_pretty_print(0);
-			if(json_send_warn(srfd, "Pretty print off"))
-				goto error;
+			cmd_result="Pretty print off";
+		}
+		else if(!strcmp(command, "response-markers-on"))
+		{
+			response_markers=1;
+			cmd_result="Response markers on";
+		}
+		else if(!strcmp(command, "response-markers-off"))
+		{
+			response_markers=0;
+			cmd_result="Response markers off";
 		}
 		else if(!strncmp(command, peer_version_str, l))
 		{
 			if(!(*peer_version=version_to_long(command+l)))
 				goto error;
+			cmd_result="Peer version updated";
 		}
 		else
 		{
-			if(json_send_warn(srfd, "Unknown command"))
-				goto error;
+			cmd_result="Unknown command";
 		}
+	}
+
+	if(response_markers
+	  && response_marker_start(srfd, srfd->rbuf->buf))
+		goto error;
+
+	if(cmd_result)
+	{
+		if(json_send_warn(srfd, cmd_result))
+			goto error;
 		goto end;
 	}
 
@@ -318,6 +347,10 @@ static int parse_client_data(struct asfd *srfd,
 error:
 	ret=-1;
 end:
+	if(response_markers
+	  && response_marker_end(srfd, srfd->rbuf->buf))
+		goto error;
+
 	free_w(&client);
 	free_w(&backup);
 	free_w(&logfile);

@@ -725,6 +725,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_MAX_RESUME_ATTEMPTS:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "max_resume_attempts");
+	case OPT_FAIL_ON_WARNING:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "fail_on_warning");
 	case OPT_RSHASH:
 	  return sc_rsh(c[o], RSHASH_UNSET,
 		CONF_FLAG_CC_OVERRIDE, "");

@@ -134,4 +134,9 @@ extern const char *cntr_status_to_action_str(struct cntr *cntr);
 extern int extract_client_pid_bno(char *buf,
 	char **cname, pid_t *pid, int *bno);
 
+extern int check_fail_on_warning(
+	int fail_on_warning,
+	struct cntr_ent *warn_ent
+);
+
 #endif

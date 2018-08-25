@@ -577,4 +577,3 @@ void strip_fqdn(char **fqdn)
 	if((tmp=strchr(*fqdn, '.')))
 		*tmp='\0';
 }
-

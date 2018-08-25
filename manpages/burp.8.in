@@ -469,6 +469,9 @@ Set this to 0 if you want to disable all clients. The default is 1. This option 
 .TP
 \fBrblk_memory_max=[B/KB/MB/GB]\fR
 The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256MB. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
+.TP
+\fBfail_on_warning=[0|1]\fR
+If a warning is generated during a backup, fail the backup. The default is 0. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -769,6 +772,8 @@ Additionally, the following options can be overridden here for each client:
 \fBhard_quota\fR
 \fBsoft_quota\fR
 \fBlabel\fR
+\fBrblk_memory_max\fR
+\fBfail_on_warning\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR
 \fBnotify_success_script\fR

@@ -384,6 +384,21 @@ static void exclude_regex(void)
 		fullpath);
 }
 
+static void include_regex(void)
+{
+	add_dir( NOT_FOUND, "");
+	add_file(    FOUND, "a", 1);
+	add_file(NOT_FOUND, "blah", 1);
+	add_file(    FOUND, "blahb", 1);
+	add_file(    FOUND, "haaa", 1);
+	add_file(NOT_FOUND, "x", 1);
+	snprintf(extra_config, sizeof(extra_config),
+		"include=%s\n"
+		"include_regex=a$\n"
+		"include_regex=b$\n",
+		fullpath);
+}
+
 static void multi_includes(void)
 {
 	add_dir( NOT_FOUND, "");
@@ -422,6 +437,7 @@ START_TEST(test_find)
 	do_test(fifo_individual);
 	do_test(fifo_all);
 	do_test(exclude_regex);
+	do_test(include_regex);
 	do_test(multi_includes);
 }
 END_TEST

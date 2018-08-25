@@ -156,7 +156,6 @@ int in_exclude_comp(struct strlist *excom, const char *fname, int compression)
 
 /* Return 1 to include the file, 0 to exclude it. */
 /* Currently not used - it needs more thinking about. */
-/*
 int in_include_regex(struct strlist *increg, const char *fname)
 {
 	// If not doing include_regex, let the file get backed up.
@@ -166,7 +165,6 @@ int in_include_regex(struct strlist *increg, const char *fname)
 			return 1;
 	return 0;
 }
-*/
 
 static int in_exclude_regex(struct strlist *excreg, const char *fname)
 {
@@ -190,7 +188,8 @@ int file_is_included_no_incext(struct conf **confs, const char *fname)
 	struct strlist *best=NULL;
 
 	if(in_exclude_ext(get_strlist(confs[OPT_EXCEXT]), fname)
-	  || in_exclude_regex(get_strlist(confs[OPT_EXCREG]), fname))
+	  || in_exclude_regex(get_strlist(confs[OPT_EXCREG]), fname)
+		|| !in_include_regex(get_strlist(confs[OPT_INCREG]), fname))
 		return 0;
 
 	// Check include/exclude directories.

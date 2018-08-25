@@ -490,10 +490,26 @@ int json_from_entry(const char *path, const char *link, struct stat *statp)
 	  || yajl_map_close_w();
 }
 
+int json_send_msg(struct asfd *asfd, const char *field, const char *msg)
+{
+	int save;
+	int ret=0;
+
+	// Turn off pretty printing so that we get it on one line.
+	save=pretty_print;
+	pretty_print=0;
+
+	if(json_start()
+	  || yajl_gen_str_pair_w(field, msg)
+	  || json_end(asfd))
+		ret=-1;
+
+	pretty_print=save;
+
+	return ret;
+}
+
 int json_send_warn(struct asfd *asfd, const char *msg)
 {
-	if(json_start()
-	  || yajl_gen_str_pair_w("warning", msg)
-	  || json_end(asfd)) return -1;
-	return 0;
+	return json_send_msg(asfd, "warning", msg);
 }

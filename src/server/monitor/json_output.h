@@ -11,7 +11,9 @@ extern int json_send(struct asfd *asfd,
 extern int json_from_entry(const char *path, const char *link, struct stat *statp);
 extern int json_cntr(struct asfd *asfd, struct cntr *cntr);
 
-extern int json_send_warn(struct asfd *asfd, const char *msg);
 extern void json_set_pretty_print(int value);
+
+extern int json_send_msg(struct asfd *asfd, const char *field, const char *msg);
+extern int json_send_warn(struct asfd *asfd, const char *msg);
 
 #endif

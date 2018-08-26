@@ -105,16 +105,18 @@ struct vers
 	long directory_tree;
 	long burp2;
 	long counters_json;
+	long storage;
 };
 
 static int send_features(struct asfd *asfd, struct conf **cconfs,
-	struct vers *vers)
+	struct vers *vers, int *client_must_reconnect)
 {
 	int ret=-1;
 	char *feat=NULL;
 	enum protocol protocol=get_protocol(cconfs);
 	struct strlist *startdir=get_strlist(cconfs[OPT_STARTDIR]);
 	struct strlist *incglob=get_strlist(cconfs[OPT_INCGLOB]);
+	const char *storage=get_string(cconfs[OPT_STORAGE]);
 
 	if(append_to_feat(&feat, "extra_comms_begin ok:")
 		/* clients can autoupgrade */
@@ -128,6 +130,14 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 		/* clients can tell the server what kind of system they are. */
           || append_to_feat(&feat, "uname:"))
 		goto end;
+
+	if(storage
+	  && vers->cli>=vers->storage)
+	{
+		if(append_to_feat(&feat, "storage:"))
+			goto end;
+		*client_must_reconnect=1;
+	}
 
 	/* Clients can receive restore initiated from the server. */
 	if(set_restore_path(cconfs, &feat))
@@ -401,6 +411,21 @@ static int extra_comms_read(struct async *as,
 			goto end;
 #endif
 		}
+		else if(!strncmp_w(rbuf->buf, "send storage"))
+		{
+			char msg[256];
+			snprintf(msg, sizeof(msg), "storage=%s",
+				get_string(cconfs[OPT_STORAGE]));
+			if(asfd->write_str(asfd, CMD_GEN, msg))
+				goto end;
+		}
+		else if(!strncmp_w(rbuf->buf, "storage ok"))
+		{
+			logp("Client is reconnecting to %s\n",
+				get_string(cconfs[OPT_STORAGE]));
+			ret=1;
+			goto end;
+		}
 		else if(!strncmp_w(rbuf->buf, "msg"))
 		{
 			set_int(cconfs[OPT_MESSAGE], 1);
@@ -428,7 +453,8 @@ static int vers_init(struct vers *vers, struct conf **cconfs)
 	  || (vers->feat_list=version_to_long("1.3.0"))<0
 	  || (vers->directory_tree=version_to_long("1.3.6"))<0
 	  || (vers->burp2=version_to_long("2.0.0"))<0
-	  || (vers->counters_json=version_to_long("2.0.46"))<0);
+	  || (vers->counters_json=version_to_long("2.0.46"))<0
+	  || (vers->storage=version_to_long("2.2.9"))<0);
 }
 
 int extra_comms(struct async *as,
@@ -439,6 +465,7 @@ int extra_comms(struct async *as,
 	asfd=as->asfd;
 	//char *restorepath=NULL;
 	const char *peer_version=NULL;
+	int client_must_reconnect=0;
 
 	if(vers_init(&vers, cconfs))
 		goto error;
@@ -473,12 +500,24 @@ int extra_comms(struct async *as,
 	}
 	else
 	{
-		if(send_features(asfd, cconfs, &vers))
+		if(send_features(asfd, cconfs, &vers, &client_must_reconnect))
 			goto error;
 	}
 
-	if(extra_comms_read(as, &vers, srestore, incexc, confs, cconfs))
-		goto error;
+	switch(extra_comms_read(as, &vers, srestore, incexc, confs, cconfs))
+	{
+		case 0:
+			if(client_must_reconnect)
+			{
+				logp("Error: client did not acknowledge storage reconnect!\n");
+				goto error;
+			}
+			break; // All OK.
+		case 1:
+			return 1; // Disconnecting.
+		default:
+			goto error;
+	}
 
 	peer_version=get_string(cconfs[OPT_PEER_VERSION]);
 

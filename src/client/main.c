@@ -323,10 +323,18 @@ static enum cliret initial_comms(struct async *as,
 		goto error;
 	}
 
-	if(extra_comms_client(as, confs, action, incexc))
+	switch(extra_comms_client(as, confs, action, incexc))
 	{
-		logp("extra comms failed\n");
-		goto error;
+		case 0:
+			break; // All OK.
+		case 1:
+			logp("Reconnect to: %s:%s\n",
+				get_string(confs[OPT_SERVER]),
+				get_strlist(confs[OPT_PORT])->path);
+			goto reconnect;
+		default:
+			logp("extra comms failed\n");
+			goto error;
 	}
 
 	ret=CLIENT_OK; goto end;
@@ -549,6 +557,8 @@ int client(struct conf **confs, enum action action, int vss_restore)
 	{
 		case CLIENT_RECONNECT:
 			logp("Re-opening connection to server\n");
+			// FIX THIS: Want to get rid of this sleep - I do not
+			// remember whether it is actually necessary.
 			sleep(5);
 			ret=do_client(confs, action, vss_restore);
 		default:

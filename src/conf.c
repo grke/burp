@@ -588,6 +588,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_DIRECTORY:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "directory");
+	case OPT_STORAGE:
+	  return sc_str(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "storage");
 	case OPT_TIMESTAMP_FORMAT:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "timestamp_format");

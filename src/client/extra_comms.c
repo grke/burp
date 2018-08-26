@@ -39,6 +39,7 @@ int extra_comms_client(struct async *as, struct conf **confs,
 	struct asfd *asfd;
 	struct iobuf *rbuf;
 	const char *orig_client=NULL;
+
 	asfd=as->asfd;
 	rbuf=asfd->rbuf;
 
@@ -245,6 +246,55 @@ int extra_comms_client(struct async *as, struct conf **confs,
 	else
 #endif
 		set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
+
+	if(server_supports(feat, ":storage:"))
+	{
+		char *port;
+		char *copy=NULL;
+		struct strlist *ports=NULL;
+
+		if(asfd->write_str(asfd, CMD_GEN, "send storage")
+		  || asfd->read(asfd))
+		{
+			logp("Problem requesting storage\n");
+			goto end;
+		}
+		if(asfd->rbuf->cmd!=CMD_GEN
+		  || strncmp(asfd->rbuf->buf, "storage=", strlen("storage=")))
+		{
+			logp("Unexpected response to storage request: %s\n",
+				iobuf_to_printable(asfd->rbuf));
+			goto end;
+		}
+
+		// FIX THIS: server needs to send us all the confs.
+		if(!(copy=strdup_w(
+			asfd->rbuf->buf+strlen("storage="), __func__)))
+				goto end;
+		if(!(port=strchr(copy, ':')))
+		{
+			logp("Could not parse storage: %s\n", copy);
+			free_w(&copy);
+			goto end;
+		}
+		*port='\0';
+		port++;
+		if(strlist_add(&ports, port, 0)
+		  || set_string(confs[OPT_SERVER], copy)
+		  || set_strlist(confs[OPT_PORT], ports))
+		{
+			strlists_free(&ports);
+			free_w(&copy);
+			goto end;
+		}
+		free_w(&copy);
+		ret=1;
+
+		if(asfd->write_str(asfd, CMD_GEN, "storage ok"))
+			goto end;
+
+		goto end;
+	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")
 	  || asfd_read_expect(asfd, CMD_GEN, "extra_comms_end ok"))

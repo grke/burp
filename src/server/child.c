@@ -147,10 +147,16 @@ int child(struct async *as, int is_status_server,
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group
 	   settings. */
-	if(extra_comms(as, &incexc, &srestore, confs, cconfs))
+	switch(extra_comms(as, &incexc, &srestore, confs, cconfs))
 	{
-		log_and_send(as->asfd, "running extra comms failed on server");
-		goto end;
+		case 0:
+			break; // All OK.
+		case 1:
+			return 0; // Disconnecting.
+		default:
+			log_and_send(as->asfd,
+				"running extra comms failed on server");
+			goto end;
 	}
 
 	// Needs to happen after extra_comms, in case extra_comms resets them.

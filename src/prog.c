@@ -289,7 +289,6 @@ int real_main(int argc, char *argv[])
 	const char *conffile=config_default_path();
 	const char *orig_client=NULL;
 	const char *logfile=NULL;
-	struct strlist *option_override=NULL;
 	// The orig_client is the original client that the normal client
 	// would like to restore from.
 #ifndef HAVE_WIN32
@@ -298,6 +297,7 @@ int real_main(int argc, char *argv[])
 	int vss_restore=1;
 	int test_confs=0;
 	enum burp_mode mode;
+	struct strlist *cli_overrides=NULL;
 
 	log_init(argv[0]);
 #ifndef HAVE_WIN32
@@ -354,7 +354,7 @@ int real_main(int argc, char *argv[])
 				forking=0;
 				break;
 			case 'o':
-				strlist_add(&option_override, optarg, 0);
+				strlist_add(&cli_overrides, optarg, 0);
 				break;
 			case 'q':
 				randomise=atoi(optarg);
@@ -403,34 +403,12 @@ int real_main(int argc, char *argv[])
 		setvbuf(stdout, NULL, _IONBF, 0);
 	}
 
+	conf_set_cli_overrides(cli_overrides);
 	if(!(confs=confs_alloc()))
 		goto end;
 
 	if(reload(confs, conffile, 1))
 		goto end;
-
-	if(option_override)
-	{
-		struct strlist *oo=NULL;
-		int line=0;
-		for(oo=option_override; oo; oo=oo->next)
-		{
-			line++;
-			char *opt = strdup(oo->path);
-			if((ret=conf_parse_line(confs, "", oo->path, line)))
-			{
-				logp("Unable to parse option '%s'\n", opt);
-				free(opt);
-				goto end;
-			}
-			free(opt);
-		}
-		if((ret=conf_finalise(confs)))
-		{
-			logp("Unable to parse your configuration\n");
-			goto end;
-		}
-	}
 
 	// Dry run to test config file syntax.
 	if(test_confs)
@@ -554,7 +532,7 @@ end:
 	lock_release(lock);
 	lock_free(&lock);
 	confs_free(&confs);
-	strlists_free(&option_override);
+	strlists_free(&cli_overrides);
 	return ret;
 }
 

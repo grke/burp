@@ -376,7 +376,7 @@ end:
 	return ret;
 }
 
-static int conf_parse_line(struct conf **confs, const char *conf_path,
+int conf_parse_line(struct conf **confs, const char *conf_path,
 	char buf[], int line)
 {
 	int ret=-1;
@@ -1061,7 +1061,7 @@ static int finalise_client_ports(struct conf **c)
 	return 0;
 }
 
-static int conf_finalise(struct conf **c)
+int conf_finalise(struct conf **c)
 {
 	enum burp_mode burp_mode=get_e_burp_mode(c[OPT_BURP_MODE]);
 	int s_script_notify=0;

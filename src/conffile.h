@@ -12,6 +12,8 @@ extern int conf_load_clientconfdir(struct conf **globalcs,
 	struct conf **ccconfs);
 extern int conf_load_global_only(const char *path, struct conf **globalcs);
 
+extern int conf_parse_line(struct conf **confs, const char *conf_path, char buf[], int line);
+
 extern const char *confs_get_lockfile(struct conf **confs);
 
 extern int conf_switch_to_orig_client(struct conf **globalcs,
@@ -20,6 +22,8 @@ extern int conf_switch_to_orig_client(struct conf **globalcs,
 extern int reeval_glob(struct conf **c);
 
 extern char *config_default_path(void);
+
+extern int conf_finalise(struct conf **c);
 
 #ifdef UTEST
 extern int conf_load_lines_from_buf(const char *buf, struct conf **c);

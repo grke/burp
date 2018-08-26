@@ -34,6 +34,10 @@ Print help and then exit.
 \fB\-?\fR \fB\fR
 Print help and then exit.
 .TP
+\fB\-o\fR \fB[option=value]\fR
+Override a given option. You can use this flag several times to override multiple options.
+You can even reset list options with the special syntax ':=' (example: '-o "include:=/tmp"').
+.TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see @name@ produce, and exit.
 .TP
@@ -83,6 +87,10 @@ Print help and then exit.
 .TP
 \fB\-?\fR \fB\fR
 Print help and then exit.
+.TP
+\fB\-o\fR \fB[option=value]\fR
+Override a given option. You can use this flag several times to override multiple options.
+You can even reset list options with the special syntax ':=' (example: '-o "include:=/tmp"').
 .TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see @name@ produce, and exit.

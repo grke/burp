@@ -13,6 +13,13 @@
 #include "client/glob_windows.h"
 #include "conffile.h"
 
+static struct strlist *cli_overrides=NULL;
+
+void conf_set_cli_overrides(struct strlist *overrides)
+{
+	cli_overrides=overrides;
+}
+
 // This will strip off everything after the last quote. So, configs like this
 // should work:
 // exclude_regex = "[A-Z]:/pagefile.sys" # swap file (Windows XP, 7, 8)
@@ -1061,10 +1068,41 @@ static int finalise_client_ports(struct conf **c)
 	return 0;
 }
 
+static int apply_cli_overrides(struct conf **confs)
+{
+	int ret=-1;
+	int line=0;
+	char *opt=NULL;
+	struct strlist *oo=NULL;
+
+	for(oo=cli_overrides; oo; oo=oo->next)
+	{
+		line++;
+		free_w(&opt);
+		if(!(opt=strdup_w(oo->path, __func__)))
+			goto end;
+		if((ret=conf_parse_line(confs, "", opt, line)))
+		{
+			logp("Unable to parse cli option %d '%s'\n",
+				line, oo->path);
+			goto end;
+		}
+	}
+	ret=0;
+end:
+	return ret;
+}
+
 int conf_finalise(struct conf **c)
 {
-	enum burp_mode burp_mode=get_e_burp_mode(c[OPT_BURP_MODE]);
+	enum burp_mode burp_mode;
 	int s_script_notify=0;
+
+	if(apply_cli_overrides(c))
+		return -1;
+
+	burp_mode=get_e_burp_mode(c[OPT_BURP_MODE]);
+
 	if(finalise_fstypes(c, OPT_EXCFS)
 	  || finalise_fstypes(c, OPT_INCFS))
 		return -1;

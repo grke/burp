@@ -29,12 +29,16 @@ static int remove_quotes(const char *f, char **v, char quote)
 	char *dp=NULL;
 	char *sp=NULL;
 	char *copy=NULL;
+	int ret=1;
 
 	// If it does not start with a quote, leave it alone.
 	if(**v!=quote) return 0;
 
 	if(!(copy=strdup_w(*v, __func__)))
-		return -1;
+	{
+		ret=-1;
+		goto end;
+	}
 
 	for(dp=*v, sp=copy+1; *sp; sp++)
 	{
@@ -46,7 +50,7 @@ static int remove_quotes(const char *f, char **v, char quote)
 			// Do not complain about trailing comments.
 			if(*sp && *sp!='#')
 				logp("ignoring trailing characters after quote in config '%s = %s'\n", f, copy);
-			return 1;
+			goto end;
 		}
 		else if(*sp=='\\')
 		{
@@ -65,7 +69,9 @@ static int remove_quotes(const char *f, char **v, char quote)
 	}
 	logp("Did not find closing quote in config '%s = %s'\n", f, copy);
 	*dp='\0';
-	return 1;
+end:
+	free_w(&copy);
+	return ret;
 }
 
 // Get field and value pair.
@@ -383,7 +389,7 @@ end:
 	return ret;
 }
 
-int conf_parse_line(struct conf **confs, const char *conf_path,
+static int conf_parse_line(struct conf **confs, const char *conf_path,
 	char buf[], int line)
 {
 	int ret=-1;
@@ -1090,10 +1096,11 @@ static int apply_cli_overrides(struct conf **confs)
 	}
 	ret=0;
 end:
+	free_w(&opt);
 	return ret;
 }
 
-int conf_finalise(struct conf **c)
+static int conf_finalise(struct conf **c)
 {
 	enum burp_mode burp_mode;
 	int s_script_notify=0;

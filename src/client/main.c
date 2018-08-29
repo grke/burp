@@ -17,6 +17,7 @@
 #include "extra_comms.h"
 #include "list.h"
 #include "monitor.h"
+#include "find_logic.h"
 #include "monitor/status_client_ncurses.h"
 #include "protocol2/restore.h"
 #include "restore.h"
@@ -193,6 +194,9 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 	if(ret==CLIENT_OK) logp("backup finished ok\n");
 
 end:
+	// The include_logic/exclude_logic cache may have been populated
+	// during backup so we clean it here
+	free_logic_cache();
 	return ret;
 error:
 	logp("error in backup\n");

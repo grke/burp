@@ -11,10 +11,15 @@ extern void alloc_counters_reset(void);
 #endif
 
 extern char *strdup_w(const char *s, const char *func);
+extern void free_list_w(char **list, int size);
+extern char **strsplit_w(const char *src, const char *delimiters, size_t *size, const char *func);
+extern char *strreplace_w(char *orig, char *search, char *replace, const char *func);
 extern void *realloc_w(void *ptr, size_t size, const char *func);
 extern void *malloc_w(size_t size, const char *func);
 extern void *calloc_w(size_t nmem, size_t size, const char *func);
+extern void free_c(void **ptr);
 extern void free_v(void **ptr);
 extern void free_w(char **str);
+extern void free_p(void *ptr);
 
 #endif

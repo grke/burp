@@ -42,6 +42,120 @@ char *strdup_w(const char *s, const char *func)
 	return ret;
 }
 
+/*
+char *strreplace_w(const char *string, const char *search, const char *replace, const char *func)
+{
+	char *tok=NULL;
+	char *newstr=NULL;
+	char *oldstr=NULL;
+	newstr = strdup_w(string, func);
+	// if either search or replace is NULL, duplicate string a let caller handle it
+	if(!search || !replace) return newstr;
+
+	while((tok=strstr(newstr, search)))
+	{
+		oldstr=newstr;
+		newstr=malloc_w (
+			strlen(oldstr)-strlen(search)+strlen(replace)+1,
+			func);
+		// failed to alloc mem, free old string and return NULL
+		if(!newstr){
+			free_w(&oldstr);
+			return NULL;
+		}
+		memcpy(newstr, oldstr, tok-oldstr);
+		memcpy(newstr+(tok-oldstr), replace, strlen(replace));
+		memcpy(newstr+(tok-oldstr)+strlen(replace),
+			tok+strlen(search),
+			strlen(oldstr)-strlen(search)-(tok-oldstr));
+		memset(newstr+strlen(oldstr)-strlen(search)+strlen(replace), 0, 1);
+		free_w(&oldstr);
+	}
+	return newstr;
+}
+*/
+
+char *strreplace_w(char *orig, char *search, char *replace, const char *func)
+{
+	char *result=NULL; // the return string
+	char *ins;         // the next insert point
+	char *tmp;         // varies
+	int len_rep;       // length of replace (the string to replace search with)
+	int len_search;    // length of search (the string to look for)
+	int len_front;     // distance between rep and end of last rep
+	int count;         // number of replacements
+
+	// sanity checks and initialization
+	if(!orig || !search) goto end;
+	len_search = strlen(search);
+	if (len_search==0)
+		goto end;
+	if (!replace)
+		len_rep=0;
+	else
+		len_rep=strlen(replace);
+
+	// count the number of replacements needed
+	ins=orig;
+	for (count=0; (tmp=strstr(ins, search)); ++count) {
+		ins=tmp+len_search;
+	}
+
+	tmp=result=malloc_w(strlen(orig)+(len_rep-len_search)*count+1, func);
+
+	if (!result) goto end;
+
+	while (count--) {
+		ins=strstr(orig, search);
+		len_front=ins-orig;
+		tmp=strncpy(tmp, orig, len_front)+len_front;
+		tmp=strcpy(tmp, replace)+len_rep;
+		orig+=len_front+len_search; // move to next "end of rep"
+	}
+	strcpy(tmp, orig);
+end:
+	return result;
+}
+
+/*
+ * Returns NULL-terminated list of tokens found in string src,
+ * also sets *size to number of tokens found (list length without final NULL).
+ * On failure returns NULL. List itself and tokens are dynamically allocated.
+ * Calls to strtok with delimiters in second argument are used (see its docs),
+ * but neither src nor delimiters arguments are altered.
+ */
+char **strsplit_w(const char *src, const char *delimiters, size_t *size, const char *func)
+{
+	size_t allocated;
+	char *init=NULL;
+	char **ret=NULL;
+
+	*size=0;
+	if(!(init=strdup_w(src, func))) goto end;
+	if(!(ret=(char **)malloc_w((allocated=10)*sizeof(char *), func)))
+		goto end;
+	for(char *tmp=strtok(init, delimiters); tmp; tmp=strtok(NULL, delimiters))
+	{
+		// Check if space is present for another token and terminating NULL.
+		if(allocated<*size+2)
+		{
+			if(!(ret=(char **)realloc_w(ret,
+				(allocated=*size+11)*sizeof(char *), func)))
+					goto end;
+		}
+		if(!(ret[(*size)++]=strdup_w(tmp, func)))
+		{
+			ret=NULL;
+			goto end;
+		}
+	}
+	ret[*size]=NULL;
+
+end:
+	free_w(&init);
+	return ret;
+}
+
 void *realloc_w(void *ptr, size_t size, const char *func)
 {
 	void *ret;
@@ -97,6 +211,19 @@ void *calloc_w(size_t nmem, size_t size, const char *func)
 	return ret;
 }
 
+// free "containers" (pointers of pointers)
+void free_c(void **ptr)
+{
+	if(!ptr) return;
+#ifdef UTEST
+	if(alloc_debug) printf("%p freed\n", ptr);
+#endif
+	free(ptr);
+#ifdef UTEST
+	free_count++;
+#endif
+}
+
 void free_v(void **ptr)
 {
 	if(!ptr || !*ptr) return;
@@ -113,4 +240,33 @@ void free_v(void **ptr)
 void free_w(char **str)
 {
 	free_v((void **)str);
+}
+
+void free_p(void *ptr)
+{
+	if(!ptr) return;
+#ifdef UTEST
+	if(alloc_debug) printf("%p freed\n", ptr);
+#endif
+	free(ptr);
+#ifdef UTEST
+	free_count++;
+#endif
+}
+
+void free_list_w(char **list, int size)
+{
+	if(!list) return;
+	if(size<0)
+	{
+		for(; *list; list++)
+			if(*list) free_w(list);
+	}
+	else
+	{
+		int i;
+		for(i=0; i<size; i++)
+			if(list[i]) free_w(&list[i]);
+	}
+	free_c((void **)list);
 }

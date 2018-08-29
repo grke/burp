@@ -8,62 +8,6 @@
 #include "../log.h"
 #include "../strlist.h"
 
-static void xfree_list(char **list, int size)
-{
-	if(!list) return;
-	if(size<0)
-	{
-		for(; *list; list++)
-			if(*list) free_w(list);
-	}
-	else
-	{
-		int i;
-		for(i=0; i<size; i++)
-			if(list[i]) free_w(&list[i]);
-	}
-	free_w(list);
-}
-
-/*
- * Returns NULL-terminated list of tokens found in string src,
- * also sets *size to number of tokens found (list length without final NULL).
- * On failure returns NULL. List itself and tokens are dynamically allocated.
- * Calls to strtok with delimiters in second argument are used (see its docs),
- * but neither src nor delimiters arguments are altered.
- */
-static char **xstrsplit(const char *src, const char *delimiters, size_t *size)
-{
-	size_t allocated;
-	char *init=NULL;
-	char **ret=NULL;
-
-	*size=0;
-	if(!(init=strdup_w(src, __func__))) goto end;
-	if(!(ret=(char **)malloc_w((allocated=10)*sizeof(char *), __func__)))
-		goto end;
-	for(char *tmp=strtok(init, delimiters); tmp; tmp=strtok(NULL, delimiters))
-	{
-		// Check if space is present for another token and terminating NULL.
-		if(allocated<*size+2)
-		{
-			if(!(ret=(char **)realloc_w(ret,
-				(allocated=*size+11)*sizeof(char *), __func__)))
-					return NULL;
-		}
-		if(!(ret[(*size)++]=strdup_w(tmp, __func__)))
-		{
-			ret=NULL;
-			goto end;
-		}
-	}
-	ret[*size]=NULL;
-
-end:
-	free_w(&init);
-	return ret;
-}
-
 static inline int xmin(int a, int b)
 {
 	return a<b?a:b;
@@ -107,7 +51,7 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 	convert_backslashes(&ig->path);
 	if(ig->path[strlen(ig->path)-1]!='*')
 	{
-		if(!(splitstr1=xstrsplit(ig->path, "*", &len1)))
+		if(!(splitstr1=strsplit_w(ig->path, "*", &len1, __func__)))
 			goto end;
 	}
 	if(len1>2)
@@ -189,7 +133,7 @@ end:
 	if(splitstr1)
 	{
 		free_w(&sav);
-		xfree_list(splitstr1, len1);
+		free_list_w(splitstr1, len1);
 	}
 	return ret;
 }

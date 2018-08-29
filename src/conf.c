@@ -4,7 +4,6 @@
 #include "log.h"
 #include "alloc.h"
 #include "cntr.h"
-#include "strlist.h"
 #include "prepend.h"
 #include "server/dpth.h"
 
@@ -770,6 +769,12 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_EXCREG:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_regex");
+	case OPT_INCLOGIC:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_logic");
+	 case OPT_EXCLOGIC:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_logic");
 	case OPT_EXCFS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_fs");

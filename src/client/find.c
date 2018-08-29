@@ -54,6 +54,7 @@
 #include "../prepend.h"
 #include "../regexp.h"
 #include "../strlist.h"
+#include "find_logic.h"
 #include "find.h"
 
 #ifdef HAVE_LINUX_OS
@@ -155,7 +156,6 @@ int in_exclude_comp(struct strlist *excom, const char *fname, int compression)
 }
 
 /* Return 1 to include the file, 0 to exclude it. */
-/* Currently not used - it needs more thinking about. */
 int in_include_regex(struct strlist *increg, const char *fname)
 {
 	// If not doing include_regex, let the file get backed up.
@@ -287,7 +287,8 @@ static int file_size_match(struct FF_PKT *ff_pkt, struct conf **confs)
 // Last checks before actually processing the file system entry.
 static int my_send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
 {
-	if(!file_is_included(confs, ff->fname, top_level)) return 0;
+	if(!file_is_included(confs, ff->fname, top_level)
+		|| is_logic_excluded(confs, ff)) return 0;
 
 	// Doing the file size match here also catches hard links.
 	if(S_ISREG(ff->statp.st_mode)

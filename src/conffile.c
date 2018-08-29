@@ -129,7 +129,7 @@ static int conf_error(const char *conf_path, int line)
 	return -1;
 }
 
-static int get_file_size(const char *v, uint64_t *dest, const char *conf_path, int line)
+int get_file_size(const char *v, uint64_t *dest, const char *conf_path, int line)
 {
 	// Store in bytes, allow k/m/g.
 	const char *cp=NULL;

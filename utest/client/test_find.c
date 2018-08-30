@@ -3,6 +3,7 @@
 #include "../../src/alloc.h"
 #include "config.h"
 #include "../../src/client/find.h"
+#include "../../src/client/find_logic.h"
 #include "../../src/conffile.h"
 #include "../../src/fsops.h"
 #include "../../src/prepend.h"
@@ -73,6 +74,8 @@ static void tear_down(struct FF_PKT **ff, struct conf ***confs)
 	confs_free(confs);
 	strlists_free(&expected);
 	fail_unless(recursive_delete(BASE)==0);
+	// cleanup our logic caches
+	free_logic_cache();
 	alloc_check();
 }
 
@@ -399,6 +402,23 @@ static void include_regex(void)
 		fullpath);
 }
 
+static void exclude_logic(void)
+{
+	add_dir(     FOUND, "");
+	add_file(    FOUND, "a", 1);
+	add_file(NOT_FOUND, "a.ost", 6);
+	add_file(    FOUND, "b.ost", 1);
+	add_file(    FOUND, "haaaab", 9);
+	add_file(FOUND, "haaab", 8);
+	add_file(FOUND, "y", 4);
+	add_file(    FOUND, "z", 1);
+	snprintf(extra_config, sizeof(extra_config),
+		 "include=%s\n"
+		 "exclude_logic=file_size>=5 and file_ext=ost\n"
+		 "exclude_logic=(file_size>=3 and file_size<=5) or (file_size=8 and file_match=b$)\n",
+		 fullpath);
+}
+
 static void multi_includes(void)
 {
 	add_dir( NOT_FOUND, "");
@@ -439,6 +459,7 @@ START_TEST(test_find)
 	do_test(exclude_regex);
 	do_test(include_regex);
 	do_test(multi_includes);
+	do_test(exclude_logic);
 }
 END_TEST
 

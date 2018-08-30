@@ -232,11 +232,11 @@ static void find(dllist *toks, TOKENS what, int start, dllist **positions)
 }
 
 // search for parentheses and return their positions
-// always return the outer parentheses first
+// always return the deepest parentheses first
 // example:
 //       false or ( false or ( true or false ) )
-// 1 =>           ^                            ^ (true, 2, 10)
-// 2 =>                      ^               ^   (true, 5, 9)
+// 1 =>                      ^               ^   (true, 5, 9)
+// 2 =>           ^                            ^ (true, 2, 10)
 static void parens(dllist *toks, int *has, int *left, int *right)
 {
 	dllist *positions;
@@ -277,6 +277,7 @@ static int eval_file_ext(char *tok, const char *fname)
 	const char *cp;
 	if(strlen(tok)==0) goto end;
 	for(; *tok=='='; ++tok);
+	if(strlen(tok)==0) goto end;  // test again after we trimmed the '='
 	for(cp=fname+strlen(fname)-1; cp>=fname; cp--)
 	{
 		if(*cp!='.') continue;
@@ -293,6 +294,7 @@ static int eval_file_match(char *tok, const char *fname)
 	struct cregex *reg;
 	if(strlen(tok)==0) goto end;
 	for(; *tok=='='; ++tok);
+	if(strlen(tok)==0) goto end;  // test again after we trimmed the '='
 	if(regex_cache)
 		HASH_FIND_STR(regex_cache, tok, reg);
 	else
@@ -511,7 +513,7 @@ static int eval_parsed_expression(dllist **tokens, int def)
 {
 	dllist *toks=*tokens, *sub;
 	node *begin, *end, *tmp;
-	int has, left, right, count;
+	int has, left, right, count, forward=1;
 	if(!toks || toks->len==0) return def;
 	if(toks->len==1) return toks->head->val;
 	parens(toks, &has, &left, &right);
@@ -538,20 +540,31 @@ static int eval_parsed_expression(dllist **tokens, int def)
 	// we replace all the tokens parentheses included with the new computed node
 	// first element of the list
 	if(!begin->prev)
+	{
+		forward=0;
 		toks->head=tmp;
+	}
 	else if (!end->next)  // last element of the list
 		toks->tail=tmp;
 	toks->len-=count;  // decrement our list size
 	tmp->prev=begin->prev;
 	tmp->next=end->next;
-	begin->prev->next=tmp;
+	if(begin->prev)
+		begin->prev->next=tmp;
 	// cleanup "forgotten" nodes
-	tmp=begin;
+	if(forward)
+		tmp=begin;
+	else
+		tmp=end;
 	while(tmp && count>=0)
 	{
 		if(tmp)
 		{
-			node *buf=tmp->next;
+			node *buf;
+			if(forward)
+				buf=tmp->next;
+			else
+				buf=tmp->prev;
 			free_node(&tmp);
 			tmp=buf;
 			count--;
@@ -615,6 +628,7 @@ void free_logic_cache(void)
 static int is_logic(struct strlist *list, struct FF_PKT *ff, int miss, int def)
 {
 	if(!list) return miss;
+	if(!S_ISREG(ff->statp.st_mode)) return def;  // ignore directories
 	for(; list; list=list->next)
 		if(eval_expression(list->path, ff->fname, (uint64_t)ff->statp.st_size))
 			return 1;
@@ -628,5 +642,5 @@ int is_logic_excluded(struct conf **confs, struct FF_PKT *ff)
 
 int is_logic_included(struct conf **confs, struct FF_PKT *ff)
 {
-	return is_logic(get_strlist(confs[OPT_INCLOGIC]), ff, /* missing */ 1, /* default */0);
+	return is_logic(get_strlist(confs[OPT_INCLOGIC]), ff, /* missing */ 1, /* default */ 0);
 }

@@ -42,39 +42,6 @@ char *strdup_w(const char *s, const char *func)
 	return ret;
 }
 
-/*
-char *strreplace_w(const char *string, const char *search, const char *replace, const char *func)
-{
-	char *tok=NULL;
-	char *newstr=NULL;
-	char *oldstr=NULL;
-	newstr = strdup_w(string, func);
-	// if either search or replace is NULL, duplicate string a let caller handle it
-	if(!search || !replace) return newstr;
-
-	while((tok=strstr(newstr, search)))
-	{
-		oldstr=newstr;
-		newstr=malloc_w (
-			strlen(oldstr)-strlen(search)+strlen(replace)+1,
-			func);
-		// failed to alloc mem, free old string and return NULL
-		if(!newstr){
-			free_w(&oldstr);
-			return NULL;
-		}
-		memcpy(newstr, oldstr, tok-oldstr);
-		memcpy(newstr+(tok-oldstr), replace, strlen(replace));
-		memcpy(newstr+(tok-oldstr)+strlen(replace),
-			tok+strlen(search),
-			strlen(oldstr)-strlen(search)-(tok-oldstr));
-		memset(newstr+strlen(oldstr)-strlen(search)+strlen(replace), 0, 1);
-		free_w(&oldstr);
-	}
-	return newstr;
-}
-*/
-
 char *strreplace_w(char *orig, char *search, char *replace, const char *func)
 {
 	char *result=NULL; // the return string

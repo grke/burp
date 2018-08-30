@@ -54,8 +54,8 @@
 #include "../prepend.h"
 #include "../regexp.h"
 #include "../strlist.h"
-#include "find_logic.h"
 #include "find.h"
+#include "find_logic.h"
 
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>

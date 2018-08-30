@@ -33,6 +33,8 @@ typedef int TOKENS;
 #define GT           8  // >
 #define LTE          9  // <=
 #define LT           10 // <
+#define EQ           11 // =
+#define PLACEHOLDER  99 // placeholder value
 
 // a node contains a TOKEN with a reference to its successor and ancestor
 struct _node
@@ -321,7 +323,7 @@ end:
 static int eval_file_size(char *tok, uint64_t filesize)
 {
 	int ret=EVAL_FALSE;
-	TOKENS eval=EVAL_FALSE;
+	TOKENS eval=PLACEHOLDER;
 	uint64_t s=0;
 	if(strlen(tok)==0) goto end;
 	for(; ; tok++)
@@ -344,6 +346,12 @@ static int eval_file_size(char *tok, uint64_t filesize)
 					case GT:
 						eval=GTE;
 						break;
+					case PLACEHOLDER:
+					case EQ:
+						eval=EQ;
+						break;
+					default:
+						eval=EVAL_FALSE;
 				}
 				break;
 		}
@@ -362,6 +370,9 @@ static int eval_file_size(char *tok, uint64_t filesize)
 			break;
 		case GTE:
 			ret=filesize>=s;
+			break;
+		case EQ:
+			ret=filesize==s;
 			break;
 		default:
 			ret=EVAL_FALSE;
@@ -513,7 +524,7 @@ static int eval_parsed_expression(dllist **tokens, int def)
 {
 	dllist *toks=*tokens, *sub;
 	node *begin, *end, *tmp;
-	int has, left, right, count, forward=1;
+	int has, left, right, count;
 	if(!toks || toks->len==0) return def;
 	if(toks->len==1) return toks->head->val;
 	parens(toks, &has, &left, &right);
@@ -540,31 +551,23 @@ static int eval_parsed_expression(dllist **tokens, int def)
 	// we replace all the tokens parentheses included with the new computed node
 	// first element of the list
 	if(!begin->prev)
-	{
-		forward=0;
-		toks->head=tmp;
-	}
+		(*tokens)->head=tmp;
 	else if (!end->next)  // last element of the list
-		toks->tail=tmp;
+		(*tokens)->tail=tmp;
 	toks->len-=count;  // decrement our list size
 	tmp->prev=begin->prev;
 	tmp->next=end->next;
 	if(begin->prev)
 		begin->prev->next=tmp;
-	// cleanup "forgotten" nodes
-	if(forward)
-		tmp=begin;
-	else
-		tmp=end;
+	else if(end->next)
+		end->next->prev=tmp;
+	// cleanup "orphans" nodes
+	tmp=begin;
 	while(tmp && count>=0)
 	{
 		if(tmp)
 		{
-			node *buf;
-			if(forward)
-				buf=tmp->next;
-			else
-				buf=tmp->prev;
+			node *buf=tmp->next;
 			free_node(&tmp);
 			tmp=buf;
 			count--;

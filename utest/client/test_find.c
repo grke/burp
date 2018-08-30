@@ -409,8 +409,8 @@ static void exclude_logic(void)
 	add_file(NOT_FOUND, "a.ost", 6);
 	add_file(    FOUND, "b.ost", 1);
 	add_file(    FOUND, "haaaab", 9);
-	add_file(FOUND, "haaab", 8);
-	add_file(FOUND, "y", 4);
+	add_file(NOT_FOUND, "haaab", 8);
+	add_file(NOT_FOUND, "y", 4);
 	add_file(    FOUND, "z", 1);
 	snprintf(extra_config, sizeof(extra_config),
 		 "include=%s\n"

@@ -397,7 +397,7 @@ static int eval_func(char *tok, const char *filename, uint64_t filesize)
 }
 
 // convert a string token into a TOKENS
-static node *eval_token(char *tok, const char *filename, uint64_t filesize)
+static node *str_to_node(char *tok, const char *filename, uint64_t filesize)
 {
 	int ret;
 	if(!strncmp(tok, "and", 3))
@@ -416,7 +416,7 @@ static node *eval_token(char *tok, const char *filename, uint64_t filesize)
 }
 
 // evaluate a trio of tokens like 'true or false'
-static int eval_tokens(node *head)
+static int eval_triplet(node *head)
 {
 	TOKENS left, func, right;
 	left=head->val;
@@ -496,7 +496,7 @@ static int bool_eval(dllist **tokens)
 		node *tmp;
 		dllist *new_tokens;
 		int i;
-		tmp=new_node(eval_tokens(toks->head));
+		tmp=new_node(eval_triplet(toks->head));
 		if(!(new_tokens=new_list()))
 		{
 			free_node(&tmp);
@@ -514,9 +514,7 @@ static int bool_eval(dllist **tokens)
 		toks=*tokens;
 		return bool_eval(tokens);
 	}
-	if(toks)
-		return eval_tokens(toks->head);
-	return 0;
+	return eval_triplet(toks->head);
 }
 
 // evaluate our list of tokens
@@ -594,7 +592,7 @@ static int eval_expression(char *expr, const char *filename, uint64_t filesize)
 	}
 	if(!(tokens=new_list())) goto end;
 	for(i=0; i<parsed->tokens->size; i++)
-		list_append(&tokens, eval_token(parsed->tokens->list[i], filename, filesize));
+		list_append(&tokens, str_to_node(parsed->tokens->list[i], filename, filesize));
 	ret=eval_parsed_expression(&tokens, empty_res);
 end:
 	list_reset(&tokens);

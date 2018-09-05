@@ -1,5 +1,6 @@
 #include "../burp.h"
 #include "../alloc.h"
+#include "../handy.h"
 #include "../conf.h"
 #include "../conffile.h"
 #include "../regexp.h"
@@ -89,7 +90,7 @@ int empty_res=EVAL_TRUE;
 static void free_tokens(struct tokens *ptr)
 {
 	if(!ptr) return;
-	free_list_w(ptr->list, (int)ptr->size);
+	free_list_w(ptr->list, ptr->size);
 	free_v((void **)&ptr);
 }
 
@@ -194,9 +195,9 @@ static struct tokens *create_token_list(char *expr)
 	char **toks=NULL;
 	size_t nb_elements=0;
 	struct tokens *ret=NULL;
-	if(!(new=strreplace_w(expr, "(", " ( ", __func__))) goto end;
-	if(!(new2=strreplace_w(new, ")", " ) ", __func__))) goto end;
-	if(!(toks=strsplit_w(new2, " ", &nb_elements, __func__))) goto end;
+	if(!(new=charreplace_noescaped_w(expr, '(', " ( ", __func__))) goto end;
+	if(!(new2=charreplace_noescaped_w(new, ')', " ) ", __func__))) goto end;
+	if(!(toks=charsplit_noescaped_w(new2, ' ', &nb_elements, __func__))) goto end;
 	if(!(ret=malloc_w(sizeof(*ret), __func__))) goto end;
 	ret->list=toks;
 	ret->size=nb_elements;
@@ -273,20 +274,41 @@ end:
 	free_v((void **)&positions);
 }
 
+// utility function
+static char *strip_quotes(char *src)
+{
+	int len;
+	char *strip=NULL;
+	if(!(len=strlen(src))) goto end;
+	if((*src=='\'' || *src=='"') && *src==src[len-1]) // strip the quotes
+	{
+		if(!(strip=malloc_w(len-1, __func__))) goto end;
+		strip=strncpy(strip, src+1, len-2);
+		strip[len-2]='\0';
+	}
+end:
+	return strip;
+}
+
 // function 'file_ext'
 static int eval_file_ext(char *tok, const char *fname)
 {
 	const char *cp;
-	if(strlen(tok)==0) goto end;
+	int len;
+	char *strip=NULL;
+	if(!(len=strlen(tok))) goto end;
 	for(; *tok=='='; ++tok);
-	if(strlen(tok)==0) goto end;  // test again after we trimmed the '='
+	if(!(len=strlen(tok))) goto end;  // test again after we trimmed the '='
+	strip=strip_quotes(tok);
 	for(cp=fname+strlen(fname)-1; cp>=fname; cp--)
 	{
 		if(*cp!='.') continue;
-		if(!strcasecmp(tok, cp+1))
+		if((strip && !strcasecmp(strip, cp+1))
+		   || (!strip && !strcasecmp(tok, cp+1)))
 			return EVAL_TRUE;
 	}
 end:
+	free_w(&strip);
 	return EVAL_FALSE;
 }
 
@@ -294,6 +316,7 @@ end:
 static int eval_file_match(char *tok, const char *fname)
 {
 	struct cregex *reg;
+	char *strip=NULL;
 	if(strlen(tok)==0) goto end;
 	for(; *tok=='='; ++tok);
 	if(strlen(tok)==0) goto end;  // test again after we trimmed the '='
@@ -303,7 +326,11 @@ static int eval_file_match(char *tok, const char *fname)
 		reg=NULL;
 	if(!reg)
 	{
-		regex_t *tmp=regex_compile(tok);
+		regex_t *tmp;
+		if((strip=strip_quotes(tok)))
+			tmp=regex_compile(strip);
+		else
+			tmp=regex_compile(tok);
 		if(!(reg=malloc_w(sizeof(*reg), __func__)))
 		{
 			regex_free(&tmp);
@@ -316,6 +343,7 @@ static int eval_file_match(char *tok, const char *fname)
 	if(regex_check(reg->compiled, fname))
 		return EVAL_TRUE;
 end:
+	free_w(&strip);
 	return EVAL_FALSE;
 }
 
@@ -323,6 +351,7 @@ end:
 static int eval_file_size(char *tok, uint64_t filesize)
 {
 	int ret=EVAL_FALSE;
+	char *strip=NULL;
 	TOKENS eval=PLACEHOLDER;
 	uint64_t s=0;
 	if(strlen(tok)==0) goto end;
@@ -356,7 +385,10 @@ static int eval_file_size(char *tok, uint64_t filesize)
 				break;
 		}
 	}
-	get_file_size(tok, &s, NULL, -1);
+	if((strip=strip_quotes(tok)))
+		get_file_size(strip, &s, NULL, -1);
+	else
+		get_file_size(tok, &s, NULL, -1);
 	switch(eval)
 	{
 		case LT:
@@ -378,6 +410,7 @@ static int eval_file_size(char *tok, uint64_t filesize)
 			ret=EVAL_FALSE;
 	}
 end:
+	free_w(&strip);
 	return ret;
 }
 

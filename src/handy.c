@@ -623,7 +623,11 @@ char *charreplace_noescaped_w(char *orig, char search, char *replace, const char
 	len=strlen(orig);
 	len_replace=strlen(replace);
 
-	if(!(count=charcount_noescaped(orig, search, 1))) goto end;
+	if(!(count=charcount_noescaped(orig, search, 1)))
+	{
+		result=strdup_w(orig, func);
+		goto end;
+	}
 
 	len_dest=len+((len_replace-1)*count)+1;
 	tmp=result=malloc_w(len_dest, func);
@@ -694,12 +698,34 @@ end:
 	return ret;
 }
 
+static char *strip_whitespace_w(const char *src, const char *func)
+{
+	char *ret=NULL;
+	char *ptr=(char *)src;
+	int len=strlen(src);
+	int size;
+	if(*ptr!=' ' && ptr[len-1]!=' ')
+	{
+		if(!(ret=strdup_w(src, func))) goto end;
+		return ret;
+	}
+	for(; *ptr==' '; ptr++);
+	size=strlen(ptr);
+	for(; ptr[size-1]==' '; --size);
+	if(!(ret=malloc_w(size+2, func))) goto end;
+	ret=strncpy(ret, ptr, size);
+	ret[size]='\0';
+end:
+	return ret;
+}
+
 // same as strsplit_w except the delimiter is a single char and if the delimiter
 // is inside quotes or escaped with '\' it is ignored.
 char **charsplit_noescaped_w(const char *src, char delimiter, size_t *size, const char *func)
 {
 	char **ret=NULL;
-	char *ptr=(char *)src;
+	char *ptr=NULL;
+	char *buf;
 	char *end;
 	char quote='\0';
 	char prev='\0';
@@ -707,37 +733,39 @@ char **charsplit_noescaped_w(const char *src, char delimiter, size_t *size, cons
 	int i, j, k;
 	int len;
 	if(!src) goto end;
-	len=strlen(src);
-	if(!(count=charcount_noescaped(src, delimiter, 0))) goto end;
+	ptr=strip_whitespace_w(src, func);
+	buf=ptr;
+	len=strlen(ptr);
+	if(!(count=charcount_noescaped(ptr, delimiter, 0))) goto end;
 	// need one more space than the number of delimiters
 	count++;
 	if(!(ret=malloc_w((count+1)*sizeof(char *), func))) goto end;
 	*size=(size_t)count;
 	for(i=0, j=0, k=0; i<len; i++)
 	{
-		if(quote=='\0' && (src[i]=='\'' || src[i]=='"'))
-			quote=src[i];
-		else if(quote!='\0' && src[i]==quote)
+		if(quote=='\0' && (ptr[i]=='\'' || ptr[i]=='"'))
+			quote=ptr[i];
+		else if(quote!='\0' && ptr[i]==quote)
 		{
-			if(i<=0 || src[i-1]!='\\')
+			if(i<=0 || ptr[i-1]!='\\')
 				quote='\0';
 		}
-		else if(quote=='\0' && src[i]==delimiter)
+		else if(quote=='\0' && ptr[i]==delimiter)
 		{
-			if(i<=0 || src[i-1]!='\\')
+			if(i<=0 || ptr[i-1]!='\\')
 			{
-				if(prev==src[i])
-					ptr++;
+				if(prev==ptr[i])
+					buf++;
 				else
 				{
 					char *tmp;
 					int tmp_len=j+1;
-					if(k>0) ptr++;
+					if(k>0) buf++;
 					tmp=malloc_w(tmp_len, func);
-					tmp=strncpy(tmp, ptr, tmp_len);
+					tmp=strncpy(tmp, buf, tmp_len);
 					tmp[tmp_len-1]='\0';
 					ret[k]=tmp;
-					ptr+=j;
+					buf+=j;
 					j=0;
 					k++;
 				}
@@ -746,15 +774,16 @@ char **charsplit_noescaped_w(const char *src, char delimiter, size_t *size, cons
 		}
 		j++;
 loop_tail:
-		prev=src[i];
+		prev=ptr[i];
 	}
-	while(*ptr==delimiter && *(ptr-1)!='\\') ptr++;
+	while(*buf==delimiter && *(buf-1)!='\\') buf++;
 	end=malloc_w(j+1, func);
-	end=strncpy(end, ptr, j+1);
+	end=strncpy(end, buf, j+1);
 	end[j]='\0';
 	ret[k]=end;
 	ret[k+1]=NULL;
 end:
+	free_w(&ptr);
 	return ret;
 }
 

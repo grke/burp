@@ -127,15 +127,3 @@ void free_w(char **str)
 {
 	free_v((void **)str);
 }
-
-void free_p(void *ptr)
-{
-	if(!ptr) return;
-#ifdef UTEST
-	if(alloc_debug) printf("%p freed\n", ptr);
-#endif
-	free(ptr);
-#ifdef UTEST
-	free_count++;
-#endif
-}

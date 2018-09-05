@@ -17,6 +17,5 @@ extern void *calloc_w(size_t nmem, size_t size, const char *func);
 extern void free_c(void **ptr);
 extern void free_v(void **ptr);
 extern void free_w(char **str);
-extern void free_p(void *ptr);
 
 #endif

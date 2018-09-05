@@ -111,7 +111,7 @@ static void free_cregex(struct cregex *ptr)
 static void free_node(node **ptr)
 {
 	if(!*ptr) return;
-	free_p(*ptr);
+	free_v((void **)ptr);
 }
 
 // append a node to a given list

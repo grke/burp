@@ -62,6 +62,7 @@ struct tokens
 {
 	char **list;
 	size_t size;
+	int valid;
 };
 
 // an expression is a hash record to retrieve already parsed records
@@ -83,9 +84,6 @@ struct cregex
 // these are some caches
 struct expression *cache=NULL;
 struct cregex *regex_cache=NULL;
-
-// empty expression always return 'true'
-int empty_res=EVAL_TRUE;
 
 static void free_tokens(struct tokens *ptr)
 {
@@ -195,12 +193,14 @@ static struct tokens *create_token_list(char *expr)
 	char **toks=NULL;
 	size_t nb_elements=0;
 	struct tokens *ret=NULL;
-	if(!(new=charreplace_noescaped_w(expr, '(', " ( ", __func__))) goto end;
-	if(!(new2=charreplace_noescaped_w(new, ')', " ) ", __func__))) goto end;
+	int opened, closed;
+	if(!(new=charreplace_noescaped_w(expr, '(', " ( ", &opened, __func__))) goto end;
+	if(!(new2=charreplace_noescaped_w(new, ')', " ) ", &closed, __func__))) goto end;
 	if(!(toks=charsplit_noescaped_w(new2, ' ', &nb_elements, __func__))) goto end;
 	if(!(ret=malloc_w(sizeof(*ret), __func__))) goto end;
 	ret->list=toks;
 	ret->size=nb_elements;
+	ret->valid=(opened==closed);
 end:
 	free_w(&new);
 	free_w(&new2);
@@ -449,7 +449,7 @@ static node *str_to_node(char *tok, const char *filename, uint64_t filesize)
 }
 
 // evaluate a trio of tokens like 'true or false'
-static int eval_triplet(node *head)
+static int eval_triplet(node *head, int def)
 {
 	TOKENS left, func, right;
 	left=head->val;
@@ -462,12 +462,12 @@ static int eval_triplet(node *head)
 		case OR_FUNC:
 			return left || right;
 		default:
-			return 0;
+			return def;
 	}
 }
 
 // factorise tokens by recursively evaluating them
-static int bool_eval(dllist **tokens)
+static int bool_eval(dllist **tokens, int def)
 {
 	dllist *toks=*tokens;
 	if(toks->len==1)
@@ -529,7 +529,7 @@ static int bool_eval(dllist **tokens)
 		node *tmp;
 		dllist *new_tokens;
 		int i;
-		tmp=new_node(eval_triplet(toks->head));
+		tmp=new_node(eval_triplet(toks->head, def));
 		if(!(new_tokens=new_list()))
 		{
 			free_node(&tmp);
@@ -545,9 +545,10 @@ static int bool_eval(dllist **tokens)
 		free_v((void **)tokens);
 		*tokens=new_tokens;
 		toks=*tokens;
-		return bool_eval(tokens);
+		return bool_eval(tokens, def);
 	}
-	return eval_triplet(toks->head);
+	if(toks->len%3!=0) return def;
+	return eval_triplet(toks->head, def);
 }
 
 // evaluate our list of tokens
@@ -561,7 +562,7 @@ static int eval_parsed_expression(dllist **tokens, int def)
 	parens(toks, &has, &left, &right);
 	// we don't have parentheses, we can evaluate the tokens
 	if(!has)
-		return bool_eval(tokens);
+		return bool_eval(tokens, def);
 	// we have parentheses
 	// we retrieve the two nodes '(' and ')'
 	begin=list_get_node_by_id(toks, left);
@@ -578,7 +579,7 @@ static int eval_parsed_expression(dllist **tokens, int def)
 	}
 	count++;
 	// evaluate the inner expression
-	tmp=new_node(bool_eval(&sub));
+	tmp=new_node(bool_eval(&sub, def));
 	// we replace all the tokens parentheses included with the new computed node
 	// first element of the list
 	if(!begin->prev)
@@ -609,9 +610,9 @@ static int eval_parsed_expression(dllist **tokens, int def)
 	return eval_parsed_expression(tokens, def);
 }
 
-static int eval_expression(char *expr, const char *filename, uint64_t filesize)
+static int eval_expression(char *expr, const char *filename, uint64_t filesize, int def)
 {
-	int ret=0, i;
+	int ret=def, i;
 	struct expression *parsed;
 	dllist *tokens;
 	if(cache)
@@ -620,13 +621,14 @@ static int eval_expression(char *expr, const char *filename, uint64_t filesize)
 		parsed=NULL;
 	if(!parsed)
 	{
-		if(!(parsed=parse_expression(expr))) return 0;
+		if(!(parsed=parse_expression(expr))) return def;
 		HASH_ADD_KEYPTR(hh, cache, parsed->id, strlen(parsed->id), parsed);
 	}
+	if(!parsed || !parsed->tokens->valid) goto end;
 	if(!(tokens=new_list())) goto end;
 	for(i=0; i<parsed->tokens->size; i++)
 		list_append(&tokens, str_to_node(parsed->tokens->list[i], filename, filesize));
-	ret=eval_parsed_expression(&tokens, empty_res);
+	ret=eval_parsed_expression(&tokens, def);
 end:
 	list_reset(&tokens);
 	free_v((void **)&tokens);
@@ -664,7 +666,7 @@ static int is_logic(struct strlist *list, struct FF_PKT *ff, int miss, int def)
 	if(!list) return miss;
 	if(!S_ISREG(ff->statp.st_mode)) return def;  // ignore directories
 	for(; list; list=list->next)
-		if(eval_expression(list->path, ff->fname, (uint64_t)ff->statp.st_size))
+		if(eval_expression(list->path, ff->fname, (uint64_t)ff->statp.st_size, miss))
 			return 1;
 	return def;
 }

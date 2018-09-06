@@ -607,12 +607,12 @@ loop_tail:
 	return count;
 }
 
-char *charreplace_noescaped_w(char *orig, char search, char *replace, const char *func)
+char *charreplace_noescaped_w(char *orig, char search, char *replace, int *count, const char *func)
 {
 	char *result=NULL;
 	char *tmp;
 	char quote='\0';
-	int count;  // number of replacement
+	int nb_repl=0;  // number of replacement
 	int i;
 	int len;
 	int len_replace;
@@ -623,13 +623,13 @@ char *charreplace_noescaped_w(char *orig, char search, char *replace, const char
 	len=strlen(orig);
 	len_replace=strlen(replace);
 
-	if(!(count=charcount_noescaped(orig, search, 1)))
+	if(!(nb_repl=charcount_noescaped(orig, search, 1)))
 	{
 		result=strdup_w(orig, func);
 		goto end;
 	}
 
-	len_dest=len+((len_replace-1)*count)+1;
+	len_dest=len+((len_replace-1)*nb_repl)+1;
 	tmp=result=malloc_w(len_dest, func);
 	if(!result) goto end;
 
@@ -656,6 +656,7 @@ char *charreplace_noescaped_w(char *orig, char search, char *replace, const char
 	}
 	*tmp='\0';
 end:
+	*count=nb_repl;
 	return result;
 }
 

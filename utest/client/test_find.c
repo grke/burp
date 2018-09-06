@@ -405,21 +405,24 @@ static void include_regex(void)
 static void exclude_logic(void)
 {
 	add_dir(     FOUND, "");
-	add_file(    FOUND, "a", 1);
+	add_file(    FOUND, "a", 2);
 	add_file(NOT_FOUND, "a.ost", 6);
-	add_file(    FOUND, "b.ost", 1);
+	add_file(    FOUND, "b.ost", 2);
 	add_file(NOT_FOUND, "ca", 15);
 	add_file(NOT_FOUND, "cb", 16);
 	add_file(    FOUND, "cc", 15);
 	add_file(    FOUND, "haaaab", 9);
 	add_file(NOT_FOUND, "haaab", 8);
 	add_file(NOT_FOUND, "y", 4);
-	add_file(    FOUND, "z", 1);
+	add_file(    FOUND, "z", 2);
 	snprintf(extra_config, sizeof(extra_config),
 		 "include=%s\n"
 		 "exclude_logic=file_size>=5 and file_ext=ost\n"
 		 "exclude_logic=(file_size>=3 and file_size<=5) or (file_size=8 and file_match=b$)\n"
-		 "exclude_logic=(file_size>=10 and file_size<=20) and (file_ext=zoro or file_match='c(a|b)$')\n",
+		 "exclude_logic=(file_size>=10 and file_size<=20) and (file_ext=zoro or file_match='c(a|b)$')\n"
+		 "exclude_logic=(file_size>=30 or file_size<2\n"
+		 "exclude_logic=this expression isnt valid\n"
+		 "exclude_logic=another unvalid expression\n",
 		 fullpath);
 }
 

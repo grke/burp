@@ -312,9 +312,10 @@ end:
 	return EVAL_FALSE;
 }
 
-// function 'file_match'
-static int eval_file_match(char *tok, const char *fname)
+// function 'path_match'
+static int eval_path_match(char *tok, const char *fname)
 {
+	int ret=EVAL_FALSE;
 	struct cregex *reg;
 	char *strip=NULL;
 	if(strlen(tok)==0) goto end;
@@ -341,10 +342,18 @@ static int eval_file_match(char *tok, const char *fname)
 		HASH_ADD_KEYPTR(hh, regex_cache, reg->id, strlen(reg->id), reg);
 	}
 	if(regex_check(reg->compiled, fname))
-		return EVAL_TRUE;
+		ret=EVAL_TRUE;
 end:
 	free_w(&strip);
-	return EVAL_FALSE;
+	return ret;
+}
+
+// function 'file_match'
+static int eval_file_match(char *tok, const char *fname)
+{
+	int len=strlen(fname);
+	for(; len>0 && fname[len-1]!='/'; len--);
+	return eval_path_match(tok, fname+len);
 }
 
 // function 'file_size'
@@ -422,6 +431,8 @@ static int eval_func(char *tok, const char *filename, uint64_t filesize)
 		ret=eval_file_ext(tok+8, filename);
 	else if(!strncmp(tok, "file_match", 10))
 		ret=eval_file_match(tok+10, filename);
+	else if(!strncmp(tok, "path_match", 10))
+		ret=eval_path_match(tok+10, filename);
 	else if(!strncmp(tok, "file_size", 9))
 		ret=eval_file_size(tok+9, filesize);
 	else

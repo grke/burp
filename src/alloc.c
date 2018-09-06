@@ -97,19 +97,6 @@ void *calloc_w(size_t nmem, size_t size, const char *func)
 	return ret;
 }
 
-// free "containers" (pointers of pointers)
-void free_c(void **ptr)
-{
-	if(!ptr) return;
-#ifdef UTEST
-	if(alloc_debug) printf("%p freed\n", ptr);
-#endif
-	free(ptr);
-#ifdef UTEST
-	free_count++;
-#endif
-}
-
 void free_v(void **ptr)
 {
 	if(!ptr || !*ptr) return;

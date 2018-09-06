@@ -88,7 +88,7 @@ struct cregex *regex_cache=NULL;
 static void free_tokens(struct tokens *ptr)
 {
 	if(!ptr) return;
-	free_list_w(ptr->list, ptr->size);
+	free_list_w(&ptr->list, ptr->size);
 	free_v((void **)&ptr);
 }
 

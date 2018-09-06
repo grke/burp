@@ -133,7 +133,7 @@ end:
 	if(splitstr1)
 	{
 		free_w(&sav);
-		free_list_w(splitstr1, len1);
+		free_list_w(&splitstr1, len1);
 	}
 	return ret;
 }

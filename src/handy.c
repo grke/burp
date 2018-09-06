@@ -788,21 +788,14 @@ end:
 	return ret;
 }
 
-void free_list_w(char **list, size_t size)
+void free_list_w(char ***list, size_t size)
 {
-	if(!list) return;
-	if(size<0)
-	{
-		for(; *list; list++)
-			if(*list) free_w(list);
-	}
-	else
-	{
-		size_t i;
-		for(i=0; i<size; i++)
-			if(list[i]) free_w(&list[i]);
-	}
-	free_c((void **)list);
+	char **l=*list;
+	if(!l) return;
+	size_t i;
+	for(i=0; i<size; i++)
+		if(l[i]) free_w(&l[i]);
+	free_v((void **)list);
 }
 
 // Strip any trailing slashes (unless it is '/').

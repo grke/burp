@@ -625,7 +625,7 @@ static int eval_expression(char *expr, const char *filename, uint64_t filesize, 
 {
 	int ret=def, i;
 	struct expression *parsed;
-	dllist *tokens;
+	dllist *tokens=NULL;
 	if(cache)
 		HASH_FIND_STR(cache, expr, parsed);
 	else

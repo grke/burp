@@ -46,7 +46,7 @@ extern int strncmp_w(const char *s1, const char *s2);
 extern char **strsplit_w(const char *src, const char *delimiters, size_t *size, const char *func);
 extern char **charsplit_noescaped_w(const char *src, char delimiter, size_t *size, const char *func);
 extern char *strreplace_w(char *orig, char *search, char *replace, const char *func);
-extern char *charreplace_noescaped_w(char *orig, char search, char *replace, int *count, const char *func);
+extern char *charreplace_noescaped_w(const char *orig, char search, const char *replace, int *count, const char *func);
 extern void free_list_w(char ***list, size_t size);
 extern char *strdup_w(const char *s, const char *func);
 extern void *realloc_w(void *ptr, size_t size, const char *func);

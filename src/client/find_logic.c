@@ -139,7 +139,7 @@ static node *list_get_node_by_id(dllist *list, int id)
 {
 	node *ret=NULL;
 	int cpt=0;
-	if(!list || id<0 || id>list->len) return ret;
+	if(!list || id<0 || id>(int)list->len) return ret;
 	ret=list->head;
 	for(cpt=0, ret=list->head; ret && cpt<id; cpt++, ret=ret->next);
 	if(cpt<id) return NULL;  // id out of range
@@ -169,7 +169,7 @@ static void list_reset(dllist **list)
 static dllist *new_list(void)
 {
 	dllist *ret;
-	if(!(ret=malloc_w(sizeof(*ret), __func__))) return NULL;
+	if(!(ret=(dllist *)malloc_w(sizeof(*ret), __func__))) return NULL;
 	ret->len=0;
 	ret->head=NULL;
 	ret->tail=NULL;
@@ -179,7 +179,7 @@ static dllist *new_list(void)
 static node *new_node(int value)
 {
 	node *ret;
-	if(!(ret=malloc_w(sizeof(*ret), __func__))) return NULL;
+	if(!(ret=(node *)malloc_w(sizeof(*ret), __func__))) return NULL;
 	ret->val=value;
 	ret->next=NULL;
 	ret->prev=NULL;
@@ -189,21 +189,24 @@ static node *new_node(int value)
 // here we actually convert our expression into a list of string tokens
 static struct tokens *create_token_list(char *expr)
 {
-	char *new=NULL, *new2=NULL;
+	char *n=NULL;
+	char *n2=NULL;
 	char **toks=NULL;
 	size_t nb_elements=0;
 	struct tokens *ret=NULL;
 	int opened, closed;
-	if(!(new=charreplace_noescaped_w(expr, '(', " ( ", &opened, __func__))) goto end;
-	if(!(new2=charreplace_noescaped_w(new, ')', " ) ", &closed, __func__))) goto end;
-	if(!(toks=charsplit_noescaped_w(new2, ' ', &nb_elements, __func__))) goto end;
-	if(!(ret=malloc_w(sizeof(*ret), __func__))) goto end;
+
+	if(!(n=charreplace_noescaped_w(expr, '(', " ( ", &opened, __func__))) goto end;
+	if(!(n2=charreplace_noescaped_w(n, ')', " ) ", &closed, __func__))) goto end;
+	if(!(toks=charsplit_noescaped_w(n2, ' ', &nb_elements, __func__))) goto end;
+	if(!(ret=(struct tokens *)malloc_w(sizeof(*ret), __func__))) goto end;
+
 	ret->list=toks;
 	ret->size=nb_elements;
 	ret->valid=(opened==closed);
 end:
-	free_w(&new);
-	free_w(&new2);
+	free_w(&n);
+	free_w(&n2);
 	return ret;
 }
 
@@ -213,7 +216,7 @@ static struct expression *parse_expression(char *expr)
 	struct expression *ret=NULL;
 	struct tokens *toks;
 	if(!(toks=create_token_list(expr))) return ret;
-	if(!(ret=malloc_w(sizeof(*ret), __func__))) goto error;
+	if(!(ret=(struct expression *)malloc_w(sizeof(*ret), __func__))) goto error;
 	ret->tokens=toks;
 	ret->id=expr;
 	return ret;
@@ -227,7 +230,7 @@ static void find(dllist *toks, TOKENS what, int start, dllist **positions)
 {
 	int i;
 	node *tmp;
-	for(i=0, tmp=toks->head; i<toks->len; i++, tmp=tmp->next)
+	for(i=0, tmp=toks->head; i<(int)toks->len; i++, tmp=tmp->next)
 	{
 		if(i<start) continue;  // skip the unwanted positions
 		if(tmp && tmp->val==what) list_append(positions, new_node(i));
@@ -282,7 +285,7 @@ static char *strip_quotes(char *src)
 	if(!(len=strlen(src))) goto end;
 	if((*src=='\'' || *src=='"') && *src==src[len-1]) // strip the quotes
 	{
-		if(!(strip=malloc_w(len-1, __func__))) goto end;
+		if(!(strip=(char *)malloc_w(len-1, __func__))) goto end;
 		strip=strncpy(strip, src+1, len-2);
 		strip[len-2]='\0';
 	}
@@ -332,7 +335,7 @@ static int eval_path_match(char *tok, const char *fname)
 			tmp=regex_compile(strip);
 		else
 			tmp=regex_compile(tok);
-		if(!(reg=malloc_w(sizeof(*reg), __func__)))
+		if(!(reg=(struct cregex *)malloc_w(sizeof(*reg), __func__)))
 		{
 			regex_free(&tmp);
 			goto end;
@@ -637,7 +640,7 @@ static int eval_expression(char *expr, const char *filename, uint64_t filesize, 
 	}
 	if(!parsed || !parsed->tokens->valid) goto end;
 	if(!(tokens=new_list())) goto end;
-	for(i=0; i<parsed->tokens->size; i++)
+	for(i=0; i<(int)parsed->tokens->size; i++)
 		list_append(&tokens, str_to_node(parsed->tokens->list[i], filename, filesize));
 	ret=eval_parsed_expression(&tokens, def);
 end:

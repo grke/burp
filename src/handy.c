@@ -556,7 +556,7 @@ char *strreplace_w(char *orig, char *search, char *replace, const char *func)
 	for(count=0; (tmp=strstr(ins, search)); ++count)
 		ins=tmp+len_search;
 
-	tmp=result=malloc_w(strlen(orig)+(len_rep-len_search)*count+1, func);
+	tmp=result=(char *)malloc_w(strlen(orig)+(len_rep-len_search)*count+1, func);
 
 	if(!result) goto end;
 
@@ -607,7 +607,7 @@ loop_tail:
 	return count;
 }
 
-char *charreplace_noescaped_w(char *orig, char search, char *replace, int *count, const char *func)
+char *charreplace_noescaped_w(const char *orig, char search, const char *replace, int *count, const char *func)
 {
 	char *result=NULL;
 	char *tmp;
@@ -630,7 +630,7 @@ char *charreplace_noescaped_w(char *orig, char search, char *replace, int *count
 	}
 
 	len_dest=len+((len_replace-1)*nb_repl)+1;
-	tmp=result=malloc_w(len_dest, func);
+	tmp=result=(char *)malloc_w(len_dest, func);
 	if(!result) goto end;
 
 	quote='\0';
@@ -713,7 +713,7 @@ static char *strip_whitespace_w(const char *src, const char *func)
 	for(; *ptr==' '; ptr++);
 	size=strlen(ptr);
 	for(; ptr[size-1]==' '; --size);
-	if(!(ret=malloc_w(size+2, func))) goto end;
+	if(!(ret=(char *)malloc_w(size+2, func))) goto end;
 	ret=strncpy(ret, ptr, size);
 	ret[size]='\0';
 end:
@@ -733,14 +733,17 @@ char **charsplit_noescaped_w(const char *src, char delimiter, size_t *size, cons
 	int count;
 	int i, j, k;
 	int len;
+
 	if(!src) goto end;
 	ptr=strip_whitespace_w(src, func);
 	buf=ptr;
 	len=strlen(ptr);
-	if(!(count=charcount_noescaped(ptr, delimiter, 0))) goto end;
+	if(!(count=charcount_noescaped(ptr, delimiter, 0)))
+		goto end;
 	// need one more space than the number of delimiters
 	count++;
-	if(!(ret=malloc_w((count+1)*sizeof(char *), func))) goto end;
+	if(!(ret=(char **)malloc_w((count+1)*sizeof(char *), func)))
+		goto error;
 	*size=(size_t)count;
 	for(i=0, j=0, k=0; i<len; i++)
 	{
@@ -762,7 +765,9 @@ char **charsplit_noescaped_w(const char *src, char delimiter, size_t *size, cons
 					char *tmp;
 					int tmp_len=j+1;
 					if(k>0) buf++;
-					tmp=malloc_w(tmp_len, func);
+					if(!(tmp=(char *)malloc_w(
+						tmp_len, func)))
+							goto error;
 					tmp=strncpy(tmp, buf, tmp_len);
 					tmp[tmp_len-1]='\0';
 					ret[k]=tmp;
@@ -778,7 +783,8 @@ loop_tail:
 		prev=ptr[i];
 	}
 	while(*buf==delimiter && *(buf-1)!='\\') buf++;
-	end=malloc_w(j+1, func);
+	if(!(end=(char *)malloc_w(j+1, func)))
+		goto error;
 	end=strncpy(end, buf, j+1);
 	end[j]='\0';
 	ret[k]=end;
@@ -786,6 +792,10 @@ loop_tail:
 end:
 	free_w(&ptr);
 	return ret;
+error:
+	free_w(&ptr);
+	free_list_w(&ret, *size);
+	return NULL;
 }
 
 void free_list_w(char ***list, size_t size)

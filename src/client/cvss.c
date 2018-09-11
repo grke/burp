@@ -86,7 +86,11 @@ int win32_start_vss(struct asfd *asfd, struct conf **confs)
 			szWinDriveLetters);
 		if(!g_pVSSClient->CreateSnapshots(szWinDriveLetters))
 		{
-			logw(asfd, cntr, "Generate VSS snapshots failed.\n");
+			berrno be;
+			berrno_init(&be);
+			logw(asfd, cntr,
+				"Generate VSS snapshots failed.ERR=%s\n",
+				berrno_bstrerror(&be, b_errno_win32));
 			errors++;
 		}
 		else
@@ -105,7 +109,11 @@ int win32_start_vss(struct asfd *asfd, struct conf **confs)
 			for(i=0; i<(int)g_pVSSClient->GetWriterCount(); i++)
 			{
 				if(g_pVSSClient->GetWriterState(i)<1)
+				{
+					logw(asfd, cntr,
+						"Start GetWriterState(%d)<1\n", i);
 					errors++;
+				}
 				logp("VSS Writer (PrepareForBackup): %s\n",
 					g_pVSSClient->GetWriterInfo(i));
 			}
@@ -133,7 +141,13 @@ int win32_stop_vss(void)
 		for(i=0; i<(int)g_pVSSClient->GetWriterCount(); i++)
 		{
 			if(g_pVSSClient->GetWriterState(i)<1)
+			{
+				// Would be better to be a logw, but this gets
+				// called by some weird handler thing above, so
+				// it is hard to pass in asfd and cntr.
+				logp("Stop GetWriterState(%d)<1\n", i);
 				errors++;
+			}
 			logp("VSS Writer (BackupComplete): %s\n",
 				g_pVSSClient->GetWriterInfo(i));
 		}

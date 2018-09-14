@@ -178,6 +178,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_EXCEXT:
 		case OPT_INCREG:
 		case OPT_EXCREG:
+		case OPT_INCLOGIC:
+		case OPT_EXCLOGIC:
 		case OPT_EXCFS:
 		case OPT_INCFS:
 		case OPT_EXCOM:

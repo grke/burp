@@ -161,6 +161,8 @@ enum conf_opt
 	OPT_EXCEXT, // exclude extensions
 	OPT_INCREG, // include (regular expression)
 	OPT_EXCREG, // exclude (regular expression)
+	OPT_INCLOGIC, // include logic expression
+	OPT_EXCLOGIC, // exclude logic expression
 	OPT_EXCFS, // exclude filesystems
 	OPT_INCFS, // include filesystems
 	OPT_EXCOM, // exclude from compression

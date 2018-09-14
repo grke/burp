@@ -183,6 +183,7 @@ main_SOURCES = \
 	src/client/extra_comms.c src/client/extra_comms.h \
 	src/client/extrameta.c src/client/extrameta.h \
 	src/client/find.c src/client/find.h \
+	src/client/find_logic.c src/client/find_logic.h \
 	src/client/glob_windows.c src/client/glob_windows.h \
 	src/client/list.c src/client/list.h \
 	src/client/main.c src/client/main.h \

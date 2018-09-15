@@ -159,20 +159,66 @@ int parse_parent_data(char *buf, struct cstat *clist)
 	return 0;
 }
 
-static char *get_str(const char **buf, const char *pre, int last)
-{
-	size_t len=0;
-	char *cp=NULL;
+#ifndef UTEST
+static
+#endif
+int status_server_parse_cmd(
+	const char *buf,
+	char **command,
+	char **client,
+	char **backup,
+	char **logfile,
+	char **browse
+) {
+	int ret=-1;
+	char *tok=NULL;
+	char **current=NULL;
 	char *copy=NULL;
-	char *ret=NULL;
-	if(!buf || !*buf) goto end;
-	len=strlen(pre);
-	if(strncmp(*buf, pre, len)
-	  || !(copy=strdup_w((*buf)+len, __func__)))
+
+	if(!buf)
+		return 0;
+
+	if(!(copy=strdup_w(buf, __func__)))
 		goto end;
-	if(!last && (cp=strchr(copy, ':'))) *cp='\0';
-	*buf+=len+strlen(copy)+1;
-	ret=strdup_w(copy, __func__);
+	if(!(tok=strtok(copy, ":")))
+	{
+		ret=0;
+		goto end;
+	}
+	do {
+		if(current)
+		{
+			if(!(*current=strdup_w(tok, __func__)))
+				goto end;
+			current=NULL;
+		}
+		else
+		{
+			if(!strcmp(tok, "j"))
+				current=command;
+			else if(!strcmp(tok, "c"))
+				current=client;
+			else if(!strcmp(tok, "b"))
+				current=backup;
+			else if(!strcmp(tok, "l"))
+				current=logfile;
+			else if(!strcmp(tok, "p"))
+			{
+				// The path may have colons in it. So, make
+				// this the last one.
+				if(copy+strlen(buf) > tok+1)
+				{
+					if(!(*browse=strdup_w(tok+2, __func__)))
+						goto end;
+				}
+				break;
+			}
+			else
+				current=NULL;
+		}
+	} while((tok=strtok(NULL, ":")));
+
+	ret=0;
 end:
 	free_w(&copy);
 	return ret;
@@ -208,19 +254,20 @@ static int parse_client_data(struct asfd *srfd,
 	char *backup=NULL;
 	char *logfile=NULL;
 	char *browse=NULL;
-	const char *cp=NULL;
 	struct cstat *cstat=NULL;
         struct bu *bu=NULL;
 	static int response_markers=0;
 	const char *cmd_result=NULL;
 //logp("got client data: '%s'\n", srfd->rbuf->buf);
 
-	cp=srfd->rbuf->buf;
-	command=get_str(&cp, "j:", 0);
-	client=get_str(&cp, "c:", 0);
-	backup=get_str(&cp, "b:", 0);
-	logfile=get_str(&cp, "l:", 0);
-	browse=get_str(&cp, "p:", 1);
+	if(status_server_parse_cmd(
+		srfd->rbuf->buf,
+		&command,
+		&client,
+		&backup,
+		&logfile,
+		&browse))
+			goto error;
 
 	if(command)
 	{

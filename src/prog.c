@@ -31,9 +31,10 @@ static void usage_server(void)
 	printf("  -h|-?         Print this text and exit.\n");
 	printf("  -i            Print index of symbols and exit.\n");
 	printf("  -n            Do not fork any children (implies '-F').\n");
-	printf("  -Q            Do not log to stdout (overrides config file)\n");
+	printf("  -Q            Do not log to stdout\n");
 	printf("  -t            Dry-run to test config file syntax.\n");
-	printf("  -v            Print version and exit.\n");
+	printf("  -v            Log to stdout.\n");
+	printf("  -V            Print version and exit.\n");
 	printf("Options to use with '-a c':\n");
 	printf("  -C <client>   Run as if forked via a connection from this client.\n");
 	printf("\n");
@@ -69,11 +70,12 @@ static void usage_client(void)
 	printf("  -h|-?          Print this text and exit.\n");
 	printf("  -i             Print index of symbols and exit.\n");
 	printf("  -q <max secs>  Randomised delay of starting a timed backup.\n");
-	printf("  -Q             Do not log to stdout (overrides config file)\n");
+	printf("  -Q             Do not log to stdout\n");
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -t             Dry-run to test config file syntax.\n");
-	printf("  -v             Print version and exit.\n");
+	printf("  -v             Log to stdout.\n");
+	printf("  -V             Print version and exit.\n");
 #ifdef HAVE_WIN32
 	printf("  -x             Do not use the Windows VSS API when restoring.\n");
 #else
@@ -309,7 +311,7 @@ int real_main(int argc, char *argv[])
 		return run_bsparse(argc, argv);
 #endif
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:o:fFghil:nq:Qr:s:tvxjz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:c:C:d:o:fFghijl:nq:Qr:s:tvVxz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -360,7 +362,8 @@ int real_main(int argc, char *argv[])
 				randomise=atoi(optarg);
 				break;
 			case 'Q':
-				log_force_quiet();
+				strlist_add(&cli_overrides, "progress_counter=0", 0);
+				strlist_add(&cli_overrides, "stdout=0", 0);
 				break;
 			case 'r':
 				regex=optarg;
@@ -369,6 +372,9 @@ int real_main(int argc, char *argv[])
 				strip=atoi(optarg);
 				break;
 			case 'v':
+				strlist_add(&cli_overrides, "stdout=1", 0);
+				break;
+			case 'V':
 				printf("%s-%s\n", progname(), PACKAGE_VERSION);
 				ret=0;
 				goto end;

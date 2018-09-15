@@ -34,16 +34,16 @@ Print help and then exit.
 \fB\-?\fR \fB\fR
 Print help and then exit.
 .TP
-\fB\-o\fR \fB[option=value]\fR
-Override a given option. You can use this flag several times to override multiple options.
-You can even reset list options with the special syntax ':=' (example: '-o "include:=/tmp"').
-.TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see @name@ produce, and exit.
 .TP
 \fB\-n\fR \fB\fR
 No forking mode. The program will accept a single query, deal with it, and then
 exit. This is useful for debugging. Implies '\-F'. If you intend to debug a protocol2 session, you will also want to run a separate champion chooser process ('\-a c' below).
+.TP
+\fB\-o\fR \fB[option=value]\fR
+Override a given option. You can use this flag several times to override multiple options.
+You can even reset list options with the special syntax ':=' (example: '-o "include:=/tmp"').
 .TP
 \fB\-Q\fR \fB\fR
 Do not log to stdout (overrides config file 'stdout' setting).
@@ -52,6 +52,9 @@ Do not log to stdout (overrides config file 'stdout' setting).
 Dry-run mode to test config file syntax.
 .TP
 \fB\-v\fR \fB\fR
+Log to stdout (overrides config file 'stdout' setting).
+.TP
+\fB\-V\fR \fB\fR
 Print version and exit.
 .TP
 ADDITIONAL SERVER OPTIONS TO USE WITH '\-a c'
@@ -110,6 +113,9 @@ For use with restores \- strip a number of leading path components.
 .TP
 \fB\-t\fR \fB\fR
 Dry-run mode to test config file syntax.
+.TP
+\fB\-v\fR \fB\fR
+Log to stdout (overrides config file 'stdout' setting).
 .TP
 \fB\-x\fR (on Windows)
 On restore, do not use the Windows VSS API on restore - give this option when you are restoring a backup that contains no VSS data.

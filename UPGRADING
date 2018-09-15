@@ -1,5 +1,10 @@
 Things to watch out for when upgrading.
 
+2.2.12
+------
+The command line option to print the version number, is now '-V'.
+It has made way for the new '-v' option, which means 'log to stdout'.
+
 2.2.10
 ------
 The server side options 'address', 'port', 'status_address', and 'status_port'

@@ -395,7 +395,7 @@ Path to the script to run when a client connects with the timed backup option. I
 A user-definable argument to the timer script. You can have many of these. The timer_arg options can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBnotify_success_script=[path]\fR
-Path to the script to run when a backup succeeds. User arguments are appended after the first five reserved arguments. An example notify script is provided. The notify_success_script option can be overriddden by the client configuration files in clientconfdir on the server.
+Path to the script to run when a backup succeeds. User arguments are appended after the first six reserved arguments. An example notify script is provided. The notify_success_script option can be overriddden by the client configuration files in clientconfdir on the server.
 .TP
 \fBnotify_success_arg=[string]\fR
 A user-definable argument to the notify success script. You can have many of these. The notify_success_arg options can be overriddden by the client configuration files in clientconfdir on the server.

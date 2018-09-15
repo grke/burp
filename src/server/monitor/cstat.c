@@ -28,13 +28,17 @@ int cstat_permitted(struct cstat *cstat,
 	if(!strcmp(cstat->name, monitorconf_cname))
 		return 1;
 
-	// Do not allow clients using the restore_client option to see more
+	// Do not allow clients using the super_client option to see more
 	// than the client that it is pretending to be.
-	if(get_string(monitor_cconfs[OPT_RESTORE_CLIENT]))
+	if(get_string(monitor_cconfs[OPT_SUPER_CLIENT]))
 		return 0;
 
-	// If we are listed in this restore_client list.
+	// If we are listed in this restore_client list, or super_client list.
 	for(rclient=get_strlist(cconfs[OPT_RESTORE_CLIENTS]);
+	  rclient; rclient=rclient->next)
+	    if(!strcmp(get_string(monitor_cconfs[OPT_CNAME]), rclient->path))
+		return 1;
+	for(rclient=get_strlist(cconfs[OPT_SUPER_CLIENTS]);
 	  rclient; rclient=rclient->next)
 	    if(!strcmp(get_string(monitor_cconfs[OPT_CNAME]), rclient->path))
 		return 1;

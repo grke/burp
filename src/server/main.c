@@ -14,6 +14,7 @@
 #include "ca.h"
 #include "child.h"
 #include "main.h"
+#include "run_action.h"
 #include "monitor/status_server.h"
 
 static int hupreload=0;
@@ -306,6 +307,14 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		if(!setup_asfd(as, "status server parent socket", &status_rfd,
 			/*listen*/""))
 				goto end;
+                if(!client_can_monitor(cconfs))
+		{
+			logp("Not allowing monitor request from %s\n", cname);
+			if(as->asfd->write_str(asfd, CMD_GEN,
+				"Monitor is not allowed"))
+					ret=-1;
+			goto end;
+		}
 	}
 
 	ret=child(as, is_status_server, status_wfd, confs, cconfs);

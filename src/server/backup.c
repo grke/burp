@@ -308,7 +308,7 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 	struct iobuf *rbuf=asfd->rbuf;
 	const char *cname=get_string(cconfs[OPT_CNAME]);
 
-	if(get_string(cconfs[OPT_RESTORE_CLIENT]))
+	if(get_string(cconfs[OPT_SUPER_CLIENT]))
 	{
 		// This client is not the original client, so a backup might
 		// cause all sorts of trouble.

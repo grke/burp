@@ -67,7 +67,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_DEDUP_GROUP:
 		case OPT_VSS_DRIVES:
 		case OPT_REGEX:
-		case OPT_RESTORE_CLIENT:
+		case OPT_SUPER_CLIENT:
 		case OPT_MONITOR_EXE:
 			fail_unless(get_string(c[o])==NULL);
 			break;
@@ -126,6 +126,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_CLIENT_CAN_DIFF:
 		case OPT_CLIENT_CAN_FORCE_BACKUP:
 		case OPT_CLIENT_CAN_LIST:
+		case OPT_CLIENT_CAN_MONITOR:
 		case OPT_CLIENT_CAN_RESTORE:
 		case OPT_CLIENT_CAN_VERIFY:
 		case OPT_SERVER_CAN_RESTORE:
@@ -169,6 +170,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_N_SUCCESS_ARG:
 		case OPT_N_FAILURE_ARG:
 		case OPT_RESTORE_CLIENTS:
+		case OPT_SUPER_CLIENTS:
 		case OPT_KEEP:
 		case OPT_INCEXCDIR:
 		case OPT_INCLUDE:

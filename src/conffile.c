@@ -1548,6 +1548,9 @@ int conf_load_global_only(const char *path, struct conf **globalcs)
 static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
 {
 	struct strlist *r;
+	for(r=get_strlist(sconfs[OPT_SUPER_CLIENTS]); r; r=r->next)
+		if(!strcmp(r->path, get_string(cconfs[OPT_CNAME])))
+			return 2;
 	for(r=get_strlist(sconfs[OPT_RESTORE_CLIENTS]); r; r=r->next)
 		if(!strcmp(r->path, get_string(cconfs[OPT_CNAME])))
 			return 1;
@@ -1560,6 +1563,7 @@ int conf_switch_to_orig_client(struct conf **globalcs,
 	struct conf **cconfs, const char *orig_client)
 {
 	int ret=-1;
+	int is_super=0;
 	struct conf **sconfs=NULL;
 
 	// If we are already the wanted client, no need to switch.
@@ -1582,8 +1586,52 @@ int conf_switch_to_orig_client(struct conf **globalcs,
 	set_int(sconfs[OPT_SEND_CLIENT_CNTR],
 		get_int(cconfs[OPT_SEND_CLIENT_CNTR]));
 
-	if(!restore_client_allowed(cconfs, sconfs))
-		goto end;
+	switch(restore_client_allowed(cconfs, sconfs))
+	{
+		case 1:
+			break;
+		case 2:
+			is_super=1;
+			break;
+		default:
+			goto end;
+	}
+
+	// Restore client can never force backup.
+	set_int(sconfs[OPT_CLIENT_CAN_FORCE_BACKUP], 0);
+
+	if(is_super)
+	{
+		set_int(sconfs[OPT_CLIENT_CAN_DELETE],
+			get_int(cconfs[OPT_CLIENT_CAN_DELETE]));
+		set_int(sconfs[OPT_CLIENT_CAN_DIFF],
+			get_int(cconfs[OPT_CLIENT_CAN_DIFF]));
+		set_int(sconfs[OPT_CLIENT_CAN_LIST],
+			get_int(cconfs[OPT_CLIENT_CAN_LIST]));
+		set_int(sconfs[OPT_CLIENT_CAN_MONITOR],
+			get_int(cconfs[OPT_CLIENT_CAN_MONITOR]));
+		set_int(sconfs[OPT_CLIENT_CAN_RESTORE],
+			get_int(cconfs[OPT_CLIENT_CAN_RESTORE]));
+		set_int(sconfs[OPT_CLIENT_CAN_VERIFY],
+			get_int(cconfs[OPT_CLIENT_CAN_VERIFY]));
+	}
+	else
+	{
+		// For the rest of the client_can things, do not allow them on
+		// orig_client if we do not have them ourselves.
+		if(!get_int(cconfs[OPT_CLIENT_CAN_DELETE]))
+			set_int(sconfs[OPT_CLIENT_CAN_DELETE], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_DIFF]))
+			set_int(sconfs[OPT_CLIENT_CAN_DIFF], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_LIST]))
+			set_int(sconfs[OPT_CLIENT_CAN_LIST], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_MONITOR]))
+			set_int(sconfs[OPT_CLIENT_CAN_MONITOR], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_RESTORE]))
+			set_int(sconfs[OPT_CLIENT_CAN_RESTORE], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_VERIFY]))
+			set_int(sconfs[OPT_CLIENT_CAN_VERIFY], 0);
+	}
 
 	if(set_string(sconfs[OPT_RESTORE_PATH],
 		get_string(cconfs[OPT_RESTORE_PATH])))
@@ -1596,7 +1644,7 @@ int conf_switch_to_orig_client(struct conf **globalcs,
 	confs_init(cconfs);
 	confs_memcpy(cconfs, sconfs);
 	confs_null(sconfs);
-	if(set_string(cconfs[OPT_RESTORE_CLIENT],
+	if(set_string(cconfs[OPT_SUPER_CLIENT],
 		get_string(cconfs[OPT_CNAME]))) goto end;
 	if(set_string(cconfs[OPT_ORIG_CLIENT],
 		get_string(cconfs[OPT_CNAME]))) goto end;

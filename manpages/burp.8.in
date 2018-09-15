@@ -76,7 +76,7 @@ Short for 'config file'. The argument is a path to the config file. The default
 is /etc/@name@/@name@.conf, or %PROGRAMFILES%\\@human_name@\\@name@.conf on Windows.
 .TP
 \fB\-C\fR \fB[client]\fR
-Allows you to specify an alternative client to list or restore from. Requires that the server configuration of the alternative client permits your client to do this. See the 'restore_client' option.
+Allows you to specify an alternative client to list or restore from. Requires that the server configuration of the alternative client permits your client to do this. See the 'restore_client' and 'super_client' options.
 .TP
 \fB\-d\fR \fB[path]\fR
 Short for 'directory'. When restoring, the argument is a path to an alternative directory to restore to. When listing, the argument is the directory to list.
@@ -348,14 +348,20 @@ Turn this off to prevent clients from forcing backups with the '\-a b' option. T
 \fBclient_can_list=[0|1]\fR
 Turn this off to prevent clients from listing backups with the '\-a l' option. The default is that clients can list backups. Restore clients can override this setting.
 .TP
+\fBclient_can_monitor=[0|1]\fR
+Turn this off to prevent clients from being able to run the status monitor. The default is that clients can run the status monitor. Restore clients can override this setting.
+.TP
 \fBclient_can_restore=[0|1]\fR
 Turn this off to prevent clients from initiating restores with the '\-a r' option. The default is that clients can initiate restores. Restore clients can override this setting.
 .TP
 \fBclient_can_verify=[0|1]\fR
 Turn this off to prevent clients from initiating a verify job with the '\-a v' option. The default is that clients can initiate a verify job. Restore clients can override this setting.
 .TP
+\fBsuper_client=[client]\fR
+A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client, according to the super_client's client_can permissions (eg, 'client_can_list'). You may specify multiple super_clients. If this is too permissive, you may set a super_client for individual original clients in the individual clientconfdir files, or look at the 'restore_client' option.
+.TP
 \fBrestore_client=[client]\fR
-A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client. You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files. Note that restoring a backup from a Windows computer onto a Linux computer will currently leave the VSS headers in place at the beginning of each file. This will be addressed in a future version of @name@.
+A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client, according to the client_can permissions on both the restore_client and the original_client (eg, 'client_can_list'). You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files.
 .TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/@name@_ca.txt.
@@ -789,8 +795,10 @@ Additionally, the following options can be overridden here for each client:
 \fBclient_can_delete\fR
 \fBclient_can_force_backup\fR
 \fBclient_can_list\fR
+\fBclient_can_monitor\fR
 \fBclient_can_restore\fR
 \fBclient_can_verify\fR
+\fBsuper_client\fR
 \fBrestore_client\fR
 \fBcompression\fR
 \fBhard_quota\fR
@@ -848,7 +856,7 @@ You can queue a backup on the server, to be performed when the client next makes
 You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. The client can deny server initiated restores by setting "server_can_restore=0" in its @name@.conf. The client also needs to specify 'restoreprefix' in its configuration as a destination for the restored files. Valid fields to include in the restore file are:
 .TP
 \fBorig_client=[client]\fR
-The original client to restore from. Equivalent to '\-C' when initiating a restore from a client. Do not include this line when restoring to the original client. See also the 'restore_client' server option.
+The original client to restore from. Equivalent to '\-C' when initiating a restore from a client. Do not include this line when restoring to the original client. See also the 'restore_client' and 'super_client' server options.
 .TP
 \fBbackup=[number|a]\fR
 The number of the backup to restore from. Equivalent to '\-b' when initiating a restore from the client.

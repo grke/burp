@@ -108,7 +108,7 @@ static int working_delete(struct async *as, struct sdirs *sdirs)
 static int working_resume(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf **cconfs)
 {
-	if(get_string(cconfs[OPT_RESTORE_CLIENT]))
+	if(get_string(cconfs[OPT_SUPER_CLIENT]))
 	{
 		// This client is not the original client, resuming might cause
 		// all sorts of trouble.

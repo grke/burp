@@ -51,7 +51,8 @@ server.
 
 In burp-2, the status port connection is secured via SSL.
 The client that you are connecting from will be able to see its own details,
-and the details of any other client that you are a 'restore_client' of.
+and the details of any other client that you are a 'super_client' or
+'restore_client' of.
 Since it uses a client configuration file, you can run status monitor clients
 remotely.
 

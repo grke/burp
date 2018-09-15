@@ -676,7 +676,7 @@ static void checks_orig_client(struct conf **confs, struct conf **cconfs,
 	const char *orig_client;
 	const char *restore_client;
 	fail_unless(!strcmp(get_string(cconfs[OPT_CNAME]), "cli2"));
-	restore_client=get_string(cconfs[OPT_RESTORE_CLIENT]);
+	restore_client=get_string(cconfs[OPT_SUPER_CLIENT]);
 	orig_client=get_string(cconfs[OPT_ORIG_CLIENT]);
 	fail_unless(!strcmp(orig_client, restore_client));
 }

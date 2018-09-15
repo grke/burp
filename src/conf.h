@@ -263,8 +263,9 @@ enum conf_opt
 
 	OPT_N_FAILURE_SCRIPT,
 	OPT_N_FAILURE_ARG,
-	// List of clients that are permitted to restore the files from our client.
+
 	OPT_RESTORE_CLIENTS,
+	OPT_SUPER_CLIENTS,
 
 	OPT_DEDUP_GROUP,
 
@@ -272,6 +273,7 @@ enum conf_opt
 	OPT_CLIENT_CAN_DIFF,
 	OPT_CLIENT_CAN_FORCE_BACKUP,
 	OPT_CLIENT_CAN_LIST,
+	OPT_CLIENT_CAN_MONITOR,
 	OPT_CLIENT_CAN_RESTORE,
 	OPT_CLIENT_CAN_VERIFY,
 	OPT_SERVER_CAN_RESTORE,
@@ -280,10 +282,10 @@ enum conf_opt
 	// counters on resume/verify/restore.
 	OPT_SEND_CLIENT_CNTR,
 
-	// Set on the server to the restore client name (the one that you
+	// Set on the server to the super client name (the one that you
 	// connected with) when the client has switched to a different set of
 	// client backups.
-	OPT_RESTORE_CLIENT,
+	OPT_SUPER_CLIENT,
 	// Path to the server initiated restore file.
 	OPT_RESTORE_PATH,
 

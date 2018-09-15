@@ -713,6 +713,8 @@ START_TEST(test_clientconfdir_conf)
 	const char *gbuf=MIN_SERVER_CONF
 		"restore_client=abc\n"
 		"restore_client=xyz\n"
+		"super_client=sss\n"
+		"super_client=ttt\n"
 		"timer_script=/timer/script\n"
 		"timer_arg=/timer/arg1\n"
 		"timer_arg=/timer/arg2\n"
@@ -738,10 +740,13 @@ START_TEST(test_clientconfdir_conf)
 		"client_can_delete=0\n"
 		"client_can_force_backup=0\n"
 		"client_can_list=0\n"
+		"client_can_monitor=0\n"
 		"client_can_restore=0\n"
 		"client_can_verify=0\n"
 		"restore_client=123\n"
 		"restore_client=456\n"
+		"super_client=ppp\n"
+		"super_client=qqq\n"
 		"dedup_group=dd_group\n"
 		"label=rty\n"
 		"label=xyz\n"
@@ -764,6 +769,12 @@ START_TEST(test_clientconfdir_conf)
 	assert_strlist(&s, "456", 0);
 	assert_strlist(&s, "abc", 0);
 	assert_strlist(&s, "xyz", 0);
+	assert_include(&s, NULL);
+	s=get_strlist(cconfs[OPT_SUPER_CLIENTS]);
+	assert_strlist(&s, "ppp", 0);
+	assert_strlist(&s, "qqq", 0);
+	assert_strlist(&s, "sss", 0);
+	assert_strlist(&s, "ttt", 0);
 	assert_include(&s, NULL);
 	fail_unless(get_e_recovery_method(
 	  cconfs[OPT_WORKING_DIR_RECOVERY_METHOD])==RECOVERY_METHOD_RESUME);
@@ -902,7 +913,7 @@ static void switch_test(int expected_ret, const char *gbuf)
 	{
 		ck_assert_str_eq(get_string(cconfs[OPT_CNAME]),
 			"orig_client");
-		ck_assert_str_eq(get_string(cconfs[OPT_RESTORE_CLIENT]),
+		ck_assert_str_eq(get_string(cconfs[OPT_SUPER_CLIENT]),
 			"orig_client");
 		ck_assert_str_eq(get_string(cconfs[OPT_ORIG_CLIENT]),
 			"orig_client");
@@ -911,7 +922,7 @@ static void switch_test(int expected_ret, const char *gbuf)
 	tear_down(&globalcs, &cconfs);
 }
 
-START_TEST(test_conf_switch_to_orig_client_fail)
+START_TEST(test_conf_switch_to_orig_client_fail_restore_client)
 {
 	const char *gbuf=MIN_SERVER_CONF
 		"restore_client=non-matching1\n"
@@ -920,7 +931,7 @@ START_TEST(test_conf_switch_to_orig_client_fail)
 }
 END_TEST
 
-START_TEST(test_conf_switch_to_orig_client_ok)
+START_TEST(test_conf_switch_to_orig_client_ok_restore_client)
 {
 	const char *gbuf=MIN_SERVER_CONF
 		"restore_client=non-matching1\n"
@@ -961,6 +972,124 @@ START_TEST(test_cname_valid)
 }
 END_TEST
 
+START_TEST(test_conf_switch_to_orig_client_fail_super_client)
+{
+	const char *gbuf=MIN_SERVER_CONF
+		"super_client=non-matching1\n"
+		"super_client=non-matching2\n";
+	switch_test(-1, gbuf);
+}
+END_TEST
+
+START_TEST(test_conf_switch_to_orig_client_ok_super_client)
+{
+	const char *gbuf=MIN_SERVER_CONF
+		"super_client=non-matching1\n"
+		"super_client=utestclient\n";
+	switch_test(0, gbuf);
+}
+END_TEST
+
+struct client_can_data
+{
+	const char *config_str;
+	int force_backup;
+	int force_backup_orig;
+	int force_backup_expected;
+	int client_can;
+	int client_can_orig;
+	int client_can_expected;
+};
+
+static struct client_can_data ccd[] = {
+	{ "super_client", 0, 0, 0,  0, 0, 0 },
+	{ "super_client", 1, 0, 0,  1, 0, 1 },
+	{ "super_client", 0, 1, 0,  0, 1, 0 },
+	{ "super_client", 1, 1, 0,  1, 1, 1 },
+	{ "restore_client", 0, 0, 0,  0, 0, 0 },
+	{ "restore_client", 1, 0, 0,  1, 0, 0 },
+	{ "restore_client", 0, 1, 0,  0, 1, 0 },
+	{ "restore_client", 1, 1, 0,  1, 1, 1 },
+};
+
+START_TEST(test_conf_switch_to_orig_client_client_can)
+{
+	FOREACH(ccd)
+	{
+		char orig_client_conf[256]="";
+		const char *clientconfdir;
+		struct conf **globalcs=NULL;
+		struct conf **cconfs=NULL;
+		char buf[4096]="";
+		char obuf[4096]="";
+		char gbuf[4096]="";
+
+		snprintf(gbuf, sizeof(gbuf), "%s%s=utestclient",
+			MIN_SERVER_CONF, ccd[i].config_str);
+
+		snprintf(buf, sizeof(buf), "%s\n"
+			"client_can_force_backup=%d\n"
+			"client_can_delete=%d\n"
+			"client_can_diff=%d\n"
+			"client_can_list=%d\n"
+			"client_can_monitor=%d\n"
+			"client_can_restore=%d\n"
+			"client_can_verify=%d\n",
+			MIN_SERVER_CONF,
+			ccd[i].force_backup,
+			ccd[i].client_can,
+			ccd[i].client_can,
+			ccd[i].client_can,
+			ccd[i].client_can,
+			ccd[i].client_can,
+			ccd[i].client_can);
+		snprintf(obuf, sizeof(obuf), "%s\n"
+			"client_can_force_backup=%d\n"
+			"client_can_delete=%d\n"
+			"client_can_diff=%d\n"
+			"client_can_list=%d\n"
+			"client_can_monitor=%d\n"
+			"client_can_restore=%d\n"
+			"client_can_verify=%d\n",
+			MIN_SERVER_CONF,
+			ccd[i].force_backup_orig,
+			ccd[i].client_can_orig,
+			ccd[i].client_can_orig,
+			ccd[i].client_can_orig,
+			ccd[i].client_can_orig,
+			ccd[i].client_can_orig,
+			ccd[i].client_can_orig);
+
+		clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
+		clientconfdir=get_string(globalcs[OPT_CLIENTCONFDIR]);
+		fail_unless(!recursive_delete(clientconfdir));
+		snprintf(orig_client_conf, sizeof(orig_client_conf),
+			"%s/orig_client", clientconfdir);
+		build_file(orig_client_conf, obuf);
+		fail_unless(conf_switch_to_orig_client(globalcs, cconfs,
+			"orig_client")==0);
+
+		fail_unless(get_int(cconfs[OPT_CLIENT_CAN_FORCE_BACKUP])
+			==ccd[i].force_backup_expected);
+		fail_unless(get_int(cconfs[OPT_CLIENT_CAN_DELETE])
+			==ccd[i].client_can_expected);
+		fail_unless(get_int(cconfs[OPT_CLIENT_CAN_DIFF])
+			==ccd[i].client_can_expected);
+		fail_unless(get_int(cconfs[OPT_CLIENT_CAN_LIST])
+			==ccd[i].client_can_expected);
+		fail_unless(get_int(cconfs[OPT_CLIENT_CAN_MONITOR])
+			==ccd[i].client_can_expected);
+		fail_unless(get_int(cconfs[OPT_CLIENT_CAN_RESTORE])
+			==ccd[i].client_can_expected);
+		fail_unless(get_int(cconfs[OPT_CLIENT_CAN_VERIFY])
+			==ccd[i].client_can_expected);
+
+		fail_unless(!recursive_delete(clientconfdir));
+		tear_down(&globalcs, &cconfs);
+	}
+}
+END_TEST
+
 Suite *suite_conffile(void)
 {
 	Suite *s;
@@ -997,9 +1126,12 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_clientconfdir_extra);
 	tcase_add_test(tc_core, test_strlist_reset);
 	tcase_add_test(tc_core, test_clientconfdir_server_script);
-	tcase_add_test(tc_core, test_conf_switch_to_orig_client_fail);
-	tcase_add_test(tc_core, test_conf_switch_to_orig_client_ok);
 	tcase_add_test(tc_core, test_cname_valid);
+	tcase_add_test(tc_core, test_conf_switch_to_orig_client_fail_restore_client);
+	tcase_add_test(tc_core, test_conf_switch_to_orig_client_ok_restore_client);
+	tcase_add_test(tc_core, test_conf_switch_to_orig_client_fail_super_client);
+	tcase_add_test(tc_core, test_conf_switch_to_orig_client_ok_super_client);
+	tcase_add_test(tc_core, test_conf_switch_to_orig_client_client_can);
 
 	suite_add_tcase(s, tc_core);
 

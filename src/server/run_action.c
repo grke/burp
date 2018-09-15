@@ -75,13 +75,12 @@ error:
 
 static int client_can_generic(struct conf **cconfs, enum conf_opt o)
 {
-	// Always allow restore_clients, unless we are talking about forcing
-	// a backup.
-	if(get_string(cconfs[OPT_RESTORE_CLIENT])
-	  && o!=OPT_CLIENT_CAN_FORCE_BACKUP)
-		return 1;
-
 	return get_int(cconfs[o]);
+}
+
+int client_can_monitor(struct conf **cconfs)
+{
+	return client_can_generic(cconfs, OPT_CLIENT_CAN_MONITOR);
 }
 
 static int client_can_restore(struct conf **cconfs)

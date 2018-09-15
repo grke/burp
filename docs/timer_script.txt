@@ -102,5 +102,5 @@ A client may attempt to force a backup at any time with 'burp -a b'.
 Some cases where attempting to force a backup will not work:
 *) The server is configured with 'client_can_force_backup=0'.
 *) The server is already dealing with a connection from the same client.
-*) The server is already dealing with a connection from a restore_client that
-   is using the same client.
+*) The server is already dealing with a connection from a super_client or
+   restore_client that is using the same client.

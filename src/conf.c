@@ -554,7 +554,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_int(c[o], 1, 0, "restore_script_reserved_args");
 	case OPT_SEND_CLIENT_CNTR:
 	  return sc_int(c[o], 0, 0, "send_client_cntr");
-	case OPT_RESTORE_CLIENT:
+	case OPT_SUPER_CLIENT:
 	  return sc_str(c[o], 0, 0, "");
 	case OPT_RESTORE_PATH:
 	  return sc_str(c[o], 0, 0, "restore_path");
@@ -696,6 +696,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_RESTORE_CLIENTS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_SORTED, "restore_client");
+	case OPT_SUPER_CLIENTS:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_SORTED, "super_client");
 	case OPT_DEDUP_GROUP:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "dedup_group");
@@ -711,6 +714,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_CLIENT_CAN_LIST:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "client_can_list");
+	case OPT_CLIENT_CAN_MONITOR:
+	  return sc_int(c[o], 1,
+		CONF_FLAG_CC_OVERRIDE, "client_can_monitor");
 	case OPT_CLIENT_CAN_RESTORE:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "client_can_restore");

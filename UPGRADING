@@ -1,5 +1,13 @@
 Things to watch out for when upgrading.
 
+2.3.2
+-----
+The 'restore_client' option now takes into consideration the 'client_can_X'
+settings of the original client before considering the 'client_can_X' settings
+of the restore client. To get the previous behaviour, where only the restore
+client's settings were considered, use the new 'super_client' option instead
+of 'restore_client'.
+
 2.2.14
 ------
 For security, the burp client will no longer let you restore over symlinks

@@ -278,11 +278,13 @@ static int asfd_do_write(struct asfd *asfd)
 			return 0;
 		logp("%s: Got error in %s, (%d=%s)\n", __func__,
 			asfd->desc, errno, strerror(errno));
+		asfd->errors++;
 		return -1;
 	}
 	else if(!w)
 	{
 		logp("%s: Wrote nothing in %s\n", asfd->desc, __func__);
+		asfd->errors++;
 		return -1;
 	}
 	if(asfd->ratelimit) asfd->rlbytes+=w;

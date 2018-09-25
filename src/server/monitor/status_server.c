@@ -396,7 +396,7 @@ error:
 end:
 	if(response_markers
 	  && response_marker_end(srfd, srfd->rbuf->buf))
-		goto error;
+		ret=-1;
 
 	free_w(&client);
 	free_w(&backup);

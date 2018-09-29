@@ -828,6 +828,13 @@ static enum str_e do_stuff_to_receive(struct asfd *asfd,
 					chmanio, cconfs, last_requested))
 						goto error;
 				return STR_OK;
+			case CMD_INTERRUPT:
+				if(*last_requested
+				  && !strcmp(rbuf->buf, *last_requested))
+					free_w(last_requested);
+				fzp_close(&(rb->protocol1->fzp));
+				sbuf_free_content(rb);
+				return STR_OK;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);
 				goto error;

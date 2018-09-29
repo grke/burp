@@ -345,7 +345,9 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 			bfd, extrameta, elen))
 		{
 			case SEND_OK:
-			case SEND_ERROR: // Carry on.
+				break;
+			case SEND_ERROR:
+				forget++;
 				break;
 			case SEND_FATAL:
 			default:

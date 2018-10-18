@@ -109,6 +109,12 @@ static int parse_readbuf_standard(struct asfd *asfd)
 			asfd->desc, asfd->readbuf, __func__);
 		return -1;
 	}
+	if(s>=asfd->bufmaxsize)
+	{
+		logp("%s: given buffer length '%d', which is too big!\n",
+			asfd->desc, s);
+		return -1;
+	}
 	if(asfd->readbuflen>=s+5)
 	{
 		asfd->rbuf->cmd=(enum cmd)command;
@@ -189,14 +195,16 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 	asfd->read_blocked_on_write=0;
 
 	ERR_clear_error();
-	r=SSL_read(asfd->ssl,
-	  asfd->readbuf+asfd->readbuflen, asfd->bufmaxsize-asfd->readbuflen);
+	r=SSL_read(
+		asfd->ssl,
+		asfd->readbuf+asfd->readbuflen,
+		asfd->bufmaxsize-asfd->readbuflen
+	);
 
 	switch((e=SSL_get_error(asfd->ssl, r)))
 	{
 		case SSL_ERROR_NONE:
 			asfd->readbuflen+=r;
-			asfd->readbuf[asfd->readbuflen]='\0';
 			asfd->rcvd+=r;
 			break;
 		case SSL_ERROR_ZERO_RETURN:

@@ -52,13 +52,23 @@ static void ls_to_buf(char *lsbuf, struct sbuf *sb)
 	*p=0;
 }
 
-static void ls_long_output(struct sbuf *sb)
+static int ls_long_output(struct sbuf *sb)
 {
-	static char lsbuf[2048];
+	static size_t len=128;
+	static char *lsbuf=NULL;
+
+	while(sb->path.len + 128 > len)
+	{
+		len*=2;
+		if(!(lsbuf=(char *)realloc_w(lsbuf, len, __func__)))
+			return -1;
+	}
 	ls_to_buf(lsbuf, sb);
 	printf("%s", lsbuf);
 	if(sb->link.buf) printf(" -> %s", sb->link.buf);
 	printf("\n");
+
+	return 0;
 }
 
 static void ls_short_output(struct sbuf *sb)
@@ -66,16 +76,13 @@ static void ls_short_output(struct sbuf *sb)
 	printf("%s\n", sb->path.buf);
 }
 
-static void list_item(enum action act, struct sbuf *sb)
+static int list_item(enum action act, struct sbuf *sb)
 {
 	if(act==ACTION_LIST_LONG)
-	{
-		ls_long_output(sb);
-	}
-	else
-	{
-		ls_short_output(sb);
-	}
+		return ls_long_output(sb);
+
+	ls_short_output(sb);
+	return 0;
 }
 
 int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
@@ -174,7 +181,8 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 			|| sb->path.cmd==CMD_EFS_FILE
 			|| sb->path.cmd==CMD_SPECIAL)
 		{
-			list_item(act, sb);
+			if(list_item(act, sb))
+				goto end;
 		}
 		else if(cmd_is_link(sb->path.cmd)) // symlink or hardlink
 		{

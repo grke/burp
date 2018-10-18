@@ -193,10 +193,31 @@ static void run_test(int expected_ret,
 	tear_down(&as, &asfd, &sdirs, &confs);
 }
 
+static unsigned char get_gzip_os_type(void)
+{
+	// Determine the gzip os type byte by creating a gzip file and then
+	// reading it.
+	struct fzp *zp;
+	char buf[32];
+
+	fail_unless((zp=fzp_gzopen(BASE "/file.gz", "w"))!=NULL);
+	fail_unless(fzp_printf(zp, "test")==4);
+	fail_unless(!fzp_close(&zp));
+
+	fail_unless((zp=fzp_open(BASE "/file.gz", "r"))!=NULL);
+	fail_unless(fzp_read(zp, buf, 10)==10);
+	fail_unless(!fzp_close(&zp));
+
+	return buf[9];
+}
+
 static void setup_asfds_proto1_stuff(struct asfd *asfd, struct slist *slist)
 {
 	int r=0; int w=0;
 	struct sbuf *s;
+
+	unsigned char gzip_os_type=get_gzip_os_type();
+
 	for(s=slist->head; s; s=s->next)
 	{
 		if(sbuf_is_link(s))
@@ -211,12 +232,11 @@ static void setup_asfds_proto1_stuff(struct asfd *asfd, struct slist *slist)
 			// The string "data" gzipped.
 			unsigned char gzipped_data1[10] = {
 				0x1f, 0x8b, 0x08, 0, 0,
-				0, 0, 0, 0x02, 0x03
+				0, 0, 0, 0x02, 0
 			};
-			if(ZLIB_VERNUM >= 0x12b0) {
-				// 0x12b0 = 1.2.11, Travis mac builds use this.
-				gzipped_data1[9]=0x13;
-			}
+
+			gzipped_data1[9]=gzip_os_type;
+
 			unsigned char gzipped_data2[14] = {
 				0x4b, 0x49, 0x2c, 0x49, 0x04, 0x00, 0x63,
 				0xf3, 0xf3, 0xad, 0x04, 0x00, 0x00, 0x00
@@ -551,9 +571,9 @@ Suite *suite_server_restore(void)
 	tc_core=tcase_create("Core");
 	tcase_set_timeout(tc_core, 60);
 
-	tcase_add_test(tc_core, test_send_regex_failure);
 	tcase_add_test(tc_core, test_proto1_stuff);
 	tcase_add_test(tc_core, test_proto2_stuff);
+	tcase_add_test(tc_core, test_send_regex_failure);
 	tcase_add_test(tc_core, test_proto2_interrupt);
 	tcase_add_test(tc_core, test_proto2_interrupt_no_match);
 	tcase_add_test(tc_core, test_proto2_interrupt_on_non_filedata);

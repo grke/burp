@@ -254,15 +254,15 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	{
 		// Add an annoying delay in case they are tempted to
 		// try repeatedly.
-		log_and_send(as->asfd, "unable to authorise on server");
 		sleep(1);
+		log_and_send(as->asfd, "unable to authorise on server");
 		goto end;
 	}
 
 	if(!get_int(cconfs[OPT_ENABLED]))
 	{
-		log_and_send(as->asfd, "client not enabled on server");
 		sleep(1);
+		log_and_send(as->asfd, "client not enabled on server");
 		goto end;
 	}
 

@@ -38,8 +38,19 @@ static int asfd_alloc_buf(struct asfd *asfd, char **buf)
 }
 
 static int extract_buf(struct asfd *asfd,
-	unsigned int len, unsigned int offset)
+	size_t len, size_t offset)
 {
+	if(offset+len>=asfd->bufmaxsize)
+	{
+		logp("%s: offset(%lu)+len(%lu)>=asfd->bufmaxsize(%lu) in %s!",
+			asfd->desc,
+			(unsigned long)offset,
+			(unsigned long)len,
+			(unsigned long)asfd->bufmaxsize,
+			__func__);
+		return -1;
+	}
+
 	if(!(asfd->rbuf->buf=(char *)malloc_w(len+1, __func__)))
 		return -1;
 	if(!(memcpy(asfd->rbuf->buf, asfd->readbuf+offset, len)))
@@ -118,7 +129,7 @@ static int parse_readbuf_standard(struct asfd *asfd)
 	if(asfd->readbuflen>=s+5)
 	{
 		asfd->rbuf->cmd=(enum cmd)command;
-		if(extract_buf(asfd, s, 5))
+		if(extract_buf(asfd, (size_t)s, 5))
 			return -1;
 	}
 	return 0;

@@ -439,7 +439,7 @@ if test "$enable_xattr" != "no"; then
 fi
 
 dnl Then check for the Linux or OSX implementation
-if test "$have_xattr" = "no"; then
+if test "$enable_xattr" != "no" && test "$have_xattr" = "no" ; then
   AC_CHECK_HEADERS([sys/xattr.h],
     [
       AC_CHECK_FUNCS([llistxattr lgetxattr lsetxattr listxattr getxattr setxattr],

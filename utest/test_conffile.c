@@ -929,6 +929,37 @@ START_TEST(test_conf_switch_to_orig_client_ok)
 }
 END_TEST
 
+struct cndata
+{
+	const char *cname;
+	int valid;
+};
+
+static struct cndata c[] = {
+	{ "testclient", 1 },
+	{ "test.client", 1 },
+	{ "testclient..", 1 },
+	{ ".testclient", 0 },
+	{ "testclient~", 0 },
+	{ ".", 0 },
+	{ "..", 0 },
+	{ "/testclient", 0 },
+	{ "test/client", 0 },
+	{ "test\\client", 0 },
+	{ "/..", 0 },
+	{ "../", 0 },
+	{ "../../testclient", 0 },
+	{ "testclient/../blah", 0 },
+};
+
+START_TEST(test_cname_valid)
+{
+	FOREACH(c)
+	{
+		fail_unless(cname_valid(c[i].cname)==c[i].valid);
+	}
+}
+END_TEST
 
 Suite *suite_conffile(void)
 {
@@ -968,6 +999,7 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_clientconfdir_server_script);
 	tcase_add_test(tc_core, test_conf_switch_to_orig_client_fail);
 	tcase_add_test(tc_core, test_conf_switch_to_orig_client_ok);
+	tcase_add_test(tc_core, test_cname_valid);
 
 	suite_add_tcase(s, tc_core);
 

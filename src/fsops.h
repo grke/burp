@@ -24,8 +24,6 @@ extern int unlink_w(const char *path, const char *func);
 
 extern int init_fs_max(const char *path);
 
-extern int looks_like_tmp_or_hidden_file(const char *filename);
-
 extern int entries_in_directory_alphasort(const char *path,
 	char ***nl, int *count, int atime);
 extern int filter_dot(const struct dirent *d);

@@ -1434,6 +1434,18 @@ int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
 	return do_conf_load_overrides(globalcs, cconfs, path, NULL);
 }
 
+int cname_valid(const char *cname)
+{
+	if(!cname) return 0;
+	if(cname[0]=='.'
+	  || strchr(cname, '/') // Avoid path attacks.
+	  || strchr(cname, '\\') // Be cautious of backslashes too.
+	  // I am told that emacs tmp files end with '~'.
+	  || cname[strlen(cname)-1]=='~')
+		return 0;
+	return 1;
+}
+
 int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 {
 	int ret=-1;
@@ -1442,9 +1454,9 @@ int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 
 	if(conf_init_save_cname_and_version(cconfs)) goto end;
 	cname=get_string(cconfs[OPT_CNAME]);
-	if(looks_like_tmp_or_hidden_file(cname))
+	if(!cname_valid(cname))
 	{
-		logp("client name '%s' is invalid\n", cname);
+		logp("client name '%s' is not valid\n", cname);
 		goto end;
 	}
 

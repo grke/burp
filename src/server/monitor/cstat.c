@@ -156,8 +156,7 @@ int cstat_get_client_names(struct cstat **clist, const char *clientconfdir)
 	}
 	for(i=0; i<n; i++)
 	{
-		// looks_like...() also avoids '.' and '..'.
-		if(looks_like_tmp_or_hidden_file(dir[i]->d_name))
+		if(!cname_valid(dir[i]->d_name))
 			continue;
 		for(c=*clist; c; c=c->next)
 		{

@@ -347,16 +347,6 @@ int init_fs_max(const char *path)
 	return 0;
 }
 
-int looks_like_tmp_or_hidden_file(const char *filename)
-{
-	if(!filename) return 0;
-	if(filename[0]=='.' // Also avoids '.' and '..'.
-	  // I am told that emacs tmp files end with '~'.
-	  || filename[strlen(filename)-1]=='~')
-		return 1;
-	return 0;
-}
-
 static int do_get_entries_in_directory(DIR *directory, char ***nl,
 	int *count, int (*compar)(const void *, const void *))
 {

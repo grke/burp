@@ -24,6 +24,8 @@ extern int reeval_glob(struct conf **c);
 
 extern char *config_default_path(void);
 
+extern int cname_valid(const char *cname);
+
 #ifdef UTEST
 extern int conf_load_lines_from_buf(const char *buf, struct conf **c);
 extern int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,

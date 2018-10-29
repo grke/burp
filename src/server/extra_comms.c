@@ -202,6 +202,11 @@ static int do_autoupgrade(struct asfd *asfd, struct vers *vers,
 	ret=0;
 	if(os && *os)
 	{
+		// Sanitise path separators
+		for(char *i=os; *i; ++i)
+			if(*i == '/' || *i == '\\' || *i == ':')
+				*i='-';
+
 		ret=autoupgrade_server(asfd, vers->ser,
 			vers->cli, os, get_cntr(globalcs),
 			autoupgrade_dir);

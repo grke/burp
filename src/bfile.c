@@ -559,7 +559,7 @@ static int bfile_open_for_send(struct BFILE *bfd, struct asfd *asfd,
 	bfile_init(bfd, winattr, cntr);
 	if(bfile_open(bfd, asfd, fname, O_RDONLY|O_BINARY
 #ifdef O_NOATIME
-		|atime?0:O_NOATIME
+		|(atime?0:O_NOATIME)
 #endif
 		, 0))
 	{

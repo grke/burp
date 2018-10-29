@@ -428,7 +428,7 @@ static int entries_in_directory(const char *path, char ***nl,
 	}
 #if defined(O_DIRECTORY) && defined(O_NOATIME)
 	int dfd=-1;
-	if((dfd=open(path, O_RDONLY|O_DIRECTORY|atime?0:O_NOATIME))<0
+	if((dfd=open(path, O_RDONLY|O_DIRECTORY|(atime?0:O_NOATIME)))<0
 	  || !(directory=fdopendir(dfd)))
 #else
 // Mac OS X appears to have no O_NOATIME and no fdopendir(), so it should

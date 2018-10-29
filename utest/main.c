@@ -27,8 +27,8 @@ int main(void)
 #endif
 #endif
 	srunner_add_suite(sr, suite_client_monitor_lline());
-	srunner_add_suite(sr, suite_client_protocol2_rabin_read());
 #ifdef HAVE_XATTR
+	srunner_add_suite(sr, suite_client_protocol2_rabin_read());
 	srunner_add_suite(sr, suite_client_xattr());
 #endif
 	srunner_add_suite(sr, suite_cmd());

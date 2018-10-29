@@ -581,4 +581,34 @@ int set_xattr(struct asfd *asfd, const char *path,
 }
 #endif
 
+#ifdef UTEST
+int fs_supports_xattr(void)
+{
+	FILE *fp;
+	int ret=-1;
+	const char *fname="xattr_test_file";
+	if(!(fp=fopen(fname, "w")))
+	{
+		printf("Could not open %s!\n", fname);
+		return 0;
+	}
+	fclose(fp);
+#ifdef HAVE_SYS_EXTATTR_H
+	ret=extattr_set_link(fname, "user", "comment", "a", strlen("a"));
+#elif HAVE_SYS_XATTR_H
+	ret=lsetxattr(fname, "user.comment", "a", strlen("a"), /*flags*/0);
+#else
+	errno=ENOTSUP;
+#endif
+	if(ret<0 && errno==ENOTSUP)
+	{
+		printf("File system does not support xattrs!\n");
+		unlink(fname);
+		return 0;
+	}
+	unlink(fname);
+	return 1;
+}
+#endif
+
 #endif

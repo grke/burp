@@ -4,6 +4,7 @@
 #include "../../src/cmd.h"
 #include "../../src/fsops.h"
 #include "../../src/client/extrameta.h"
+#include "../../src/client/xattr.h"
 
 #ifdef HAVE_ACL
 #ifdef HAVE_XATTR
@@ -144,11 +145,12 @@ Suite *suite_client_extrameta(void)
 
 	s=suite_create("client_extrameta");
 
+	if(!fs_supports_xattr())
+		return s;
+
 	tc_core=tcase_create("Core");
 
-#ifndef HAVE_NETBSD_OS
 	tcase_add_test(tc_core, test_extrametas);
-#endif
 
 	suite_add_tcase(s, tc_core);
 

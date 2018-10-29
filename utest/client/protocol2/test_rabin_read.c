@@ -129,8 +129,6 @@ START_TEST(test_rabin_read)
 }
 END_TEST
 
-#endif
-
 Suite *suite_client_protocol2_rabin_read(void)
 {
 	Suite *s;
@@ -138,17 +136,16 @@ Suite *suite_client_protocol2_rabin_read(void)
 
 	s=suite_create("client_protocol2_rabin_read");
 
+	if(!fs_supports_xattr())
+		return s;
+
 	tc_core=tcase_create("Core");
 
-// It seems to be very difficult to get xattrs enabled on a filesystem with
-// NetBSD, so I am skipping the test on NetBSD.
-#ifdef HAVE_XATTR
-#ifndef HAVE_NETBSD_OS
 	tcase_add_test(tc_core, test_rabin_read);
-#endif
-#endif
 
 	suite_add_tcase(s, tc_core);
 
 	return s;
 }
+
+#endif

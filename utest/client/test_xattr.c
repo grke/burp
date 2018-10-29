@@ -185,13 +185,12 @@ Suite *suite_client_xattr(void)
 
 	s=suite_create("client_xattr");
 
+	if(!fs_supports_xattr())
+		return s;
+
 	tc_core=tcase_create("Core");
 
-// It seems to be very difficult to get xattrs enabled on a filesystem with
-// NetBSD, so I am skipping the test on NetBSD.
-#ifndef HAVE_NETBSD_OS
 	tcase_add_test(tc_core, test_xattrs);
-#endif
 
 	suite_add_tcase(s, tc_core);
 

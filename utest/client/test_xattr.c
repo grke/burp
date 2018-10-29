@@ -89,24 +89,24 @@ void assert_xattr(const char *expected,
 	while(r>0)
 	{
 		size_t e;
-		ssize_t rlen=0;
+		uint32_t xlen=0;
 		char *rval=NULL;
 		char *expe=NULL;
 		int found=0;
 
 		fail_unless((rval=get_next_xattr_str(NULL,
-			&retr, &r, NULL, &rlen, NULL))!=NULL);
+			&retr, &r, NULL, &xlen, NULL))!=NULL);
 
 		expe=(char *)expected+9;
-		e=rlen-9;
+		e=strlen(expected)-9;
 		while(e>0)
 		{
 			char *eval=NULL;
-			ssize_t elen=0;
+			uint32_t elen=0;
 			fail_unless((eval=get_next_xattr_str(NULL,
 				&expe, &e, NULL, &elen, NULL))!=NULL);
-			if(rlen==elen
-			  && !memcmp(rval, eval, rlen))
+			if(xlen==elen
+			  && !memcmp(rval, eval, xlen))
 			{
 				found++;
 				free_w(&eval);

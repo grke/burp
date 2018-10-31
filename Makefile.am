@@ -441,7 +441,7 @@ clean-local-check:
 $(configs): Makefile
 
 $(PACKAGE_TARNAME): main
-	$(AM_V_at)mv -v main $(PACKAGE_TARNAME)
+	$(AM_V_at)mv -fv main $(PACKAGE_TARNAME)
 
 $(PACKAGE_TARNAME).conf:
 	$(AM_V_at)rm -f $@

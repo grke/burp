@@ -403,7 +403,7 @@ error:
 }
 
 static int entries_in_directory(const char *path, char ***nl,
-	int *count, int atime,
+	int *count, int atime, int follow_symlinks,
 	int (*compar)(const char **, const char **))
 {
 	int ret=0;
@@ -418,7 +418,11 @@ static int entries_in_directory(const char *path, char ***nl,
 	}
 #if defined(O_DIRECTORY) && defined(O_NOATIME)
 	int dfd=-1;
-	if((dfd=open(path, O_RDONLY|O_DIRECTORY|(atime?0:O_NOATIME)))<0
+	if((dfd=open(path, O_RDONLY|O_DIRECTORY|(atime?0:O_NOATIME)
+#ifdef O_NOFOLLOW
+	  |(follow_symlinks?0:O_NOFOLLOW)
+#endif
+	  ))<0
 	  || !(directory=fdopendir(dfd)))
 #else
 // Mac OS X appears to have no O_NOATIME and no fdopendir(), so it should
@@ -456,9 +460,10 @@ static int my_alphasort(const char **a, const char **b)
 }
 
 int entries_in_directory_alphasort(const char *path, char ***nl,
-	int *count, int atime)
+	int *count, int atime, int follow_symlinks)
 {
-	return entries_in_directory(path, nl, count, atime, my_alphasort);
+	return entries_in_directory(path, nl, count, atime, follow_symlinks,
+		my_alphasort);
 }
 
 #define FULL_CHUNK      4096

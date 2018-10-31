@@ -577,7 +577,8 @@ static int found_directory(struct asfd *asfd,
 
 	errno=0;
 	switch(entries_in_directory_alphasort(fname,
-		&nl, &count, get_int(confs[OPT_ATIME])))
+		&nl, &count, get_int(confs[OPT_ATIME]),
+		/* follow_symlinks */ 0))
 	{
 		case 0: break;
 		case 1:

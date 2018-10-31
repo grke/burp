@@ -25,7 +25,7 @@ extern int unlink_w(const char *path, const char *func);
 extern int init_fs_max(const char *path);
 
 extern int entries_in_directory_alphasort(const char *path,
-	char ***nl, int *count, int atime);
+	char ***nl, int *count, int atime, int follow_symlinks);
 extern int filter_dot(const struct dirent *d);
 
 extern int files_equal(const char *opath, const char *npath, int compressed);

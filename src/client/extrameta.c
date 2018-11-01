@@ -92,7 +92,7 @@ int set_extrameta(struct asfd *asfd,
 	while(l>0)
 	{
 		char *m=NULL;
-		if(l<8)
+		if(l<9)
 		{
 			logw(asfd, cntr,
 				"length of metadata '%s' %d is too short for %s\n",

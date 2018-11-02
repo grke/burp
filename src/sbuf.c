@@ -8,6 +8,7 @@
 #include "handy.h"
 #include "log.h"
 #include "msg.h"
+#include "pathcmp.h"
 #include "protocol2/blk.h"
 
 struct sbuf *sbuf_alloc(enum protocol protocol)
@@ -202,6 +203,9 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			}
 			else
 			{
+				if(iobuf_relative_path_attack(rbuf))
+					return PARSE_RET_ERROR;
+
 				iobuf_free_content(&sb->path);
 				iobuf_move(&sb->path, rbuf);
 				if(cmd_is_link(rbuf->cmd))
@@ -262,6 +266,8 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 				return PARSE_RET_ERROR;
 			// Fall through.
 		case CMD_MANIFEST:
+			if(iobuf_relative_path_attack(rbuf))
+				return PARSE_RET_ERROR;
 			iobuf_free_content(&sb->path);
 			iobuf_move(&sb->path, rbuf);
 			return PARSE_RET_COMPLETE;
@@ -269,6 +275,9 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			logp("got error: %s\n", rbuf->buf);
 			return PARSE_RET_ERROR;
 		case CMD_DATAPTH:
+			if(iobuf_relative_path_attack(rbuf))
+				return PARSE_RET_ERROR;
+
 			if(!sb->protocol1)
 			{
 				iobuf_log_unexpected(rbuf, __func__);

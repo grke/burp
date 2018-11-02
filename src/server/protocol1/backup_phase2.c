@@ -845,6 +845,8 @@ static enum str_e do_stuff_to_receive(struct asfd *asfd,
 	switch(rbuf->cmd)
 	{
 		case CMD_DATAPTH:
+			if(iobuf_relative_path_attack(rbuf))
+				goto error;
 			iobuf_move(&rb->protocol1->datapth, rbuf);
 			return STR_OK;
 		case CMD_ATTRIBS:

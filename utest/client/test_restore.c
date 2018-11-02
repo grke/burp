@@ -21,6 +21,15 @@
 static struct ioevent_list reads;
 static struct ioevent_list writes;
 
+static char *absolute(const char *fname)
+{
+	static char path[PATH_MAX];
+	char cwd[PATH_MAX];
+	fail_unless(getcwd(cwd, sizeof(cwd)));
+	snprintf(path, sizeof(path), "%s/%s/%s", cwd, BASE, fname);
+	return path;
+}
+
 static void tear_down(struct asfd **asfd, struct conf ***confs)
 {
 	asfd_free(asfd);
@@ -51,11 +60,18 @@ static void setup_proto1_no_files(struct asfd *asfd, struct slist *slist)
 static void setup_proto1_no_datapth(struct asfd *asfd, struct slist *slist)
 {
 	int r=0; int w=0;
+	uint32_t l;
+	char *path;
+
+	path=absolute("afile");
+	l=(uint32_t)strlen(path);
+	char expected[512];
+	snprintf(expected, sizeof(expected), "datapth not supplied for f:%04X:%s in restore_switch_protocol1\n", l, path);
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 	asfd_mock_read(asfd, &r, 0, CMD_ATTRIBS, "attribs");
-	asfd_mock_read(asfd, &r, 0, CMD_FILE, BASE "/afile");
-	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "datapth not supplied for f:001A:utest_client_restore/afile in restore_switch_protocol1\n");
+	asfd_mock_read(asfd, &r, 0, CMD_FILE, path);
+	asfd_assert_write(asfd, &w, 0, CMD_ERROR, expected);
 }
 
 static void setup_proto1_no_attribs(struct asfd *asfd, struct slist *slist)
@@ -64,7 +80,7 @@ static void setup_proto1_no_attribs(struct asfd *asfd, struct slist *slist)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 	asfd_mock_read(asfd, &r, 0, CMD_DATAPTH, "datapth");
-	asfd_mock_read(asfd, &r, 0, CMD_FILE, BASE "/afile");
+	asfd_mock_read(asfd, &r, 0, CMD_FILE, absolute("afile"));
 	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "read cmd with no attribs");
 }
 
@@ -368,7 +384,7 @@ struct sdata
 };
 
 static struct sdata s[] = {
-        { "/path/to/a/file", "/to/a", "/path/file" },
+	{ "/path/to/a/file", "/to/a", "/path/file" },
 	{ "/path/to/a/file/to/a/foo", "/to/a", "/path/file/to/a/foo" },
 	{ "/path/to/a/file", "/path/to/a/file", "/path/to/a/file" },
 	{ "/path/to/a/file", "/", "path/to/a/file" },

@@ -100,34 +100,47 @@ END_TEST
 
 struct abs
 {
-	int expected;
+	int expected_dot;
+	int expected_abs;
 	const char *a;
 };
 
-static struct data a[] = {
-	{ 0, "foo/bar" },
+static struct abs a[] = {
+	{ 0, 0, "foo/bar" },
 #ifndef HAVE_WIN32
-	{ 1, "/foo/bar" },
+	{ 0, 1, "/foo/bar" },
+	{ 0, 1, "/foo..bar" },
+	{ 0, 1, "/foo/bar.." },
+	{ 0, 1, "/foo../bar" },
 #endif
-	{ 0, ":/foo/bar" },
-	{ 0, ".." },
-	{ 0, "../" },
-	{ 0, "/foo/.." },
-	{ 0, "/foo/../" },
-	{ 0, "/foo/../bar" },
-	{ 0, "." },
-	{ 0, "./" },
-	{ 0, "/foo/." },
-	{ 0, "/foo/./" },
-	{ 0, "/foo/./bar" },
-	{ 1, "C:/foo/bar" },
-	{ 1, "D:/foo/bar" },
-	{ 0, "CD:/foo/bar" },
+	{ 0, 0, ":/foo/bar" },
+	{ 1, 0, ".." },
+	{ 1, 0, "../" },
+	{ 1, 0, "/foo/.." },
+	{ 1, 0, "/foo/../" },
+	{ 1, 0, "/foo/../bar" },
+	{ 1, 0, "." },
+	{ 1, 0, "./" },
+	{ 1, 0, "/foo/." },
+	{ 1, 0, "/foo/./" },
+	{ 1, 0, "/foo/./bar" },
+	{ 0, 1, "C:/foo/bar" },
+	{ 0, 1, "D:/foo/bar" },
+	{ 0, 1, "C:/foo..bar" },
+	{ 0, 1, "C:/foo/bar.." },
+	{ 0, 1, "C:/foo../bar" },
+	{ 0, 0, "CD:/foo/bar" },
 };
+
+START_TEST(test_has_dot_component)
+{
+	FOREACH(a) fail_unless(has_dot_component(a[i].a)==a[i].expected_dot);
+}
+END_TEST
 
 START_TEST(test_is_absolute)
 {
-	FOREACH(a) fail_unless(is_absolute(a[i].a)==a[i].expected);
+	FOREACH(a) fail_unless(is_absolute(a[i].a)==a[i].expected_abs);
 }
 END_TEST
 
@@ -143,6 +156,7 @@ Suite *suite_pathcmp(void)
 	tcase_add_test(tc_core, test_pathcmp);
 	tcase_add_test(tc_core, test_pathcmp_s);
 	tcase_add_test(tc_core, test_is_subdir);
+	tcase_add_test(tc_core, test_has_dot_component);
 	tcase_add_test(tc_core, test_is_absolute);
 	suite_add_tcase(s, tc_core);
 

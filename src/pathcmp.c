@@ -62,7 +62,7 @@ int pathcmp(const char *a, const char *b)
 }
 
 // Not really pathcmp functions, but there is nowhere better to put them.
-static int has_dot_component(const char *path)
+int has_dot_component(const char *path)
 {
 	const char *p=NULL;
 	for(p=path; *p; p++)

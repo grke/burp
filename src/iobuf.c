@@ -196,3 +196,12 @@ const char *iobuf_to_printable(struct iobuf *iobuf)
 			"%c:%04X:(binary data)", iobuf->cmd, (int)iobuf->len);
 	return str;
 }
+
+int iobuf_relative_path_attack(struct iobuf *iobuf)
+{
+	if(!has_dot_component(iobuf->buf))
+		return 0;
+	iobuf_log_unexpected(iobuf, __func__);
+	return 1;
+}
+

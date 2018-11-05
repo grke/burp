@@ -13,6 +13,13 @@
 #include "client/glob_windows.h"
 #include "conffile.h"
 
+static struct strlist *cli_overrides=NULL;
+
+void conf_set_cli_overrides(struct strlist *overrides)
+{
+	cli_overrides=overrides;
+}
+
 // This will strip off everything after the last quote. So, configs like this
 // should work:
 // exclude_regex = "[A-Z]:/pagefile.sys" # swap file (Windows XP, 7, 8)
@@ -22,12 +29,16 @@ static int remove_quotes(const char *f, char **v, char quote)
 	char *dp=NULL;
 	char *sp=NULL;
 	char *copy=NULL;
+	int ret=1;
 
 	// If it does not start with a quote, leave it alone.
 	if(**v!=quote) return 0;
 
 	if(!(copy=strdup_w(*v, __func__)))
-		return -1;
+	{
+		ret=-1;
+		goto end;
+	}
 
 	for(dp=*v, sp=copy+1; *sp; sp++)
 	{
@@ -39,7 +50,7 @@ static int remove_quotes(const char *f, char **v, char quote)
 			// Do not complain about trailing comments.
 			if(*sp && *sp!='#')
 				logp("ignoring trailing characters after quote in config '%s = %s'\n", f, copy);
-			return 1;
+			goto end;
 		}
 		else if(*sp=='\\')
 		{
@@ -58,7 +69,9 @@ static int remove_quotes(const char *f, char **v, char quote)
 	}
 	logp("Did not find closing quote in config '%s = %s'\n", f, copy);
 	*dp='\0';
-	return 1;
+end:
+	free_w(&copy);
+	return ret;
 }
 
 // Get field and value pair.
@@ -116,7 +129,7 @@ static int conf_error(const char *conf_path, int line)
 	return -1;
 }
 
-static int get_file_size(const char *v, uint64_t *dest, const char *conf_path, int line)
+int get_file_size(const char *v, uint64_t *dest, const char *conf_path, int line)
 {
 	// Store in bytes, allow k/m/g.
 	const char *cp=NULL;
@@ -424,25 +437,9 @@ static void burp_ca_conf_problem(const char *conf_path,
 	conf_problem(conf_path, msg, r);
 }
 
-#ifdef HAVE_IPV6
-// These should work for IPv4 connections too.
-#define DEFAULT_ADDRESS_MAIN	"::"
-#else
-// Fall back to IPv4 address if IPv6 is not compiled in.
-#define DEFAULT_ADDRESS_MAIN	"0.0.0.0"
-#endif
-
-#define DEFAULT_ADDRESS_STATUS	"localhost"
-
 static int server_conf_checks(struct conf **c, const char *path, int *r)
 {
-	if(!get_strlist(c[OPT_PORT]))
-		conf_problem(path, "port unset", r);
-
 	// FIX THIS: Most of this could be done by flags.
-	if(!get_string(c[OPT_ADDRESS])
-	  && set_string(c[OPT_ADDRESS], DEFAULT_ADDRESS_MAIN))
-			return -1;
 	if(!get_string(c[OPT_DIRECTORY]))
 		conf_problem(path, "directory unset", r);
 	if(!get_string(c[OPT_DEDUP_GROUP]))
@@ -456,11 +453,6 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 	if(get_string(c[OPT_ENCRYPTION_PASSWORD]))
 		conf_problem(path,
 		  "encryption_password should not be set on the server!", r);
-	if(!get_string(c[OPT_STATUS_ADDRESS])
-	  && set_string(c[OPT_STATUS_ADDRESS], DEFAULT_ADDRESS_STATUS))
-			return -1;
-	if(!get_strlist(c[OPT_STATUS_PORT])) // carry on if not set.
-		logp("%s: status_port unset", path);
 	if(!get_strlist(c[OPT_KEEP]))
 		conf_problem(path, "keep unset", r);
 	if(get_int(c[OPT_MAX_HARDLINKS])<2)
@@ -713,8 +705,6 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	}
 	if(!get_string(c[OPT_SERVER]))
 		conf_problem(path, "server unset", r);
-	if(!get_strlist(c[OPT_STATUS_PORT])) // carry on if not set.
-		logp("%s: status_port unset\n", path);
 	if(!get_string(c[OPT_SSL_PEER_CN]))
 	{
 		const char *server=get_string(c[OPT_SERVER]);
@@ -810,6 +800,12 @@ static int finalise_incexc_dirs(struct conf **c)
 		if(incexc_munge(c, s)) return -1;
 	for(s=get_strlist(c[OPT_EXCLUDE]); s; s=s->next)
 		if(incexc_munge(c, s)) return -1;
+	if(get_strlist(c[OPT_INCREG]) &&
+	   !(get_strlist(c[OPT_INCLUDE]) || get_strlist(c[OPT_INCGLOB])))
+	{
+		logp("Need at least one 'include' or 'include_glob' for the 'include_regex' to work.\n");
+		return -1;
+	}
 	return 0;
 }
 
@@ -980,38 +976,68 @@ static int setup_script_arg_overrides(struct conf *c,
 	  || setup_script_arg_override(c, post_args);
 }
 
-static int finalise_server_ports(struct conf **c,
-	enum conf_opt port_opt, enum conf_opt max_children_opt)
+static int listen_config_ok(const char *l)
 {
-	struct strlist *p;
+	int port;
+	const char *c=NULL;
+	const char *cp=NULL;
+
+	for(c=l; *c; c++)
+		if(!isalnum(*c) && *c!=':' && *c!='.')
+			return 0;
+
+	if(!(cp=strrchr(l, ':')))
+		return 0;
+	if(l==cp)
+		return 0;
+	cp++;
+	if(!strlen(cp) || strlen(cp)>5)
+		return 0;
+	port=atoi(cp);
+	if(port<=0 || port>65535)
+		return 0;
+
+	return 1;
+}
+
+static int finalise_server_max_children(struct conf **c,
+	enum conf_opt listen_opt, enum conf_opt max_children_opt)
+{
+	struct strlist *l;
 	struct strlist *mc;
 	long max_children=5;
 
-	for(p=get_strlist(c[port_opt]),
-	   mc=get_strlist(c[max_children_opt]); p; p=p->next)
+	for(l=get_strlist(c[listen_opt]),
+	   mc=get_strlist(c[max_children_opt]); l; l=l->next)
 	{
+		if(!listen_config_ok(l->path))
+		{
+			logp("Could not parse %s config '%s'\n",
+				c[listen_opt]->field, l->path);
+			return -1;
+		}
 		if(mc)
 		{
 			if((max_children=atol(mc->path))<=0)
 			{
 				logp("%s too low for %s %s\n",
 					c[max_children_opt]->field,
-					c[port_opt]->field,
-					p->path);
+					c[listen_opt]->field,
+					l->path);
 				return -1;
 			}
-			p->flag=max_children;
-	
+			l->flag=max_children;
+
 			mc=mc->next;
 		}
 		else
 		{
 			logp("%s %s defaulting to %s %lu\n",
-				c[port_opt]->field,
-				p->path,
+				c[listen_opt]->field,
+				l->path,
 				c[max_children_opt]->field,
 				max_children);
-			p->flag=max_children;
+			l->flag=max_children;
 		}
 	}
 
@@ -1048,10 +1074,42 @@ static int finalise_client_ports(struct conf **c)
 	return 0;
 }
 
+static int apply_cli_overrides(struct conf **confs)
+{
+	int ret=-1;
+	int line=0;
+	char *opt=NULL;
+	struct strlist *oo=NULL;
+
+	for(oo=cli_overrides; oo; oo=oo->next)
+	{
+		line++;
+		free_w(&opt);
+		if(!(opt=strdup_w(oo->path, __func__)))
+			goto end;
+		if((ret=conf_parse_line(confs, "", opt, line)))
+		{
+			logp("Unable to parse cli option %d '%s'\n",
+				line, oo->path);
+			goto end;
+		}
+	}
+	ret=0;
+end:
+	free_w(&opt);
+	return ret;
+}
+
 static int conf_finalise(struct conf **c)
 {
-	enum burp_mode burp_mode=get_e_burp_mode(c[OPT_BURP_MODE]);
+	enum burp_mode burp_mode;
 	int s_script_notify=0;
+
+	if(apply_cli_overrides(c))
+		return -1;
+
+	burp_mode=get_e_burp_mode(c[OPT_BURP_MODE]);
+
 	if(finalise_fstypes(c, OPT_EXCFS)
 	  || finalise_fstypes(c, OPT_INCFS))
 		return -1;
@@ -1077,10 +1135,15 @@ static int conf_finalise(struct conf **c)
 
 	if(burp_mode==BURP_MODE_SERVER)
 	{
-		if(finalise_server_ports(c,
-			OPT_PORT, OPT_MAX_CHILDREN)
-		  || finalise_server_ports(c,
-			OPT_STATUS_PORT, OPT_MAX_STATUS_CHILDREN))
+		if(!get_strlist(c[OPT_LISTEN]))
+		{
+			logp("Need at least one 'listen' config.\n");
+			return -1;
+		}
+		if(finalise_server_max_children(c,
+			OPT_LISTEN, OPT_MAX_CHILDREN)
+		  || finalise_server_max_children(c,
+			OPT_LISTEN_STATUS, OPT_MAX_STATUS_CHILDREN))
 				return -1;
 	}
 	if(burp_mode==BURP_MODE_CLIENT)

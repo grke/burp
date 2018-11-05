@@ -1,3 +1,48 @@
+2018-10-01 Changes in burp-2.2.12:
+  * From ziirish:
+    - 253: 'logic' rules parser with new exclude_logic option.
+  * 753: Send error to server when there is a VSS problem.
+  * 754: Fixes for find_logic code.
+  * 756: Man page correction about number of notify args.
+    Also rename 'warnings' to 'warning_count' in notify_script.
+  * 675: Stdout command line options.
+    '-v' now overrides stdout=0 in the config file, to be 1.
+    '-Q' now overrides stdout=1 in the config file, to be 0, and turns
+         off the progress counter.
+    '-v' used to be the version option - that is now '-V'.
+  * 743: Fix broken status monitor command parsing.
+  * 759: Log backup start/resume/complete/failure in the main log.
+  * 760: Fix and prevent possibility of infinite loops on error in asfd code.
+  * 758, 763: Read errors should interrupt backing up a file.
+
+2018-09-01 Changes in burp-2.2.10:
+  * 737, 738: Multiple listen addresses.
+  * 747: Fix for ACLs not getting restored on directories, and fix metadata
+    client side counters.
+  * 744: Fix for truncated .created file.
+  * 750: fail_on_warning config option.
+  * From ziirish:
+    - 742: Clarify backup_script_pre documentation.
+    - 746: Add '-o' flag to override configuration options on the command line.
+    - 3: Implement 'include_regex' .
+  * From deajan and hakong:
+    - 740: Updates for backup tool script, including calendar.
+  * From pablodav:
+    - Fix Windows upgrade script getting stuck after execution.
+  * Add j:response-markers-on/off monitor commands.
+  * Fix utests for travis mac builds, they have a new gzip version.
+
+2018-08-01 Changes in burp-2.2.8:
+  * Do not try to log remotely with client side post_scripts.
+  * 693: Fix RS_BLAKE2_SIG_MAGIC detection.
+  * 734: Fix typo in retention doc.
+  * 728: On error in protocol2, print the last tried file.
+  * 731: Minor documentation update from Iznohak:
+    - Remove references to yajl.
+    - Clarify usage of backup_tool_script on the burp server.
+    - Remove unimplemented diff options.
+    - Reorder man page examples and group them by action.
+
 2018-06-22 Changes in burp-2.2.6:
   * 726: Fix 'burp -t' missing fields.
   * 720: Bug fix for falling back to server name when ssl_peer_cn

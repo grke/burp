@@ -280,7 +280,8 @@ static int extra_comms_read(struct async *as,
 			const char *restore_path=get_string(
 				cconfs[OPT_RESTORE_PATH]);
 			// Client will not accept the restore.
-			unlink(restore_path);
+			if (restore_path)
+				unlink(restore_path);
 			if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
 				goto end;
 			logp("Client not accepting server initiated restore.\n");

@@ -83,7 +83,9 @@ static int want_to_restore(int srestore, struct sbuf *sb,
 		if(sbuf_is_vssdata(sb))
 			return 0;
 		// Do not send VSS directory data to non-windows.
-		if(S_ISDIR(sb->statp.st_mode) && sbuf_is_filedata(sb))
+		if(S_ISDIR(sb->statp.st_mode)
+		  && sbuf_is_filedata(sb)
+		  && !sbuf_is_metadata(sb))
 			return 0;
 	}
 	return (!srestore || check_srestore(cconfs, sb->path.buf))

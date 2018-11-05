@@ -55,6 +55,7 @@
 #include "../regexp.h"
 #include "../strlist.h"
 #include "find.h"
+#include "find_logic.h"
 
 #ifdef HAVE_LINUX_OS
 #include <sys/statfs.h>
@@ -155,8 +156,6 @@ int in_exclude_comp(struct strlist *excom, const char *fname, int compression)
 }
 
 /* Return 1 to include the file, 0 to exclude it. */
-/* Currently not used - it needs more thinking about. */
-/*
 int in_include_regex(struct strlist *increg, const char *fname)
 {
 	// If not doing include_regex, let the file get backed up.
@@ -166,7 +165,6 @@ int in_include_regex(struct strlist *increg, const char *fname)
 			return 1;
 	return 0;
 }
-*/
 
 static int in_exclude_regex(struct strlist *excreg, const char *fname)
 {
@@ -190,7 +188,8 @@ int file_is_included_no_incext(struct conf **confs, const char *fname)
 	struct strlist *best=NULL;
 
 	if(in_exclude_ext(get_strlist(confs[OPT_EXCEXT]), fname)
-	  || in_exclude_regex(get_strlist(confs[OPT_EXCREG]), fname))
+	  || in_exclude_regex(get_strlist(confs[OPT_EXCREG]), fname)
+		|| !in_include_regex(get_strlist(confs[OPT_INCREG]), fname))
 		return 0;
 
 	// Check include/exclude directories.
@@ -288,7 +287,8 @@ static int file_size_match(struct FF_PKT *ff_pkt, struct conf **confs)
 // Last checks before actually processing the file system entry.
 static int my_send_file_w(struct asfd *asfd, struct FF_PKT *ff, bool top_level, struct conf **confs)
 {
-	if(!file_is_included(confs, ff->fname, top_level)) return 0;
+	if(!file_is_included(confs, ff->fname, top_level)
+		|| is_logic_excluded(confs, ff)) return 0;
 
 	// Doing the file size match here also catches hard links.
 	if(S_ISREG(ff->statp.st_mode)

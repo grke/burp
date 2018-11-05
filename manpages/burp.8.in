@@ -41,6 +41,10 @@ Print an index table of symbols that humans may see @name@ produce, and exit.
 No forking mode. The program will accept a single query, deal with it, and then
 exit. This is useful for debugging. Implies '\-F'. If you intend to debug a protocol2 session, you will also want to run a separate champion chooser process ('\-a c' below).
 .TP
+\fB\-o\fR \fB[option=value]\fR
+Override a given option. You can use this flag several times to override multiple options.
+You can even reset list options with the special syntax ':=' (example: '-o "include:=/tmp"').
+.TP
 \fB\-Q\fR \fB\fR
 Do not log to stdout (overrides config file 'stdout' setting).
 .TP
@@ -48,6 +52,9 @@ Do not log to stdout (overrides config file 'stdout' setting).
 Dry-run mode to test config file syntax.
 .TP
 \fB\-v\fR \fB\fR
+Log to stdout (overrides config file 'stdout' setting).
+.TP
+\fB\-V\fR \fB\fR
 Print version and exit.
 .TP
 ADDITIONAL SERVER OPTIONS TO USE WITH '\-a c'
@@ -84,6 +91,10 @@ Print help and then exit.
 \fB\-?\fR \fB\fR
 Print help and then exit.
 .TP
+\fB\-o\fR \fB[option=value]\fR
+Override a given option. You can use this flag several times to override multiple options.
+You can even reset list options with the special syntax ':=' (example: '-o "include:=/tmp"').
+.TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see @name@ produce, and exit.
 .TP
@@ -102,6 +113,9 @@ For use with restores \- strip a number of leading path components.
 .TP
 \fB\-t\fR \fB\fR
 Dry-run mode to test config file syntax.
+.TP
+\fB\-v\fR \fB\fR
+Log to stdout (overrides config file 'stdout' setting).
 .TP
 \fB\-x\fR (on Windows)
 On restore, do not use the Windows VSS API on restore - give this option when you are restoring a backup that contains no VSS data.
@@ -213,17 +227,11 @@ Read additional configuration files.
 \fBmode=server\fR
 Required to run in server mode.
 .TP
-\fBaddress=[address]\fR
-Defines the main TCP address that the server listens on. The default is either '::' or '0.0.0.0', dependent upon compile time options.
+\fBlisten=[address]:[port]\fR
+Defines the main TCP address and port that the server listens on. The default is either '::' or '0.0.0.0', dependent upon compile time options. Specify multiple 'listen' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_children' value.
 .TP
-\fBport=[port number]\fR
-Defines the main TCP port that the server listens on. Specify multiple 'port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_children' value.
-.TP
-\fBstatus_address=[address|localhost]\fR
-Defines the main TCP address that the server listens on for status requests. The default is special value 'localhost' that includes both '::1' (if available) and '127.0.0.1' (always).
-.TP
-\fBstatus_port=[port number]\fR
-Defines the TCP port that the server listens on for status requests. Comment this out to have no status server. Specify multiple 'status_port' entries on separate lines in order to listen on multiple ports. Each port can be configured with its own 'max_status_children' value.
+\fBlisten_status=[address]:[port]\fR
+Defines the main TCP address and port that the server listens on for status requests. Specify multiple 'listen_status' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_status_children' value. Comment out to have no status server.
 .TP
 \fBcname_lowercase=[0|1]\fR
 Whether to force lowercase cname when looking-up in clientconfdir. This also affects the fqdn lookup on the client (see client configuration options for details). The default is 0. When set to 1 the name provided by the client while authenticating will be lowercased.
@@ -378,10 +386,10 @@ Choose the level of zlib compression over SSL. Setting 0 or zlib0 turns SSL comp
 Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-dsaparam \-out dhfile.pem 2048
 .TP
 \fBmax_children=[number]\fR
-Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5. Specify multiple 'max_children' entries on separate lines if you have configured multiple port entries.
+Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5. Specify multiple 'max_children' entries on separate lines if you have configured multiple 'listen' entries.
 .TP
 \fBmax_status_children=[number]\fR
-Defines the number of status child processes to fork (the number of status clients that can simultaneously connect. The default is 5. Specify multiple 'max_status_children' entries on separate lines if you have configured multiple status_port entries.
+Defines the number of status child processes to fork (the number of status clients that can simultaneously connect. The default is 5. Specify multiple 'max_status_children' entries on separate lines if you have configured multiple 'listen_status' entries.
 .TP
 \fBmax_storage_subdirs=[number]\fR
 Defines the number of subdirectories in the data storage areas. The maximum number of subdirectories that ext3 allows is 32000. If you do not set this option, it defaults to 30000.
@@ -393,7 +401,7 @@ Path to the script to run when a client connects with the timed backup option. I
 A user-definable argument to the timer script. You can have many of these. The timer_arg options can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBnotify_success_script=[path]\fR
-Path to the script to run when a backup succeeds. User arguments are appended after the first five reserved arguments. An example notify script is provided. The notify_success_script option can be overriddden by the client configuration files in clientconfdir on the server.
+Path to the script to run when a backup succeeds. User arguments are appended after the first six reserved arguments. An example notify script is provided. The notify_success_script option can be overriddden by the client configuration files in clientconfdir on the server.
 .TP
 \fBnotify_success_arg=[string]\fR
 A user-definable argument to the notify success script. You can have many of these. The notify_success_arg options can be overriddden by the client configuration files in clientconfdir on the server.
@@ -475,6 +483,9 @@ Set this to 0 if you want to disable all clients. The default is 1. This option 
 .TP
 \fBrblk_memory_max=[B/KB/MB/GB]\fR
 The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256MB. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
+.TP
+\fBfail_on_warning=[0|1]\fR
+If a warning is generated during a backup, fail the backup. The default is 0. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -598,7 +609,7 @@ Set this to enable client side file Blowfish encryption. If you do not want encr
 Set this to 0 if you do not want include_glob settings to be evaluated after the pre script is run. The default is 1.
 .TP
 \fBbackup_script_pre=[path]\fR
-Path to a script to run before a backup. It is not run if the server decides it is not yet time for a backup. The arguments to it are 'pre', 'reserved2' to 'reserved5', and then arguments defined by backup_script_pre_arg - unless the option 'backup_script_reserved_args' is off, then only arguments defined by backup_script_pre_arg are passed to it.
+Path to a script to run before a backup. It is not run if the server decides it is not yet time for a backup. The arguments to it are 'pre', 'reserved2' to 'reserved5', and then arguments defined by backup_script_pre_arg - unless the option 'backup_script_reserved_args' is off, then only arguments defined by backup_script_pre_arg are passed to it. If the script fails (ie. when the return code is not 0), then the backup is aborted.
 .TP
 \fBbackup_script_pre_arg=[string]\fR
 A user-definable argument to the backup pre script. You can have many of these.
@@ -669,10 +680,16 @@ Path to exclude from the backup. You can have multiple exclude lines. Use forwar
 Include paths that match the glob expression. For example, '/home/*/Documents' will include '/home/user1/Documents' and '/home/user2/Documents' if directories 'user1' and 'user2' exist in '/home'. The Windows implementation currently limit the expression to contain only one '*'.
 .TP
 \fBinclude_regex=[regular expression]\fR
-Not implemented.
+Include paths that match the regular expression. You need at least one 'include' or 'include_glob' option to have files to be matched against the regex. If you have at least one 'include_regex' line, then any path NOT matching the regex will be excluded from your backup.
 .TP
 \fBexclude_regex=[regular expression]\fR
 Exclude paths that match the regular expression.
+.TP
+\fBinclude_logic=[logic expression]\fR
+Not yet implemented. See 'exclude_logic' for details on the 'logic expression' syntax.
+.TP
+\fBexclude_logic=[logic expression]\fR
+Exclude paths that match the 'logic expression'. A 'logic expression' may contain several tests chained with boolean operators. The supported operators are: 'and', 'or', 'not' as well as groups of expressions surrounded by parentheses. The supported tests are: 'file_size', 'file_match', 'path_match' and 'file_ext'. The 'file_size' test supports comparisons with '>', '>=', '<', '<=', '=' and take a size as parameter, example: 'file_size<=5Mb'. The 'file_ext' test takes an extension as parameter, example: 'file_ext=pst'. Finally, the 'file_match'  and 'path_match' tests take a regular expression as parameter, example: file_match=b$. 'file_match' is ran against the filename (exemple 'file1') while 'path_match' is ran against the full path of the file (exemple: '/home/test/file1'). A complete expression may look like '(file_size>=5Mb and file_size<=10Mb) and (file_ext=pst or file_match=movies) and not file_ext=mp3'. There are some limitations though, white-spaces and parentheses must be escaped inside a test either by quoting the expression or escaping a given character: 'file_match="perso(nnal)?"', 'file_match=a\ filename'.
 .TP
 \fBinclude_ext=[extension]\fR
 Extensions to include in the backup. Case insensitive. Nothing else will be included in the backup. You can have multiple include extension lines. For example, set 'txt' to include files that end in '.txt'. You need to specify an 'include' line so that @name@ knows where to start looking.
@@ -775,6 +792,8 @@ Additionally, the following options can be overridden here for each client:
 \fBhard_quota\fR
 \fBsoft_quota\fR
 \fBlabel\fR
+\fBrblk_memory_max\fR
+\fBfail_on_warning\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR
 \fBnotify_success_script\fR

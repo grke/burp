@@ -18,7 +18,6 @@ static struct fzp *logfzp=NULL;
 static int do_syslog=1;
 static int do_stdout=1;
 static int do_progress_counter=1;
-static int force_quiet=0;
 static int syslog_opened=0;
 static int json=0;
 
@@ -150,16 +149,8 @@ int log_fzp_set(const char *path, struct conf **confs)
 	}
 	if(logfzp) fzp_setlinebuf(logfzp);
 	do_syslog=get_int(confs[OPT_SYSLOG]);
-	if(force_quiet)
-	{
-		do_stdout=0;
-		do_progress_counter=0;
-	}
-	else
-	{
-		do_stdout=get_int(confs[OPT_STDOUT]);
-		do_progress_counter=get_int(confs[OPT_PROGRESS_COUNTER]);
-	}
+	do_stdout=get_int(confs[OPT_STDOUT]);
+	do_progress_counter=get_int(confs[OPT_PROGRESS_COUNTER]);
 
 	if(syslog_opened)
 	{
@@ -172,11 +163,6 @@ int log_fzp_set(const char *path, struct conf **confs)
 		syslog_opened++;
 	}
 	return 0;
-}
-
-void log_force_quiet(void)
-{
-	force_quiet=1;
 }
 
 void log_fzp_set_direct(struct fzp *fzp)

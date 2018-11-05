@@ -1,3 +1,4 @@
+@echo off
 REM Burp used to put everything in C:\Program Files\Burp\ until 1.3.11.
 REM But still want old installations to work.
 

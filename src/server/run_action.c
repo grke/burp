@@ -400,7 +400,7 @@ static const char *buf_to_notify_str(struct iobuf *rbuf)
 
 static int maybe_write_first_created_file(struct sdirs *sdirs)
 {
-	char tstmp[32]="";
+	char tstmp[48]="";
 	if(is_reg_lstat(sdirs->created)>0
 	  || is_lnk_lstat(sdirs->current)>0
 	  || is_lnk_lstat(sdirs->currenttmp)>0

@@ -828,6 +828,13 @@ static enum str_e do_stuff_to_receive(struct asfd *asfd,
 					chmanio, cconfs, last_requested))
 						goto error;
 				return STR_OK;
+			case CMD_INTERRUPT:
+				if(*last_requested
+				  && !strcmp(rbuf->buf, *last_requested))
+					free_w(last_requested);
+				fzp_close(&(rb->protocol1->fzp));
+				sbuf_free_content(rb);
+				return STR_OK;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);
 				goto error;
@@ -1093,6 +1100,8 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	int breaking=0;
 	int breakcount=0;
 	struct cntr *cntr=NULL;
+	struct cntr_ent *warn_ent=NULL;
+	int fail_on_warning=0;
 
 	if(!as)
 	{
@@ -1116,6 +1125,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 	cntr=get_cntr(cconfs);
+	fail_on_warning=get_int(cconfs[OPT_FAIL_ON_WARNING]);
+	if(cntr)
+		warn_ent=cntr->ent[CMD_WARNING];
 
 	if(get_int(cconfs[OPT_BREAKPOINT])>=2000
 	  && get_int(cconfs[OPT_BREAKPOINT])<3000)
@@ -1177,6 +1189,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 
 	while(1)
 	{
+		if(check_fail_on_warning(fail_on_warning, warn_ent))
+			goto error;
+
 		if(breaking && breakcount--==0)
 			return breakpoint(breaking, __func__);
 
@@ -1201,6 +1216,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 				case STR_OK:
 					break;
 				case STR_FINISHED:
+					if(check_fail_on_warning(
+						fail_on_warning, warn_ent))
+							goto error;
 					goto end;
 				case STR_ERROR:
 					goto error;

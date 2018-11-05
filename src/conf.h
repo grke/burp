@@ -102,10 +102,8 @@ enum conf_opt
 	OPT_CNAME_FQDN, // use fqdn cname, client or server option
 
 	// Server options.
-	OPT_ADDRESS,
-	OPT_PORT,
-	OPT_STATUS_ADDRESS,
-	OPT_STATUS_PORT,
+	OPT_LISTEN,
+	OPT_LISTEN_STATUS,
 	OPT_DIRECTORY,
 	OPT_TIMESTAMP_FORMAT,
 	OPT_CLIENTCONFDIR,
@@ -134,6 +132,8 @@ enum conf_opt
 
 	// Client options.
 	OPT_CNAME, // set on the server when client connects
+	OPT_PORT,
+	OPT_STATUS_PORT,
 	OPT_PORT_BACKUP,
 	OPT_PORT_RESTORE,
 	OPT_PORT_VERIFY,
@@ -161,6 +161,8 @@ enum conf_opt
 	OPT_EXCEXT, // exclude extensions
 	OPT_INCREG, // include (regular expression)
 	OPT_EXCREG, // exclude (regular expression)
+	OPT_INCLOGIC, // include logic expression
+	OPT_EXCLOGIC, // exclude logic expression
 	OPT_EXCFS, // exclude filesystems
 	OPT_INCFS, // include filesystems
 	OPT_EXCOM, // exclude from compression
@@ -236,6 +238,7 @@ enum conf_opt
 	OPT_KEEP,
 
 	OPT_WORKING_DIR_RECOVERY_METHOD,
+	OPT_FAIL_ON_WARNING,
 	OPT_MAX_RESUME_ATTEMPTS,
 	OPT_LIBRSYNC,
 	OPT_LIBRSYNC_MAX_SIZE,

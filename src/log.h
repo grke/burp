@@ -22,7 +22,6 @@ extern void log_set_json(int value);
 extern void log_oom_w(const char *func, const char *orig_func);
 extern int log_incexcs_buf(const char *incexc);
 extern void log_recvd(struct iobuf *iobuf, struct cntr *cntr, int print);
-extern void log_force_quiet(void);
 
 #ifndef __GNUC__
 #define __attribute__(x) /*NOTHING*/

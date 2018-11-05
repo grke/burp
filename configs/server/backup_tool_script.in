@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
-PROGRAM_VERSION=0.4.0
-PROGRAM_BUILD=2018022401
+PROGRAM_VERSION=0.4.2
+PROGRAM_BUILD=2018070301
 AUTHOR="(C) 2017-2018 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=yes
 
-## backup_tool_script - A script to check @name@ backup sanity on the server
+## backup_tool_script - A script to check @name@ backup sanity
 
 ## backup_tool_script can verify a given number of backups for each client. It can run verifiy operations in parallel.
 ## Verify operations are timed in order to stop them after a given amount of time, leaving the system performance ready for backup operations.
@@ -28,9 +28,9 @@ SOFT_MAX_EXEC_TIME_PER_VERIFY=10800
 ## After how much time (in seconds) for a single verification the process should be stopped (defaults to 5 hours)
 HARD_MAX_EXEC_TIME_PER_VERIFY=18000
 ## After how much seconds of execution of all steps a warning should be logged (defaults to 10 hours)
-SOFT_MAX_EXEC_TIME=36000
+SOFT_MAX_EXEC_TIME=64800
 ## After how much seconds of execution of all steps a verification process should be stopped (defaults to 12 hours)
-HARD_MAX_EXEC_TIME=43200
+HARD_MAX_EXEC_TIME=82800
 
 # Verify operations checks
 ## When a client isn't idle, we can postpone the it's backup verification process. How many times should we retry the verification command. Set this to 0 to disable operation postponing
@@ -53,8 +53,8 @@ PARELLEL_VERIFY_CONCURRENCY=2
 MAIL_ALERT_MSG="Execution of $PROGRAM instance $INSTANCE_ID on $(date) has warnings/errors."
 
 ## Optional change of mail body encoding (using iconv)
-## By default, all mails are sent in UTF-8 format without header (because of maximum compatibility of all platforms)
-## You may specify an optional encoding here (like "ISO-8859-1" or whatever iconv can handle)
+## By default, all mails are sent in UTF-8 format without headers
+## You may specify an optional encoding here (like "ISO-8859-1" or whatever iconv can handle) for maximal compatibility
 MAIL_BODY_CHARSET="ISO-8859-1"
 
 # ------------ Client specific alert email template --------------
@@ -66,7 +66,7 @@ CLIENT_ALERT_SUBJECT="@name@ backup - Warning about your backup"
 ## [NUMBERDAYS] is the number of days we check.
 ## [QUOTAEXCEED] is the size of the actual backup versus the quota.
 ## [CLIENT] is the client name
-
+## [INSTANCE] is the current instance name
 
 ## Message sent directly to client email address when no recent backups are found.
 CLIENT_ALERT_BODY_OUTDATED="Hello,
@@ -401,6 +401,12 @@ function SendAlert {
 # encryption can be set to tls, ssl or none
 # smtpUser and smtpPassword are optional
 # SendEmail "subject" "Body text" "receiver@example.com receiver2@otherdomain.com" "/path/to/attachment.file" "senderMail@example.com" "smtpServer.domain.tld" "smtpPort" "encryption" "smtpUser" "smtpPassword"
+
+# If text is received as attachment ATT00001.bin or noname, consider adding the following to /etc/mail.rc
+#set ttycharset=iso-8859-1
+#set sendcharsets=iso-8859-1
+#set encoding=8bit
+
 function SendEmail {
 	local subject="${1}"
 	local message="${2}"
@@ -430,7 +436,7 @@ function SendEmail {
 		mail_no_attachment=0
 	fi
 
-	for i in "${destinationMails}"; do
+	for i in "${destinationMails[@]}"; do
 		if [ $(CheckRFC822 "$i") -ne 1 ]; then
 			Logger "Given email [$i] does not seem to be valid." "WARN"
 		fi
@@ -1260,7 +1266,7 @@ function ListClients {
 	local configFile="${2}"
 	local clientConfDir="${3}"
 
-	__CheckArguments 1-2 $# "$@"      #__WITH_PARANOIA_DEBUG
+	__CheckArguments 0-3 $# "$@"      #__WITH_PARANOIA_DEBUG
 
 	local clientIsIncluded
 	local clientIsExcluded
@@ -1281,42 +1287,51 @@ function ListClients {
 		clientConfDir="/etc/@name@/clientconfdir"
 	fi
 
-	# File 'backup_stats' is there only when a backup is finished
-	find "$backupDir" -mindepth 3 -maxdepth 3 -type f -name "backup_stats" | grep -e '.*' > /dev/null
-	if [ $? != 0 ]; then
-		Logger "The directory [$backupDir] does not seem to be a @name@ folder. Please check the path. Additionnaly, protocol 2 directores need to specify the dedup group directory and the client subfolder." "ERROR"
-	fi
-
-	# Using both @name@ -a S list and find method in order to find maximum backup clients
-	cmd="$BACKUP_EXECUTABLE $configString -a S | grep \"last backup\" | awk '{print \$1}' > \"$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP\""
-	Logger "Running cmd [$cmd]." "DEBUG"
-	eval "$cmd" &
-	ExecTasks $! "${FUNCNAME[0]}_lastbackup" false 0 0 1800 3600 true $SLEEP_TIME $KEEP_LOGGING
-	if [ $? != 0 ]; then
-		Logger "Enumerating @name@ clients via [$BACKUP_EXECUTABLE $configString -a S] failed. Check provided @name@ client config file." "ERROR"
-	else
-		Logger "@name@ method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP)" "DEBUG"
-	fi
-
-	# First exp removes everything before last '/'
-	# sed tested on linux and BSD (should work on MacOS too)
-	find "$backupDir" -mindepth 1 -maxdepth 1 -type d | sed -e "s/\(.*\)\/\(.*\)/\2/g" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
-
-	while IFS=$'\n' read -r client; do
-		find "$backupDir$client" -mindepth 2 -maxdepth 2 -type f -name "backup_stats" | grep -e '.*' > /dev/null
-		if [ $? == 0 ]; then
-			echo "$client" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
+	if [ -d "$backupDir" ]; then
+		# File 'backup_stats' is there only when a backup is finished
+		find "$backupDir" -mindepth 3 -maxdepth 3 -type f -name "backup_stats" | grep -e '.*' > /dev/null
+		if [ $? != 0 ]; then
+			Logger "The directory [$backupDir] does not seem to be a @name@ folder. Please check the path. Additionnaly, protocol 2 directores need to specify the dedup group directory and the client subfolder." "ERROR"
 		fi
-	done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
-
-	if [ ! -f "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" ]; then
-		touch "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
 	fi
 
-	Logger "Detection method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP)" "DEBUG"
+	# Autodetect clients or use provided client with --client or -C option
+	if [ "$GIVEN_CLIENT" == "" ]; then
 
-	# Merge all clients found by @name@ executable and manual check
-	sort "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP" "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" | uniq > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-4.$SCRIPT_PID.$TSTAMP"
+		# Using both @name@ -a S list and find method in order to find maximum backup clients
+		cmd="$BACKUP_EXECUTABLE $configString -a S | grep \"last backup\" | awk '{print \$1}' > \"$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP\""
+		Logger "Running cmd [$cmd]." "DEBUG"
+		eval "$cmd" &
+		ExecTasks $! "${FUNCNAME[0]}_lastbackup" false 0 0 1800 3600 true $SLEEP_TIME $KEEP_LOGGING
+		if [ $? != 0 ]; then
+			Logger "Enumerating @name@ clients via [$BACKUP_EXECUTABLE $configString -a S] failed. Check provided @name@ client config file." "ERROR"
+		else
+			Logger "@name@ detection method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP)" "DEBUG"
+		fi
+
+		# First exp removes everything before last '/'
+		# sed tested on linux and BSD (should work on MacOS too)
+		if [ -d "$backupDir" ]; then
+			find "$backupDir" -mindepth 1 -maxdepth 1 -type d | sed -e "s/\(.*\)\/\(.*\)/\2/g" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
+
+			while IFS=$'\n' read -r client; do
+				find "$backupDir$client" -mindepth 2 -maxdepth 2 -type f -name "backup_stats" | grep -e '.*' > /dev/null 2>&1
+				if [ $? == 0 ]; then
+					echo "$client" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
+				fi
+			done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
+		fi
+
+		if [ ! -f "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" ]; then
+			touch "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
+		fi
+
+		Logger "Backup file detection method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP)" "DEBUG"
+		# Merge all clients found by @name@ executable and manual check
+		sort "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP" "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" | uniq > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-4.$SCRIPT_PID.$TSTAMP"
+	else
+		echo "$GIVEN_CLIENT" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-4.$SCRIPT_PID.$TSTAMP"
+	fi
 
 	while IFS=$'\n' read -r client; do
 		clientIsIncluded=false
@@ -1342,39 +1357,39 @@ function ListClients {
 			Logger "Ommiting client [$client]." "NOTICE"
 		else
 			if [ -f "$backupDir$client/current/timestamp" ]; then
-				Logger "Found client [$client]." "NOTICE"
-				CLIENT_LIST+=("$client")
+				Logger "Found client [$client] backup directory." "NOTICE"
+			elif [ -d "$backupDir" ]; then
+				Logger "Client [$client] does not seem to have any backups (check provided backup directory)." "WARN"
+			fi
 
-				# Client email is a label in client config file
-				# Check whether we can fetch the default value
-				if [ -f "$clientConfDir/$client" ]; then
-					clientEmail=$(egrep "^label( )?=( )?email_address( )?:( )?" "$clientConfDir/$client")
-					if [ "$clientEmail" != "" ]; then	
-						clientEmail="${clientEmail#*:}"
-						# Remove eventual spaces
-						clientEmail="${clientEmail/ /}"
-						for j in $clientEmail; do
-							if [ $(CheckRFC822 "$j") -eq 1 ]; then 
-								if [ "${CLIENT_EMAIL["$client"]}" == "" ]; then
+			CLIENT_LIST+=("$client")
+
+			# Client email is a label in client config file
+			# Check whether we can fetch the default value
+			if [ -f "$clientConfDir/$client" ]; then
+				clientEmail=$(egrep "^label( )?=( )?email_address( )?:( )?" "$clientConfDir/$client")
+				if [ "$clientEmail" != "" ]; then	
+					clientEmail="${clientEmail#*:}"
+					# Remove eventual spaces
+					clientEmail="${clientEmail/ /}"
+					for j in $clientEmail; do
+						if [ $(CheckRFC822 "$j") -eq 1 ]; then 
+							if [ "${CLIENT_EMAIL["$client"]}" == "" ]; then
 									CLIENT_EMAIL["$client"]="$j"
-								else
-									CLIENT_EMAIL["$client"]=${CLIENT_EMAIL["$client"]}" $j"
-								fi
 							else
-								Logger "Client [$client] has a bogus mail address [$j]." "WARN"
+								CLIENT_EMAIL["$client"]=${CLIENT_EMAIL["$client"]}" $j"
 							fi
-						done
-					else
-						Logger "Client [$client] has no mail address set." "NOTICE"
-					fi
-				elif [ "$CLIENT_ALERTS" == true ]; then
-					Logger "Cannot find client config file [$clientConfDir/$client] to fetch email address." "ERROR"
+						else
+							Logger "Client [$client] has a bogus mail address [$j]." "WARN"
+						fi
+					done
+				else
+					Logger "Client [$client] has no mail address set." "NOTICE"
 				fi
-			else
-				Logger "Client [$client] does not have any backups." "WARN"
+			elif ([ "$CLIENTS_ALERT_QUOTAS" == true ] || [ "$CLIENTS_ALERT_OUTDATED" == true ]); then
+				Logger "Cannot find client config file [$clientConfDir/$client] to fetch email address." "ERROR"
 			fi
 		fi
-
 	done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-4.$SCRIPT_PID.$TSTAMP"
 }
 
@@ -1482,6 +1497,7 @@ function ListOutdatedClients {
 			if [ $CLIENTS_ALERT_OUTDATED == true ]; then
 				clientAlertBody="${CLIENT_ALERT_BODY_OUTDATED/"[CLIENT]"/$client}"
 				clientAlertBody="${clientAlertBody/"[NUMBERDAYS]"/$oldDays}"
+				clientAlertBody="${clientAlertBody/"[INSTANCE]"/$INSTANCE_ID}"
 				if [ "${CLIENT_EMAIL[$client]}" != "" ]; then
 					SendEmail "$CLIENT_ALERT_SUBJECT" "$clientAlertBody" "${CLIENT_EMAIL[$client]}"
 					Logger "Sent outdated client mail to [${CLIENT_EMAIL[$client]}]." "NOTICE"
@@ -1672,6 +1688,46 @@ function VerifyService {
 	done
 }
 
+function DisplayBackupCalendar {
+	local configFile="${1}"
+
+	local client
+	local cmd
+	local backups
+	local months
+	local days
+	local days_expr
+	local cdate
+	local month_count=1
+
+	if [ -f "$configFile" ]; then
+		configString="-c \"$configFile\""
+	fi
+
+	for client in "${CLIENT_LIST[@]}"; do
+		cmd="$BACKUP_EXECUTABLE $configString -a l -C \"$client\" | grep \"^Backup: \" |awk '{print \$3}' > \"$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP\""
+		Logger "Running cmd [$cmd]." "DEBUG"
+		eval "$cmd" &
+		ExecTasks $! "${FUNCNAME[0]}" false 0 0 1800 3600 true $SLEEP_TIME $KEEP_LOGGING
+		if [ $? != 0 ]; then
+			Logger "Failed to enumerate backups for client [$client]." "ERROR"
+		elif [ -s "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP" ]; then
+			backups="$(cat "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP")"
+			months=$(echo "$backups" | cut -d'-' -f1-2 | sort -V | uniq | tail -n $month_count)
+			Logger "Calendar for client [$client]:" "NOTICE"
+			for month in $months; do
+				days=$(echo "$backups" | grep "$month" | cut -d'-' -f3 | sort | uniq )
+				days_expr=$(echo "$days" | tr '\n' '|'|rev|cut -c2-|rev)
+				cdate="$(date --date="$month-01" +"%m %Y")"
+				cal $cdate | head -1
+				cal $cdate | tail -n +2 | sed -r 's/\x5f\x08//g;s/ ([0-9]( |$))/0\1/g' | grep --color -EC10 "((^| )$days_expr( |$))"
+			done
+		else
+			Logger "No backups were found for client [$client]" "NOTICE"
+		fi
+	done
+}
+
 function Init {
 	# Set error exit code if a piped command fails
 	set -o pipefail
@@ -1706,6 +1762,8 @@ function Usage {
 	echo "-A, --clients-alert-quotas         Use email defined in client config to alert users about exceeded disk quotas (see email template in header)"
 	echo "-a, --clients-alert-outdated       Use email defined in client config to alert users about outdated backups (see email template in header)"
 	echo "-z, --clientconfdir=\"\"             Path of clientconfdir in order to fetch email addresses when client alerts are used (defaults to /etc/@name@/clientconfdir)"
+	echo "-C, --client=\"\"                    Specify specific client instead of detecting clients."
+	echo "--calendar                         Show backup calendar"
 	echo ""
 	echo "Examples:"
 	echo "$0 -d /path/to/@name@/protocol1 -v 3 -c /etc/@name@/@name@.conf"
@@ -1738,6 +1796,7 @@ INCLUDE_CLIENTS=""
 EXCLUDE_CLIENTS=""
 OUTDATED_DAYS=""
 CLIENT_LIST=()
+GIVEN_CLIENT=""
 declare -A CLIENT_EMAIL
 VSS_STRIP_DIR=""
 VERIFY_SERVICE=""
@@ -1746,6 +1805,7 @@ VERIFY_QUOTAS=false
 CLIENTS_ALERT_QUOTAS=false
 CLIENTS_ALERT_OUTDATED=false
 CLIENT_CONF_DIR=""
+SHOW_BACKUP_CALENDAR=false
 
 function GetCommandlineArguments {
 	local isFirstArgument=true
@@ -1815,6 +1875,16 @@ function GetCommandlineArguments {
 			-c)
 			CONFIG_FILE="${2}"
 			shift
+			;;
+			-C)
+			GIVEN_CLIENT="${2}"
+			shift
+			;;
+			--client=*)
+			GIVEN_CLIENT="${1##*=}"
+			;;
+			--calendar)
+			SHOW_BACKUP_CALENDAR=true
 			;;
 			--vss-strip-path=*)
 			VSS_STRIP_DIR="${1##*=}"
@@ -1928,46 +1998,59 @@ if [ "$BACKUP_DIR" != "" ]; then
 		# Make sure there is only one trailing slash on path
 		BACKUP_DIR="${BACKUP_DIR%/}/"
 	fi
+fi
 
-	if [ "$CONFIG_FILE" != "" ]; then
-		if [ ! -f "$CONFIG_FILE" ]; then
-			Logger "Bogus configuration file [$CONFIG_FILE] given." "CRITICAL"
-			exit 1
-		fi
-	fi
-
-	if [ "$CLIENT_CONF_DIR" != "" ]; then
-		if [ ! -d "$CLIENT_CONF_DIR" ]; then
-			Logger "Bogus clientconfdir [$CLIENT_CONF_DIR] given." "CRITICAL"
-			exit 1
-		fi
-	fi
-
-	ListClients "$BACKUP_DIR" "$CONFIG_FILE" "$CLIENT_CONF_DIR"
-
-	if [ $VERIFY_WARNINGS == true ]; then
-		VerifyLastWarnings "$BACKUP_DIR"
-	fi
-
-	if [ $VERIFY_QUOTAS == true ]; then
-		ListQuotaExceedClients "$BACKUP_DIR"
-	fi
-
-	if [ "$OUTDATED_DAYS" != "" ]; then
-		if [ $(IsInteger "$OUTDATED_DAYS") -ne 0 ]; then
-			ListOutdatedClients "$BACKUP_DIR" $OUTDATED_DAYS
-		else
-			Logger "Bogus --check-outdated-clients value [$OUTDATED_DAYS]." "CRITICAL"
-			exit 1
-		fi
-	fi
-
-	if [ "$VERIFY_BACKUPS" != "" ]; then
-		if [ $(IsInteger "$VERIFY_BACKUPS") -ne 0 ]; then
-			VerifyBackups "$BACKUP_DIR" $VERIFY_BACKUPS "$CONFIG_FILE"
-		else
-			Logger "Bogus --verify-last-backups value [$VERIFY_BACKUPS]." "CRITICAL"
-			exit 1
-		fi
+if [ "$CONFIG_FILE" != "" ]; then
+	if [ ! -f "$CONFIG_FILE" ]; then
+		Logger "Bogus configuration file [$CONFIG_FILE] given." "CRITICAL"
+		exit 1
 	fi
 fi
+
+if [ "$CLIENT_CONF_DIR" != "" ]; then
+	if [ ! -d "$CLIENT_CONF_DIR" ]; then
+		Logger "Bogus clientconfdir [$CLIENT_CONF_DIR] given." "CRITICAL"
+		exit 1
+	fi
+fi
+
+ListClients "$BACKUP_DIR" "$CONFIG_FILE" "$CLIENT_CONF_DIR"
+
+if [ $SHOW_BACKUP_CALENDAR == true ]; then
+	DisplayBackupCalendar "$CONFIG_FILE"
+fi
+
+if [ $VERIFY_WARNINGS == true ]; then
+	VerifyLastWarnings "$BACKUP_DIR"
+fi
+
+if [ $VERIFY_QUOTAS == true ]; then
+	ListQuotaExceedClients "$BACKUP_DIR"
+fi
+
+if [ "$OUTDATED_DAYS" != "" ]; then
+	if [ $(IsInteger "$OUTDATED_DAYS") -ne 0 ]; then
+		ListOutdatedClients "$BACKUP_DIR" $OUTDATED_DAYS
+	else
+		Logger "Bogus --check-outdated-clients value [$OUTDATED_DAYS]." "CRITICAL"
+		exit 1
+	fi
+fi
+
+if [ "$VERIFY_BACKUPS" != "" ]; then
+	if [ $(IsInteger "$VERIFY_BACKUPS") -ne 0 ]; then
+		VerifyBackups "$BACKUP_DIR" $VERIFY_BACKUPS "$CONFIG_FILE"
+	else
+		Logger "Bogus --verify-last-backups value [$VERIFY_BACKUPS]." "CRITICAL"
+		exit 1
+	fi
+fi
+
+# v0.4.2
+# - Added Hakong's backup calendar display (using --calendar)
+# - Added [INSTANCE] placeholder for email sending
+# - Client detection now also happens when no data directory is set
+# - Fixed warning not shown when email address cannot be fetched and client alerts are enabled
+# - Fixed multiple email adresses not being checked against RFC822
+
+# v0.4.0 first public release, merged into @name@ codebase

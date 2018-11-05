@@ -2,24 +2,19 @@
 
 mode = server
 
-# The default addresses to listen on depend upon compile time options.
-# They may be overridden here.
-#address = 0.0.0.0
-port = 4971
+listen = 0.0.0.0:4971
 max_children = 5
-# Optionally configure additional ports.
-# port = 5971
+# Optionally configure additional addresses and ports.
+# listen = :::5971
 # max_children = 6
 
 # Think carefully before changing the status port address, as it can be used
 # to view the contents of backups.
-# Special value 'localhost' includes both ::1 and 127.0.0.1.
-#status_address = localhost
-# If you do not wish to run a status server at all, comment status_port out.
-status_port = 4972
-max_status_children = 5
-# Optionally configure additional status_ports.
-# status_port = 5972
+# If you do not wish to run a status server at all, leave it commented out.
+#listen_status = 127.0.0.1:4972
+#max_status_children = 5
+# Optionally configure additional addresses and ports.
+# listen_status = ::1:5972
 # max_status_children = 6
 
 directory = @localstatedir@/spool/@name@

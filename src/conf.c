@@ -4,7 +4,6 @@
 #include "log.h"
 #include "alloc.h"
 #include "cntr.h"
-#include "strlist.h"
 #include "prepend.h"
 #include "server/dpth.h"
 
@@ -426,10 +425,14 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_int(c[o], 0, 0, "client_is_windows");
 	case OPT_PEER_VERSION:
 	  return sc_str(c[o], 0, 0, "peer_version");
-	case OPT_ADDRESS:
-	  return sc_str(c[o], 0, 0, "address");
 	case OPT_PORT:
 	  return sc_lst(c[o], 0, 0, "port");
+	case OPT_STATUS_PORT:
+	  return sc_lst(c[o], 0, 0, "status_port");
+	case OPT_LISTEN:
+	  return sc_lst(c[o], 0, 0, "listen");
+	case OPT_LISTEN_STATUS:
+	  return sc_lst(c[o], 0, 0, "listen_status");
 	case OPT_PORT_BACKUP:
 	  return sc_int(c[o], 0, 0, "port_backup");
 	case OPT_PORT_RESTORE:
@@ -440,10 +443,6 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_int(c[o], 0, 0, "port_list");
 	case OPT_PORT_DELETE:
 	  return sc_int(c[o], 0, 0, "port_delete");
-	case OPT_STATUS_ADDRESS:
-	  return sc_str(c[o], 0, 0, "status_address");
-	case OPT_STATUS_PORT:
-	  return sc_lst(c[o], 0, 0, "status_port");
 	case OPT_SSL_DHFILE:
 	  return sc_str(c[o], 0, 0, "ssl_dhfile");
 	case OPT_MAX_CHILDREN:
@@ -725,6 +724,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_MAX_RESUME_ATTEMPTS:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "max_resume_attempts");
+	case OPT_FAIL_ON_WARNING:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "fail_on_warning");
 	case OPT_RSHASH:
 	  return sc_rsh(c[o], RSHASH_UNSET,
 		CONF_FLAG_CC_OVERRIDE, "");
@@ -767,6 +769,12 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_EXCREG:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_regex");
+	case OPT_INCLOGIC:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_logic");
+	 case OPT_EXCLOGIC:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_logic");
 	case OPT_EXCFS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_fs");

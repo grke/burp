@@ -368,7 +368,7 @@ cleanup:
 		enc_ctx=NULL;
 	}
 
-	if(ret!=SEND_FATAL)
+	if(ret==SEND_OK)
 	{
 		uint8_t checksum[MD5_DIGEST_LENGTH];
 		if(!MD5_Final(checksum, &md5))

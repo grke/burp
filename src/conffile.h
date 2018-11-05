@@ -4,7 +4,10 @@
 #include "cntr.h"
 #include "strlist.h"
 
+extern void conf_set_cli_overrides(struct strlist *overrides);
+
 extern int conf_get_pair(char buf[], char **field, char **value, int *reset);
+extern int get_file_size(const char *v, uint64_t *dest, const char *conf_path, int line);
 extern int conf_parse_incexcs_buf(struct conf **confs, const char *incexc);
 extern int conf_parse_incexcs_path(struct conf **confs, const char *path);
 

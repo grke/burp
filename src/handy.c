@@ -531,6 +531,283 @@ int strncmp_w(const char *s1, const char *s2)
 	return strncmp(s1, s2, strlen(s2));
 }
 
+char *strreplace_w(char *orig, char *search, char *replace, const char *func)
+{
+	char *result=NULL; // the return string
+	char *ins;         // the next insert point
+	char *tmp;         // varies
+	int len_rep;       // length of replace (the string to replace search with)
+	int len_search;    // length of search (the string to look for)
+	int len_front;     // distance between rep and end of last rep
+	int count;         // number of replacements
+
+	// sanity checks and initialization
+	if(!orig || !search) goto end;
+	len_search = strlen(search);
+	if(len_search==0)
+		goto end;
+	if(!replace)
+		len_rep=0;
+	else
+		len_rep=strlen(replace);
+
+	// count the number of replacements needed
+	ins=orig;
+	for(count=0; (tmp=strstr(ins, search)); ++count)
+		ins=tmp+len_search;
+
+	tmp=result=(char *)malloc_w(strlen(orig)+(len_rep-len_search)*count+1, func);
+
+	if(!result) goto end;
+
+	while(count--)
+	{
+		ins=strstr(orig, search);
+		len_front=ins-orig;
+		tmp=strncpy(tmp, orig, len_front)+len_front;
+		tmp=strcpy(tmp, replace)+len_rep;
+		orig+=len_front+len_search; // move to next "end of rep"
+	}
+	strcpy(tmp, orig);
+end:
+	return result;
+}
+
+static int charcount_noescaped(const char *orig, char search, int repeat)
+{
+	int count=0;
+	int len;
+	int i;
+	char quote='\0';
+	char prev='\0';
+	if(!orig) return count;
+	len=strlen(orig);
+	for(count=0, i=0; i<len; i++)
+	{
+		if(quote=='\0' && (orig[i]=='\'' || orig[i]=='"'))
+			quote=orig[i];
+		else if(quote!='\0' && orig[i]==quote)
+		{
+			// ignore escaped quote
+			if(i>0 && orig[i-1]=='\\')
+				goto loop_tail;
+			quote='\0';
+		}
+		else if(quote=='\0' && orig[i]==search)
+		{
+			// ignore escaped char
+			if(i>0 && orig[i-1]=='\\')
+				goto loop_tail;
+			if(repeat || prev!=orig[i])
+				count++;
+		}
+loop_tail:
+		prev=orig[i];
+	}
+	return count;
+}
+
+char *charreplace_noescaped_w(const char *orig, char search, const char *replace, int *count, const char *func)
+{
+	char *result=NULL;
+	char *tmp;
+	char quote='\0';
+	int nb_repl=0;  // number of replacement
+	int i;
+	int len;
+	int len_replace;
+	int len_dest;
+
+	if(!orig || !search) goto end;
+
+	len=strlen(orig);
+	len_replace=strlen(replace);
+
+	if(!(nb_repl=charcount_noescaped(orig, search, 1)))
+	{
+		result=strdup_w(orig, func);
+		goto end;
+	}
+
+	len_dest=len+((len_replace-1)*nb_repl)+1;
+	tmp=result=(char *)malloc_w(len_dest, func);
+	if(!result) goto end;
+
+	quote='\0';
+	for(i=0; i<len; i++)
+	{
+		if(quote=='\0' && (orig[i]=='\'' || orig[i]=='"'))
+			quote=orig[i];
+		else if(quote!='\0' && orig[i]==quote)
+		{
+			if(i<=0 || orig[i-1]!='\\')
+				quote='\0';
+		}
+		else if(quote=='\0' && orig[i]==search)
+		{
+			if(i<=0 || orig[i-1]!='\\')
+			{
+				tmp=strncpy(tmp, replace, len_replace)+len_replace;
+				continue;
+			}
+		}
+		*tmp=orig[i];
+		tmp++;
+	}
+	*tmp='\0';
+end:
+	*count=nb_repl;
+	return result;
+}
+
+/*
+ * Returns NULL-terminated list of tokens found in string src,
+ * also sets *size to number of tokens found (list length without final NULL).
+ * On failure returns NULL. List itself and tokens are dynamically allocated.
+ * Calls to strtok with delimiters in second argument are used (see its docs),
+ * but neither src nor delimiters arguments are altered.
+ */
+char **strsplit_w(const char *src, const char *delimiters, size_t *size, const char *func)
+{
+	size_t allocated;
+	char *init=NULL;
+	char **ret=NULL;
+
+	*size=0;
+	if(!(init=strdup_w(src, func))) goto end;
+	if(!(ret=(char **)malloc_w((allocated=10)*sizeof(char *), func)))
+		goto end;
+	for(char *tmp=strtok(init, delimiters); tmp; tmp=strtok(NULL, delimiters))
+	{
+		// Check if space is present for another token and terminating NULL.
+		if(allocated<*size+2)
+		{
+			if(!(ret=(char **)realloc_w(ret,
+				(allocated=*size+11)*sizeof(char *), func)))
+					goto end;
+		}
+		if(!(ret[(*size)++]=strdup_w(tmp, func)))
+		{
+			ret=NULL;
+			goto end;
+		}
+	}
+	ret[*size]=NULL;
+
+end:
+	free_w(&init);
+	return ret;
+}
+
+static char *strip_whitespace_w(const char *src, const char *func)
+{
+	char *ret=NULL;
+	char *ptr=(char *)src;
+	int len=strlen(src);
+	int size;
+	if(*ptr!=' ' && ptr[len-1]!=' ')
+	{
+		if(!(ret=strdup_w(src, func))) goto end;
+		return ret;
+	}
+	for(; *ptr==' '; ptr++);
+	size=strlen(ptr);
+	for(; ptr[size-1]==' '; --size);
+	if(!(ret=(char *)malloc_w(size+2, func))) goto end;
+	ret=strncpy(ret, ptr, size);
+	ret[size]='\0';
+end:
+	return ret;
+}
+
+// same as strsplit_w except the delimiter is a single char and if the delimiter
+// is inside quotes or escaped with '\' it is ignored.
+char **charsplit_noescaped_w(const char *src, char delimiter, size_t *size, const char *func)
+{
+	char **ret=NULL;
+	char *ptr=NULL;
+	char *buf;
+	char *end;
+	char quote='\0';
+	char prev='\0';
+	int count;
+	int i, j, k;
+	int len;
+
+	if(!src) goto end;
+	ptr=strip_whitespace_w(src, func);
+	buf=ptr;
+	len=strlen(ptr);
+	if(!(count=charcount_noescaped(ptr, delimiter, 0)))
+		goto end;
+	// need one more space than the number of delimiters
+	count++;
+	if(!(ret=(char **)malloc_w((count+1)*sizeof(char *), func)))
+		goto error;
+	*size=(size_t)count;
+	for(i=0, j=0, k=0; i<len; i++)
+	{
+		if(quote=='\0' && (ptr[i]=='\'' || ptr[i]=='"'))
+			quote=ptr[i];
+		else if(quote!='\0' && ptr[i]==quote)
+		{
+			if(i<=0 || ptr[i-1]!='\\')
+				quote='\0';
+		}
+		else if(quote=='\0' && ptr[i]==delimiter)
+		{
+			if(i<=0 || ptr[i-1]!='\\')
+			{
+				if(prev==ptr[i])
+					buf++;
+				else
+				{
+					char *tmp;
+					int tmp_len=j+1;
+					if(k>0) buf++;
+					if(!(tmp=(char *)malloc_w(
+						tmp_len, func)))
+							goto error;
+					tmp=strncpy(tmp, buf, tmp_len);
+					tmp[tmp_len-1]='\0';
+					ret[k]=tmp;
+					buf+=j;
+					j=0;
+					k++;
+				}
+				goto loop_tail;
+			}
+		}
+		j++;
+loop_tail:
+		prev=ptr[i];
+	}
+	while(*buf==delimiter && *(buf-1)!='\\') buf++;
+	if(!(end=(char *)malloc_w(j+1, func)))
+		goto error;
+	end=strncpy(end, buf, j+1);
+	end[j]='\0';
+	ret[k]=end;
+	ret[k+1]=NULL;
+end:
+	free_w(&ptr);
+	return ret;
+error:
+	free_w(&ptr);
+	free_list_w(&ret, *size);
+	return NULL;
+}
+
+void free_list_w(char ***list, size_t size)
+{
+	char **l=*list;
+	if(!l) return;
+	size_t i;
+	for(i=0; i<size; i++)
+		if(l[i]) free_w(&l[i]);
+	free_v((void **)list);
+}
+
 // Strip any trailing slashes (unless it is '/').
 void strip_trailing_slashes(char **str)
 {
@@ -577,4 +854,3 @@ void strip_fqdn(char **fqdn)
 	if((tmp=strchr(*fqdn, '.')))
 		*tmp='\0';
 }
-

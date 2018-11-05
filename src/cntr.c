@@ -1084,3 +1084,12 @@ const char *cntr_status_to_action_str(struct cntr *cntr)
 			return "unknown";
 	}
 }
+
+int check_fail_on_warning(int fail_on_warning, struct cntr_ent *warn_ent)
+{
+	if(!fail_on_warning || !warn_ent || !warn_ent->count)
+		return 0;
+	logp("fail_on_warning is set and warning count is %" PRIu64 "\n",
+		warn_ent->count);
+	return -1;
+}

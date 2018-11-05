@@ -19,6 +19,7 @@ Some features:
  * Send a warning / error when problems are found, even while operating.
  * Check disk quotas and send a warning when quotas are exceeded.
  * Launch vss_strip for each file found in a given directory.
+ * Show a calendar of successful backups (Thanks to https://github.com/hakong)
 
 
 Usage
@@ -123,6 +124,10 @@ trivial instance name:
   backup_tool_script -d /path/to/clients/backup/dir -o 3 -v 5 -j burp \
     -c /etc/burp/burp.conf -w --destination-mails=backupadmin@example.com \
     --instance-id=burp_checks
+
+Show calendar of successful backups:
+
+  backup_tool_script --calendar
 
 You can check the full syntax simply by running the script without any
 arguments.

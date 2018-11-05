@@ -159,20 +159,66 @@ int parse_parent_data(char *buf, struct cstat *clist)
 	return 0;
 }
 
-static char *get_str(const char **buf, const char *pre, int last)
-{
-	size_t len=0;
-	char *cp=NULL;
+#ifndef UTEST
+static
+#endif
+int status_server_parse_cmd(
+	const char *buf,
+	char **command,
+	char **client,
+	char **backup,
+	char **logfile,
+	char **browse
+) {
+	int ret=-1;
+	char *tok=NULL;
+	char **current=NULL;
 	char *copy=NULL;
-	char *ret=NULL;
-	if(!buf || !*buf) goto end;
-	len=strlen(pre);
-	if(strncmp(*buf, pre, len)
-	  || !(copy=strdup_w((*buf)+len, __func__)))
+
+	if(!buf)
+		return 0;
+
+	if(!(copy=strdup_w(buf, __func__)))
 		goto end;
-	if(!last && (cp=strchr(copy, ':'))) *cp='\0';
-	*buf+=len+strlen(copy)+1;
-	ret=strdup_w(copy, __func__);
+	if(!(tok=strtok(copy, ":")))
+	{
+		ret=0;
+		goto end;
+	}
+	do {
+		if(current)
+		{
+			if(!(*current=strdup_w(tok, __func__)))
+				goto end;
+			current=NULL;
+		}
+		else
+		{
+			if(!strcmp(tok, "j"))
+				current=command;
+			else if(!strcmp(tok, "c"))
+				current=client;
+			else if(!strcmp(tok, "b"))
+				current=backup;
+			else if(!strcmp(tok, "l"))
+				current=logfile;
+			else if(!strcmp(tok, "p"))
+			{
+				// The path may have colons in it. So, make
+				// this the last one.
+				if(copy+strlen(buf) > tok+1)
+				{
+					if(!(*browse=strdup_w(tok+2, __func__)))
+						goto end;
+				}
+				break;
+			}
+			else
+				current=NULL;
+		}
+	} while((tok=strtok(NULL, ":")));
+
+	ret=0;
 end:
 	free_w(&copy);
 	return ret;
@@ -189,6 +235,16 @@ void dump_cbno(struct cstat *clist, const char *msg)
 }
 */
 
+static int response_marker_start(struct asfd *srfd, const char *buf)
+{
+	return json_send_msg(srfd, "response-start", buf);
+}
+
+static int response_marker_end(struct asfd *srfd, const char *buf)
+{
+	return json_send_msg(srfd, "response-end", buf);
+}
+
 static int parse_client_data(struct asfd *srfd,
 	struct cstat *clist, int monitor_browse_cache, long *peer_version)
 {
@@ -198,18 +254,20 @@ static int parse_client_data(struct asfd *srfd,
 	char *backup=NULL;
 	char *logfile=NULL;
 	char *browse=NULL;
-	const char *cp=NULL;
 	struct cstat *cstat=NULL;
         struct bu *bu=NULL;
+	static int response_markers=0;
+	const char *cmd_result=NULL;
 //logp("got client data: '%s'\n", srfd->rbuf->buf);
 
-	cp=srfd->rbuf->buf;
-
-	command=get_str(&cp, "j:", 0);
-	client=get_str(&cp, "c:", 0);
-	backup=get_str(&cp, "b:", 0);
-	logfile=get_str(&cp, "l:", 0);
-	browse=get_str(&cp, "p:", 1);
+	if(status_server_parse_cmd(
+		srfd->rbuf->buf,
+		&command,
+		&client,
+		&backup,
+		&logfile,
+		&browse))
+			goto error;
 
 	if(command)
 	{
@@ -219,25 +277,43 @@ static int parse_client_data(struct asfd *srfd,
 		if(!strcmp(command, "pretty-print-on"))
 		{
 			json_set_pretty_print(1);
-			if(json_send_warn(srfd, "Pretty print on"))
-				goto error;
+			cmd_result="Pretty print on";
 		}
 		else if(!strcmp(command, "pretty-print-off"))
 		{
 			json_set_pretty_print(0);
-			if(json_send_warn(srfd, "Pretty print off"))
-				goto error;
+			cmd_result="Pretty print off";
+		}
+		else if(!strcmp(command, "response-markers-on"))
+		{
+			response_markers=1;
+			cmd_result="Response markers on";
+		}
+		else if(!strcmp(command, "response-markers-off"))
+		{
+			response_markers=0;
+			cmd_result="Response markers off";
 		}
 		else if(!strncmp(command, peer_version_str, l))
 		{
 			if(!(*peer_version=version_to_long(command+l)))
 				goto error;
+			cmd_result="Peer version updated";
 		}
 		else
 		{
-			if(json_send_warn(srfd, "Unknown command"))
-				goto error;
+			cmd_result="Unknown command";
 		}
+	}
+
+	if(response_markers
+	  && response_marker_start(srfd, srfd->rbuf->buf))
+		goto error;
+
+	if(cmd_result)
+	{
+		if(json_send_warn(srfd, cmd_result))
+			goto error;
 		goto end;
 	}
 
@@ -318,6 +394,10 @@ static int parse_client_data(struct asfd *srfd,
 error:
 	ret=-1;
 end:
+	if(response_markers
+	  && response_marker_end(srfd, srfd->rbuf->buf))
+		ret=-1;
+
 	free_w(&client);
 	free_w(&backup);
 	free_w(&logfile);

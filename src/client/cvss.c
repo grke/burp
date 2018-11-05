@@ -3,6 +3,7 @@
 #include "../berrno.h"
 #include "../bfile.h"
 #include "../cmd.h"
+#include "../cntr.h"
 #include "../log.h"
 #include "../strlist.h"
 #include "cvss.h"
@@ -27,14 +28,19 @@ BOOL CtrlHandler(DWORD fdwCtrlType)
 	} 
 }
 
-int win32_start_vss(struct conf **confs)
+int win32_start_vss(struct asfd *asfd, struct conf **confs)
 {
 	int errors=0;
+	struct cntr *cntr=get_cntr(confs);
 
 	if(SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE))
 		logp("Control handler registered.\n");
 	else
-		logp("Could not register control handler.\n");
+	{
+		logw(asfd, cntr, "Could not register control handler.\n");
+		errors++;
+		return errors;
+	}
 
 	if(g_pVSSClient->InitializeForBackup())
 	{
@@ -74,13 +80,13 @@ int win32_start_vss(struct conf **confs)
 			}
 			szWinDriveLetters[j]='\0';
 		}
-		printf("Generate VSS snapshots.\n");
-		printf("Driver=\"%s\", Drive(s)=\"%s\"\n",
+		logp("Generate VSS snapshots.\n");
+		logp("Driver=\"%s\", Drive(s)=\"%s\"\n",
 			g_pVSSClient->GetDriverName(),
 			szWinDriveLetters);
 		if(!g_pVSSClient->CreateSnapshots(szWinDriveLetters))
 		{
-			logp("Generate VSS snapshots failed.\n");
+			logw(asfd, cntr, "Generate VSS snapshots failed.\n");
 			errors++;
 		}
 		else
@@ -91,7 +97,7 @@ int win32_start_vss(struct conf **confs)
 			  logp("VSS drive letters: %d\n", i);
 			  if(islower(szWinDriveLetters[i]))
 			  {
-				logp("Generate VSS snapshot of drive \"%c:\\\" failed.\n", szWinDriveLetters[i]);
+				logw(asfd, cntr, "Generate VSS snapshot of drive \"%c:\\\" failed.\n", szWinDriveLetters[i]);
 				errors++;
 			  }
 			}
@@ -109,8 +115,7 @@ int win32_start_vss(struct conf **confs)
 	{
 		berrno be;
 		berrno_init(&be);
-		logp("VSS was not initialized properly.\n");
-		logp("VSS support is disabled. ERR=%s\n",
+		logw(asfd, cntr, "VSS was not initialized properly. ERR=%s",
 			berrno_bstrerror(&be, b_errno_win32));
 		errors++;
 	}

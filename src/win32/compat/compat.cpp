@@ -37,7 +37,7 @@
 
 #include "burp.h"
 #include "compat.h"
-#include "time.h"
+#include "sys/time.h"
 #include "mem_pool.h"
 #include "berrno.h"
 
@@ -851,18 +851,19 @@ int fstat(intptr_t fd, struct stat *sb)
 	return do_fstat(fd, sb, &winattr);
 }
 
+static char tmpbuf[_MAX_PATH]="";
+
 static int stat2(const char *file, struct stat *sb, uint64_t *winattr)
 {
 	HANDLE h=INVALID_HANDLE_VALUE;
 	int rval=0;
-	char tmpbuf[5000];
-	conv_unix_to_win32_path(file, tmpbuf, 5000);
+	conv_unix_to_win32_path(file, tmpbuf, _MAX_PATH);
 
 	DWORD attr=(DWORD)-1;
 
 	if(p_GetFileAttributesW)
 	{
-		char* pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
 		make_win32_path_UTF8_2_wchar(&pwszBuf, tmpbuf);
 
 		attr=p_GetFileAttributesW((LPCWSTR) pwszBuf);
@@ -1492,6 +1493,15 @@ int win32_mkdir(const char *dir)
 	return _mkdir(dir);
 }
 
+static void backslashes_to_forward_slashes(char *path)
+{
+	char *cp;
+	// Windows gives us backslashes, but we want forward slashes.
+	for(cp=path; *cp; cp++)
+		if(*cp=='\\')
+			*cp='/';
+}
+
 char *win32_getcwd(char *buf, int maxlen)
 {
 	int n=0;
@@ -1513,10 +1523,10 @@ char *win32_getcwd(char *buf, int maxlen)
 
 	if(n+1 > maxlen) return NULL;
 	if(n!=3)
-	{
-		buf[n]='\\';
-		buf[n+1]=0;
-	}
+		buf[n]=0;
+
+	backslashes_to_forward_slashes(buf);
+
 	return buf;
 }
 
@@ -2020,9 +2030,8 @@ int win32_utime(const char *fname, struct stat *statp)
 	FILETIME cre;
 	FILETIME acc;
 	FILETIME mod;
-	char tmpbuf[5000];
 
-	conv_unix_to_win32_path(fname, tmpbuf, 5000);
+	conv_unix_to_win32_path(fname, tmpbuf, _MAX_PATH);
 
 	// We save creation date in st_ctime.
 	cvt_utime_to_ftime(statp->st_ctime, cre);
@@ -2119,7 +2128,7 @@ int win32_getfsname(const char *path, char *fsname, size_t fsname_size)
 		}
 		sm_free_pool_memory((char*)pwsz_path);
 
-		if (error)
+		if(error)
 		{
 			char used_path[MAX_PATH_UTF8 + 1];
 			wchar_2_UTF8(used_path, (WCHAR*)pwsz_path, sizeof(used_path));
@@ -2130,4 +2139,132 @@ int win32_getfsname(const char *path, char *fsname, size_t fsname_size)
 	}
 	wchar_2_UTF8(fsname, fsname_ucs2, fsname_size);
 	return 0;
+}
+
+char *realpath(const char *path, char *resolved_path)
+{
+	int alloced=0;
+	DWORD size=0;
+	char *ret=NULL;
+	HANDLE h=INVALID_HANDLE_VALUE;
+	char *pwszBuf=NULL;
+	size_t s=strlen(path);
+
+	// Have to special case the drive letter by itself, because the
+	// functions that are provided to us fail on them.
+	if((s==2 || s==3) // Could have a trailing slash.
+	  && isalpha(path[0])
+	  && path[1]==':')
+	{
+		if(resolved_path)
+		{
+			strncpy(resolved_path, path, _MAX_PATH);
+			return resolved_path;
+		}
+		return strdup(path);
+	}
+
+	errno=0;
+	SetLastError(0);
+	conv_unix_to_win32_path(path, tmpbuf, _MAX_PATH);
+
+	pwszBuf=sm_get_pool_memory(PM_FNAME);
+
+	if(p_CreateFileW)
+	{
+		make_win32_path_UTF8_2_wchar(&pwszBuf, tmpbuf);
+
+		h=p_CreateFileW(
+			(LPCWSTR)pwszBuf,
+			GENERIC_READ,
+			FILE_SHARE_READ,
+			NULL,
+			OPEN_EXISTING,
+			FILE_FLAG_BACKUP_SEMANTICS,
+			NULL
+		);
+	}
+	else if(p_CreateFileA)
+	{
+		h=p_CreateFileA(
+			tmpbuf,
+			GENERIC_READ,
+			FILE_SHARE_READ,
+			NULL,
+			OPEN_EXISTING,
+			FILE_FLAG_BACKUP_SEMANTICS,
+			NULL
+		);
+	}
+
+	if(h==INVALID_HANDLE_VALUE)
+	{
+		DWORD e=GetLastError();
+		switch(e)
+		{
+			case ERROR_NOT_ENOUGH_MEMORY:
+				errno=ENOMEM;
+				break;
+			case ERROR_FILE_NOT_FOUND:
+			case ERROR_PATH_NOT_FOUND:
+				errno=ENOENT;
+				break;
+			case ERROR_ACCESS_DENIED:
+			default:
+				errno=EACCES;
+				break;
+		}
+		goto end;
+	}
+
+	if(resolved_path)
+		size=_MAX_PATH;
+	else
+	{
+		if(p_GetFinalPathNameByHandleW)
+		{
+			size=p_GetFinalPathNameByHandleW(h, NULL, 0, 0);
+		}
+		else if(p_GetFinalPathNameByHandleA)
+		{
+			size=p_GetFinalPathNameByHandleA(h, NULL, 0, 0);
+		}
+		if(!size)
+		{
+			errno=ENOENT;
+			goto end;
+		}
+		if(!(resolved_path=(char *)malloc(size)))
+			goto end;
+		alloced=1;
+	}
+
+	if(p_GetFinalPathNameByHandleW)
+	{
+		int junk_len=4;
+		if(!pwszBuf) pwszBuf=sm_get_pool_memory(PM_FNAME);
+		if(p_GetFinalPathNameByHandleW(h,
+			(LPWSTR)pwszBuf, size, 0)<junk_len)
+				goto end;
+		wchar_2_UTF8(resolved_path,
+			(LPCWSTR)pwszBuf+junk_len, size);
+		ret=resolved_path;
+	}
+	else if(p_GetFinalPathNameByHandleA)
+	{
+		int junk_len=4;
+		if(p_GetFinalPathNameByHandleA(h,
+			(LPSTR)pwszBuf, size, 0)<junk_len)
+				goto end;
+		memcpy(resolved_path, pwszBuf+junk_len, size);
+		ret=resolved_path;
+	}
+	backslashes_to_forward_slashes(ret);
+end:
+	if(pwszBuf) sm_free_pool_memory(pwszBuf);
+	if(h!=INVALID_HANDLE_VALUE)
+		CloseHandle(h);
+	if(!ret && alloced && resolved_path)
+		free(resolved_path);
+	return ret;
 }

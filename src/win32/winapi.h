@@ -100,6 +100,9 @@ typedef HANDLE (WINAPI * t_CreateFileW) (LPCWSTR, DWORD ,DWORD, LPSECURITY_ATTRI
 typedef BOOL (WINAPI * t_CreateDirectoryA) (LPCSTR, LPSECURITY_ATTRIBUTES);
 typedef BOOL (WINAPI * t_CreateDirectoryW) (LPCWSTR, LPSECURITY_ATTRIBUTES);
 
+typedef BOOL (WINAPI * t_GetFinalPathNameByHandleA) (HANDLE, LPSTR, DWORD, DWORD);
+typedef BOOL (WINAPI * t_GetFinalPathNameByHandleW) (HANDLE, LPWSTR, DWORD, DWORD);
+
 typedef BOOL (WINAPI * t_SetProcessShutdownParameters)(DWORD, DWORD);
 typedef BOOL (WINAPI * t_BackupRead)(HANDLE,LPBYTE,DWORD,LPDWORD,BOOL,BOOL,LPVOID*);
 typedef BOOL (WINAPI * t_BackupWrite)(HANDLE,LPBYTE,DWORD,LPDWORD,BOOL,BOOL,LPVOID*);
@@ -168,6 +171,9 @@ extern t_CreateFileW   DLL_IMP_EXP p_CreateFileW;
 
 extern t_CreateDirectoryA   DLL_IMP_EXP p_CreateDirectoryA;
 extern t_CreateDirectoryW   DLL_IMP_EXP p_CreateDirectoryW;
+
+extern t_GetFinalPathNameByHandleA   DLL_IMP_EXP p_GetFinalPathNameByHandleA;
+extern t_GetFinalPathNameByHandleW   DLL_IMP_EXP p_GetFinalPathNameByHandleW;
 
 extern t_SetProcessShutdownParameters DLL_IMP_EXP p_SetProcessShutdownParameters;
 extern t_BackupRead         DLL_IMP_EXP p_BackupRead;

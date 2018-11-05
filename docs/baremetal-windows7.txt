@@ -60,7 +60,7 @@ i) At this point, you can grab the burp client installer from your file server,
 j) Start the restore by executing the following command:
 
    > "cd C:\Program Files\Burp\bin"
-   > burp.exe -a r -f
+   > burp.exe -a r -f -d /
 
 k) Shutdown the machine.
 

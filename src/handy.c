@@ -481,6 +481,9 @@ int receive_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 	bfd->set_vss_strip(bfd, 0);
 #endif
 	if(bfd->open(bfd, asfd, path,
+#ifdef O_NOFOLLOW
+		O_NOFOLLOW |
+#endif
 		O_WRONLY | O_CREAT | O_TRUNC | O_BINARY,
 		S_IRUSR | S_IWUSR))
 	{

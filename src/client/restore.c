@@ -91,7 +91,7 @@ static int make_link(
 	struct cntr *cntr,
 #endif
 	const char *fname, const char *lnk,
-	enum cmd cmd, const char *restore_prefix)
+	enum cmd cmd, const char *restore_desired_dir)
 {
 	int ret=-1;
 
@@ -102,7 +102,7 @@ static int make_link(
 	if(cmd==CMD_HARD_LINK)
 	{
 		char *flnk=NULL;
-		if(!(flnk=prepend_s(restore_prefix, lnk)))
+		if(!(flnk=prepend_s(restore_desired_dir, lnk)))
 		{
 			log_out_of_memory(__func__);
 			return -1;
@@ -178,14 +178,18 @@ enum ofr_e open_for_restore(struct asfd *asfd, struct BFILE *bfd, const char *pa
 	// Abuse the vss_restore option to mean vss_strip on non-Windows.
 	bfd->set_vss_strip(bfd, !vss_restore);
 #endif
+	flags=O_WRONLY|O_BINARY
+#ifdef O_NOFOLLOW
+	|O_NOFOLLOW
+#endif
+	;
 	if(S_ISDIR(sb->statp.st_mode))
 	{
 		// Windows directories are treated as having file data.
-		flags=O_WRONLY|O_BINARY;
 		mkdir(path, 0777);
 	}
 	else
-		flags=O_WRONLY|O_BINARY|O_CREAT|O_TRUNC;
+		flags|=O_CREAT|O_TRUNC;
 
 	if(bfd->open(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
 	{
@@ -333,7 +337,7 @@ end:
 
 static int restore_link(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct cntr *cntr,
-	enum protocol protocol, const char *restore_prefix)
+	enum protocol protocol, const char *restore_desired_dir)
 {
 	int ret=0;
 
@@ -352,7 +356,7 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 			cntr,
 #endif
 			fname, sb->link.buf,
-			sb->link.cmd, restore_prefix))
+			sb->link.cmd, restore_desired_dir))
 		{
 			ret=warn_and_interrupt(asfd, sb, cntr, protocol,
 				"could not create link", "");
@@ -543,6 +547,160 @@ static char *get_restore_style(struct asfd *asfd, struct conf **confs)
 	return restore_style;
 }
 
+#ifdef HAVE_WIN32
+#ifndef PATH_MAX
+	#define PATH_MAX _MAX_PATH
+#endif
+#endif
+
+static char *get_restore_desired_dir(
+	const char *restoreprefix,
+	struct asfd *asfd,
+	struct cntr *cntr
+) {
+	char *ret=NULL;
+	char *path=NULL;
+
+	if(
+#ifdef HAVE_WIN32
+		isalpha(*restoreprefix) && *(restoreprefix+1)==':'
+#else
+		*restoreprefix=='/'
+#endif
+	) {
+		if(!(path=strdup_w(restoreprefix, __func__)))
+			return NULL;
+	}
+	else
+	{
+		static char d[PATH_MAX];
+		if(!getcwd(d, sizeof(d)))
+		{
+			logw(asfd, cntr,
+				"Could not get current working directory: %s\n",
+				strerror(errno));
+			return NULL;
+		}
+		if(!(path=prepend_s(d, restoreprefix)))
+			return NULL;
+	}
+
+	// Canonicalise the path so that we can protect against symlinks that
+	// point outsired of the desired restore directory.
+	if((ret=realpath(path, NULL)))
+		goto end;
+	if(errno!=ENOENT)
+		goto realpath_error;
+	// Try to create the directory if it did not exist, then try again.
+	mkdir(path, 0777);
+	if(!(ret=realpath(path, NULL)))
+		goto realpath_error;
+
+end:
+	free_w(&path);
+	return ret;
+
+realpath_error:
+	logp("%s: Could not get realpath in %s: %s\n",
+		path, __func__, strerror(errno));
+	free_w(&path);
+	return NULL;
+}
+
+// Seems that windows has no dirname(), so do something similar instead.
+static int strip_trailing_component(char **path)
+{
+	char *cp=NULL;
+
+	if(**path=='/' && !*((*path)+1))
+		return -1;
+	if(!(cp=strrchr(*path, '/')))
+		return -1;
+	if(*path==cp)
+		*(cp+1)='\0'; // Deal with '/somepath' in root, gives '/'.
+	else
+		*cp='\0'; // Deal with '/some/path', gives '/some'.
+	return 0;
+}
+
+static int canonicalise(
+	struct asfd *asfd,
+	struct sbuf *sb,
+	struct cntr *cntr,
+	enum protocol protocol,
+	const char *restore_desired_dir,
+	char **fullpath
+) {
+	int ret=-1;
+	char *tmp=NULL;
+	char *copy=NULL;
+	char *canonical=NULL;
+
+	if(!(copy=strdup_w(*fullpath, __func__)))
+		goto end;
+
+	// The realpath function does not work on entries that do not exist,
+	// so we have to do complicated things.
+	while(1)
+	{
+		if(strip_trailing_component(&copy))
+		{
+			char msg[512]="";
+			snprintf(msg, sizeof(msg),
+				"%s: Could not get dirname of '%s'",
+				*fullpath, copy);
+			if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+				goto end;
+			ret=1;
+			goto end;
+		}
+		if((canonical=realpath(copy, NULL)))
+			break;
+		if(errno!=ENOENT)
+		{
+			char msg[512]="";
+			snprintf(msg, sizeof(msg),
+				"%s: Could not get realpath of %s in %s: %s",
+				*fullpath, copy, __func__, strerror(errno));
+			if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+				goto end;
+			ret=1;
+			goto end;
+		}
+	}
+
+	// Protect against malicious servers trying to install a symlink and
+	// then files over the top of it to directories outside of the
+	// desired directory.
+	if(!is_subdir(restore_desired_dir, canonical))
+	{
+		char msg[512]="";
+		snprintf(msg, sizeof(msg),
+			"%s: Is not in a subdir of '%s'",
+			*fullpath,
+			restore_desired_dir);
+		if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+			goto end;
+		ret=1;
+		goto end;
+	}
+
+	// Add the trailing content back onto the canonical path.
+	if(!(tmp=prepend_s(canonical, (*fullpath)+strlen(copy))))
+		goto end;
+	free_w(fullpath);
+	*fullpath=tmp;
+
+	ret=0;
+end:
+	// Cannot use free_w() because it was not allocated by alloc.c, and
+	// I cannot implement realpath() it in alloc.c because I cannot get
+	// Windows code to use alloc.c.
+	if(canonical) free(canonical);
+	free_w(&copy);
+	return ret;
+}
+
 int do_restore_client(struct asfd *asfd,
 	struct conf **confs, enum action act, int vss_restore)
 {
@@ -553,6 +711,7 @@ int do_restore_client(struct asfd *asfd,
 	struct BFILE *bfd=NULL;
 	char *fullpath=NULL;
 	char *style=NULL;
+	char *restore_desired_dir=NULL;
 	struct cntr *cntr=get_cntr(confs);
 	enum protocol protocol=get_protocol(confs);
 	int strip=get_int(confs[OPT_STRIP]);
@@ -560,10 +719,32 @@ int do_restore_client(struct asfd *asfd,
 	const char *strip_path=get_string(confs[OPT_STRIP_FROM_PATH]);
 	const char *backup=get_string(confs[OPT_BACKUP]);
 	const char *regex=get_string(confs[OPT_REGEX]);
-	const char *restore_prefix=get_string(confs[OPT_RESTOREPREFIX]);
 	const char *encryption_password=get_string(confs[OPT_ENCRYPTION_PASSWORD]);
 
-	if(!(bfd=bfile_alloc())) goto end;
+	if(act==ACTION_RESTORE)
+	{
+		const char *restore_prefix=get_string(confs[OPT_RESTOREPREFIX]);
+		if(!restore_prefix)
+		{
+			logw(asfd, cntr,
+				"You must specify a restore directory (-d)!\n");
+			goto error;
+		}
+		if(!strcmp(restore_prefix, "/")) {
+			// Special case to try to help Windows users that are
+			// trying to do "bare metal" restores. Let them give
+			// '/' as the restore prefix, and have it mean that
+			// everything gets restored back to the original
+			// locations (this would work on Linux *without* this
+			// special case anyway, but hey-ho).
+		}
+		else if(!(restore_desired_dir=get_restore_desired_dir(
+			restore_prefix, asfd, cntr)))
+				goto error;
+	}
+
+	if(!(bfd=bfile_alloc()))
+		goto error;
 
 	bfile_init(bfd, 0, cntr);
 	bfd->set_attribs_on_close=1;
@@ -671,15 +852,39 @@ int do_restore_client(struct asfd *asfd,
 							strip_path);
 				}
 				free_w(&fullpath);
-				if(!(fullpath=prepend_s(restore_prefix,
+				if(!(fullpath=prepend_s(restore_desired_dir,
 					sb->path.buf)))
 				{
 					log_and_send_oom(asfd);
 					goto error;
 				}
+
 				if(act==ACTION_RESTORE)
 				{
 				  strip_invalid_characters(&fullpath);
+				  // canonicalise will fail on Windows split_vss
+				  // restores if we do not make sure bfd is
+				  // closed first.
+				  if(bfd
+					&& bfd->mode!=BF_CLOSED
+					&& bfd->path
+					&& strcmp(bfd->path, fullpath))
+						bfd->close(bfd, asfd);
+				  if(restore_desired_dir) {
+					switch(canonicalise(
+						asfd,
+						sb,
+						cntr,
+						protocol,
+						restore_desired_dir,
+						&fullpath
+					)) {
+						case 0: break;
+						case 1: continue;
+						default: goto error;
+					}
+				}
+
 				  if(!overwrite_ok(sb, overwrite,
 #ifdef HAVE_WIN32
 					bfd,
@@ -717,7 +922,7 @@ int do_restore_client(struct asfd *asfd,
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
 				if(restore_link(asfd, sb, fullpath, act, cntr,
-					protocol, restore_prefix))
+					protocol, restore_desired_dir))
 						goto error;
 				continue;
 			case CMD_SPECIAL:
@@ -747,8 +952,11 @@ end:
 	ret=0;
 error:
 	// It is possible for a fd to still be open.
-	bfd->close(bfd, asfd);
-	bfile_free(&bfd);
+	if(bfd)
+	{
+		bfd->close(bfd, asfd);
+		bfile_free(&bfd);
+	}
 
 	cntr_print_end(cntr);
 	cntr_print(cntr, act, asfd);
@@ -760,6 +968,12 @@ error:
 	free_w(&style);
 	free_w(&fullpath);
 	blk_free(&blk);
+
+	// Cannot use free_w() because it was not allocated by alloc.c, and
+	// I cannot implement realpath() it in alloc.c because I cannot get
+	// Windows code to use alloc.c.
+	if(restore_desired_dir)
+		free(restore_desired_dir);
 
 	return ret;
 }

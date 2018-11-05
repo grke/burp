@@ -50,8 +50,11 @@ t_SetProcessShutdownParameters p_SetProcessShutdownParameters=NULL;
 
 t_CreateFileA           p_CreateFileA=NULL;
 t_CreateFileW           p_CreateFileW=NULL;
-t_CreateDirectoryA      p_CreateDirectoryA;
-t_CreateDirectoryW      p_CreateDirectoryW;
+t_CreateDirectoryA      p_CreateDirectoryA=NULL;
+t_CreateDirectoryW      p_CreateDirectoryW=NULL;
+
+t_GetFinalPathNameByHandleA  p_GetFinalPathNameByHandleA=NULL;
+t_GetFinalPathNameByHandleW  p_GetFinalPathNameByHandleW=NULL;
 
 t_OpenEncryptedFileRawA  p_OpenEncryptedFileRawA=NULL;
 t_OpenEncryptedFileRawW  p_OpenEncryptedFileRawW=NULL;
@@ -123,6 +126,9 @@ void InitWinAPIWrapper()
 		p_CreateDirectoryA=(t_CreateDirectoryA)
 			GetProcAddress(hLib, "CreateDirectoryA");
 
+		p_GetFinalPathNameByHandleA=(t_GetFinalPathNameByHandleA)
+			GetProcAddress(hLib, "GetFinalPathNameByHandleA");
+
 		// Attribute calls.
 		p_GetFileAttributesA=(t_GetFileAttributesA)
 			GetProcAddress(hLib, "GetFileAttributesA");
@@ -159,6 +165,9 @@ void InitWinAPIWrapper()
 				GetProcAddress(hLib, "CreateFileW");
 			p_CreateDirectoryW=(t_CreateDirectoryW)
 				GetProcAddress(hLib, "CreateDirectoryW");
+
+			p_GetFinalPathNameByHandleW=(t_GetFinalPathNameByHandleW)
+				GetProcAddress(hLib, "GetFinalPathNameByHandleW");
 
 			// backup calls.
 			p_BackupRead=(t_BackupRead)

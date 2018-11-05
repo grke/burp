@@ -383,3 +383,5 @@ int win32_ftruncate(int fd, int64_t length);
 #endif
 
 int win32_getfsname(const char *file, char *fsname, size_t fsname_size);
+
+char *realpath(const char *path, char *resolved_path);

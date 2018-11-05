@@ -1291,6 +1291,65 @@ int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
 	return 0;
 }
 
+/* The client runs this when the server$overrides the incexcs for restore. */
+int conf_parse_incexcs_srestore(struct conf **c, const char *incexc)
+{
+	int ret=-1;
+	char *rp=NULL;
+	char *oldprefix=NULL;
+	char *srvprefix=NULL;
+	char *newprefix=NULL;
+	const char *rpfield=c[OPT_RESTOREPREFIX]->field;
+
+	if(!(rp=get_string(c[OPT_RESTOREPREFIX])))
+	{
+		logp("The client side must specify a %s!\n", rpfield);
+		goto end;
+	}
+	if(!(oldprefix=strdup_w(rp, __func__)))
+		goto end;
+
+	free_incexcs(c);
+	if(conf_load_lines_from_buf(incexc, c)
+	  || conf_finalise(c))
+		goto end;
+
+	if((srvprefix=get_string(c[OPT_RESTOREPREFIX])))
+	{
+		if(has_dot_component(srvprefix))
+		{
+			logp("The server gave %s '%s', which is not allowed!",
+				rpfield, srvprefix);
+			goto end;
+		}
+		if(!strcmp(oldprefix, "/"))
+		{
+			// Avoid double slash.
+			if(!(newprefix=prepend_s("", srvprefix)))
+				goto end;
+		}
+		else
+		{
+			if(!(newprefix=prepend_s(oldprefix, srvprefix)))
+				goto end;
+		}
+		if(set_string(c[OPT_RESTOREPREFIX], newprefix))
+			goto end;
+		if(build_path_w(newprefix))
+			goto end;
+	}
+	else
+	{
+		if(set_string(c[OPT_RESTOREPREFIX], oldprefix))
+			goto end;
+	}
+	ret=0;
+end:
+	free_w(&oldprefix);
+	free_w(&newprefix);
+	return ret;
+}
+
 static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 {
 	int i=0;

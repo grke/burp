@@ -619,7 +619,13 @@ int cntr_stats_to_file(struct cntr *cntr,
 
 	if(!(path=prepend_s(directory, fname)))
 		goto end;
-	if((fd=open(path, O_WRONLY|O_CREAT, 0666))<0)
+	if((fd=open(
+		path,
+#ifdef O_NOFOLLOW
+		O_NOFOLLOW|
+#endif
+		O_WRONLY|O_CREAT,
+		0666))<0)
 	{
 		logp("Could not open %s for writing in %s: %s\n",
 			path, __func__, strerror(errno));

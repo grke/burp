@@ -60,18 +60,15 @@ int mkpath(char **rpath, const char *limit)
 	int ret=-1;
 	char *cp=NULL;
 	struct stat buf;
-#ifdef HAVE_WIN32
-	int windows_stupidity=0;
-#endif
+
 	if((cp=strrchr(*rpath, '/')))
 	{
 		*cp='\0';
 #ifdef HAVE_WIN32
 		if(strlen(*rpath)==2 && (*rpath)[1]==':')
 		{
-			(*rpath)[1]='\0';
-			windows_stupidity++;
-		}
+			// We are down to the drive letter, which is OK.
+		} else
 #endif
 		if(!**rpath)
 		{
@@ -128,16 +125,12 @@ int mkpath(char **rpath, const char *limit)
 
 	ret=0;
 end:
-#ifdef HAVE_WIN32
-	if(windows_stupidity) (*rpath)[1]=':';
-#endif
 	if(cp) *cp='/';
 	return ret;
 }
 
 int build_path(const char *datadir, const char *fname, char **rpath, const char *limit)
 {
-	//logp("build path: '%s/%s'\n", datadir, fname);
 	if(!(*rpath=prepend_s(datadir, fname))) return -1;
 	if(mkpath(rpath, limit))
 	{

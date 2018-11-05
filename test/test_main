@@ -267,6 +267,9 @@ add_run_restore_server_initiated()
 	dir="$2$res"
 	test_includes_restore=1
 	local srestore="$target/var/spool/burp/testclient/restore"
+
+	append_client 'restoreprefix = /'
+
 	[ "$PROTOCOL" = "2" ] && \
 	  srestore="$target/var/spool/burp/global/clients/testclient/restore"
 

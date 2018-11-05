@@ -177,7 +177,7 @@ Just a test.
 
 Run restore (the -f is optional; if it fails, try without).
 
-> bin\burp -a r -f -c burp.conf -C $name
+> bin\burp -a r -f -c burp.conf -C $name -d /
 
         Be patient... this takes a long time. 
 

@@ -89,7 +89,7 @@ int extra_comms_client(struct async *as, struct conf **confs,
 				goto end;
 			if(*incexc)
 			{
-				if(conf_parse_incexcs_buf(confs, *incexc))
+				if(conf_parse_incexcs_srestore(confs, *incexc))
 					goto end;
 				*action=ACTION_RESTORE;
 				log_restore_settings(confs, 1);

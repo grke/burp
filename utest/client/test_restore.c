@@ -172,12 +172,12 @@ static void run_test(int expected_ret,
 	const char *conffile=BASE "/burp.conf";
 	struct asfd *asfd;
 	struct conf **confs;
-	const char *buf;
+	char buf[4096];
 
-	if(protocol==PROTO_1)
-		buf=MIN_CLIENT_CONF "protocol=1\n";
-	else
-		buf=MIN_CLIENT_CONF "protocol=2\n";
+	snprintf(buf, sizeof(buf), MIN_CLIENT_CONF
+		"protocol=%d\n"
+		"restoreprefix=/\n",
+			protocol==PROTO_1?1:2);
 
 	base64_init();
 

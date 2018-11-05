@@ -1,5 +1,13 @@
 Things to watch out for when upgrading.
 
+2.2.14
+------
+For security, the burp client will no longer let you restore over symlinks
+that point outside of your desired destination directory. Specifying a
+'-d <directory>' with your restore parameters is now mandatory. If you wish
+to restore everything back to the original locations, you can give '-d /',
+which will also work on Windows clients.
+
 2.2.12
 ------
 The command line option to print the version number, is now '-V'.

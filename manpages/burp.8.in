@@ -382,6 +382,10 @@ Allowed SSL ciphers. See openssl ciphers for details.
 Choose the level of zlib compression over SSL. Setting 0 or zlib0 turns SSL compression off. Setting non-zero gives zlib5 compression (it is not currently possible for openssl to set any other level). The default is 5. 'gzip' is a synonym of 'zlib'.
 .TP
 .TP
+\fBssl_verify_peer_early=[0|1]\fR
+Verify and authenticate client certificates at SSL layer before receiving or sending @human_name@ traffic. The default is to verify client certificates only after password authentication.
+.TP
+.TP
 \fBssl_dhfile=[path]\fR
 Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-dsaparam \-out dhfile.pem 2048
 .TP

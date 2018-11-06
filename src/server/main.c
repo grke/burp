@@ -234,11 +234,12 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	}
 	SSL_set_bio(ssl, sbio, sbio);
 
-	/* Do not try to check peer certificate straight away.
-	   Clients can send a certificate signing request when they have
-	   no certificate. */
-	SSL_set_verify(ssl, SSL_VERIFY_PEER
-		/* | SSL_VERIFY_FAIL_IF_NO_PEER_CERT */, 0);
+	/* Check peer certificate straight away if the "verify_peer_early"
+	   option is enabled. Otherwise clients may send a certificate signing
+	   request when they have no certificate. */
+	SSL_set_verify(ssl, SSL_VERIFY_PEER |
+		(get_int(confs[OPT_SSL_VERIFY_PEER_EARLY])?SSL_VERIFY_FAIL_IF_NO_PEER_CERT:0),
+		0);
 
 	if(ssl_do_accept(ssl))
 		goto end;

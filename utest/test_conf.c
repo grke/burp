@@ -109,6 +109,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_PORT_DELETE:
 		case OPT_MAX_RESUME_ATTEMPTS:
 		case OPT_FAIL_ON_WARNING:
+		case OPT_SSL_VERIFY_PEER_EARLY:
 			fail_unless(get_int(c[o])==0);
 			break;
 		case OPT_DAEMON:

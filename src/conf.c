@@ -417,6 +417,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "ssl_ciphers");
 	case OPT_SSL_COMPRESSION:
 	  return sc_int(c[o], 5, 0, "ssl_compression");
+	case OPT_SSL_VERIFY_PEER_EARLY:
+	  return sc_int(c[o], 0, 0, "ssl_verify_peer_early");
 	case OPT_RATELIMIT:
 	  return sc_flt(c[o], 0, 0, "ratelimit");
 	case OPT_NETWORK_TIMEOUT:

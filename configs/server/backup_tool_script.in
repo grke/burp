@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
 PROGRAM_VERSION=0.4.4
-PROGRAM_BUILD=2018110501
+PROGRAM_BUILD=2018112801
 AUTHOR="(C) 2017-2018 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=yes
@@ -896,13 +896,18 @@ function ExecTasks {
 		fi
 
 		if [ $keepLogging -ne 0 ]; then
+			# This log solely exists for readability purposes before having next set of logs
+			if [ ${#pidsArray[@]} -eq $numberOfProcesses ] && [ $log_ttime -eq 0 ]; then
+				log_ttime=$exec_time
+				Logger "There are $((mainItemCount-counter+postponedItemCount)) / $mainItemCount tasks in the queue of which $postponedItemCount are postponed. Currently, ${#pidsArray[@]} tasks running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
+			fi
 			if [ $(((exec_time + 1) % keepLogging)) -eq 0 ]; then
 				if [ $log_ttime -ne $exec_time ]; then # Fix when sleep time lower than 1 second
 					log_ttime=$exec_time
-					if [ $functionMode == "Wait" ]; then
+					if [ $functionMode == "WaitForTaskCompletion" ]; then
 						Logger "Current tasks still running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
 					elif [ $functionMode == "ParallelExec" ]; then
-						Logger "There are $((mainItemCount-counter+postponedItemCount)) / $mainItemCount tasks in the queue. Currently, ${#pidsArray[@]} tasks running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
+						Logger "There are $((mainItemCount-counter+postponedItemCount)) / $mainItemCount tasks in the queue of which $postponedItemCount are postponed. Currently, ${#pidsArray[@]} tasks running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
 					fi
 				fi
 			fi
@@ -1111,7 +1116,8 @@ function ExecTasks {
 						if [ $subRetval -ne 0 ]; then
 							# is postponing enabled ?
 							if [ $maxPostponeRetries -gt 0 ]; then
-								Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]. Postponing command." "NOTICE"
+								Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]." "NOTICE"
+								Logger "Postponing command." "NOTICE"
 								postponedRetryCount=$((postponedRetryCount+1))
 								if [ $postponedRetryCount -ge $maxPostponeRetries ]; then
 									Logger "Max retries reached for postponed command [$currentCommand]. Skipping command." "NOTICE"
@@ -1120,7 +1126,8 @@ function ExecTasks {
 								fi
 								postponedExecTime=0
 							else
-								Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]. Ignoring command." "NOTICE"
+								Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]." "NOTICE"
+								Logger "Ignoring command." "NOTICE"
 							fi
 						else
 							executeCommand=true

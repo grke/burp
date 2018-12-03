@@ -75,7 +75,7 @@ No valid backup sets found in the last [NUMBERDAYS] day(s) for client [CLIENT].
 Please leave your computer online enough time for a backup to occur.
 Contact your system administrator for further information.
 
-@name@ backup server $INSTANCE.
+@name@ backup server $INSTANCE_ID.
 "
 
 # Message sent directly to client email address when quota exceeded.
@@ -84,7 +84,7 @@ CLIENT_ALERT_BODY_QUOTA="Hello,
 Your backup disk quota has been exceeded ([QUOTAEXCEED]) for client [CLIENT].
 Contact your system administrator for further information.
 
-@name@ backup server $INSTANCE.
+@name@ backup server $INSTANCE_ID.
 "
 
 # ------------ Do not modify under this line unless you have great cow powers --------------

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
 PROGRAM_VERSION=0.4.4
-PROGRAM_BUILD=2018112801
+PROGRAM_BUILD=2018120301
 AUTHOR="(C) 2017-2018 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=yes

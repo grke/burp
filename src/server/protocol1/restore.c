@@ -195,6 +195,7 @@ int verify_file(struct asfd *asfd, struct sbuf *sb,
 	  || sb->path.cmd==CMD_ENC_METADATA
 	  || sb->path.cmd==CMD_EFS_FILE
 	  || sb->path.cmd==CMD_ENC_VSS
+	  || sb->path.cmd==CMD_ENC_VSS_T
 	  || (!patches && !dpth_protocol1_is_compressed(sb->compression, best)))
 		fzp=fzp_open(best, "rb");
 	else

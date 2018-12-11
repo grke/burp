@@ -1,3 +1,30 @@
+2018-12-12 Changes in burp-2.2.14:
+  * Fix restoring with compressed/encrypted trailing vss data.
+  * Protect the client against restoring over symlinks that point
+    outside of the desired destination directory. Giving a restore
+    directory is now mandatory. Make '-d /' work on Windows.
+  * 753: More logging for VSS.
+  * Protect against malicious relative paths in sbuf parsing.
+  * 766: Don't run xattr tests if the filesystem doesn't support them.
+  * Check lengths in xattr/extrameta/acl.
+  * Avoid path attacks via cname.
+  * Fix 'configure --enable-xattr=no'.
+  * Buffer safety check in asfd::extract_buf().
+  * Clean up burp_ca and make it more secure.
+  * Fix buffer overrun in client-side long list.
+  * Fix buffer overrun in asfd_do_read_ssl().
+  * 766: Correct gzip os type in utest/server/test_restore.c.
+  * From Michael Hanselm:
+    - Add option to verify client certificate early.
+    - Use "O_NOFOLLOW" as appropriate.
+    - Sanitise autoupgrade os name.
+    - Random delay on password mismatch.
+    - Sleep before giving auth failure message.
+    - 772: Ensure O_NOATIME is passed to system calls.
+    - 770: In extra_comms: Avoid calling unlink(2) with NULL.
+    - 768: In run_script: Limit number of arguments to avoid stack overflow.
+    - 767: Avoid interactive question on CentOS when overwriting binary.
+
 2018-10-01 Changes in burp-2.2.12:
   * From ziirish:
     - 253: 'logic' rules parser with new exclude_logic option.

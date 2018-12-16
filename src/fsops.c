@@ -440,7 +440,7 @@ static int entries_in_directory(const char *path, char ***nl,
 
 int filter_dot(const struct dirent *d)
 {
-	if(!d->d_name
+	if(!d
 	  || !strcmp(d->d_name, ".")
 	  || !strcmp(d->d_name, ".."))
 		return 0;

@@ -80,7 +80,7 @@ void Win32ConvCleanupCache(void)
 
 	if(g_pWin32ConvUCS2Cache)
 	{
-		sm_free_pool_memory(g_pWin32ConvUCS2Cache);   
+		sm_free_pool_memory(g_pWin32ConvUCS2Cache);
 		g_pWin32ConvUCS2Cache=NULL;
 	}
 
@@ -97,7 +97,7 @@ extern DWORD g_platform_id;
 extern DWORD g_MinorVersion;
 
 // From MicroSoft SDK (KES) is the diff between Jan 1 1601 and Jan 1 1970.
-#define WIN32_FILETIME_ADJUST 0x19DB1DED53E8000ULL 
+#define WIN32_FILETIME_ADJUST 0x19DB1DED53E8000ULL
 
 #define WIN32_FILETIME_SCALE 10000000 // 100ns/second
 
@@ -184,12 +184,11 @@ char *unix_name_to_win32(char *name)
 }
 
 /* Created 02/27/2006 Thorsten Engel.
-   
    This function expects an UCS-encoded standard wchar_t in pszUCSPath and
    will complete the input path to an absolue path of the form \\?\c:\path\file
-   
+
    With this trick, it is possible to have 32K characters long paths.
-  
+
    Optionally one can use pBIsRawPath to determine id pszUCSPath contains a
    path to a raw windows partition. */
 char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
@@ -229,7 +228,7 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 	}
 
 	// Is path absolute?
-	if(IsPathSeparator(name[0])) bAddCurrentPath=FALSE; 
+	if(IsPathSeparator(name[0])) bAddCurrentPath=FALSE;
 
 	// Skip ./ if path is relative to itself?
 	if(name[0]=='.' && IsPathSeparator(name[1])) name+=2;
@@ -262,7 +261,7 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 		if(dwCurDirPathSize>0)
 		{
 			/* Get directory into own buffer as it may either
-			   return c:\... or \\?\C:\.... */         
+			   return c:\... or \\?\C:\.... */
 			pwszCurDirBuf=(wchar_t *)sm_check_pool_memory_size(
 				(char *)pwszCurDirBuf,
 				(dwCurDirPathSize+1)*sizeof(wchar_t));
@@ -301,7 +300,7 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 	if(bAddCurrentPath)
 	{
 		// The 1 add. character is for the eventually added backslash.
-		dwBufCharsNeeded+=dwCurDirPathSize+1; 
+		dwBufCharsNeeded+=dwCurDirPathSize+1;
 		pwszBuf=(wchar_t *)sm_check_pool_memory_size((char *)pwszBuf,
 			dwBufCharsNeeded*sizeof(wchar_t));
 		/* get directory into own buffer as it may either
@@ -330,7 +329,7 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 
 	while(*name)
 	{
-		/* Check for Unix separator and convert to Win32, eliminating 
+		/* Check for Unix separator and convert to Win32, eliminating
 		  duplicate separators.  */
 		if(IsPathSeparator(*name))
 		{
@@ -351,23 +350,23 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 	/* here we convert to VSS specific file name which
 	   can get longer because VSS will make something like
 	   \\\\?\\GLOBALROOT\\Device\\HarddiskVolumeShadowCopy1\\burp\\x.exe
-	   from c:\burp\x.exe */ 
+	   from c:\burp\x.exe */
 	if(g_pVSSPathConvertW)
 	{
 		// Is output buffer large enough?
-		pwszBuf=(wchar_t *)sm_check_pool_memory_size((char *)pwszBuf, 
+		pwszBuf=(wchar_t *)sm_check_pool_memory_size((char *)pwszBuf,
 			(dwBufCharsNeeded+MAX_PATH)*sizeof(wchar_t));
 		// Create temp. buffer.
 		wchar_t *pszBuf=(wchar_t *)sm_get_pool_memory(PM_FNAME);
-		pszBuf=(wchar_t *)sm_check_pool_memory_size((char *)pszBuf, 
+		pszBuf=(wchar_t *)sm_check_pool_memory_size((char *)pszBuf,
 			(dwBufCharsNeeded+MAX_PATH)*sizeof(wchar_t));
 		if(bAddPrefix) nParseOffset=4;
-		else nParseOffset=0; 
+		else nParseOffset=0;
 		wcsncpy(pszBuf, &pwszBuf[nParseOffset],
 			wcslen(pwszBuf)+1-nParseOffset);
 		g_pVSSPathConvertW(pszBuf, pwszBuf, dwBufCharsNeeded+MAX_PATH);
 		sm_free_pool_memory((char *)pszBuf);
-	}   
+	}
 
 	sm_free_pool_memory(pszUCSPath);
 	sm_free_pool_memory((char *)pwszCurDirBuf);
@@ -452,7 +451,7 @@ int make_win32_path_UTF8_2_wchar(char **pszUCS, const char *pszUTF, BOOL *pBIsRa
 			// Return cached value.
 			int32_t nBufSize=sm_sizeof_pool_memory(
 				g_pWin32ConvUCS2Cache);
-			*pszUCS=sm_check_pool_memory_size(*pszUCS, nBufSize);      
+			*pszUCS=sm_check_pool_memory_size(*pszUCS, nBufSize);
 			wcscpy((LPWSTR)*pszUCS, (LPWSTR)g_pWin32ConvUCS2Cache);
 			return nBufSize/sizeof(WCHAR);
 		}
@@ -525,7 +524,7 @@ void *dlsym(void *handle, const char *name)
 	return symaddr;
 }
 
-int dlclose(void *handle) 
+int dlclose(void *handle)
 {
 	if(handle && !FreeLibrary((HMODULE)handle))
 	{
@@ -535,7 +534,7 @@ int dlclose(void *handle)
 	return 0;
 }
 
-char *dlerror(void) 
+char *dlerror(void)
 {
 	static char buf[200];
 	const char *err=errorString();
@@ -622,7 +621,6 @@ static const char *errorString(void)
 static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 {
 	WIN32_FIND_DATAW info_w; // window's file info
-	WIN32_FIND_DATAA info_a; // window's file info
 
 	// cache some common vars to make code more transparent
 	DWORD *pdwFileAttributes;
@@ -633,7 +631,7 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 	FILETIME *pftLastWriteTime;
 	FILETIME *pftCreationTime;
 
-	/* Oh, cool, another exception: Microsoft doesn't let us do 
+	/* Oh, cool, another exception: Microsoft doesn't let us do
 	   FindFile operations on a Drive, so simply fake root attibutes. */
 	if(file[1]==':' && !file[2])
 	{
@@ -666,18 +664,6 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 		pftLastWriteTime =&info_w.ftLastWriteTime;
 		pftCreationTime  =&info_w.ftCreationTime;
 		// use ASCII
-	}
-	else if (p_FindFirstFileA)
-	{
-		h=p_FindFirstFileA(file, &info_a);
-
-		pdwFileAttributes=&info_a.dwFileAttributes;
-		pdwReserved0     =&info_a.dwReserved0;
-		pnFileSizeHigh   =&info_a.nFileSizeHigh;
-		pnFileSizeLow    =&info_a.nFileSizeLow;
-		pftLastAccessTime=&info_a.ftLastAccessTime;
-		pftLastWriteTime =&info_a.ftLastWriteTime;
-		pftCreationTime  =&info_a.ftCreationTime;
 	}
 
 	if(h==INVALID_HANDLE_VALUE)
@@ -747,14 +733,6 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 			}
 			sm_free_pool_memory(pwszBuf);
 		}
-		else if(p_GetFileAttributesA)
-		{
-			h=CreateFileA(file, GENERIC_READ,
-				FILE_SHARE_READ, NULL, OPEN_EXISTING,
-				FILE_FLAG_BACKUP_SEMANTICS
-				| FILE_FLAG_OPEN_REPARSE_POINT,
-				NULL);
-		}
 		if(h!=INVALID_HANDLE_VALUE)
 		{
 			char dummy[1000];
@@ -774,7 +752,7 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 				  rdb->SymbolicLinkReparseBuffer.PathBuffer);
 				if(!strncasecmp(utf8, "\\??\\volume{", 11))
 					sb->st_rdev=WIN32_MOUNT_POINT;
-				else // Points to a directory so we ignore it. 
+				else // Points to a directory so we ignore it.
 					sb->st_rdev=WIN32_JUNCTION_POINT;
 				sm_free_pool_memory(utf8);
 			}
@@ -873,12 +851,6 @@ static int stat2(const char *file, struct stat *sb, uint64_t *winattr)
 				NULL, OPEN_EXISTING, 0, NULL);
 		sm_free_pool_memory(pwszBuf);
 	}
-	else if(p_GetFileAttributesA)
-	{
-		attr=p_GetFileAttributesA(tmpbuf);
-		h=CreateFileA(tmpbuf, GENERIC_READ,
-			FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-	}
 
 	if(attr==(DWORD)-1)
 	{
@@ -927,13 +899,6 @@ static int do_stat(const char *file, struct stat *sb, uint64_t *winattr)
 		if(!b) return stat2(file, sb, winattr);
 
 	}
-	else if(p_GetFileAttributesExA)
-	{
-		if(!p_GetFileAttributesExA(file, GetFileExInfoStandard, &data))
-			return stat2(file, sb, winattr);
-	}
-	else
-		return stat2(file, sb, winattr);
 
 	*winattr=(int64_t)data.dwFileAttributes;
 
@@ -957,7 +922,7 @@ static int do_stat(const char *file, struct stat *sb, uint64_t *winattr)
 		sb->st_mode |= S_IFREG;
 
 	// Use st_rdev to store reparse attribute.
-	sb->st_rdev=(data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)?1:0; 
+	sb->st_rdev=(data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)?1:0;
 
 	sb->st_nlink=1;
 	sb->st_size=data.nFileSizeHigh;
@@ -969,7 +934,7 @@ static int do_stat(const char *file, struct stat *sb, uint64_t *winattr)
 	sb->st_mtime=cvt_ftime_to_utime(data.ftLastWriteTime);
 	sb->st_ctime=cvt_ftime_to_utime(data.ftCreationTime);
 
-	/* If we are not at the root, then to distinguish a reparse 
+	/* If we are not at the root, then to distinguish a reparse
 	   point from a mount point, we must call FindFirstFile() to
 	   get the WIN32_FIND_DATA, which has the bit that indicates
 	   that this directory is a mount point -- aren't Win32 APIs
@@ -985,7 +950,7 @@ static int do_stat(const char *file, struct stat *sb, uint64_t *winattr)
    Microsoft library mrcrt.dll does not truncate
    files greater than 2GB.
    KES - May 2007 */
-int win32_ftruncate(int fd, int64_t length) 
+int win32_ftruncate(int fd, int64_t length)
 {
 	// Set point we want to truncate file.
 	__int64 pos=_lseeki64(fd, (__int64)length, SEEK_SET);
@@ -1120,7 +1085,7 @@ int gettimeofday(struct timeval *tv, struct timezone *)
 }
 
 // For apcupsd this is in src/lib/wincompat.c.
-extern "C" void syslog(int type, const char *fmt, ...) 
+extern "C" void syslog(int type, const char *fmt, ...)
 {
 }
 
@@ -1248,14 +1213,6 @@ struct dirent *readdir(DIR *dirp)
 				goto err;
 			valid_w=TRUE;
 		}
-		else if(p_FindFirstFileA)
-		{
-			dp->dirh=p_FindFirstFileA(dp->spec, &dp->data_a);
-
-			if(dp->dirh==INVALID_HANDLE_VALUE)
-				goto err;
-			valid_a=TRUE;
-		}
 		else
 			goto err;
 
@@ -1266,8 +1223,6 @@ struct dirent *readdir(DIR *dirp)
 		// Get next file, try unicode first.
 		if(p_FindNextFileW)
 			valid_w=p_FindNextFileW(dp->dirh, &dp->data_w);
-		else if(p_FindNextFileA)
-			valid_a=p_FindNextFileA(dp->dirh, &dp->data_a);
 	}
 
 	dp->entry.d_ino=0;
@@ -1362,24 +1317,6 @@ static int win32_chmod_old(const char *path, mode_t mode)
 		}
 		sm_free_pool_memory(pwszBuf);
 	}
-	else if (p_GetFileAttributesA)
-	{
-		if(!(mode & (S_IRUSR|S_IRGRP|S_IROTH)))
-			attr |= FILE_ATTRIBUTE_READONLY;
-		else
-			attr &= ~FILE_ATTRIBUTE_READONLY;
-		if(!(mode & S_IRWXO))
-			attr |= FILE_ATTRIBUTE_SYSTEM;
-		else
-			attr &= ~FILE_ATTRIBUTE_SYSTEM;
-		if(mode & S_ISVTX)
-			attr |= FILE_ATTRIBUTE_HIDDEN;
-		else
-			attr &= ~FILE_ATTRIBUTE_HIDDEN;
-		attr=p_GetFileAttributesA(path);
-		if(attr!=INVALID_FILE_ATTRIBUTES)
-			attr=p_SetFileAttributesA(path, attr);
-	}
 
 	if(attr==(DWORD)-1)
 	{
@@ -1419,12 +1356,6 @@ static int win32_chmod_new(const char *path, int64_t winattr)
 				winattr & SET_ATTRS);
 		sm_free_pool_memory(pwszBuf);
 	}
-	else if(p_GetFileAttributesA)
-	{
-		attr=p_GetFileAttributesA(path);
-		if(attr!=INVALID_FILE_ATTRIBUTES)
-			winattr=p_SetFileAttributesA(path, attr & SET_ATTRS);
-	}
 
 	if(attr==(DWORD)-1)
 	{
@@ -1460,14 +1391,6 @@ int win32_chdir(const char *dir)
 		sm_free_pool_memory(pwszBuf);
 
 		if(!b)
-		{
-			errno=b_errno_win32;
-			return -1;
-		}
-	}
-	else if(p_SetCurrentDirectoryA)
-	{
-		if(!p_SetCurrentDirectoryA(dir))
 		{
 			errno=b_errno_win32;
 			return -1;
@@ -1516,8 +1439,6 @@ char *win32_getcwd(char *buf, int maxlen)
 			n=wchar_2_UTF8(buf, (wchar_t *)pwszBuf, maxlen)-1;
 		sm_free_pool_memory(pwszBuf);
 	}
-	else if(p_GetCurrentDirectoryA)
-		n=p_GetCurrentDirectoryA(maxlen, buf);
 
 	if(!n || n>maxlen) return NULL;
 
@@ -1645,7 +1566,8 @@ char* win32_cgets (char* buffer, int len)
 
 int win32_unlink(const char *filename)
 {
-	int nRetCode;
+	int nRetCode=-1;
+
 	if(p_wunlink)
 	{
 		char* pwszBuf=sm_get_pool_memory(PM_FNAME);
@@ -1675,32 +1597,6 @@ int win32_unlink(const char *filename)
 			}
 		}
 		sm_free_pool_memory(pwszBuf);
-	}
-	else
-	{
-		nRetCode=_unlink(filename);
-
-		/* special case if file is readonly,
-		   we retry but unset attribute before. */
-		if(nRetCode==-1
-		  && errno==EACCES
-		  && p_SetFileAttributesA
-		  && p_GetFileAttributesA)
-		{
-			DWORD dwAttr=p_GetFileAttributesA(filename);
-			if(dwAttr!=INVALID_FILE_ATTRIBUTES)
-			{
-				if(p_SetFileAttributesA(filename,
-				  dwAttr & ~FILE_ATTRIBUTE_READONLY))
-				{
-					nRetCode=_unlink(filename);
-					// Reset to original if it didn't help.
-					if(nRetCode==-1)
-						p_SetFileAttributesA(
-						  filename, dwAttr);
-				}
-			}
-		}
 	}
 	return nRetCode;
 }
@@ -1795,17 +1691,17 @@ static int dwAltNameLength_ok(DWORD dwAltNameLength)
 	return dwAltNameLength>0 && dwAltNameLength<MAX_PATH_UTF8;
 }
 
-/* Extracts the executable or script name from the first string in 
+/* Extracts the executable or script name from the first string in
    cmdline.
-  
+
    If the name contains blanks then it must be quoted with double quotes,
-   otherwise quotes are optional.  If the name contains blanks then it 
+   otherwise quotes are optional.  If the name contains blanks then it
    will be converted to a short name.
-  
+
    The optional quotes will be removed.  The result is copied to a malloc'ed
    buffer and returned through the pexe argument.  The pargs parameter is set
    to the address of the character in cmdline located after the name.
-  
+
    The malloc'ed buffer returned in *pexe must be freed by the caller.  */
 bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 {
@@ -1842,8 +1738,8 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 	*pargs=NULL;
 	*pexe=NULL;
 
-	/* Scan command line looking for path separators (/ and \\) and the 
-	   terminator, either a quote or a blank.  The location of the 
+	/* Scan command line looking for path separators (/ and \\) and the
+	   terminator, either a quote or a blank.  The location of the
 	   extension is also noted.  */
 	for( ; *current!='\0'; current++)
 	{
@@ -1865,7 +1761,7 @@ bool GetApplicationName(const char *cmdline, char **pexe, const char **pargs)
 			if(*current!=' ') continue;
 		}
 
-		/* Hit terminator, remember end of name (address of terminator) 
+		/* Hit terminator, remember end of name (address of terminator)
 		   and start of arguments. */
 		pExeEnd=current;
 
@@ -2058,19 +1954,6 @@ int win32_utime(const char *fname, struct stat *statp)
 
 		sm_free_pool_memory(pwszBuf);
 	}
-	else if(p_CreateFileA)
-	{
-		h=p_CreateFileA(tmpbuf,
-				FILE_WRITE_ATTRIBUTES,
-				FILE_SHARE_WRITE
-				|FILE_SHARE_READ
-				|FILE_SHARE_DELETE,
-				NULL,
-				OPEN_EXISTING,
-				// required for directories
-				FILE_FLAG_BACKUP_SEMANTICS,
-				NULL);
-	}
 
 	if(h==INVALID_HANDLE_VALUE)
 	{
@@ -2184,18 +2067,6 @@ char *realpath(const char *path, char *resolved_path)
 			NULL
 		);
 	}
-	else if(p_CreateFileA)
-	{
-		h=p_CreateFileA(
-			tmpbuf,
-			GENERIC_READ,
-			FILE_SHARE_READ,
-			NULL,
-			OPEN_EXISTING,
-			FILE_FLAG_BACKUP_SEMANTICS,
-			NULL
-		);
-	}
 
 	if(h==INVALID_HANDLE_VALUE)
 	{
@@ -2225,10 +2096,6 @@ char *realpath(const char *path, char *resolved_path)
 		{
 			size=p_GetFinalPathNameByHandleW(h, NULL, 0, 0);
 		}
-		else if(p_GetFinalPathNameByHandleA)
-		{
-			size=p_GetFinalPathNameByHandleA(h, NULL, 0, 0);
-		}
 		if(!size)
 		{
 			errno=ENOENT;
@@ -2248,15 +2115,6 @@ char *realpath(const char *path, char *resolved_path)
 				goto end;
 		wchar_2_UTF8(resolved_path,
 			(LPCWSTR)pwszBuf+junk_len, size);
-		ret=resolved_path;
-	}
-	else if(p_GetFinalPathNameByHandleA)
-	{
-		int junk_len=4;
-		if(p_GetFinalPathNameByHandleA(h,
-			(LPSTR)pwszBuf, size, 0)<junk_len)
-				goto end;
-		memcpy(resolved_path, pwszBuf+junk_len, size);
 		ret=resolved_path;
 	}
 	backslashes_to_forward_slashes(ret);

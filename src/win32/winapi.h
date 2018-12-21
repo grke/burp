@@ -74,14 +74,10 @@ extern t_wunlink   DLL_IMP_EXP p_wunlink;
 extern t_wmkdir    DLL_IMP_EXP p_wmkdir;
 
 /* In KERNEL32.DLL */
-typedef BOOL (WINAPI * t_GetFileAttributesExA)(LPCSTR, GET_FILEEX_INFO_LEVELS,
-       LPVOID);
 typedef BOOL (WINAPI * t_GetFileAttributesExW)(LPCWSTR, GET_FILEEX_INFO_LEVELS,
        LPVOID);
 
-typedef DWORD (WINAPI * t_GetFileAttributesA)(LPCSTR);
 typedef DWORD (WINAPI * t_GetFileAttributesW)(LPCWSTR);
-typedef BOOL (WINAPI * t_SetFileAttributesA)(LPCSTR, DWORD);
 typedef BOOL (WINAPI * t_SetFileAttributesW)(LPCWSTR, DWORD);
 
 /* Graham says: PFE_EXPORT_FUNC/PFE_IMPORT_FUNC are defined in mingw64 but no
@@ -89,18 +85,13 @@ typedef BOOL (WINAPI * t_SetFileAttributesW)(LPCWSTR, DWORD);
 typedef DWORD (WINAPI *PFE_EXPORT_FUNC)(PBYTE pbData,PVOID pvCallbackContext,ULONG ulLength);
 typedef DWORD (WINAPI *PFE_IMPORT_FUNC)(PBYTE pbData,PVOID pvCallbackContext,PULONG ulLength);
 
-typedef DWORD (WINAPI * t_OpenEncryptedFileRawA)(LPCSTR, ULONG, PVOID);
 typedef DWORD (WINAPI * t_OpenEncryptedFileRawW)(LPCWSTR, ULONG, PVOID);
 
-typedef HANDLE (WINAPI * t_CreateFileA) (LPCSTR, DWORD ,DWORD, LPSECURITY_ATTRIBUTES,
-        DWORD , DWORD, HANDLE);
 typedef HANDLE (WINAPI * t_CreateFileW) (LPCWSTR, DWORD ,DWORD, LPSECURITY_ATTRIBUTES,
         DWORD , DWORD, HANDLE);
 
-typedef BOOL (WINAPI * t_CreateDirectoryA) (LPCSTR, LPSECURITY_ATTRIBUTES);
 typedef BOOL (WINAPI * t_CreateDirectoryW) (LPCWSTR, LPSECURITY_ATTRIBUTES);
 
-typedef BOOL (WINAPI * t_GetFinalPathNameByHandleA) (HANDLE, LPSTR, DWORD, DWORD);
 typedef BOOL (WINAPI * t_GetFinalPathNameByHandleW) (HANDLE, LPWSTR, DWORD, DWORD);
 
 typedef BOOL (WINAPI * t_SetProcessShutdownParameters)(DWORD, DWORD);
@@ -111,16 +102,12 @@ typedef int (WINAPI * t_WideCharToMultiByte) (UINT CodePage, DWORD , LPCWSTR, in
                                               LPSTR, int, LPCSTR, LPBOOL);
 
 typedef int (WINAPI * t_MultiByteToWideChar) (UINT, DWORD, LPCSTR, int, LPWSTR, int);
-typedef HANDLE (WINAPI * t_FindFirstFileA) (LPCSTR, LPWIN32_FIND_DATAA);
 typedef HANDLE (WINAPI * t_FindFirstFileW) (LPCWSTR, LPWIN32_FIND_DATAW);
 
-typedef BOOL (WINAPI * t_FindNextFileA) (HANDLE, LPWIN32_FIND_DATAA);
 typedef BOOL (WINAPI * t_FindNextFileW) (HANDLE, LPWIN32_FIND_DATAW);
 
-typedef BOOL (WINAPI * t_SetCurrentDirectoryA) (LPCSTR);
 typedef BOOL (WINAPI * t_SetCurrentDirectoryW) (LPCWSTR);
 
-typedef DWORD (WINAPI * t_GetCurrentDirectoryA) (DWORD, LPSTR);
 typedef DWORD (WINAPI * t_GetCurrentDirectoryW) (DWORD, LPWSTR);
 
 typedef BOOL (WINAPI * t_GetVolumePathNameW) (LPCWSTR, LPWSTR, DWORD);
@@ -128,17 +115,6 @@ typedef BOOL (WINAPI * t_GetVolumeNameForVolumeMountPointW) (LPCWSTR, LPWSTR, DW
 
 typedef BOOL (WINAPI * t_AttachConsole) (DWORD);
 
-typedef BOOL (WINAPI *t_CreateProcessA) (
-   LPCSTR,
-   LPSTR,
-   LPSECURITY_ATTRIBUTES,
-   LPSECURITY_ATTRIBUTES,
-   BOOL,
-   DWORD,
-   PVOID,
-   LPCSTR,
-   LPSTARTUPINFOA,
-   LPPROCESS_INFORMATION);
 typedef BOOL (WINAPI *t_CreateProcessW) (
    LPCWSTR,
    LPWSTR,
@@ -151,28 +127,20 @@ typedef BOOL (WINAPI *t_CreateProcessW) (
    LPSTARTUPINFOW,
    LPPROCESS_INFORMATION);
 
-extern t_CreateProcessA DLL_IMP_EXP p_CreateProcessA;
 extern t_CreateProcessW DLL_IMP_EXP p_CreateProcessW;
 
-extern t_OpenEncryptedFileRawA  DLL_IMP_EXP p_OpenEncryptedFileRawA;
 extern t_OpenEncryptedFileRawW  DLL_IMP_EXP p_OpenEncryptedFileRawW;
 
-extern t_GetFileAttributesA   DLL_IMP_EXP p_GetFileAttributesA;
 extern t_GetFileAttributesW   DLL_IMP_EXP p_GetFileAttributesW;
 
-extern t_GetFileAttributesExA   DLL_IMP_EXP p_GetFileAttributesExA;
 extern t_GetFileAttributesExW   DLL_IMP_EXP p_GetFileAttributesExW;
 
-extern t_SetFileAttributesA   DLL_IMP_EXP p_SetFileAttributesA;
 extern t_SetFileAttributesW   DLL_IMP_EXP p_SetFileAttributesW;
 
-extern t_CreateFileA   DLL_IMP_EXP p_CreateFileA;
 extern t_CreateFileW   DLL_IMP_EXP p_CreateFileW;
 
-extern t_CreateDirectoryA   DLL_IMP_EXP p_CreateDirectoryA;
 extern t_CreateDirectoryW   DLL_IMP_EXP p_CreateDirectoryW;
 
-extern t_GetFinalPathNameByHandleA   DLL_IMP_EXP p_GetFinalPathNameByHandleA;
 extern t_GetFinalPathNameByHandleW   DLL_IMP_EXP p_GetFinalPathNameByHandleW;
 
 extern t_SetProcessShutdownParameters DLL_IMP_EXP p_SetProcessShutdownParameters;
@@ -182,16 +150,12 @@ extern t_BackupWrite        DLL_IMP_EXP p_BackupWrite;
 extern t_WideCharToMultiByte DLL_IMP_EXP p_WideCharToMultiByte;
 extern t_MultiByteToWideChar DLL_IMP_EXP p_MultiByteToWideChar;
 
-extern t_FindFirstFileA DLL_IMP_EXP p_FindFirstFileA;
 extern t_FindFirstFileW DLL_IMP_EXP p_FindFirstFileW;
 
-extern t_FindNextFileA DLL_IMP_EXP p_FindNextFileA;
 extern t_FindNextFileW DLL_IMP_EXP p_FindNextFileW;
 
-extern t_SetCurrentDirectoryA DLL_IMP_EXP p_SetCurrentDirectoryA;
 extern t_SetCurrentDirectoryW DLL_IMP_EXP p_SetCurrentDirectoryW;
 
-extern t_GetCurrentDirectoryA DLL_IMP_EXP p_GetCurrentDirectoryA;
 extern t_GetCurrentDirectoryW DLL_IMP_EXP p_GetCurrentDirectoryW;
 
 extern t_GetVolumePathNameW DLL_IMP_EXP p_GetVolumePathNameW;

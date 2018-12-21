@@ -264,7 +264,9 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 		case CMD_FINGERPRINT:
 			if(blk && blk_set_from_iobuf_fingerprint(blk, rbuf))
 				return PARSE_RET_ERROR;
-			// Fall through.
+			iobuf_free_content(&sb->path);
+			iobuf_move(&sb->path, rbuf);
+			return PARSE_RET_COMPLETE;
 		case CMD_MANIFEST:
 			if(iobuf_relative_path_attack(rbuf))
 				return PARSE_RET_ERROR;

@@ -68,7 +68,7 @@ static int append_to_extrameta(const char *toappend, char metasymbol,
 	char tmp3[10];
 	size_t newlen=0;
 	snprintf(tmp3, sizeof(tmp3), "%c%08X", metasymbol, totallen);
-	newlen=(*xlen)+9+totallen;
+	newlen=(*xlen)+9+totallen+1;
 	if(!(*xattrtext=(char *)
 		realloc_w(*xattrtext, newlen, __func__)))
 			return -1;

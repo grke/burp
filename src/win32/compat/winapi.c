@@ -53,6 +53,10 @@ t_CreateDirectoryW      p_CreateDirectoryW=NULL;
 
 t_GetFinalPathNameByHandleW  p_GetFinalPathNameByHandleW=NULL;
 
+t_GetLogicalDriveStringsW  p_GetLogicalDriveStringsW=NULL;
+
+t_GetDriveTypeW  p_GetDriveTypeW=NULL;
+
 t_OpenEncryptedFileRawW  p_OpenEncryptedFileRawW=NULL;
 
 t_wunlink               p_wunlink=NULL;
@@ -125,6 +129,10 @@ void InitWinAPIWrapper()
 
 			p_GetFinalPathNameByHandleW=(t_GetFinalPathNameByHandleW)
 				GetProcAddress(hLib, "GetFinalPathNameByHandleW");
+			p_GetLogicalDriveStringsW=(t_GetLogicalDriveStringsW)
+				GetProcAddress(hLib, "GetLogicalDriveStringsW");
+			p_GetDriveTypeW=(t_GetDriveTypeW)
+				GetProcAddress(hLib, "GetDriveTypeW");
 
 			// backup calls.
 			p_BackupRead=(t_BackupRead)

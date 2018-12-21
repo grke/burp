@@ -379,7 +379,6 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 int wchar_2_UTF8(char *pszUTF, const wchar_t *pszUCS, int cchChar)
 {
 	int ret=0;
-	if(!p_WideCharToMultiByte) return ret;
 	ret=p_WideCharToMultiByte(CP_UTF8,
 		0, pszUCS, -1, pszUTF, cchChar, NULL, NULL);
 	ASSERT(ret>0);
@@ -1460,8 +1459,6 @@ int win32_fputs(const char *string, FILE *stream)
 	HANDLE hOut=GetStdHandle(STD_OUTPUT_HANDLE);
 	if(hOut
 	  && (hOut!=INVALID_HANDLE_VALUE)
-	  && p_WideCharToMultiByte
-	  && p_MultiByteToWideChar
 	  && (stream==stdout))
 	{
 		char *pwszBuf=sm_get_pool_memory(PM_MESSAGE);
@@ -1500,15 +1497,14 @@ int win32_fputs(const char *string, FILE *stream)
 	return fputs(string, stream);
 }
 
-char* win32_cgets (char* buffer, int len)
+char *win32_cgets(char* buffer, int len)
 {
 	/* We use console ReadConsoleA / ReadConsoleW to be able to read
 	   unicode from the win32 console and fallback if seomething fails. */
 
 	HANDLE hIn=GetStdHandle (STD_INPUT_HANDLE);
 	if(hIn
-	  && (hIn!=INVALID_HANDLE_VALUE)
-	    && p_WideCharToMultiByte && p_MultiByteToWideChar)
+	  && (hIn!=INVALID_HANDLE_VALUE))
 	{
 		DWORD dwRead;
 		wchar_t wszBuf[1024];
@@ -2124,5 +2120,37 @@ end:
 		CloseHandle(h);
 	if(!ret && alloced && resolved_path)
 		free(resolved_path);
+	return ret;
+}
+
+char *get_fixed_drives(void)
+{
+	static char ret[256]="";
+	size_t r=0;
+	char *drive=NULL;
+	char pwszBuf[256];
+
+	memset(&ret, 0, sizeof(ret));
+
+	if(!p_GetLogicalDriveStringsW(sizeof(pwszBuf), (LPWSTR)pwszBuf))
+		return NULL;
+
+	// The function above fills a buffer with widechars like this:
+	// C:/<null>D:/<null><null>
+	// So we have to work to extract the letters.
+	drive=pwszBuf;
+	while(*drive)
+	{
+		int l;
+		char u[8];
+		l=wchar_2_UTF8(u, (const wchar_t *)drive, sizeof(u));
+		if(GetDriveTypeW((const wchar_t *)drive)==DRIVE_FIXED)
+		{
+			if(isalpha(*u))
+				ret[r++]=toupper(*u);
+		}
+		drive+=l*2;
+	}
+
 	return ret;
 }

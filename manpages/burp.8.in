@@ -672,7 +672,7 @@ Where to look to find the burp binary to use when forking a monitor client. This
 .SH INCLUDES / EXCLUDES
 
 .TP
-The following options specify exactly what is backed up. The client can specify these options, or if you include at least one 'include=' in the client configuration files on the server, the server will override them all.
+The following options specify exactly what is backed up. The client can specify these options, or if you include at least one 'include=' or 'include_glob=' in the client configuration files on the server, the server will override them all.
 .TP
 \fBinclude=[path]\fR
 Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
@@ -681,7 +681,7 @@ Path to include in the backup. You can have multiple include lines. Use forward 
 Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
 .TP
 \fBinclude_glob=[glob expression]\fR
-Include paths that match the glob expression. For example, '/home/*/Documents' will include '/home/user1/Documents' and '/home/user2/Documents' if directories 'user1' and 'user2' exist in '/home'. The Windows implementation currently limit the expression to contain only one '*'.
+Include paths that match the glob expression. For example, '/home/*/Documents' will include '/home/user1/Documents' and '/home/user2/Documents' if directories 'user1' and 'user2' exist in '/home'. The Windows implementation currently limits the expression to contain only one '*', with one exception - you may also specify '*:' to expand to detected fixed drives.
 .TP
 \fBinclude_regex=[regular expression]\fR
 Include paths that match the regular expression. You need at least one 'include' or 'include_glob' option to have files to be matched against the regex. If you have at least one 'include_regex' line, then any path NOT matching the regex will be excluded from your backup.

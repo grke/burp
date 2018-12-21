@@ -14,24 +14,25 @@
 
 // Attempt to stop VSS nicely if the client is interrupted by the user.
 BOOL CtrlHandler(DWORD fdwCtrlType)
-{ 
+{
 	switch(fdwCtrlType)
-	{ 
-		// Handle the CTRL-C signal. 
+	{
+		// Handle the CTRL-C signal.
 		case CTRL_C_EVENT:
-		case CTRL_CLOSE_EVENT: 
-		case CTRL_BREAK_EVENT: 
+		case CTRL_CLOSE_EVENT:
+		case CTRL_BREAK_EVENT:
 			win32_stop_vss();
-			return FALSE; 
-		default: 
-			return FALSE; 
-	} 
+			return FALSE;
+		default:
+			return FALSE;
+	}
 }
 
 int win32_start_vss(struct asfd *asfd, struct conf **confs)
 {
 	int errors=0;
 	struct cntr *cntr=get_cntr(confs);
+	const char *drives_vss=get_string(confs[OPT_VSS_DRIVES]);
 
 	if(SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE))
 		logp("Control handler registered.\n");
@@ -44,14 +45,13 @@ int win32_start_vss(struct asfd *asfd, struct conf **confs)
 
 	if(g_pVSSClient->InitializeForBackup(asfd, cntr))
 	{
-		const char *vss_drives=get_string(confs[OPT_VSS_DRIVES]);
 		char szWinDriveLetters[27];
 		// Tell vss which drives to snapshot.
-		if(vss_drives)
+		if(drives_vss)
 		{
 			unsigned int i=0;
-			for(i=0; i<strlen(vss_drives) && i<26; i++)
-			  szWinDriveLetters[i]=toupper(vss_drives[i]);
+			for(i=0; i<strlen(drives_vss) && i<26; i++)
+			  szWinDriveLetters[i]=toupper(drives_vss[i]);
 			szWinDriveLetters[i]='\0';
 		}
 		else

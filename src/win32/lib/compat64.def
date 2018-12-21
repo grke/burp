@@ -62,6 +62,7 @@ _Z9forkchildPP3fzpS1_S1_PKcPKPc
 _Z17forkchild_no_waitPP3fzpS1_S1_PKcPKPc
 _Z15win32_getfsnamePKcPcy
 _Z8realpathPKcPc
+_Z16get_fixed_drivesv
 
 ; print.o
 _Z10__vsprintfPcPKcS_

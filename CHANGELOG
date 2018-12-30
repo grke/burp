@@ -1,3 +1,10 @@
+2019-01-01 Changes in burp-2.2.16:
+  * 786: Don't run relative attack detection on CMD_FINGERPRINT.
+  * 785: Fix incorrect xattr buffer size.
+  * 784: Fix compiler warning d->d_name always evaluates to true.
+  * From Michael Hanselmann:
+    - Remove unused sbuf_print_alloc_stats prototype
+
 2018-12-12 Changes in burp-2.2.14:
   * Fix restoring with compressed/encrypted trailing vss data.
   * Protect the client against restoring over symlinks that point
@@ -14,7 +21,7 @@
   * Fix buffer overrun in client-side long list.
   * Fix buffer overrun in asfd_do_read_ssl().
   * 766: Correct gzip os type in utest/server/test_restore.c.
-  * From Michael Hanselm:
+  * From Michael Hanselmann:
     - Add option to verify client certificate early.
     - Use "O_NOFOLLOW" as appropriate.
     - Sanitise autoupgrade os name.

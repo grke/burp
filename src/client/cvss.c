@@ -42,7 +42,7 @@ int win32_start_vss(struct asfd *asfd, struct conf **confs)
 		return errors;
 	}
 
-	if(g_pVSSClient->InitializeForBackup())
+	if(g_pVSSClient->InitializeForBackup(asfd, cntr))
 	{
 		const char *vss_drives=get_string(confs[OPT_VSS_DRIVES]);
 		char szWinDriveLetters[27];

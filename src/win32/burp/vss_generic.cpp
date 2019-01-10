@@ -39,6 +39,7 @@
 
 #include "burp.h"
 #include "berrno.h"
+#include "../../log.h"
 
 #undef setlocale
 
@@ -228,11 +229,11 @@ static BOOL set_errno(void)
 }
 
 // Initialize the COM infrastructure and the internal pointers.
-BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
+BOOL VSSClientGeneric::Initialize(struct asfd *asfd, struct cntr *cntr)
 {
 	if(!(p_CreateVssBackupComponents && p_VssFreeSnapshotProperties))
 	{
-		fprintf(stderr, "%s error\n", __func__);
+		logw(asfd, cntr, "%s error\n", __func__);
 		return bsystem_error();
 	}
 
@@ -243,7 +244,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 		hr=CoInitialize(NULL);
 		if(FAILED(hr))
 		{
-			fprintf(stderr, "%s: CoInitialize returned 0x%08X\n",
+			logw(asfd, cntr, "%s: CoInitialize returned 0x%08X\n",
 				__func__, (unsigned int)hr);
 			return set_errno();
 		}
@@ -269,7 +270,7 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 
 		if(FAILED(hr))
 		{
-			fprintf(stderr,
+			logw(asfd, cntr,
 			  "%s: CoInitializeSecurity returned 0x%08X\n",
 			  __func__, (unsigned int)hr);
 			return set_errno();
@@ -290,61 +291,40 @@ BOOL VSSClientGeneric::Initialize(DWORD dwContext, BOOL bDuringRestore)
 	{
 		berrno be;
 		berrno_init(&be);
-		fprintf(stderr,
+		logw(asfd, cntr,
 		  "%s: CreateVssBackupComponents returned 0x%08X. ERR=%s\n",
 			__func__, (unsigned int)hr,
 			berrno_bstrerror(&be, b_errno_win32));
 		return set_errno();
 	}
 
-#if defined(B_VSS_W2K3) || defined(B_VSS_VISTA)
-	if(dwContext!=VSS_CTX_BACKUP)
+	// 1. InitializeForBackup.
+	hr=((IVssBackupComponents*)m_pVssObject)->InitializeForBackup();
+	if(FAILED(hr))
 	{
-		hr=((IVssBackupComponents*)m_pVssObject)->SetContext(dwContext);
-		if(FAILED(hr))
-		{
-			fprintf(stderr, "%s: IVssBackupComponents->SetContext returned 0x%08X\n", __func__, (unsigned int)hr);
-			return set_errno();
-		}
-	}
-#endif
-
-	if(!bDuringRestore)
-	{
-		// 1. InitializeForBackup.
-		hr=((IVssBackupComponents*)m_pVssObject)->InitializeForBackup();
-		if(FAILED(hr))
-		{
-			fprintf(stderr, "%s: IVssBackupComponents->InitializeForBackup returned 0x%08X\n", __func__, (unsigned int)hr);
-			return set_errno();
-		}
-
-		// 2. SetBackupState.
-		hr=((IVssBackupComponents*)m_pVssObject)->SetBackupState(true,
-			true, VSS_BT_FULL, false);
-		if(FAILED(hr))
-		{
-			fprintf(stderr, "%s: IVssBackupComponents->SetBackupState returned 0x%08X\n", __func__, (unsigned int)hr);
-			return set_errno();
-		}
-
-		CComPtr<IVssAsync> pAsync1;
-		// 3. GatherWriterMetaData.
-		hr=((IVssBackupComponents*)
-			m_pVssObject)->GatherWriterMetadata(&pAsync1.p);
-		if(FAILED(hr))
-		{
-			fprintf(stderr, "%s: IVssBackupComponents->GatherWriterMetadata returned 0x%08X\n", __func__, (unsigned int)hr);
-			return set_errno();
-		}
-		WaitAndCheckForAsyncOperation(pAsync1.p);
+		logw(asfd, cntr, "%s: IVssBackupComponents->InitializeForBackup returned 0x%08X\n", __func__, (unsigned int)hr);
+		return set_errno();
 	}
 
-	// We are during restore now?
-	m_bDuringRestore=bDuringRestore;
+	// 2. SetBackupState.
+	hr=((IVssBackupComponents*)m_pVssObject)->SetBackupState(true,
+		true, VSS_BT_FULL, false);
+	if(FAILED(hr))
+	{
+		logw(asfd, cntr, "%s: IVssBackupComponents->SetBackupState returned 0x%08X\n", __func__, (unsigned int)hr);
+		return set_errno();
+	}
 
-	// Keep the context.
-	m_dwContext=dwContext;
+	CComPtr<IVssAsync> pAsync1;
+	// 3. GatherWriterMetaData.
+	hr=((IVssBackupComponents*)
+		m_pVssObject)->GatherWriterMetadata(&pAsync1.p);
+	if(FAILED(hr))
+	{
+		logw(asfd, cntr, "%s: IVssBackupComponents->GatherWriterMetadata returned 0x%08X\n", __func__, (unsigned int)hr);
+		return set_errno();
+	}
+	WaitAndCheckForAsyncOperation(pAsync1.p);
 
 	return TRUE;
 }

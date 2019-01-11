@@ -12,6 +12,9 @@ Latest versions:
 For the latest tarball releases and Windows client installers, please
 visit the
 <a href="http://sourceforge.net/projects/burp">burp sourceforge page</a>.
+<br>
+My gpg public key is <a href="downloads/grke.gpg">here</a>. You can use this
+to verify the releases.
 </P>
 <p>
 Old versions and source for the Windows build tools are currently hosted

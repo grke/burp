@@ -53,12 +53,14 @@ while ! lock; do
 	fi
 done
 
-# Solaris and AIX don't support 'hostname -f' and, in fact,
-# set the hostname to '-f' with that call.
+# Solaris, AIX, NetBSD and OpenBSD don't support 'hostname -f' and,
+# in fact, set the hostname to '-f' with that call.
 name=
 case "$(uname -s)" in
 	SunOS) name="$(check-hostname | cut -d' ' -f7)" ;;
 	AIX) name="$(host "$(hostname)" | awk '{ print $1}')" ;;
+	NetBSD) name="$(hostname)" ;;
+	OpenBSD) name="$(uname -n)" ;;
 	*) name="$(hostname -f)" ;;
 esac
 # Try NetBSD style.

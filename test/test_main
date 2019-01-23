@@ -375,16 +375,16 @@ cp -r "$includedir/src" "$includedir/src-new" \
 	|| fail "could not cp $includedir/src to $includedir/src-new"
 
 # Move a directory, which simulates deleting and adding new files.
-if [ -d "$includedir/debian" ] \
- && [ ! -e "$includedir/debian-new" ] ; then
-	mv "$includedir/debian" "$includedir/debian-new" \
-	    || fail "could not move $includedir/debian to $includedir/debian-new"
-elif [ ! -e "$includedir/debian" ] \
- && [ -d "$includedir/debian-new" ] ; then
-   mv "$includedir/debian-new" "$includedir/debian" \
-    || fail "could not move $includedir/debian-new to $includedir/debian"
+if [ -d "$includedir/configs" ] \
+ && [ ! -e "$includedir/configs-new" ] ; then
+	mv "$includedir/configs" "$includedir/configs-new" \
+	    || fail "could not move $includedir/configs to $includedir/configs-new"
+elif [ ! -e "$includedir/configs" ] \
+ && [ -d "$includedir/configs-new" ] ; then
+   mv "$includedir/configs-new" "$includedir/configs" \
+    || fail "could not move $includedir/configs-new to $includedir/configs"
 else
-	fail "could not move debian directories" 
+	fail "could not move directory to simulate deletion/addition"
 fi
 
 # Scramble a whole bunch of files

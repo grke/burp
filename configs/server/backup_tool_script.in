@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
-PROGRAM_VERSION=0.4.4
-PROGRAM_BUILD=2018120301
-AUTHOR="(C) 2017-2018 by Orsiris de Jong"
+PROGRAM_VERSION=0.4.6
+PROGRAM_BUILD=2019012801
+AUTHOR="(C) 2017-2019 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
-IS_STABLE=yes
+IS_STABLE=true
 
 ## backup_tool_script - A script to check @name@ backup sanity
 
@@ -26,7 +26,7 @@ INSTANCE_ID="base"
 ## After how much time (in seconds) for a single verification a warning should be logged (defaults to 3 hours)
 SOFT_MAX_EXEC_TIME_PER_VERIFY=10800
 ## After how much time (in seconds) for a single verification the process should be stopped (defaults to 5 hours)
-HARD_MAX_EXEC_TIME_PER_VERIFY=18000
+HARD_MAX_EXEC_TIME_PER_VERIFY=64800
 ## After how much seconds of execution of all steps a warning should be logged (defaults to 10 hours)
 SOFT_MAX_EXEC_TIME=64800
 ## After how much seconds of execution of all steps a verification process should be stopped (defaults to 12 hours)
@@ -75,7 +75,7 @@ No valid backup sets found in the last [NUMBERDAYS] day(s) for client [CLIENT].
 Please leave your computer online enough time for a backup to occur.
 Contact your system administrator for further information.
 
-@name@ backup server $INSTANCE_ID.
+@name@ backup server [INSTANCE].
 "
 
 # Message sent directly to client email address when quota exceeded.
@@ -84,7 +84,7 @@ CLIENT_ALERT_BODY_QUOTA="Hello,
 Your backup disk quota has been exceeded ([QUOTAEXCEED]) for client [CLIENT].
 Contact your system administrator for further information.
 
-@name@ backup server $INSTANCE_ID.
+@name@ backup server [INSTANCE].
 "
 
 # ------------ Do not modify under this line unless you have great cow powers --------------
@@ -166,13 +166,13 @@ fi
 
 #### DEBUG SUBSET ####
 ## allow function call checks                   #__WITH_PARANOIA_DEBUG
-if [ "$_PARANOIA_DEBUG" == "yes" ];then         #__WITH_PARANOIA_DEBUG
-	_DEBUG=yes                              	#__WITH_PARANOIA_DEBUG
+if [ "$_PARANOIA_DEBUG" == true ];then          #__WITH_PARANOIA_DEBUG
+	_DEBUG=false                           	#__WITH_PARANOIA_DEBUG
 fi                                              #__WITH_PARANOIA_DEBUG
 
-## allow debugging from command line with _DEBUG=yes
-if [ ! "$_DEBUG" == "yes" ]; then
-	_DEBUG=no
+## allow debugging from command line with _DEBUG=true
+if [ ! "$_DEBUG" == true ]; then
+	_DEBUG=false
 	_LOGGER_VERBOSE=false
 else
 	trap 'TrapError ${LINENO} $?' ERR
@@ -228,9 +228,9 @@ function _Logger {
 
 # CRITICAL, ERROR, WARN sent to stderr, color depending on level, level also logged
 # NOTICE sent to stdout
-# VERBOSE sent to stdout if _LOGGER_VERBOSE = true
-# ALWAYS is sent to stdout unless _LOGGER_SILENT = true
-# DEBUG & PARANOIA_DEBUG are only sent to stdout if _DEBUG=yes
+# VERBOSE sent to stdout if _LOGGER_VERBOSE=true
+# ALWAYS is sent to stdout unless _LOGGER_SILENT=true
+# DEBUG & PARANOIA_DEBUG are only sent to stdout if _DEBUG=true
 function Logger {
 	local value="${1}"              # Sentence to log (in double quotes)
 	local level="${2}"              # Log level
@@ -278,15 +278,15 @@ function Logger {
 		_Logger "$prefix$value" "$prefix$value"
 		return
 	elif [ "$level" == "DEBUG" ]; then
-		if [ "$_DEBUG" == "yes" ]; then
+		if [ "$_DEBUG" == true ]; then
 			_Logger "$prefix$value" "$prefix$value"
 			return
 		fi
 	elif [ "$level" == "PARANOIA_DEBUG" ]; then                             #__WITH_PARANOIA_DEBUG
-		if [ "$_PARANOIA_DEBUG" == "yes" ]; then                        #__WITH_PARANOIA_DEBUG
+		if [ "$_PARANOIA_DEBUG" == true ]; then                         #__WITH_PARANOIA_DEBUG
 			_Logger "$prefix$value" "$prefix\e[35m$value\e[0m"      #__WITH_PARANOIA_DEBUG
 			return                                                  #__WITH_PARANOIA_DEBUG
-		fi                                                              #__WITH_PARANOIA_DEBUG
+		fi                                                              #__WITH_PARANOIA_DEBUG	
 	else
 		_Logger "\e[41mLogger function called without proper loglevel [$level].\e[0m" "\e[41mLogger function called without proper loglevel [$level].\e[0m" true
 		_Logger "Value was: $prefix$value" "Value was: $prefix$value" true
@@ -377,7 +377,7 @@ function SendAlert {
 		return 0
 	fi
 
-	if [ "$_DEBUG" == "yes" ]; then
+	if [ "$_DEBUG" == true ]; then
 		Logger "Debug mode, no warning mail will be sent." "NOTICE"
 		return 0
 	fi
@@ -785,7 +785,7 @@ function ExecTasks {
 	__CheckArguments 1-18 $# "$@"                                                                                                                                          #__WITH_PARANOIA_DEBUG
 
 	# Since ExecTasks takes up to 17 arguments, do a quick preflight check in DEBUG mode
-	if [ "$_DEBUG" == "yes" ]; then
+	if [ "$_DEBUG" == true ]; then
 		declare -a booleans=(readFromFile counting spinner noTimeErrorLog noErrorLogsAtAll)
 		for i in "${booleans[@]}"; do
 			test="if [ \$$i != false ] && [ \$$i != true ]; then Logger \"Bogus $i value [\$$i] given to ${FUNCNAME[0]}.\" \"CRITICAL\"; exit 1; fi"
@@ -807,7 +807,8 @@ function ExecTasks {
 	local commandsConditionArray=() # Array containing conditional commands
 	local currentCommand            # Variable containing currently processed command
 	local currentCommandCondition   # Variable containing currently processed conditional command
-	local commandsArrayPid=()       # Array containing pids of commands currently run
+	local commandsArrayPid=()       # Array containing commands indexed py pids
+	local commandsArrayOutput()     # Array containing command results indexed by pids
 	local postponedRetryCount=0     # Number of current postponed commands retries
 	local postponedItemCount=0      # Number of commands that have been postponed (keep at least one in order to check once)
 	local postponedCounter=0
@@ -836,8 +837,9 @@ function ExecTasks {
 	local executeCommand            # Boolean to check if currentCommand can be executed given a condition
 	local hasPids=false             # Are any valable pids given to function ?              #__WITH_PARANOIA_DEBUG
 	local functionMode
-	local softAlert=false			# Does a soft alert need to be triggered, if yes, send an alert once
-	local failedPidsList			# List containing failed pids with exit code separated by semicolons (eg : 2355:1;4534:2;2354:3)
+	local softAlert=false           # Does a soft alert need to be triggered, if yes, send an alert once
+	local failedPidsList            # List containing failed pids with exit code separated by semicolons (eg : 2355:1;4534:2;2354:3)
+	local randomOutputName          # Random filename for command outputs
 	
 	# Initialise global variable
 	eval "WAIT_FOR_TASK_COMPLETION_$id=\"\""
@@ -1007,6 +1009,9 @@ function ExecTasks {
 							if [ "$functionMode" == "ParallelExec" ]; then
 								Logger "Command was [${commandsArrayPid[$pid]}]." "ERROR"
 							fi
+							if [ -f "${commandsArrayOutput[$pid]}" ]; then
+								Logger "Command output was [$(cat ${commandsArrayOutput[$pid]})]." "ERROR"
+							fi
 						fi
 						errorcount=$((errorcount+1))
 						# Welcome to variable variable bash hell
@@ -1032,7 +1037,7 @@ function ExecTasks {
 		# Trivial wait time for bash to not eat up all CPU
 		sleep $sleepTime
 
-		if [ "$_PERF_PROFILER" == "yes" ]; then                         ##__WITH_PARANOIA_DEBUG
+		if [ "$_PERF_PROFILER" == true ]; then                         ##__WITH_PARANOIA_DEBUG
 			_PerfProfiler                                           ##__WITH_PARANOIA_DEBUG
 		fi                                                              ##__WITH_PARANOIA_DEBUG
 
@@ -1152,10 +1157,12 @@ function ExecTasks {
 
 				if [ $executeCommand == true ]; then
 					Logger "Running command [$currentCommand]." "DEBUG"
-					eval "$currentCommand" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$id.$SCRIPT_PID.$TSTAMP" 2>&1 &
+					randomOutputName=$(date '+%Y%m%dT%H%M%S').$(PoorMansRandomGenerator 5)
+					eval "$currentCommand" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$id.$pid.$randomOutputName.$SCRIPT_PID.$TSTAMP" 2>&1 &
 					pid=$!
 					pidsArray+=($pid)
 					commandsArrayPid[$pid]="$currentCommand"
+					commandsArrayOutput[$pid]="$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$id.$pid.$randomOutputName.$SCRIPT_PID.$TSTAMP"
 					# Initialize pid execution time array
 					pidsTimeArray[$pid]=0
 				else
@@ -1189,7 +1196,7 @@ function ExecTasks {
 function CleanUp {
 	__CheckArguments 0 $# "$@"      #__WITH_PARANOIA_DEBUG
 
-	if [ "$_DEBUG" != "yes" ]; then
+	if [ "$_DEBUG" != true ]; then
 		rm -f "$RUN_DIR/$PROGRAM."*".$SCRIPT_PID.$TSTAMP"
 		# Fix for sed -i requiring backup extension for BSD & Mac (see all sed -i statements)
 		rm -f "$RUN_DIR/$PROGRAM."*".$SCRIPT_PID.$TSTAMP.tmp"
@@ -1200,7 +1207,7 @@ function CleanUp {
 function __CheckArguments {
 	# Checks the number of arguments of a function and raises an error if some are missing
 
-	if [ "$_DEBUG" == "yes" ]; then
+	if [ "$_DEBUG" == true ]; then
 		local numberOfArguments="${1}" # Number of arguments the tested function should have, can be a number of a range, eg 0-2 for zero to two arguments
 		local numberOfGivenArguments="${2}" # Number of arguments that have been passed
 
@@ -1267,7 +1274,7 @@ function TrapQuit {
 
 	if [ $ERROR_ALERT == true ]; then
 		Logger "$PROGRAM finished with errors." "ERROR"
-		if [ "$_DEBUG" != "yes" ]
+		if [ "$_DEBUG" != true ]
 		then
 			SendAlert
 		else
@@ -1276,7 +1283,7 @@ function TrapQuit {
 		exitcode=1
 	elif [ $WARN_ALERT == true ]; then
 		Logger "$PROGRAM finished with warnings." "WARN"
-		if [ "$_DEBUG" != "yes" ]
+		if [ "$_DEBUG" != true ]
 		then
 			SendAlert
 		else
@@ -1792,7 +1799,7 @@ function Init {
 
 function Usage {
 
-	if [ "$IS_STABLE" != "yes" ]; then
+	if [ "$IS_STABLE" != true ]; then
 		echo -e "\e[93mThis is an unstable dev build. Please use with caution.\e[0m"
 	fi
 	echo "$PROGRAM $PROGRAM_VERSION $PROGRAM_BUILD"
@@ -2099,6 +2106,12 @@ if [ "$VERIFY_BACKUPS" != "" ]; then
 		exit 1
 	fi
 fi
+
+# v0.4.6
+# - Added command output to logs
+# - Fixed not using [INSTANCE] placeholder in example text
+# - Raised default HARD_MAX_EXEC_TIME_PER_VERIFY to 64800 seconds
+# - Replaced yes/no with true/false booleans
 
 # v0.4.4
 # - More explicit log messages

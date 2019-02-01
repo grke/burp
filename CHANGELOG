@@ -1,3 +1,14 @@
+2019-02-02 Changes in burp-2.3.0:
+  * 777: Make include_glob able to detect windows drive letters.
+  * From Olivier Cherrier:
+    - NetBSD/OpenBSD fix for burp_ca.
+  * 780: More logging for VSS.
+  * Remove non-widechar Windows functions.
+  * From Calogero Lo Leggio:
+    - Remove debian packaging files from upstream repository
+  * From deajan:
+    - Backup tool script 0.4.6.
+
 2019-01-01 Changes in burp-2.2.16:
   * 786: Don't run relative attack detection on CMD_FINGERPRINT.
   * 785: Fix incorrect xattr buffer size.

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
-PROGRAM_VERSION=0.4.2
-PROGRAM_BUILD=2018070301
-AUTHOR="(C) 2017-2018 by Orsiris de Jong"
+PROGRAM_VERSION=0.4.6
+PROGRAM_BUILD=2019012801
+AUTHOR="(C) 2017-2019 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
-IS_STABLE=yes
+IS_STABLE=true
 
 ## backup_tool_script - A script to check @name@ backup sanity
 
@@ -26,7 +26,7 @@ INSTANCE_ID="base"
 ## After how much time (in seconds) for a single verification a warning should be logged (defaults to 3 hours)
 SOFT_MAX_EXEC_TIME_PER_VERIFY=10800
 ## After how much time (in seconds) for a single verification the process should be stopped (defaults to 5 hours)
-HARD_MAX_EXEC_TIME_PER_VERIFY=18000
+HARD_MAX_EXEC_TIME_PER_VERIFY=64800
 ## After how much seconds of execution of all steps a warning should be logged (defaults to 10 hours)
 SOFT_MAX_EXEC_TIME=64800
 ## After how much seconds of execution of all steps a verification process should be stopped (defaults to 12 hours)
@@ -39,10 +39,10 @@ POSTPONE_RETRY=2
 POSTPONE_TIME=3600
 
 ## Backup executable (can be set to /usr/sbin/@name@, /usr/local/sbin/@name@, or autodetect via $(type -p @name@))
-BACKUP_EXECUTABLE=@sbindir@/@name@
+BACKUP_EXECUTABLE=@sbindir@/@name@ # PROD = @sbindir@/@name@
 
 ## @name@ service type (can be "initv" or "systemd")
-SERVICE_TYPE=initv
+SERVICE_TYPE=initv # PROD = initv
 
 ## How many simultaneous verify operations should be launched (please check I/O and CPU usage before increasing this)
 PARELLEL_VERIFY_CONCURRENCY=2
@@ -75,7 +75,7 @@ No valid backup sets found in the last [NUMBERDAYS] day(s) for client [CLIENT].
 Please leave your computer online enough time for a backup to occur.
 Contact your system administrator for further information.
 
-@name@ backup server $INSTANCE.
+@name@ backup server [INSTANCE].
 "
 
 # Message sent directly to client email address when quota exceeded.
@@ -84,7 +84,7 @@ CLIENT_ALERT_BODY_QUOTA="Hello,
 Your backup disk quota has been exceeded ([QUOTAEXCEED]) for client [CLIENT].
 Contact your system administrator for further information.
 
-@name@ backup server $INSTANCE.
+@name@ backup server [INSTANCE].
 "
 
 # ------------ Do not modify under this line unless you have great cow powers --------------
@@ -113,7 +113,34 @@ LOCAL_HOST=$(hostname)
 
 SCRIPT_PID=$$
 
-TSTAMP=$(date '+%Y%m%dT%H%M%S.%N')
+# Get a random number on Windows BusyBox alike, also works on most Unixes that have dd, if dd is not found, then return $RANDOM
+function PoorMansRandomGenerator {
+	local digits="${1}" # The number of digits to generate
+	local number
+	local isFirst=true
+
+	if type dd >/dev/null 2>&1; then
+
+		# Some read bytes can't be used, se we read twice the number of required bytes
+		dd if=/dev/urandom bs=$digits count=2 2> /dev/null | while read -r -n1 char; do
+			if [ $isFirst == false ] || [ $(printf "%d" "'$char") != "0" ]; then
+				number=$number$(printf "%d" "'$char")
+				isFirst=false
+			fi
+			if [ ${#number} -ge $digits ]; then
+				echo ${number:0:$digits}
+				break;
+			fi
+		done
+	elif [ "$RANDOM" -ne 0 ]; then
+		 echo $RANDOM
+	else
+		Logger "Cannot generate random number." "ERROR"
+	fi
+}
+
+# Initial TSTMAP value before function declaration
+TSTAMP=$(date '+%Y%m%dT%H%M%S').$(PoorMansRandomGenerator 5)
 
 ALERT_LOG_FILE="$RUN_DIR/$PROGRAM.$SCRIPT_PID.$TSTAMP.last.log"
 
@@ -139,13 +166,13 @@ fi
 
 #### DEBUG SUBSET ####
 ## allow function call checks                   #__WITH_PARANOIA_DEBUG
-if [ "$_PARANOIA_DEBUG" == "yes" ];then         #__WITH_PARANOIA_DEBUG
-	_DEBUG=yes                              #__WITH_PARANOIA_DEBUG
+if [ "$_PARANOIA_DEBUG" == true ];then          #__WITH_PARANOIA_DEBUG
+	_DEBUG=false                           	#__WITH_PARANOIA_DEBUG
 fi                                              #__WITH_PARANOIA_DEBUG
 
-## allow debugging from command line with _DEBUG=yes
-if [ ! "$_DEBUG" == "yes" ]; then
-	_DEBUG=no
+## allow debugging from command line with _DEBUG=true
+if [ ! "$_DEBUG" == true ]; then
+	_DEBUG=false
 	_LOGGER_VERBOSE=false
 else
 	trap 'TrapError ${LINENO} $?' ERR
@@ -201,9 +228,9 @@ function _Logger {
 
 # CRITICAL, ERROR, WARN sent to stderr, color depending on level, level also logged
 # NOTICE sent to stdout
-# VERBOSE sent to stdout if _LOGGER_VERBOSE = true
-# ALWAYS is sent to stdout unless _LOGGER_SILENT = true
-# DEBUG & PARANOIA_DEBUG are only sent to stdout if _DEBUG=yes
+# VERBOSE sent to stdout if _LOGGER_VERBOSE=true
+# ALWAYS is sent to stdout unless _LOGGER_SILENT=true
+# DEBUG & PARANOIA_DEBUG are only sent to stdout if _DEBUG=true
 function Logger {
 	local value="${1}"              # Sentence to log (in double quotes)
 	local level="${2}"              # Log level
@@ -251,15 +278,15 @@ function Logger {
 		_Logger "$prefix$value" "$prefix$value"
 		return
 	elif [ "$level" == "DEBUG" ]; then
-		if [ "$_DEBUG" == "yes" ]; then
+		if [ "$_DEBUG" == true ]; then
 			_Logger "$prefix$value" "$prefix$value"
 			return
 		fi
 	elif [ "$level" == "PARANOIA_DEBUG" ]; then                             #__WITH_PARANOIA_DEBUG
-		if [ "$_PARANOIA_DEBUG" == "yes" ]; then                        #__WITH_PARANOIA_DEBUG
+		if [ "$_PARANOIA_DEBUG" == true ]; then                         #__WITH_PARANOIA_DEBUG
 			_Logger "$prefix$value" "$prefix\e[35m$value\e[0m"      #__WITH_PARANOIA_DEBUG
 			return                                                  #__WITH_PARANOIA_DEBUG
-		fi                                                              #__WITH_PARANOIA_DEBUG
+		fi                                                              #__WITH_PARANOIA_DEBUG	
 	else
 		_Logger "\e[41mLogger function called without proper loglevel [$level].\e[0m" "\e[41mLogger function called without proper loglevel [$level].\e[0m" true
 		_Logger "Value was: $prefix$value" "Value was: $prefix$value" true
@@ -350,7 +377,7 @@ function SendAlert {
 		return 0
 	fi
 
-	if [ "$_DEBUG" == "yes" ]; then
+	if [ "$_DEBUG" == true ]; then
 		Logger "Debug mode, no warning mail will be sent." "NOTICE"
 		return 0
 	fi
@@ -620,23 +647,50 @@ function CheckRFC822 {
 	fi
 }
 
+# Function is busybox compatible since busybox ash does not understand direct regex, we use expr
 function IsInteger {
 	local value="${1}"
-	if [[ $value =~ ^[0-9]+$ ]]; then
-		echo 1
+
+	if type expr > /dev/null 2>&1; then
+		expr "$value" : '^[0-9]\{1,\}$' > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			echo 1
+		else
+			echo 0
+		fi
 	else
-		echo 0
+		if [[ $value =~ ^[0-9]+$ ]]; then
+			echo 1
+		else
+			echo 0
+		fi
+	fi
+}
+
+# Usage [ $(IsNumeric $var) -eq 1 ]
+function IsNumeric {
+	local value="${1}"
+
+	if type expr > /dev/null 2>&1; then
+		expr "$value" : '^[-+]\{0,1\}[0-9]*\.\{0,1\}[0-9]\{1,\}$' > /dev/null 2>&1
+		if [ $? -eq 0 ]; then
+			echo 1
+		else
+			echo 0
+		fi
+	else
+		if [[ $value =~ ^[-+]?[0-9]+([.][0-9]+)?$ ]]; then
+			echo 1
+		else
+			echo 0
+		fi
 	fi
 }
 
 function IsNumericExpand {
 	eval "local value=\"${1}\"" # Needed eval so variable variables can be processed
 
-	if [[ $value =~ ^-?[0-9]+([.][0-9]+)?$ ]]; then
-		echo 1
-	else
-		echo 0
-	fi
+	echo $(IsNumeric "$value")
 }
 
 ## Modified version of http://stackoverflow.com/a/8574392
@@ -731,7 +785,7 @@ function ExecTasks {
 	__CheckArguments 1-18 $# "$@"                                                                                                                                          #__WITH_PARANOIA_DEBUG
 
 	# Since ExecTasks takes up to 17 arguments, do a quick preflight check in DEBUG mode
-	if [ "$_DEBUG" == "yes" ]; then
+	if [ "$_DEBUG" == true ]; then
 		declare -a booleans=(readFromFile counting spinner noTimeErrorLog noErrorLogsAtAll)
 		for i in "${booleans[@]}"; do
 			test="if [ \$$i != false ] && [ \$$i != true ]; then Logger \"Bogus $i value [\$$i] given to ${FUNCNAME[0]}.\" \"CRITICAL\"; exit 1; fi"
@@ -744,9 +798,6 @@ function ExecTasks {
 		done
 	fi
 
-	# Change '-' to '_' in task id
-	id="${id/-/_}"
-
 	# Expand validExitCodes into array
 	IFS=';' read -r -a validExitCodes <<< "$validExitCodes"
 
@@ -756,7 +807,8 @@ function ExecTasks {
 	local commandsConditionArray=() # Array containing conditional commands
 	local currentCommand            # Variable containing currently processed command
 	local currentCommandCondition   # Variable containing currently processed conditional command
-	local commandsArrayPid=()       # Array containing pids of commands currently run
+	local commandsArrayPid=()       # Array containing commands indexed py pids
+	local commandsArrayOutput()     # Array containing command results indexed by pids
 	local postponedRetryCount=0     # Number of current postponed commands retries
 	local postponedItemCount=0      # Number of commands that have been postponed (keep at least one in order to check once)
 	local postponedCounter=0
@@ -783,17 +835,12 @@ function ExecTasks {
 	local newPidsArray              # New array of currently running pids for next iteration
 	local pidsTimeArray             # Array containing execution begin time of pids
 	local executeCommand            # Boolean to check if currentCommand can be executed given a condition
-
 	local hasPids=false             # Are any valable pids given to function ?              #__WITH_PARANOIA_DEBUG
-
 	local functionMode
-
-	if [ $counting == true ]; then
-		local softAlert=false # Does a soft alert need to be triggered, if yes, send an alert once
-	else
-		local softAlert=false
-	fi
-
+	local softAlert=false           # Does a soft alert need to be triggered, if yes, send an alert once
+	local failedPidsList            # List containing failed pids with exit code separated by semicolons (eg : 2355:1;4534:2;2354:3)
+	local randomOutputName          # Random filename for command outputs
+	
 	# Initialise global variable
 	eval "WAIT_FOR_TASK_COMPLETION_$id=\"\""
 	eval "HARD_MAX_EXEC_TIME_REACHED_$id=false"
@@ -851,13 +898,18 @@ function ExecTasks {
 		fi
 
 		if [ $keepLogging -ne 0 ]; then
+			# This log solely exists for readability purposes before having next set of logs
+			if [ ${#pidsArray[@]} -eq $numberOfProcesses ] && [ $log_ttime -eq 0 ]; then
+				log_ttime=$exec_time
+				Logger "There are $((mainItemCount-counter+postponedItemCount)) / $mainItemCount tasks in the queue of which $postponedItemCount are postponed. Currently, ${#pidsArray[@]} tasks running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
+			fi
 			if [ $(((exec_time + 1) % keepLogging)) -eq 0 ]; then
 				if [ $log_ttime -ne $exec_time ]; then # Fix when sleep time lower than 1 second
 					log_ttime=$exec_time
-					if [ $functionMode == "Wait" ]; then
+					if [ $functionMode == "WaitForTaskCompletion" ]; then
 						Logger "Current tasks still running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
 					elif [ $functionMode == "ParallelExec" ]; then
-						Logger "There are $((mainItemCount-counter+postponedItemCount)) / $mainItemCount tasks in the queue. Currently, ${#pidsArray[@]} tasks running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
+						Logger "There are $((mainItemCount-counter+postponedItemCount)) / $mainItemCount tasks in the queue of which $postponedItemCount are postponed. Currently, ${#pidsArray[@]} tasks running with pids [$(joinString , ${pidsArray[@]})]." "NOTICE"
 					fi
 				fi
 			fi
@@ -957,13 +1009,16 @@ function ExecTasks {
 							if [ "$functionMode" == "ParallelExec" ]; then
 								Logger "Command was [${commandsArrayPid[$pid]}]." "ERROR"
 							fi
+							if [ -f "${commandsArrayOutput[$pid]}" ]; then
+								Logger "Command output was [$(cat ${commandsArrayOutput[$pid]})]." "ERROR"
+							fi
 						fi
 						errorcount=$((errorcount+1))
 						# Welcome to variable variable bash hell
-						if [ "$(eval echo \"\$WAIT_FOR_TASK_COMPLETION_$id\")" == "" ]; then
-							eval "WAIT_FOR_TASK_COMPLETION_$id=\"$pid:$retval\""
+						if [ "$failedPidsList" == "" ]; then
+							failedPidsList="$pid:$retval"
 						else
-							eval "WAIT_FOR_TASK_COMPLETION_$id=\";$pid:$retval\""
+							failedPidsList="$failedPidsList;$pid:$retval"
 						fi
 					else
 						Logger "${FUNCNAME[0]} called by [$id] finished monitoring pid [$pid] with exitcode [$retval]." "DEBUG"
@@ -982,7 +1037,7 @@ function ExecTasks {
 		# Trivial wait time for bash to not eat up all CPU
 		sleep $sleepTime
 
-		if [ "$_PERF_PROFILER" == "yes" ]; then                         ##__WITH_PARANOIA_DEBUG
+		if [ "$_PERF_PROFILER" == true ]; then                         ##__WITH_PARANOIA_DEBUG
 			_PerfProfiler                                           ##__WITH_PARANOIA_DEBUG
 		fi                                                              ##__WITH_PARANOIA_DEBUG
 
@@ -1066,7 +1121,8 @@ function ExecTasks {
 						if [ $subRetval -ne 0 ]; then
 							# is postponing enabled ?
 							if [ $maxPostponeRetries -gt 0 ]; then
-								Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]. Postponing command." "NOTICE"
+								Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]." "NOTICE"
+								Logger "Postponing command." "NOTICE"
 								postponedRetryCount=$((postponedRetryCount+1))
 								if [ $postponedRetryCount -ge $maxPostponeRetries ]; then
 									Logger "Max retries reached for postponed command [$currentCommand]. Skipping command." "NOTICE"
@@ -1075,7 +1131,8 @@ function ExecTasks {
 								fi
 								postponedExecTime=0
 							else
-								Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]. Ignoring command." "NOTICE"
+								Logger "Condition [$currentCommandCondition] not met for command [$currentCommand]. Exit code [$subRetval]." "NOTICE"
+								Logger "Ignoring command." "NOTICE"
 							fi
 						else
 							executeCommand=true
@@ -1100,10 +1157,12 @@ function ExecTasks {
 
 				if [ $executeCommand == true ]; then
 					Logger "Running command [$currentCommand]." "DEBUG"
-					eval "$currentCommand" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$id.$SCRIPT_PID.$TSTAMP" 2>&1 &
+					randomOutputName=$(date '+%Y%m%dT%H%M%S').$(PoorMansRandomGenerator 5)
+					eval "$currentCommand" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$id.$pid.$randomOutputName.$SCRIPT_PID.$TSTAMP" 2>&1 &
 					pid=$!
 					pidsArray+=($pid)
 					commandsArrayPid[$pid]="$currentCommand"
+					commandsArrayOutput[$pid]="$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$id.$pid.$randomOutputName.$SCRIPT_PID.$TSTAMP"
 					# Initialize pid execution time array
 					pidsTimeArray[$pid]=0
 				else
@@ -1125,6 +1184,8 @@ function ExecTasks {
 	# Return exit code if only one process was monitored, else return number of errors
 	# As we cannot return multiple values, a global variable WAIT_FOR_TASK_COMPLETION contains all pids with their return value
 
+	eval "WAIT_FOR_TASK_COMPLETION_$id=\"$failedPidsList\""
+	
 	if [ $mainItemCount -eq 1 ]; then
 		return $retval
 	else
@@ -1135,7 +1196,7 @@ function ExecTasks {
 function CleanUp {
 	__CheckArguments 0 $# "$@"      #__WITH_PARANOIA_DEBUG
 
-	if [ "$_DEBUG" != "yes" ]; then
+	if [ "$_DEBUG" != true ]; then
 		rm -f "$RUN_DIR/$PROGRAM."*".$SCRIPT_PID.$TSTAMP"
 		# Fix for sed -i requiring backup extension for BSD & Mac (see all sed -i statements)
 		rm -f "$RUN_DIR/$PROGRAM."*".$SCRIPT_PID.$TSTAMP.tmp"
@@ -1146,7 +1207,7 @@ function CleanUp {
 function __CheckArguments {
 	# Checks the number of arguments of a function and raises an error if some are missing
 
-	if [ "$_DEBUG" == "yes" ]; then
+	if [ "$_DEBUG" == true ]; then
 		local numberOfArguments="${1}" # Number of arguments the tested function should have, can be a number of a range, eg 0-2 for zero to two arguments
 		local numberOfGivenArguments="${2}" # Number of arguments that have been passed
 
@@ -1213,7 +1274,7 @@ function TrapQuit {
 
 	if [ $ERROR_ALERT == true ]; then
 		Logger "$PROGRAM finished with errors." "ERROR"
-		if [ "$_DEBUG" != "yes" ]
+		if [ "$_DEBUG" != true ]
 		then
 			SendAlert
 		else
@@ -1222,7 +1283,7 @@ function TrapQuit {
 		exitcode=1
 	elif [ $WARN_ALERT == true ]; then
 		Logger "$PROGRAM finished with warnings." "WARN"
-		if [ "$_DEBUG" != "yes" ]
+		if [ "$_DEBUG" != true ]
 		then
 			SendAlert
 		else
@@ -1292,6 +1353,7 @@ function ListClients {
 		find "$backupDir" -mindepth 3 -maxdepth 3 -type f -name "backup_stats" | grep -e '.*' > /dev/null
 		if [ $? != 0 ]; then
 			Logger "The directory [$backupDir] does not seem to be a @name@ folder. Please check the path. Additionnaly, protocol 2 directores need to specify the dedup group directory and the client subfolder." "ERROR"
+			Logger "This message may also show if the current user running this script does not have sufficient privileges on the @name@ folder." "ERROR"
 		fi
 	fi
 
@@ -1437,8 +1499,6 @@ function VerifyBackups {
 
 	local safeExitCodes="0;2;3" # 0: success, 2: warnings, 3: timer conditions not met
 
-	Logger "Running backup verification, concurrency set to $PARELLEL_VERIFY_CONCURRENCY." "NOTICE"
-
 	if [ -f "$configFile" ]; then
 		configString="-c \"$configFile\""
 	fi
@@ -1467,6 +1527,7 @@ function VerifyBackups {
 	InterleaveFiles "${interleaveFileArgs[@]}" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
 	InterleaveFiles "${interleaveConditionsFileArgs[@]}" > "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.1.$SCRIPT_PID.$TSTAMP"
 
+	Logger "Now running backup verifications, concurrency set to $PARELLEL_VERIFY_CONCURRENCY." "NOTICE"
 	Logger "Executing parallel commands\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP)" "DEBUG"
 	ExecTasks "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" "${FUNCNAME[0]}" true $SOFT_MAX_EXEC_TIME_PER_VERIFY $HARD_MAX_EXEC_TIME_PER_VERIFY $SOFT_MAX_EXEC_TIME $HARD_MAX_EXEC_TIME true $SLEEP_TIME $KEEP_LOGGING true false false $PARELLEL_VERIFY_CONCURRENCY "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.1.$SCRIPT_PID.$TSTAMP" $POSTPONE_RETRY $POSTPONE_TIME "$safeExitCodes"
 	exitCode=$?
@@ -1738,7 +1799,7 @@ function Init {
 
 function Usage {
 
-	if [ "$IS_STABLE" != "yes" ]; then
+	if [ "$IS_STABLE" != true ]; then
 		echo -e "\e[93mThis is an unstable dev build. Please use with caution.\e[0m"
 	fi
 	echo "$PROGRAM $PROGRAM_VERSION $PROGRAM_BUILD"
@@ -2045,6 +2106,17 @@ if [ "$VERIFY_BACKUPS" != "" ]; then
 		exit 1
 	fi
 fi
+
+# v0.4.6
+# - Added command output to logs
+# - Fixed not using [INSTANCE] placeholder in example text
+# - Raised default HARD_MAX_EXEC_TIME_PER_VERIFY to 64800 seconds
+# - Replaced yes/no with true/false booleans
+
+# v0.4.4
+# - More explicit log messages
+# - Fix for missing date %N in BSD / MacOS
+# - Ported some minor fixes from osync project
 
 # v0.4.2
 # - Added Hakong's backup calendar display (using --calendar)

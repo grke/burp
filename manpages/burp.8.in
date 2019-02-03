@@ -225,7 +225,7 @@ Read additional configuration files.
 Required to run in server mode.
 .TP
 \fBlisten=[address]:[port]\fR
-Defines the main TCP address and port that the server listens on. The default is either '::' or '0.0.0.0', dependent upon compile time options. Specify multiple 'listen' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_children' value.
+Defines the main TCP address and port that the server listens on. Specify multiple 'listen' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_children' value.
 .TP
 \fBlisten_status=[address]:[port]\fR
 Defines the main TCP address and port that the server listens on for status requests. Specify multiple 'listen_status' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_status_children' value. Comment out to have no status server.

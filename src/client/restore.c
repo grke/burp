@@ -756,6 +756,8 @@ int do_restore_client(struct asfd *asfd,
 	  || asfd_read_expect(asfd, CMD_GEN, "ok"))
 		goto error;
 	logp("doing %s confirmed\n", act_str(act));
+	if(act==ACTION_RESTORE)
+		logp("Directory: '%s'\n", restore_desired_dir);
 
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();

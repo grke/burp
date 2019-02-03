@@ -89,8 +89,13 @@ static void usage_client(void)
 #endif
 	printf("\n");
 #ifndef HAVE_WIN32
-	printf(" See %s or the man page ('man %s') for usage examples\n",
-		PACKAGE_URL, PACKAGE_TARNAME);
+	printf(" See ");
+	// Older versions of autoconf do not pick up PACKAGE_URL.
+	#ifdef PACKAGE_URL
+		printf("%s or ", PACKAGE_URL);
+	#endif
+	printf( "the man page ('man %s') for usage examples\n",
+			PACKAGE_TARNAME);
 	printf(" and additional configuration options.\n\n");
 #else
 	printf(" See %s for usage examples and additional configuration\n",

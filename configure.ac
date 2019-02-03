@@ -44,7 +44,7 @@ dnl --------------------------------------------------
 dnl Libtool config
 dnl --------------------------------------------------
 
-LT_INIT([disable-static])
+#LT_INIT([disable-static])
 
 dnl --------------------------------------------------
 dnl OS determination

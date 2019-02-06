@@ -37,6 +37,7 @@ while true ; do
 	attempts=$((attempts+1))
 	[ "$attempts" = "$attempts_max" ] && \
 		fail "Could not make initial ssh connection after $attempts"
+	sleep 1
 done
 
 ssh $ssh_opts "$host" "rm -rf $tarfile $directory /tmp/burp_ca.lock" \

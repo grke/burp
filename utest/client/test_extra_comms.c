@@ -335,7 +335,7 @@ static void setup_counters(struct asfd *asfd, struct conf **confs)
 
 static void setup_uname(struct asfd *asfd, struct conf **confs)
 {
-	char msg[256]="";
+	char msg[512]="";
 	int r=0; int w=0;
 	struct utsname utsname;
 	fail_unless(!uname(&utsname));

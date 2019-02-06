@@ -177,11 +177,16 @@ int extra_comms_client(struct async *as, struct conf **confs,
 #endif
 		if(clientos)
 		{
-			char msg[128]="";
-			snprintf(msg, sizeof(msg),
-				"uname=%s", clientos);
-			if(asfd->write_str(asfd, CMD_GEN, msg))
+			char *msg=NULL;
+			if(astrcat(&msg, "uname=", __func__)
+			  || astrcat(&msg, clientos, __func__))
 				goto end;
+			if(asfd->write_str(asfd, CMD_GEN, msg))
+			{
+				free_w(&msg);
+				goto end;
+			}
+			free_w(&msg);
 		}
 	}
 

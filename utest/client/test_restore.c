@@ -23,8 +23,8 @@ static struct ioevent_list writes;
 
 static char *absolute(const char *fname)
 {
-	static char path[PATH_MAX];
-	char cwd[PATH_MAX];
+	static char path[1024];
+	char cwd[512];
 	fail_unless(getcwd(cwd, sizeof(cwd)));
 	snprintf(path, sizeof(path), "%s/%s/%s", cwd, BASE, fname);
 	return path;

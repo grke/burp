@@ -23,7 +23,7 @@ static void do_build_storage_dirs(struct sdirs *sdirs, struct sd *s, int len,
 	int i=0;
 	time_t t=0;
 	char backup[128]="";
-	char timestamp_path[128]="";
+	char timestamp_path[256]="";
 	fail_unless(!build_path_w(sdirs->client));
 	fail_unless(!mkdir(sdirs->client, 0777));
 	for(i=0; i<len; i++)

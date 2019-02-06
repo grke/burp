@@ -650,7 +650,8 @@ char *charreplace_noescaped_w(const char *orig, char search, const char *replace
 		{
 			if(i<=0 || orig[i-1]!='\\')
 			{
-				tmp=strncpy(tmp, replace, len_replace)+len_replace;
+				tmp=(char *)memcpy(tmp, replace, len_replace);
+				tmp+=len_replace;
 				continue;
 			}
 		}

@@ -153,7 +153,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 		char *cnamespace=NULL;
 		uint32_t totallen=0;
 		char *toappend=NULL;
-		char z[BSD_BUF_SIZE]="";
+		static char z[BSD_BUF_SIZE*2]="";
 		char cattrname[BSD_BUF_SIZE]="";
 		if((len=extattr_list_link(path, namespaces[i], NULL, 0))<0)
 		{
@@ -594,7 +594,7 @@ int fs_supports_xattr(void)
 	}
 	fclose(fp);
 #ifdef HAVE_SYS_EXTATTR_H
-	ret=extattr_set_link(fname, "user", "comment", "a", strlen("a"));
+	ret=extattr_set_link(fname, EXTATTR_NAMESPACE_USER, "comment", "a", strlen("a"));
 #elif HAVE_SYS_XATTR_H
 	ret=lsetxattr(fname, "user.comment", "a", strlen("a"), /*flags*/0);
 #else

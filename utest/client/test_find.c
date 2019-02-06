@@ -12,7 +12,7 @@
 #define BASE		"utest_find"
 #define CONFBASE	"utest_find_conf"
 
-static char fullpath[4096]; // absolute path to base
+static char fullpath[1024]; // absolute path to base
 static struct strlist *e=NULL;
 static struct strlist *expected=NULL;
 
@@ -195,22 +195,24 @@ static void run_find(const char *buf, struct FF_PKT *ff, struct conf **confs)
 	fail_unless(!recursive_delete(CONFBASE));
 }
 
-static char extra_config[1024]="";
+static char extra_config[8192]="";
 
 static void do_test(void setup_entries(void))
 {
 	struct FF_PKT *ff;
-	char buf[4096];
+	char *buf=NULL;
 	struct conf **confs=NULL;
 	ff=setup(&confs);
 
 	setup_entries();
 	e=expected;
 
-	snprintf(buf, sizeof(buf), "%s%s", MIN_CLIENT_CONF, extra_config);
+	fail_unless(!astrcat(&buf, MIN_CLIENT_CONF, __func__));
+	fail_unless(!astrcat(&buf, extra_config, __func__));
 
 	run_find(buf, ff, confs);
 
+	free_w(&buf);
 	tear_down(&ff, &confs);
 }
 

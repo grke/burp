@@ -648,7 +648,8 @@ static enum sts_e do_stuff_to_send(struct asfd *asfd,
 				// keep going round the loop.
 				return STS_BLOCKED;
 			default:
-				logp("error in rs_async: %d\n", sigresult);
+				logp("error in rs_async: %d %s\n",
+					sigresult, rs_strerror(sigresult));
 				return STS_ERROR;
 		}
 	}

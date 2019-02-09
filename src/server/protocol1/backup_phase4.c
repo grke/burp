@@ -48,7 +48,11 @@ int do_patch(const char *dst, const char *del,
 
 	if(!upfzp) goto end;
 
-	result=rs_patch_gzfile(dstp, delfzp, upfzp);
+	if((result=rs_patch_gzfile(dstp, delfzp, upfzp))!=RS_DONE)
+	{
+		logp("rs_patch_gzfile returned %d %s\n",
+			result, rs_strerror(result));
+	}
 end:
 	fzp_close(&dstp);
 	fzp_close(&delfzp);
@@ -64,6 +68,7 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 	int compression, struct conf **confs)
 {
 	int ret=-1;
+	rs_result result;
 	struct fzp *dstfzp=NULL;
 	struct fzp *sigp=NULL;
 //logp("make rev sig: %s %s\n", dst, sig);
@@ -74,11 +79,17 @@ static int make_rev_sig(const char *dst, const char *sig, const char *endfile,
 		dstfzp=fzp_open(dst, "rb");
 
 	if(!dstfzp
-	  || !(sigp=fzp_open(sig, "wb"))
-	  || rs_sig_gzfile(dstfzp, sigp,
+	  || !(sigp=fzp_open(sig, "wb")))
+		goto end;
+	
+	if((result=rs_sig_gzfile(dstfzp, sigp,
 		get_librsync_block_len(endfile),
-		PROTO1_RS_STRONG_LEN, confs)!=RS_DONE)
-			goto end;
+		PROTO1_RS_STRONG_LEN, confs)!=RS_DONE))
+	{
+		logp("rs_sig_gzfile returned %d %s\n",
+			result, rs_strerror(result));
+		goto end;
+	}
 	ret=0;
 end:
 //logp("end of make rev sig\n");
@@ -95,6 +106,7 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 	int compression, struct conf **cconfs)
 {
 	int ret=-1;
+	rs_result result;
 	struct fzp *srcfzp=NULL;
 	struct fzp *delfzp=NULL;
 	struct fzp *sigp=NULL;
@@ -103,9 +115,18 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 //logp("make rev delta: %s %s %s\n", src, sig, del);
 	if(!(sigp=fzp_open(sig, "rb"))) goto end;
 
-	if(rs_loadsig_fzp(sigp, &sumset)!=RS_DONE
-	  || rs_build_hash_table(sumset)!=RS_DONE)
+	if((result=rs_loadsig_fzp(sigp, &sumset))!=RS_DONE)
+	{
+		logp("rs_loadsig_fzp returned %d %s\n",
+			result, rs_strerror(result));
 		goto end;
+	}
+	if((result=rs_build_hash_table(sumset))!=RS_DONE)
+	{
+		logp("rs_build_hash_table returned %d %s\n",
+			result, rs_strerror(result));
+		goto end;
+	}
 
 //logp("make rev deltb: %s %s %s\n", src, sig, del);
 
@@ -123,8 +144,12 @@ static int make_rev_delta(const char *src, const char *sig, const char *del,
 		delfzp=fzp_open(del, "wb");
 	if(!delfzp) goto end;
 
-	if(rs_delta_gzfile(sumset, srcfzp, delfzp)!=RS_DONE)
+	if((result=rs_delta_gzfile(sumset, srcfzp, delfzp))!=RS_DONE)
+	{
+		logp("rs_delta_gzfile returned %d %s\n",
+			result, rs_strerror(result));
 		goto end;
+	}
 	ret=0;
 end:
 	if(sumset) rs_free_sumset(sumset);

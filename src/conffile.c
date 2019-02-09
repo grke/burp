@@ -466,14 +466,23 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 	if(get_string(c[OPT_CA_CONF]))
 	{
 		int ca_err=0;
-		if(!get_string(c[OPT_CA_NAME]))
+		const char *ca_name=get_string(c[OPT_CA_NAME]);
+		const char *ca_server_name=get_string(c[OPT_CA_SERVER_NAME]);
+		if(!ca_name)
 		{
 			logp("ca_conf set, but ca_name not set\n");
 			ca_err++;
 		}
-		if(!get_string(c[OPT_CA_SERVER_NAME]))
+		if(!ca_server_name)
 		{
 			logp("ca_conf set, but ca_server_name not set\n");
+			ca_err++;
+		}
+		if(ca_name
+		  && ca_server_name
+		  && !strcmp(ca_name, ca_server_name))
+		{
+			logp("ca_name and ca_server_name cannot be the same\n");
 			ca_err++;
 		}
 		if(!get_string(c[OPT_CA_BURP_CA]))

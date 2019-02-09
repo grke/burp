@@ -12,7 +12,7 @@
 #define BASE		"utest_find"
 #define CONFBASE	"utest_find_conf"
 
-static char fullpath[1024]; // absolute path to base
+static char fullpath[4096]; // absolute path to base
 static struct strlist *e=NULL;
 static struct strlist *expected=NULL;
 

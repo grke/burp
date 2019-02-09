@@ -69,6 +69,7 @@ error:
 
 static int run_server_script(struct asfd *asfd,
 	const char *pre_or_post,
+	const char *action_from_client,
 	const char *script, struct strlist *script_arg,
 	uint8_t notify, struct conf **cconfs, int backup_ret, int timer_ret)
 {
@@ -76,12 +77,11 @@ static int run_server_script(struct asfd *asfd,
 	int ret=0;
 	char *logbuf=NULL;
 	const char *args[12];
-	struct iobuf *rbuf=asfd->rbuf;
 	const char *cname=get_string(cconfs[OPT_CNAME]);
 
 	args[a++]=script;
 	args[a++]=pre_or_post;
-	args[a++]=rbuf->buf?rbuf->buf:"", // Action requested by client.
+	args[a++]=action_from_client;
 	args[a++]=cname;
 	args[a++]=backup_ret?"1":"0", // Indicate success or failure.
 	// Indicate whether the timer script said OK or not.
@@ -120,6 +120,26 @@ end:
 	return ret;
 }
 
+static char *get_action_from_client(const char *buf)
+{
+	char *cp=NULL;
+	char *ret=NULL;
+
+	if(buf)
+	{
+		if(!strcmp(buf, "backupphase1"))
+			return strdup_w("backup", __func__);
+		if(!strcmp(buf, "backupphase1timed"))
+			return strdup_w("backup_timed", __func__);
+	}
+
+	if(!(ret=strdup_w(buf?buf:"", __func__)))
+		return NULL;
+	if((cp=strchr(ret, ' ')))
+		*cp='\0';
+	return ret;
+}
+
 int child(struct async *as, int is_status_server,
 	int status_wfd, struct conf **confs, struct conf **cconfs)
 {
@@ -127,6 +147,7 @@ int child(struct async *as, int is_status_server,
 	int srestore=0;
 	int timer_ret=0;
 	char *incexc=NULL;
+	char *action_from_client=NULL;
 	const char *confs_user;
 	const char *cconfs_user;
 	const char *confs_group;
@@ -184,6 +205,8 @@ int child(struct async *as, int is_status_server,
 		goto end;
 	}
 
+	if(!(action_from_client=get_action_from_client(as->asfd->rbuf->buf)))
+		goto end;
 	ret=0;
 
 	s_script_pre=get_string(cconfs[OPT_S_SCRIPT_PRE]);
@@ -191,8 +214,9 @@ int child(struct async *as, int is_status_server,
 
 	// FIX THIS: Make the script components part of a struct, and just
 	// pass in the correct struct. Same below.
+	
 	if(s_script_pre)
-		ret=run_server_script(as->asfd, "pre",
+		ret=run_server_script(as->asfd, "pre", action_from_client,
 			s_script_pre,
 			get_strlist(cconfs[OPT_S_SCRIPT_PRE_ARG]),
 			get_int(cconfs[OPT_S_SCRIPT_PRE_NOTIFY]),
@@ -203,12 +227,13 @@ int child(struct async *as, int is_status_server,
 
 	if((!ret || get_int(cconfs[OPT_S_SCRIPT_POST_RUN_ON_FAIL]))
 	  && s_script_post)
-		ret=run_server_script(as->asfd, "post",
+		ret=run_server_script(as->asfd, "post", action_from_client,
 			s_script_post,
 			get_strlist(cconfs[OPT_S_SCRIPT_POST_ARG]),
 			get_int(cconfs[OPT_S_SCRIPT_POST_NOTIFY]),
 			cconfs, ret, timer_ret);
 
 end:
+	free_w(&action_from_client);
 	return ret;
 }

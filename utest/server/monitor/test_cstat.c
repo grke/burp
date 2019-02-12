@@ -125,6 +125,7 @@ START_TEST(test_cstat_set_backup_list_fail_bu_get_list)
 	// But cstat_set_backup_list() will return OK anyway.
 	fail_unless(!cstat_set_backup_list(cstat));
 	fail_unless(cstat->bu==NULL);
+	tear_down(&cstat);
 }
 END_TEST
 

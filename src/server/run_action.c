@@ -88,7 +88,7 @@ static int client_can_restore(struct conf **cconfs)
 	const char *restore_path=get_string(cconfs[OPT_RESTORE_PATH]);
 
 	// If there is a restore file on the server, it is always OK.
-	if(is_reg_lstat(restore_path)==1)
+	if(restore_path && is_reg_lstat(restore_path)==1)
 	{
 		// Remove the file.
 		unlink(restore_path);

@@ -81,9 +81,8 @@ static int check_timebands(const char *day_now, const char *hour_now,
 	if(!(lower_day_now=strdup_w(day_now, __func__))
 	  || !(lower_hour_now=strdup_w(hour_now, __func__)))
 	{
-		free_w(&lower_day_now);
-		free_w(&lower_hour_now);
-		return -1;
+		in_timeband=-1;
+		goto end;
 	}
 	strtolower(lower_day_now);
 	strtolower(lower_hour_now);
@@ -92,7 +91,10 @@ static int check_timebands(const char *day_now, const char *hour_now,
 	{
 		free_w(&lower_tb);
 		if(!(lower_tb=strdup_w(t->path, __func__)))
-			return -1;
+		{
+			in_timeband=-1;
+			goto end;
+		}
 		strtolower(lower_tb);
 
 		if(!strcmp(lower_tb, "always")
@@ -105,6 +107,10 @@ static int check_timebands(const char *day_now, const char *hour_now,
 		else
 			logp("Out of timeband: %s\n", t->path);
 	}
+
+end:
+	free_w(&lower_day_now);
+	free_w(&lower_hour_now);
 	free_w(&lower_tb);
 
 	return in_timeband;

@@ -276,6 +276,12 @@ end:
 int fzp_truncate(const char *path, enum fzp_type type, off_t length,
 	int compression)
 {
+	if(!path)
+	{
+		// Avoids a valgrind complaint in one of the tests.
+		errno=ENOENT;
+		goto error;
+	}
 	switch(type)
 	{
 		case FZP_FILE:

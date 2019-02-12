@@ -109,6 +109,9 @@ int from_base64(int64_t *value, const char *where)
 	int i=0;
 	int neg=0;
 
+	if(where[i]==' ')
+		i++;
+
 	/* Check if it is negative */
 	if(where[i]=='-')
 	{
@@ -130,7 +133,7 @@ int from_base64(int64_t *value, const char *where)
 
 uint64_t base64_to_uint64(const char *buf)
 {
-	int64_t val;
+	int64_t val=0;
 	from_base64(&val, buf);
 	return (uint64_t)val;
 }

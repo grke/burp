@@ -80,6 +80,32 @@ START_TEST(test_attribs_protocol2)
 }
 END_TEST
 
+static void test_attribs_bad_decode(enum protocol protocol)
+{
+	const char *bad_attr="bad attr";
+	struct sbuf *decode;
+
+	base64_init();
+	decode=sbuf_alloc(protocol);
+	fail_unless((decode->attr.buf=strdup_w(bad_attr, __func__))!=NULL);
+	decode->attr.len=strlen(bad_attr);
+	attribs_decode(decode);
+	sbuf_free(&decode);
+	tear_down();
+}
+
+START_TEST(test_attribs_bad_decode_protocol1)
+{
+	test_attribs_bad_decode(PROTO_1);
+}
+END_TEST
+
+START_TEST(test_attribs_bad_decode_protocol2)
+{
+	test_attribs_bad_decode(PROTO_2);
+}
+END_TEST
+
 Suite *suite_attribs(void)
 {
 	Suite *s;
@@ -89,10 +115,12 @@ Suite *suite_attribs(void)
 
 	tc_core=tcase_create("Core");
 
-	tcase_set_timeout(tc_core, 5);
+	tcase_set_timeout(tc_core, 10);
 
 	tcase_add_test(tc_core, test_attribs_protocol1);
 	tcase_add_test(tc_core, test_attribs_protocol2);
+	tcase_add_test(tc_core, test_attribs_bad_decode_protocol1);
+	tcase_add_test(tc_core, test_attribs_bad_decode_protocol2);
 	suite_add_tcase(s, tc_core);
 
 	return s;

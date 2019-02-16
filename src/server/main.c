@@ -20,6 +20,7 @@ static int hupreload=0;
 static int hupreload_logged=0;
 static int gentleshutdown=0;
 static int gentleshutdown_logged=0;
+static struct fzp *devnull;
 
 // These will also be used as the exit codes of the program and are therefore
 // unsigned integers.
@@ -577,10 +578,18 @@ static int daemonise(void)
 		return -1;
 	}
 
-	/* close std* */
-	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
+	// It turns out that if I close stdin (fd=0), and have exactly one
+	// listen address configured (listen=0.0.0.0:4971), with no
+	// listen_status configured, then the socket file descriptor will be 0.
+	// In this case, select() in async.c will raise an exception on fd=0.
+	// It does not raise an exception if you have a socket fd 0 and 1
+	// (ie, two listen addresses).
+	// Seems like a linux bug to me. Anyway, hack around it by immediately
+	// opening /dev/null, so that the sockets can never get fd=0.
+	close(STDIN_FILENO);
+	devnull=fzp_open("/dev/null", "w");
 
 	return 0;
 }
@@ -866,6 +875,7 @@ int server(struct conf **confs, const char *conffile,
 end:
 	ret=SERVER_OK;
 error:
+	fzp_close(&devnull);
 
 // FIX THIS: Have an enum for a return value, so that it is more obvious what
 // is happening, like client.c does.

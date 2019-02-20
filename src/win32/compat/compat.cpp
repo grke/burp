@@ -397,9 +397,9 @@ int UTF8_2_wchar(char **ppszUCS, const char *pszUTF)
 	// strlen of UTF8 +1 is enough.
 	cchSize=strlen(pszUTF)+1;
 	*ppszUCS=sm_check_pool_memory_size(*ppszUCS, cchSize*sizeof(wchar_t));
-
 	ret=p_MultiByteToWideChar(CP_UTF8,
 		0, pszUTF, -1, (LPWSTR)*ppszUCS, cchSize);
+
 	ASSERT(ret>0);
 	return ret;
 }
@@ -2022,26 +2022,22 @@ int win32_getfsname(const char *path, char *fsname, size_t fsname_size)
 
 char *realpath(const char *path, char *resolved_path)
 {
-	int alloced=0;
 	DWORD size=0;
 	char *ret=NULL;
 	HANDLE h=INVALID_HANDLE_VALUE;
 	char *pwszBuf=NULL;
 	size_t s=strlen(path);
+	int junk_len=4;
+
+	// Passing in an existing buffer is not supported.
+	ASSERT(resolved_path==NULL);
 
 	// Have to special case the drive letter by itself, because the
 	// functions that are provided to us fail on them.
 	if((s==2 || s==3) // Could have a trailing slash.
 	  && isalpha(path[0])
 	  && path[1]==':')
-	{
-		if(resolved_path)
-		{
-			strncpy(resolved_path, path, _MAX_PATH);
-			return resolved_path;
-		}
 		return strdup(path);
-	}
 
 	errno=0;
 	SetLastError(0);
@@ -2084,42 +2080,36 @@ char *realpath(const char *path, char *resolved_path)
 		goto end;
 	}
 
-	if(resolved_path)
-		size=_MAX_PATH;
-	else
+	if(!(size=p_GetFinalPathNameByHandleW(h, NULL, 0, 0)))
 	{
-		if(p_GetFinalPathNameByHandleW)
-		{
-			size=p_GetFinalPathNameByHandleW(h, NULL, 0, 0);
-		}
-		if(!size)
-		{
-			errno=ENOENT;
-			goto end;
-		}
-		if(!(resolved_path=(char *)malloc(size)))
-			goto end;
-		alloced=1;
+		errno=ENOENT;
+		goto end;
 	}
 
-	if(p_GetFinalPathNameByHandleW)
-	{
-		int junk_len=4;
-		if(!pwszBuf) pwszBuf=sm_get_pool_memory(PM_FNAME);
-		if(p_GetFinalPathNameByHandleW(h,
-			(LPWSTR)pwszBuf, size, 0)<junk_len)
-				goto end;
-		wchar_2_UTF8(resolved_path,
-			(LPCWSTR)pwszBuf+junk_len, size);
-		ret=resolved_path;
-	}
+	pwszBuf=sm_get_pool_memory(PM_FNAME);
+	if(p_GetFinalPathNameByHandleW(h,
+		(LPWSTR)pwszBuf, size, 0)<junk_len)
+			goto end;
+	// Get size of wanted buffer.
+	size=p_WideCharToMultiByte(CP_UTF8, 0,
+		(LPCWSTR)pwszBuf+junk_len, -1,
+		NULL, 0, // <- 0 to get buffer size
+		NULL, NULL);
+	ASSERT(size>0);
+	// Allocate and fill buffer.
+	if(!(ret=(char *)malloc(size+1)))
+		goto end;
+	size=p_WideCharToMultiByte(CP_UTF8, 0,
+		(LPCWSTR)pwszBuf+junk_len, -1,
+		ret, size,
+		NULL, NULL);
+	ASSERT(size>0);
+
 	backslashes_to_forward_slashes(ret);
 end:
 	if(pwszBuf) sm_free_pool_memory(pwszBuf);
 	if(h!=INVALID_HANDLE_VALUE)
 		CloseHandle(h);
-	if(!ret && alloced && resolved_path)
-		free(resolved_path);
 	return ret;
 }
 

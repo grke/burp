@@ -39,6 +39,8 @@ build_and_install()
 	# than 127, to check for differences between client phase1 sorting and
 	# server sorting.
 	touch "$build/utest/á" || fail
+	# Add some wide-character directories/files.
+	cp -ar china-data "$build"
 
 	# Create a .bz2 file, to exercise exclude_comp.
 	# Some tars (like on NetBSd) do not like having '..' in the arguments.

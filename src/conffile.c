@@ -1291,7 +1291,7 @@ int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
 	return 0;
 }
 
-/* The client runs this when the server$overrides the incexcs for restore. */
+/* The client runs this when the server overrides the incexcs for restore. */
 int conf_parse_incexcs_srestore(struct conf **c, const char *incexc)
 {
 	int ret=-1;

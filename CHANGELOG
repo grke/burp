@@ -1,3 +1,7 @@
+2019-02-23 Changes in burp-2.2.18
+  * 797: Fix wide-character restores on Windows.
+  * 794: Fix burp not starting with only one listen address.
+
 2019-01-01 Changes in burp-2.2.16:
   * 786: Don't run relative attack detection on CMD_FINGERPRINT.
   * 785: Fix incorrect xattr buffer size.

@@ -50,6 +50,8 @@ build_and_install()
 		[ "$f" = ".git" ] && continue
 		cp -ar ../"$f" "$build" || fail "could not copy ../$f to $build"
 	done || exit 1
+	# Add some wide-character directories/files.
+	cp -ar china-data "$build"
 
 	# Create a target directory, compile burp and install it into the
 	# target.
@@ -80,8 +82,8 @@ build_and_install
 
 # Copy the build directory to the client, to give it something to backup.
 cdir "$path" || fail
-# The Windows build symlinks cock things for 'diff -ur' on the restore later,
-# so delete them first.
+# The Windows build symlinks cock things up for 'diff -ur' on the restore
+# later, so delete them first.
 rm -f build/burp-depkgs
 rm -f build/burp-cross-tools
 tar -cjf build.tar.bz2 build || fail

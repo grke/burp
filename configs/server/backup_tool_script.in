@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
 PROGRAM_VERSION=0.4.8
-PROGRAM_BUILD=2019030101
+PROGRAM_BUILD=2019030102
 AUTHOR="(C) 2017-2019 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=true
@@ -367,10 +367,10 @@ function KillAllChilds {
 # osync/obackup/pmocr script specific mail alert function, use SendEmail function for generic mail sending
 function SendAlert {
 	local runAlert="${1:-false}" # Specifies if current message is sent while running or at the end of a run
+	local attachment="${2:-true}" # Do we send an attachment
 
 	__CheckArguments 0-1 $# "$@"    #__WITH_PARANOIA_DEBUG
 
-	local attachment
 	local attachmentFile
 	local subject
 	local body
@@ -384,11 +384,14 @@ function SendAlert {
 		return 0
 	fi
 
-	eval "cat \"$LOG_FILE\" $COMPRESSION_PROGRAM > $ALERT_LOG_FILE"
-	if [ $? != 0 ]; then
-		attachment=false
-	else
-		attachment=true
+	if [ $attachment == true ]; then
+		attachmentFile="$LOG_FILE"
+		if type "$COMPRESSION_PROGRAM" > /dev/null 2>&1; then
+			eval "cat \"$LOG_FILE\" \"$COMPRESSION_PROGRAM\" > \"$ALERT_LOG_FILE\""
+			if [ $? -eq 0 ]; then
+				attachmentFile="$ALERT_LOG_FILE"
+			fi
+		fi
 	fi
 
 	body="$MAIL_ALERT_MSG"$'\n\n'"Last 1000 lines of current log"$'\n\n'"$(tail -n 1000 $RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP.log)"
@@ -405,10 +408,6 @@ function SendAlert {
 		subject="Currently runing - $subject"
 	else
 		subject="Finished run - $subject"
-	fi
-
-	if [ "$attachment" == true ]; then
-		attachmentFile="$ALERT_LOG_FILE"
 	fi
 
 	SendEmail "$subject" "$body" "$DESTINATION_MAILS" "$attachmentFile" "$SENDER_MAIL" "$SMTP_SERVER" "$SMTP_PORT" "$SMTP_ENCRYPTION" "$SMTP_USER" "$SMTP_PASSWORD"
@@ -927,7 +926,7 @@ function ExecTasks {
 			if [ "$softAlert" != true ] && [ $softMaxTime -ne 0 ] && [ $noTimeErrorLog != true ]; then
 				Logger "Max soft execution time [$softMaxTime] exceeded for task [$id] with pids [$(joinString , ${pidsArray[@]})]." "WARN"
 				softAlert=true
-				SendAlert true
+				SendAlert true false
 			fi
 		fi
 
@@ -947,7 +946,7 @@ function ExecTasks {
 				errorcount=$((errorcount+1))
 			done
 			if [ $noTimeErrorLog != true ]; then
-				SendAlert true
+				SendAlert true false
 			fi
 			eval "HARD_MAX_EXEC_TIME_REACHED_$id=true"
 			if [ $functionMode == "WaitForTaskCompletion" ]; then
@@ -977,7 +976,7 @@ function ExecTasks {
 									Logger "Command was [${commandsArrayPid[$pid]}]]." "WARN"
 								fi
 								softAlert=true
-								SendAlert true
+								SendAlert true false
 							fi
 						fi
 
@@ -1000,7 +999,7 @@ function ExecTasks {
 							errorcount=$((errorcount+1))
 
 							if [ $noTimeErrorLog != true ]; then
-								SendAlert true
+								SendAlert true false
 							fi
 						fi
 
@@ -1284,7 +1283,7 @@ function TrapQuit {
 		Logger "$PROGRAM finished with errors." "ERROR"
 		if [ "$_DEBUG" != true ]
 		then
-			SendAlert
+			SendAlert false false
 		else
 			Logger "Debug mode, no alert mail will be sent." "NOTICE"
 		fi
@@ -1293,7 +1292,7 @@ function TrapQuit {
 		Logger "$PROGRAM finished with warnings." "WARN"
 		if [ "$_DEBUG" != true ]
 		then
-			SendAlert
+			SendAlert false false
 		else
 			Logger "Debug mode, no alert mail will be sent." "NOTICE"
 		fi
@@ -1756,10 +1755,10 @@ function VerifyService {
 			ExecTasks $! "${FUNCNAME[0]}_startcmd" false 0 0 120 300 true $SLEEP_TIME $KEEP_LOGGING
 			if [ $? -ne 0 ]; then
 				Logger "Cannot start service [$i]." "CRITICAL"
-				SendAlert
+				SendAlert false false
 			else
 				Logger "Service [$i] was successfuly started." "WARN"
-				SendAlert
+				SendAlert false false
 			fi
 		else
 			Logger "Service [$i] is running." "NOTICE"
@@ -2129,6 +2128,7 @@ if [ "$VERIFY_BACKUPS" != "" ]; then
 fi
 
 # v0.4.8
+# - Removed attachment sending to prevent mailbox clogging
 # - Fixed possible missing characters from log results (see https://github.com/grke/burp/issues/801 and burp/src/cmd.h)
 # - Fixed quota warning when no client log file exists
 # - Smaller fixes ported from ofunctions project

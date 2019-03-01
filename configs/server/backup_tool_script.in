@@ -203,7 +203,7 @@ function _Logger {
 		echo -e "$logValue" >> "$LOG_FILE"
 		# Build current log file for alerts if we have a sufficient environment
 		if [ "$RUN_DIR/$PROGRAM" != "/" ]; then
-			echo -e "$logValue" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP"
+			echo -e "$logValue" >> "$RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP.log"
 		fi
 	fi
 
@@ -327,11 +327,11 @@ function KillChilds {
 		if kill -0 "$pid" > /dev/null 2>&1; then
 			kill -s TERM "$pid"
 			Logger "Sent SIGTERM to process [$pid]." "DEBUG"
-			if [ $? != 0 ]; then
+			if [ $? -ne 0 ]; then
 				sleep 15
 				Logger "Sending SIGTERM to process [$pid] failed." "DEBUG"
 				kill -9 "$pid"
-				if [ $? != 0 ]; then
+				if [ $? -ne 0 ]; then
 					Logger "Sending SIGKILL to process [$pid] failed." "DEBUG"
 					return 1
 				fi      # Simplify the return 0 logic here
@@ -357,7 +357,7 @@ function KillAllChilds {
 	IFS=';' read -a pidsArray <<< "$pids"
 	for pid in "${pidsArray[@]}"; do
 		KillChilds $pid $self
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			errorcount=$((errorcount+1))
 			fi
 	done
@@ -369,7 +369,7 @@ function SendAlert {
 	local runAlert="${1:-false}" # Specifies if current message is sent while running or at the end of a run
 	local attachment="${2:-true}" # Do we send an attachment
 
-	__CheckArguments 0-1 $# "$@"    #__WITH_PARANOIA_DEBUG
+	__CheckArguments 0-2 $# "$@"    #__WITH_PARANOIA_DEBUG
 
 	local attachmentFile
 	local subject
@@ -394,7 +394,7 @@ function SendAlert {
 		fi
 	fi
 
-	body="$MAIL_ALERT_MSG"$'\n\n'"Last 1000 lines of current log"$'\n\n'"$(tail -n 1000 $RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP.log)"
+	body="$MAIL_ALERT_MSG"$'\n\n'"Last 1000 lines of current log"$'\n\n'"$(tail -n 1000 "$RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP.log")"
 
 	if [ $ERROR_ALERT == true ]; then
 		subject="Error alert for $INSTANCE_ID"
@@ -498,7 +498,7 @@ function SendEmail {
 				echo -e "Subject:$subject\r\n$message" | $(type -p sendmail) -f "$senderMail" -S "$smtpServer:$smtpPort" -au"$smtpUser" -ap"$smtpPassword" "$destinationMails"
 			fi
 
-			if [ $? != 0 ]; then
+			if [ $? -ne 0 ]; then
 				Logger "Cannot send alert mail via $(type -p sendmail) !!!" "WARN"
 				# Do not bother try other mail systems with busybox
 				return 1
@@ -514,7 +514,7 @@ function SendEmail {
 	if type mutt > /dev/null 2>&1 ; then
 		# We need to replace spaces with comma in order for mutt to be able to process multiple destinations
 		echo "$message" | $(type -p mutt) -x -s "$subject" "${destinationMails// /,}" $attachment_command
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			Logger "Cannot send mail via $(type -p mutt) !!!" "WARN"
 		else
 			Logger "Sent mail using mutt." "NOTICE"
@@ -536,10 +536,10 @@ function SendEmail {
 		fi
 
 		echo "$message" | $(type -p mail) $attachment_command -s "$subject" "$destinationMails"
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			Logger "Cannot send mail via $(type -p mail) with attachments !!!" "WARN"
 			echo "$message" | $(type -p mail) -s "$subject" "$destinationMails"
-			if [ $? != 0 ]; then
+			if [ $? -ne 0 ]; then
 				Logger "Cannot send mail via $(type -p mail) without attachments !!!" "WARN"
 			else
 				Logger "Sent mail using mail command without attachment." "NOTICE"
@@ -553,7 +553,7 @@ function SendEmail {
 
 	if type sendmail > /dev/null 2>&1 ; then
 		echo -e "Subject:$subject\r\n$message" | $(type -p sendmail) "$destinationMails"
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			Logger "Cannot send mail via $(type -p sendmail) !!!" "WARN"
 		else
 			Logger "Sent mail using sendmail command without attachment." "NOTICE"
@@ -587,7 +587,7 @@ function SendEmail {
 			auth_string="-auth -user \"$smtpUser\" -pass \"$smtpPassword\""
 		fi
 		$(type mailsend.exe) -f "$senderMail" -t "$destinationMails" -sub "$subject" -M "$message" -attach "$attachment" -smtp "$smtpServer" -port "$smtpPort" $encryption_string $auth_string
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			Logger "Cannot send mail via $(type mailsend.exe) !!!" "WARN"
 		else
 			Logger "Sent mail using mailsend.exe command with attachment." "NOTICE"
@@ -598,7 +598,7 @@ function SendEmail {
 	# pfSense specific
 	if [ -f /usr/local/bin/mail.php ]; then
 		echo "$message" | /usr/local/bin/mail.php -s="$subject"
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			Logger "Cannot send mail via /usr/local/bin/mail.php (pfsense) !!!" "WARN"
 		else
 			Logger "Sent mail using pfSense mail.php." "NOTICE"
@@ -936,7 +936,7 @@ function ExecTasks {
 			fi
 			for pid in "${pidsArray[@]}"; do
 				KillChilds $pid true
-				if [ $? == 0 ]; then
+				if [ $? -eq 0 ]; then
 					Logger "Task with pid [$pid] stopped successfully." "NOTICE"
 				else
 					if [ $noErrorLogsAtAll != true ]; then
@@ -989,7 +989,7 @@ function ExecTasks {
 								fi
 							fi
 							KillChilds $pid true
-							if [ $? == 0 ]; then
+							if [ $? -eq 0 ]; then
 								 Logger "Command with pid [$pid] stopped successfully." "NOTICE"
 							else
 								if [ $noErrorLogsAtAll != true ]; then
@@ -1358,7 +1358,7 @@ function ListClients {
 	if [ -d "$backupDir" ]; then
 		# File 'backup_stats' is there only when a backup is finished
 		find "$backupDir" -mindepth 3 -maxdepth 3 -type f -name "backup_stats" | grep -e '.*' > /dev/null
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			Logger "The directory [$backupDir] does not seem to be a @name@ folder. Please check the path. Additionnaly, protocol 2 directores need to specify the dedup group directory and the client subfolder." "ERROR"
 			Logger "This message may also show if the current user running this script does not have sufficient privileges on the @name@ folder." "ERROR"
 		fi
@@ -1372,7 +1372,7 @@ function ListClients {
 		Logger "Running cmd [$cmd]." "DEBUG"
 		eval "$cmd" &
 		ExecTasks $! "${FUNCNAME[0]}_lastbackup" false 0 0 1800 3600 true $SLEEP_TIME $KEEP_LOGGING
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			Logger "Enumerating @name@ clients via [$BACKUP_EXECUTABLE $configString -a S] failed. Check provided @name@ client config file." "ERROR"
 		else
 			Logger "@name@ detection method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP)" "DEBUG"
@@ -1385,7 +1385,7 @@ function ListClients {
 
 			while IFS=$'\n' read -r client; do
 				find "$backupDir$client" -mindepth 2 -maxdepth 2 -type f -name "backup_stats" | grep -e '.*' > /dev/null 2>&1
-				if [ $? == 0 ]; then
+				if [ $? -eq 0 ]; then
 					echo "$client" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
 				fi
 			done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
@@ -1413,7 +1413,7 @@ function ListClients {
 		IFS=',' read -a includeArray <<< "$INCLUDE_CLIENTS"
 		for i in "${includeArray[@]}"; do
 			echo "$client" | grep -e "^"$i"$" > /dev/null 2>&1
-			if [ $? == 0 ]; then
+			if [ $? -eq 0 ]; then
 				clientIsIncluded=true
 			fi
 		done
@@ -1421,7 +1421,7 @@ function ListClients {
 		IFS=',' read -a excludeArray <<< "$EXCLUDE_CLIENTS"
 		for i in "${excludeArray[@]}"; do
 			echo "$client" | grep -e "^"$i"$" > /dev/null 2>&1
-			if [ $? == 0 ]; then
+			if [ $? -eq 0 ]; then
 				clientIsExcluded=true
 			fi
 		done
@@ -1789,7 +1789,7 @@ function DisplayBackupCalendar {
 		Logger "Running cmd [$cmd]." "DEBUG"
 		eval "$cmd" &
 		ExecTasks $! "${FUNCNAME[0]}" false 0 0 1800 3600 true $SLEEP_TIME $KEEP_LOGGING
-		if [ $? != 0 ]; then
+		if [ $? -ne 0 ]; then
 			Logger "Failed to enumerate backups for client [$client]." "ERROR"
 		elif [ -s "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP" ]; then
 			backups="$(cat "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP")"

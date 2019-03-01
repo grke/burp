@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
-PROGRAM_VERSION=0.4.6a
-PROGRAM_BUILD=2019020201
+PROGRAM_VERSION=0.4.8
+PROGRAM_BUILD=2019030101
 AUTHOR="(C) 2017-2019 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=true
@@ -201,8 +201,10 @@ function _Logger {
 
 	if [ "$logValue" != "" ]; then
 		echo -e "$logValue" >> "$LOG_FILE"
-		# Current log file
-		echo -e "$logValue" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP"
+		# Build current log file for alerts if we have a sufficient environment
+		if [ "$RUN_DIR/$PROGRAM" != "/" ]; then
+			echo -e "$logValue" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.$SCRIPT_PID.$TSTAMP"
+		fi
 	fi
 
 	if [ "$stdValue" != "" ] && [ "$_LOGGER_SILENT" != true ]; then
@@ -251,7 +253,7 @@ function Logger {
 	if [ "$level" == "CRITICAL" ]; then
 		_Logger "$prefix($level):$value" "$prefix\e[1;33;41m$value\e[0m" true
 		ERROR_ALERT=true
-		# ERROR_ALERT / WARN_ALERT isn't set in main when Logger is called from a subprocess. Need to keep this flag.
+		# ERROR_ALERT / WARN_ALERT is not set in main when Logger is called from a subprocess. Need to keep this flag.
 		echo -e "[$retval] in [$(joinString , ${FUNCNAME[@]})] SP=$SCRIPT_PID P=$$\n$prefix($level):$value" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}.error.$SCRIPT_PID.$TSTAMP"
 		return
 	elif [ "$level" == "ERROR" ]; then
@@ -299,7 +301,7 @@ function KillChilds {
 	local pid="${1}" # Parent pid to kill childs
 	local self="${2:-false}" # Should parent be killed too ?
 
-	# Paranoid checks, we can safely assume that $pid shouldn't be 0 nor 1
+	# Paranoid checks, we can safely assume that $pid should not be 0 nor 1
 	if [ $(IsInteger "$pid") -eq 0 ] || [ "$pid" == "" ] || [ "$pid" == "0" ] || [ "$pid" == "1" ]; then
 		Logger "Bogus pid given [$pid]." "CRITICAL"
 		return 1
@@ -389,7 +391,7 @@ function SendAlert {
 		attachment=true
 	fi
 
-	body="$MAIL_ALERT_MSG"$'\n\n'"Last 1000 lines of log"$'\n\n'"$(tail -n 1000 $RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP)"
+	body="$MAIL_ALERT_MSG"$'\n\n'"Last 1000 lines of current log"$'\n\n'"$(tail -n 1000 $RUN_DIR/$PROGRAM._Logger.$SCRIPT_PID.$TSTAMP.log)"
 
 	if [ $ERROR_ALERT == true ]; then
 		subject="Error alert for $INSTANCE_ID"
@@ -456,18 +458,16 @@ function SendEmail {
 
 	local i
 
-	if [ ! -f "$attachment" ]; then
-		attachment_command="-a $attachment"
-		mail_no_attachment=1
+	if [ "$destinationMails" != "" ]; then
+		for i in "${destinationMails[@]}"; do
+			if [ $(CheckRFC822 "$i") -ne 1 ]; then
+				Logger "Given email [$i] does not seem to be valid." "WARN"
+			fi
+		done
 	else
-		mail_no_attachment=0
+		Logger "No valid email address given." "WARN"
+		return 1
 	fi
-
-	for i in "${destinationMails[@]}"; do
-		if [ $(CheckRFC822 "$i") -ne 1 ]; then
-			Logger "Given email [$i] does not seem to be valid." "WARN"
-		fi
-	done
 
 	# Prior to sending an email, convert its body if needed
 	if [ "$MAIL_BODY_CHARSET" != "" ]; then
@@ -479,6 +479,12 @@ function SendEmail {
 		fi
 	fi
 
+	if [ ! -f "$attachment" ]; then
+		attachment_command="-a $attachment"
+		mail_no_attachment=1
+	else
+		mail_no_attachment=0
+	fi
 	if [ "$LOCAL_OS" == "Busybox" ] || [ "$LOCAL_OS" == "Android" ]; then
 		if [ "$smtpPort" == "" ]; then
 			Logger "Missing smtp port, assuming 25." "WARN"
@@ -495,13 +501,13 @@ function SendEmail {
 
 			if [ $? != 0 ]; then
 				Logger "Cannot send alert mail via $(type -p sendmail) !!!" "WARN"
-				# Don't bother try other mail systems with busybox
+				# Do not bother try other mail systems with busybox
 				return 1
 			else
 				return 0
 			fi
 		else
-			Logger "Sendmail not present. Won't send any mail" "WARN"
+			Logger "Sendmail not present. Will not send any mail" "WARN"
 			return 1
 		fi
 	fi
@@ -779,10 +785,12 @@ function ExecTasks {
 	local minTimeBetweenRetries="${17:-300}"	# Time (in seconds) between postponed command retries
 	local validExitCodes="${18:-0}"			# Semi colon separated list of valid main command exit codes which will not trigger errors
 
+	__CheckArguments 1-18 $# "$@"
+
 	local i
 
-	Logger "${FUNCNAME[0]} called by [${FUNCNAME[0]} < ${FUNCNAME[1]} < ${FUNCNAME[2]} < ${FUNCNAME[3]} < ${FUNCNAME[4]} ...]." "PARANOIA_DEBUG"     #__WITH_PARANOIA_DEBUG
-	__CheckArguments 1-18 $# "$@"                                                                                                                                          #__WITH_PARANOIA_DEBUG
+	Logger "${FUNCNAME[0]} id [$id] called by [${FUNCNAME[1]} < ${FUNCNAME[2]} < ${FUNCNAME[3]} < ${FUNCNAME[4]} < ${FUNCNAME[5]} < ${FUNCNAME[6]} ...]." "PARANOIA_DEBUG"	 #__WITH_PARANOIA_DEBUG
+                                                                                                                                       #__WITH_PARANOIA_DEBUG
 
 	# Since ExecTasks takes up to 17 arguments, do a quick preflight check in DEBUG mode
 	if [ "$_DEBUG" == true ]; then
@@ -1010,7 +1018,7 @@ function ExecTasks {
 								Logger "Command was [${commandsArrayPid[$pid]}]." "ERROR"
 							fi
 							if [ -f "${commandsArrayOutput[$pid]}" ]; then
-								Logger "Command output was [$(cat ${commandsArrayOutput[$pid]})]." "ERROR"
+								Logger "Command output was [$(cat ${commandsArrayOutput[$pid]})\n]." "ERROR"
 							fi
 						fi
 						errorcount=$((errorcount+1))
@@ -1384,9 +1392,13 @@ function ListClients {
 			done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$SCRIPT_PID.$TSTAMP"
 		fi
 
+
+
+
 		if [ ! -f "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP" ]; then
 			touch "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP"
 		fi
+
 
 		Logger "Backup file detection method found the following clients:\n$(cat $RUN_DIR/$PROGRAM.${FUNCNAME[0]}-3.$SCRIPT_PID.$TSTAMP)" "DEBUG"
 		# Merge all clients found by @name@ executable and manual check
@@ -1474,6 +1486,8 @@ function IsClientIdle {
 	ExecTasks $! "${FUNCNAME[0]}_idle" false 0 0 120 300 true $SLEEP_TIME $KEEP_LOGGING
 	exitCode=$?
 
+
+
 	if [ $exitCode -ne 0 ]; then
 		Logger "Client [$client] is currently backing up." "NOTICE"
 		return $exitCode
@@ -1511,7 +1525,7 @@ function VerifyBackups {
 			# sed here removes all lines containing only block logs (64 chars + number)
 			# sed regex isn't complete (lacks \+$ because BSD / macOS sed does not like extended regex)
 			Logger "Preparing verification of backup [$backupNumber] for client [$client]." "NOTICE"
-			echo "$BACKUP_EXECUTABLE $configString -C $client -a v -b $backupNumber | sed '/^[BbfFvud]\{64\} [0-9]/d' >> \"$LOG_FILE\" 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP"
+			echo "$BACKUP_EXECUTABLE $configString -C $client -a v -b $backupNumber | sed '/^[rRSDBWfydlLsmnkceaipwxzbMFqYZGOPQEtvVuU]\{64\} [0-9]/d' >> \"$LOG_FILE\" 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.$client.$SCRIPT_PID.$TSTAMP"
 			echo "$BACKUP_EXECUTABLE $configString -a S -C $client | grep \"Status: idle\" > /dev/null 2>&1" >> "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-2.1.$client.$SCRIPT_PID.$TSTAMP"
 		done < "$RUN_DIR/$PROGRAM.${FUNCNAME[0]}-1.$SCRIPT_PID.$TSTAMP"
 
@@ -1593,28 +1607,32 @@ function ListQuotaExceedClients {
 
 	for client in "${CLIENT_LIST[@]}"; do
 		lastBackupDir=$(find "$backupDir$client" -maxdepth 2 -name "*current")
-		if zcat "$lastBackupDir/log.gz" | grep quota > /dev/null 2>&1; then
-			bytesEstimated=$(zcat "$lastBackupDir/log.gz" | grep "Bytes estimated")
-			bytesEstimated="${bytesEstimated##*:}"
-			# Remove leading spaces
-			bytesEstimated="${bytesEstimated# *}"
-			quotaExceed=$(zcat "$lastBackupDir/log.gz" | grep "quota")
-			quotaExceed="${quotaExceed##*:}"
-			quotaDiff="$bytesEstimated /$quotaExceed)"
+		if [ -f "$backupDir$client/current/log.gz" ]; then
+			if zcat "$lastBackupDir/log.gz" | grep quota > /dev/null 2>&1; then
+				bytesEstimated=$(zcat "$lastBackupDir/log.gz" | grep "Bytes estimated")
+				bytesEstimated="${bytesEstimated##*:}"
+				# Remove leading spaces
+				bytesEstimated="${bytesEstimated# *}"
+				quotaExceed=$(zcat "$lastBackupDir/log.gz" | grep "quota")
+				quotaExceed="${quotaExceed##*:}"
+				quotaDiff="$bytesEstimated /$quotaExceed)"
 
-			Logger "Client [$client] quota exceed ($quotaDiff)." "WARN"
+				Logger "Client [$client] quota exceed ($quotaDiff)." "WARN"
 
-			if [ $CLIENTS_ALERT_QUOTAS == true ]; then
-				clientAlertBody="${CLIENT_ALERT_BODY_QUOTA/"[CLIENT]"/$client}"
-				clientAlertBody="${clientAlertBody/"[QUOTAEXCEED]"/$quotaDiff}"
-				if [ "${CLIENT_EMAIL[$client]}" != "" ]; then
-					SendEmail "$CLIENT_ALERT_SUBJECT" "$clientAlertBody" "${CLIENT_EMAIL[$client]}"
-					Logger "Sent quota exceeded mail to [${CLIENT_EMAIL[$client]}]." "NOTICE"
-				else
-					Logger "Client [$client] does not have a mail address. Cannot send notification" "ERROR"
+				if [ $CLIENTS_ALERT_QUOTAS == true ]; then
+					clientAlertBody="${CLIENT_ALERT_BODY_QUOTA/"[CLIENT]"/$client}"
+					clientAlertBody="${clientAlertBody/"[QUOTAEXCEED]"/$quotaDiff}"
+					if [ "${CLIENT_EMAIL[$client]}" != "" ]; then
+						SendEmail "$CLIENT_ALERT_SUBJECT" "$clientAlertBody" "${CLIENT_EMAIL[$client]}"
+						Logger "Sent quota exceeded mail to [${CLIENT_EMAIL[$client]}]." "NOTICE"
+					else
+						Logger "Client [$client] does not have a mail address. Cannot send notification" "ERROR"
+					fi
 				fi
+				found=true
 			fi
-			found=true
+		else
+			Logger "No valid log file found for analysis of client [$client]." "WARN"
 		fi
 	done
 
@@ -1649,7 +1667,7 @@ function VerifyLastWarnings {
 				found=true
 			fi
 		else
-			Logger "No log file found for analysis in [$backupDir$client/current]." "WARN"
+			Logger "No log file found for warning analysis in [$backupDir$client/current]." "WARN"
 		fi
 	done
 
@@ -1751,6 +1769,8 @@ function VerifyService {
 
 function DisplayBackupCalendar {
 	local configFile="${1}"
+	
+	__CheckArguments 1 $# "$@"      #__WITH_PARANOIA_DEBUG
 
 	local client
 	local cmd
@@ -2025,6 +2045,7 @@ Logger "$DATE - $PROGRAM $PROGRAM_VERSION script begin." "ALWAYS"
 Logger "---------------------------------------------------------------------" "NOTICE"
 Logger "Instance [$INSTANCE_ID] launched as $LOCAL_USER@$LOCAL_HOST (PID $SCRIPT_PID)" "NOTICE"
 
+
 if [ $no_maxtime == true ]; then
 	SOFT_MAX_EXEC_TIME_PER_VERIFY=0
 	HARD_MAX_EXEC_TIME_PER_VERIFY=0
@@ -2106,6 +2127,11 @@ if [ "$VERIFY_BACKUPS" != "" ]; then
 		exit 1
 	fi
 fi
+
+# v0.4.8
+# - Fixed possible missing characters from log results (see https://github.com/grke/burp/issues/801 and burp/src/cmd.h)
+# - Fixed quota warning when no client log file exists
+# - Smaller fixes ported from ofunctions project
 
 # v0.4.6
 # - Added command output to logs

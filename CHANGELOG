@@ -1,3 +1,34 @@
+2019-03-03 Changes in burp-2.3.2:
+  * 796: Fix not compressing log on phase3/4 resume.
+  * 797: Fix wide-character restores on Windows.
+  * 794: Fix burp not starting with only one listen address.
+  * 735: restore_client client_can_X behaviour.
+    - Obey the original client permissions.
+    - Add super_client option, which behaves as restore_client used to.
+    - Also add client_can_monitor permission.
+  * Correct 'listen' section in the manpage.
+    - There is no longer a default or compile-time options.
+  * Run utests with valgrind in automatic testing suite.
+  * Fix valgrind errors.
+  * Fix minor memory leaks in timer code.
+  * Fix potential buffer overruns when decoding attribs.
+  * 769: ca_name and ca_server_name cannot be the same, so error
+    early, to avoid certificate problems.
+  * 774: Fix incorrect action names passed to server_post_script.
+  * 775: Fix empty action in server_post_script.
+  * 790: On restore, mention target directory in the client output.
+  * Use librsync's rs_strerror() for better error messages.
+  * Update freebsd test instance to freebsd 12.
+    - Fix compiler warnings.
+  * Remove LT_INIT, it seems to cause more problems than it solves.
+  * Fix 'PACKAGE_URL undeclared' for older versions of autoconf.
+  * From deajan:
+    - Backup tool script minor fixes
+
+2019-02-23 Changes in burp-2.2.18:
+  * 797: Fix wide-character restores on Windows.
+  * 794: Fix burp not starting with only one listen address.
+
 2019-02-02 Changes in burp-2.3.0:
   * 777: Make include_glob able to detect windows drive letters.
   * From Olivier Cherrier:

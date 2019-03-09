@@ -44,6 +44,8 @@ server_can_restore = 0
 # Set an encryption password if you do not trust the server with your data.
 # Note that this will mean that network deltas will not be possible. Each time
 # a file changes, the whole file will be transferred on the next backup.
+# On restoration, take care when copying and pasting special characters between
+# client conf files, as the encoding of the config file matters.
 # encryption_password = My^$pAsswIrD%@
 
 # More configuration files can be read, using syntax like the following

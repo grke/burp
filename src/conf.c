@@ -480,6 +480,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "monitor_logfile");
 	case OPT_MONITOR_EXE:
 	  return sc_str(c[o], 0, 0, "monitor_exe");
+	case OPT_BACKUP_FAILOVERS_LEFT:
+	  return sc_int(c[o], 0, 0, "");
 	case OPT_CNAME:
 	  return sc_str(c[o], 0, 0, "cname");
 	case OPT_CNAME_LOWERCASE:
@@ -492,6 +494,10 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "passwd");
 	case OPT_SERVER:
 	  return sc_str(c[o], 0, 0, "server");
+	case OPT_SERVER_FAILOVER:
+	  return sc_lst(c[o], 0, 0, "server_failover");
+	case OPT_FAILOVER_ON_BACKUP_ERROR:
+	  return sc_int(c[o], 0, 0, "failover_on_backup_error");
 	case OPT_ENCRYPTION_PASSWORD:
 	  return sc_str(c[o], 0, 0, "encryption_password");
 	case OPT_AUTOUPGRADE_OS:
@@ -693,6 +699,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_N_FAILURE_ARG:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "notify_failure_arg");
+	case OPT_N_FAILURE_BACKUP_FAILOVERS_LEFT:
+	  return sc_int(c[o], 1,
+		CONF_FLAG_CC_OVERRIDE, "notify_failure_on_backup_with_failovers_left");
 	case OPT_RESTORE_CLIENTS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_SORTED, "restore_client");

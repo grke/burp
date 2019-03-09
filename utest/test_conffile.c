@@ -222,16 +222,6 @@ START_TEST(test_client_conf_ports_no_opt_port_and_all)
 }
 END_TEST
 
-START_TEST(test_client_conf_ports_none)
-{
-	struct conf **confs=NULL;
-	setup(&confs, NULL);
-	build_file(CONFFILE, MIN_CLIENT_CONF_NO_PORTS);
-	fail_unless(conf_load_global_only(CONFFILE, confs)==-1);
-	tear_down(NULL, &confs);
-}
-END_TEST
-
 START_TEST(test_client_conf_ca_conf_problems)
 {
 	const char *buf="mode=client\n"
@@ -1110,7 +1100,6 @@ Suite *suite_conffile(void)
 	tcase_add_test(tc_core, test_client_conf_ports_opt_port_and_restore);
 	tcase_add_test(tc_core, test_client_conf_ports_opt_port_and_all);
 	tcase_add_test(tc_core, test_client_conf_ports_no_opt_port_and_all);
-	tcase_add_test(tc_core, test_client_conf_ports_none);
 	tcase_add_test(tc_core, test_server_conf);
 	tcase_add_test(tc_core, test_server_port_conf_one_max_child);
 	tcase_add_test(tc_core, test_server_port_conf_too_many_max_child);

@@ -64,6 +64,7 @@ static void run_test(int expected_ret,
         struct async *as;
         struct asfd *asfd;
         struct conf **confs;
+	struct strlist *failover=NULL;
 	char *incexc=NULL;
 
         setup(&as, &confs);
@@ -78,6 +79,7 @@ static void run_test(int expected_ret,
 		as,
 		confs,
 		&action,
+		failover,
 		&incexc
 	)==expected_ret);
 

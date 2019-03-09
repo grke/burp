@@ -501,6 +501,14 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	// Only backup action left to deal with.
 	ret=run_backup(as, sdirs,
 		cconfs, incexc, timer_ret, resume);
+
+	// If this is a backup failure and the client has more servers
+	// to failover to, do not notify.
+	if(ret
+	  && get_int(cconfs[OPT_N_FAILURE_BACKUP_FAILOVERS_LEFT])
+	  && get_int(cconfs[OPT_BACKUP_FAILOVERS_LEFT]))
+		return ret;
+
 	if(*timer_ret<0)
 		maybe_do_notification(as->asfd, ret,
 			"", "error running timer script",

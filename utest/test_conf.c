@@ -110,6 +110,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_MAX_RESUME_ATTEMPTS:
 		case OPT_FAIL_ON_WARNING:
 		case OPT_SSL_VERIFY_PEER_EARLY:
+		case OPT_FAILOVER_ON_BACKUP_ERROR:
+		case OPT_BACKUP_FAILOVERS_LEFT:
 			fail_unless(get_int(c[o])==0);
 			break;
 		case OPT_DAEMON:
@@ -136,6 +138,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_GLOB_AFTER_SCRIPT_PRE:
 		case OPT_ACL:
 		case OPT_XATTR:
+		case OPT_N_FAILURE_BACKUP_FAILOVERS_LEFT:
 			fail_unless(get_int(c[o])==1);
 			break;
 		case OPT_NETWORK_TIMEOUT:
@@ -196,6 +199,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_LISTEN_STATUS:
 		case OPT_MAX_CHILDREN:
 		case OPT_MAX_STATUS_CHILDREN:
+		case OPT_SERVER_FAILOVER:
 			fail_unless(get_strlist(c[o])==NULL);
 			break;
 		case OPT_PROTOCOL:

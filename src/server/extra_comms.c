@@ -126,7 +126,8 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 		   to restore from */
 	  || append_to_feat(&feat, "orig_client:")
 		/* clients can tell the server what kind of system they are. */
-          || append_to_feat(&feat, "uname:"))
+          || append_to_feat(&feat, "uname:")
+          || append_to_feat(&feat, "failover:"))
 		goto end;
 
 	/* Clients can receive restore initiated from the server. */
@@ -411,6 +412,13 @@ static int extra_comms_read(struct async *as,
 		{
 			set_int(cconfs[OPT_MESSAGE], 1);
 			set_int(globalcs[OPT_MESSAGE], 1);
+		}
+		else if(!strncmp_w(rbuf->buf, "backup_failovers_left="))
+		{
+			int l;
+			l=atoi(rbuf->buf+strlen("backup_failovers_left="));
+			set_int(cconfs[OPT_BACKUP_FAILOVERS_LEFT], l);
+			set_int(globalcs[OPT_BACKUP_FAILOVERS_LEFT], l);
 		}
 		else
 		{

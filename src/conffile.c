@@ -683,17 +683,6 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 {
 	const char *autoupgrade_os=get_string(c[OPT_AUTOUPGRADE_OS]);
 
-	if(!get_int(c[OPT_PORT_BACKUP]))
-		conf_problem(path, "port_backup unset", r);
-	if(!get_int(c[OPT_PORT_RESTORE]))
-		conf_problem(path, "port_restore unset", r);
-	if(!get_int(c[OPT_PORT_VERIFY]))
-		conf_problem(path, "port_verify unset", r);
-	if(!get_int(c[OPT_PORT_LIST]))
-		conf_problem(path, "port_list unset", r);
-	if(!get_int(c[OPT_PORT_DELETE]))
-		conf_problem(path, "port_delete unset", r);
-
 	if(!get_string(c[OPT_CNAME]))
 	{
 		if(get_cname_from_ssl_cert(c)) return -1;
@@ -1066,6 +1055,7 @@ static int finalise_client_ports(struct conf **c)
 
 	for(p=get_strlist(c[OPT_PORT]); p; p=p->next)
 		port=atoi(p->path);
+
 	if(!port)
 		return 0;
 

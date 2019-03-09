@@ -32,7 +32,7 @@ static const char *server_supports_autoupgrade(const char *feat)
 #include <librsync.h>
 
 int extra_comms_client(struct async *as, struct conf **confs,
-	enum action *action, char **incexc)
+	enum action *action, struct strlist *failover, char **incexc)
 {
 	int ret=-1;
 	char *feat=NULL;
@@ -250,6 +250,23 @@ int extra_comms_client(struct async *as, struct conf **confs,
 	else
 #endif
 		set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
+
+	if(server_supports(feat, ":failover:"))
+	{
+		if(*action==ACTION_BACKUP
+		  || *action==ACTION_BACKUP_TIMED)
+		{
+			char msg[32]="";
+			int left=0;
+			struct strlist *f=NULL;
+			for(f=failover; f; f=f->next)
+				left++;
+			snprintf(msg, sizeof(msg),
+				"backup_failovers_left=%d", left);
+			if(asfd->write_str(asfd, CMD_GEN, msg))
+				goto end;
+		}
+	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")
 	  || asfd_read_expect(asfd, CMD_GEN, "extra_comms_end ok"))

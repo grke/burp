@@ -96,7 +96,7 @@ clientburpdir="/cygdrive/c/Program Files/Burp"
 rm -f windowsscript
 cat >> windowsscript << EOF
 #!/usr/bin/env bash
-set -e
+set -ex
 
 clientburpdir="$clientburpdir"
 
@@ -110,14 +110,14 @@ echo "Test command line switches"
 rm -rf "\$clientburpdir"
 ./$installer /S /cname=customcname /server=1.2.3.4 /password=custompass
 check_conf '^cname = customcname$'
-check_conf '^server = 1.2.3.4$'
+check_conf '^server = 1.2.3.4:4971$'
 check_conf '^password = custompass$'
 
 echo "Test command line without switches"
 rm -rf "\$clientburpdir"
 ./$installer /S
 check_conf "^cname = \$(hostname)$"
-check_conf '^server = 10.0.0.1$'
+check_conf '^server = 10.0.0.1:4971$'
 check_conf '^password = abcdefgh$'
 
 # Remove the cron job, or unexpected results can occur.

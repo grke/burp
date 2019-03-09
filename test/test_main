@@ -568,11 +568,10 @@ pre_tweaks_client()
 {
 	start_script_client
 	sed_rep_client 's#= /#= '"$target"'/#g'
-	sed_rep_client 's/port = 4971/port = 4998/g'
 	sed_rep_client 's/port = 4972/port = 4999/g'
 	sed_rep_client 's/^stdout = .*/stdout = 1/g'
 	sed_rep_client 's/^syslog = .*/syslog = 0/g'
-	sed_rep_client 's/^server = .*/server = '"$serveraddress"'/g' "$clientconf"
+	sed_rep_client 's/^server = .*/server = '"$serveraddress":4998'/g' "$clientconf"
 	sed_rep_client 's/^cname = .*/cname = testclient/g' "$clientconf"
 	sed_rep_client 's/^password = .*/password = abcdefgh/g' "$clientconf"
 }

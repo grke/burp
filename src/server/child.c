@@ -100,6 +100,13 @@ static int run_server_script(struct asfd *asfd,
 		ret=-1;
 		if(!notify) goto end;
 
+		// If this is a backup failure and the client has more servers
+		// to failover to, do not notify.
+		if(!strncmp_w(action_from_client, "backup")
+		  && get_int(cconfs[OPT_N_FAILURE_BACKUP_FAILOVERS_LEFT])
+		  && get_int(cconfs[OPT_BACKUP_FAILOVERS_LEFT]))
+			goto end;
+
 		a=0;
 		args[a++]=get_string(cconfs[OPT_N_FAILURE_SCRIPT]);
 		args[a++]=cname;
@@ -225,13 +232,15 @@ int child(struct async *as, int is_status_server,
 	if(!ret)
 		ret=run_action_server(as, incexc, srestore, &timer_ret, cconfs);
 
-	if((!ret || get_int(cconfs[OPT_S_SCRIPT_POST_RUN_ON_FAIL]))
-	  && s_script_post)
-		ret=run_server_script(as->asfd, "post", action_from_client,
-			s_script_post,
-			get_strlist(cconfs[OPT_S_SCRIPT_POST_ARG]),
-			get_int(cconfs[OPT_S_SCRIPT_POST_NOTIFY]),
-			cconfs, ret, timer_ret);
+	if(!s_script_post)
+		goto end;
+	if(ret && !get_int(cconfs[OPT_S_SCRIPT_POST_RUN_ON_FAIL]))
+			goto end;
+	ret=run_server_script(as->asfd, "post", action_from_client,
+		s_script_post,
+		get_strlist(cconfs[OPT_S_SCRIPT_POST_ARG]),
+		get_int(cconfs[OPT_S_SCRIPT_POST_NOTIFY]),
+		cconfs, ret, timer_ret);
 
 end:
 	free_w(&action_from_client);

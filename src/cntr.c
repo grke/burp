@@ -599,6 +599,7 @@ int cntr_stats_to_file(struct cntr *cntr,
 	int ret=-1;
 	int fd=-1;
 	char *path=NULL;
+	char *pathtmp=NULL;
 	const char *fname=NULL;
 	struct async *as=NULL;
 	struct asfd *wfd=NULL;
@@ -617,10 +618,11 @@ int cntr_stats_to_file(struct cntr *cntr,
 	else
 		return 0;
 
-	if(!(path=prepend_s(directory, fname)))
+	if(!(path=prepend_s(directory, fname))
+	  || !(pathtmp=prepend(path, ".tmp")))
 		goto end;
 	if((fd=open(
-		path,
+		pathtmp,
 #ifdef O_NOFOLLOW
 		O_NOFOLLOW|
 #endif
@@ -628,7 +630,7 @@ int cntr_stats_to_file(struct cntr *cntr,
 		0666))<0)
 	{
 		logp("Could not open %s for writing in %s: %s\n",
-			path, __func__, strerror(errno));
+			pathtmp, __func__, strerror(errno));
 		goto end;
 	}
 
@@ -645,9 +647,13 @@ int cntr_stats_to_file(struct cntr *cntr,
 
 	ret=0;
 end:
-	free_w(&path);
 	async_free(&as);
 	asfd_free(&wfd);
+	if(!ret && do_rename(pathtmp, path))
+		ret=-1;
+
+	free_w(&path);
+	free_w(&pathtmp);
 	return ret;
 }
 

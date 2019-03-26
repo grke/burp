@@ -232,6 +232,17 @@ int extra_comms_client(struct async *as, struct conf **confs,
 		set_protocol(confs, PROTO_2);
 	}
 
+        if(get_protocol(confs)==PROTO_2
+          && get_string(confs[OPT_ENCRYPTION_PASSWORD]))
+	{
+		char msg[64]="";
+		snprintf(msg, sizeof(msg),
+			"%s is not supported in protocol 2",
+				confs[OPT_ENCRYPTION_PASSWORD]->field);
+		log_and_send(asfd, msg);
+		goto end;
+	}
+
 	if(server_supports(feat, ":msg:"))
 	{
 		set_int(confs[OPT_MESSAGE], 1);

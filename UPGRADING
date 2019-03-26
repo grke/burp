@@ -1,5 +1,10 @@
 Things to watch out for when upgrading.
 
+2.3.4
+-----
+Clients will now error out if using protocol 2 and 'encryption_password' is
+set, because that option is not supported in protocol 2.
+
 2.3.2
 -----
 The 'restore_client' option now takes into consideration the 'client_can_X'

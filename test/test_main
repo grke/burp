@@ -883,8 +883,11 @@ all_tests()
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
 	comp_enc_change_test off off on
-	comp_enc_change_test off on  on
-	comp_enc_change_test on  on  on
+	if [ "$PROTOCOL" != "2" ] ; then
+		# Encryption not supported in protocol 2.
+		comp_enc_change_test off on  on
+		comp_enc_change_test on  on  on
+	fi
 
 	start_test "Permissions"
 	add_chown 755 "$includedir/utest/test_cmd.c"

@@ -618,6 +618,7 @@ int client(struct conf **confs, enum action action, int vss_restore)
 					finished=1;
 					break;
 				}
+				logp("Failing over\n");
 				// Use a failover server.
 				server=failover->path;
 				failover=failover->next;

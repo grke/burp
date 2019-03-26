@@ -311,8 +311,8 @@ int init_client_socket(const char *host, const char *port)
 	freeaddrinfo(result);
 	if(!rp)
 	{
-		/* host==NULL and AI_PASSIVE not set -> loopback */
-		logp("could not connect to %s:%s\n",
+		// host==NULL and AI_PASSIVE not set -> loopback
+		logp("Could not connect to %s:%s\n",
 			host?host:"loopback", port);
 		close_fd(&rfd);
 		return -1;

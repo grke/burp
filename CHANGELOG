@@ -1,3 +1,19 @@
+2019-04-01 Changes in burp-2.3.4:
+  * Feature sponsored by Orsiris de Jong:
+    - 782: Server failover feature.
+           You may specify multiple server:port combinations in the client
+           burp.conf. They will each be tried in turn until a connection is
+           made. Orsiris's use case is that he has clients that may or not be
+           on restricted networks where ports are blocked. You may also
+           configure the client to try the next server:port if a backup
+           actually failed.
+  * 800: Create backup_stats before phase4, so that it exists if a backup
+         is interrupted during phase4 and resumed.
+  * 803: Mangepage notes about file encoding and encryption_password.
+  * 806: Error out on protocol 2 with encryption_password set.
+  * From melak:
+    - Manpage clarification about compression/encryption and protocol version.
+
 2019-03-03 Changes in burp-2.3.2:
   * 796: Fix not compressing log on phase3/4 resume.
   * 797: Fix wide-character restores on Windows.

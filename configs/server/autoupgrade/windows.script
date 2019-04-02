@@ -1,3 +1,4 @@
+@echo off
 :: Upgrade script 2019040201
 set product=Burp
 

@@ -20,13 +20,20 @@ set server_failover=other.server.local:443
 set failover_on_backup_error=1
 
 IF EXIST "%curdir%\..\%product%.conf" (
+:: First let's make a config file backup
        copy "%curdir%\..\%product%.conf" "%curdir%\..\%product%.conf.backup"
+:: Then lets remove server, port and failover_on_backcup_error statements
        type "%curdir%\..\%product%.conf" | FINDSTR /I /V "server ^= " | FINDSTR /I /V "port ^= 443" | FINDSTR /I /V "failover_on_backup_error ^=" > "%curdir%\..\%product%.conf.tmp"
+:: Add new server to config file
        (echo server = %server%) > "%curdir%\..\%product%.conf"
-       (echo server_failover = %server_failover%) >> "%curdir%\..\%product%.conf"
+:: Add new server_failover to config file if specified
+       IF NOT "%server_failover%"=="" (echo server_failover = %server_failover%) >> "%curdir%\..\%product%.conf"
+:: Add failover_on_backup_error statement
        (echo failover_on_backup_error = %failover_on_backup_error%) >> "%curdir%\..\%product%.conf"
+:: Put new config in place
        type "%curdir%\..\%product%.conf.tmp">> "%curdir%\..\%product%.conf"
        del "%curdir%\..\%product%.conf.tmp" /S /Q
 )
 
 :END
+exit

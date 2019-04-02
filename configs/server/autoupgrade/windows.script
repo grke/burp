@@ -1,11 +1,34 @@
 @echo off
-REM Burp used to put everything in C:\Program Files\Burp\ until 1.3.11.
-REM But still want old installations to work.
+:: Upgrade script 2019040201
+set product=Burp
 
-IF EXIST "C:\Program Files\Burp\autoupgrade\package.exe" (
-	"C:\Program Files\Burp\autoupgrade\package.exe" /S
-) ELSE (
-	IF EXIST "%~dp0\package.exe" (
-		"%~dp0\package.exe" /S
-	)
+set curdir=%~dp0
+set curdir=%curdir:~0,-1%
+cd "%curdir%"
+
+IF EXIST "%curdir%\package.exe" start /wait "" "%curdir%\package.exe" /S && GOTO NEXT
+:: Fallback for elder than 1.3.11 burp packages where everything was in C:\Program Files\Burp
+IF EXIST "C:\Program Files\Burp\autoupgrade\package.exe" start /wait "" "C:\Program Files\Burp\autoupgrade\package.exe" /S && GOTO NEXT
+GOTO END
+
+:NEXT
+:: The following optional part replaces server and port directives by server = fqdn:port and optional server_failover = fqdn:port
+:: Comment out the following line and set options below in order to update the config file
+GOTO END
+set server=server.local:4971
+set server_failover=other.server.local:443
+set failover_on_backup_error=1
+
+IF "%ERRORLEVEL%"=="0" (
+    IF EXIST "%curdir%\..\%product%.conf" (
+           copy "%curdir%\..\%product%.conf" "%curdir%\..\%product%.conf.backup"
+           type "%curdir%\..\%product%.conf" | FINDSTR /I /V "server ^= " | FINDSTR /I /V "port ^= 443" | FINDSTR /I /V "failover_on_backup_error ^=" > "%curdir%\..\%product%.conf.tmp"
+           (echo server = %server%) > "%curdir%\..\%product%.conf"
+           (echo server_failover = %server_failover%) >> "%curdir%\..\%product%.conf"
+           (echo failover_on_backup_error = %failover_on_backup_error%) >> "%curdir%\..\%product%.conf"
+           type "%curdir%\..\%product%.conf.tmp">> "%curdir%\..\%product%.conf"
+           del "%curdir%\..\%product%.conf.tmp" /S /Q
+    )
 )
+
+:END

@@ -183,6 +183,7 @@ static struct fstype fstypes[]={
 	{ "ext4",		0x0000EF53 },
 	{ "ecryptfs",		0x0000F15F },
 	{ "cgroup",		0x0027E0EB },
+	{ "ceph",		0x00C36400 },
 	{ "tmpfs",		0x01021994 },
 	{ "zfs",		0x2FC12FC1 },
 	{ "jfs",		0x3153464A },

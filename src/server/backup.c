@@ -253,6 +253,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 
 	// Write backup_stats before flipping the symlink, so that is there
 	// even if phase4 is interrupted.
+	cntr_set_bytes(cntr, asfd);
 	if(cntr_stats_to_file(cntr, sdirs->working, ACTION_BACKUP))
 		goto error;
 
@@ -265,7 +266,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	cntr_print(cntr, ACTION_BACKUP, asfd);
+	cntr_print(cntr, ACTION_BACKUP);
 
 	if(protocol==PROTO_2)
 	{

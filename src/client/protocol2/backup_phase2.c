@@ -399,7 +399,8 @@ end:
 		iobuf_free(&wbuf);
 	}
 	cntr_print_end(cntr);
-	cntr_print(cntr, ACTION_BACKUP, asfd);
+	cntr_set_bytes(cntr, asfd);
+	cntr_print(cntr, ACTION_BACKUP);
 	if(ret) logp("Error in backup\n");
 	logp("End backup\n");
 

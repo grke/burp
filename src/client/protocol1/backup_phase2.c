@@ -492,7 +492,8 @@ int backup_phase2_client_protocol1(struct asfd *asfd,
 	ret=do_backup_phase2_client(asfd, confs, resume);
 
 	cntr_print_end(cntr);
-	cntr_print(cntr, ACTION_BACKUP, asfd);
+	cntr_set_bytes(cntr, asfd);
+	cntr_print(cntr, ACTION_BACKUP);
 
 	if(ret) logp("Error in phase 2\n");
 	logp("Phase 2 end (send file data)\n");

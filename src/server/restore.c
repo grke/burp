@@ -625,7 +625,8 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 		act, sdirs, cconfs)) goto end;
 
 	if(cconfs) cntr=get_cntr(cconfs);
-	cntr_print(cntr, act, asfd);
+	cntr_set_bytes(cntr, asfd);
+	cntr_print(cntr, act);
 	if(cntr_stats_to_file(cntr, bu->path, act))
 		goto end;
 	ret=0;

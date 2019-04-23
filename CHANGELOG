@@ -9,7 +9,7 @@
            actually failed.
   * 800: Create backup_stats before phase4, so that it exists if a backup
          is interrupted during phase4 and resumed.
-  * 803: Mangepage notes about file encoding and encryption_password.
+  * 803: Man page notes about file encoding and encryption_password.
   * 806: Error out on protocol 2 with encryption_password set.
   * From melak:
     - Manpage clarification about compression/encryption and protocol version.

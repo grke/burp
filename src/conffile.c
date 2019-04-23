@@ -682,16 +682,20 @@ static int general_conf_checks(struct conf **c, const char *path, int *r)
 
 static int client_conf_checks(struct conf **c, const char *path, int *r)
 {
+	int ret=-1;
+	char *copy=NULL;
 	const char *autoupgrade_os=get_string(c[OPT_AUTOUPGRADE_OS]);
 
 	if(!get_string(c[OPT_CNAME]))
 	{
-		if(get_cname_from_ssl_cert(c)) return -1;
+		if(get_cname_from_ssl_cert(c))
+			goto end;
 		// There was no error. This is probably a new install.
 		// Try getting the fqdn and using that.
 		if(!get_string(c[OPT_CNAME]))
 		{
-			if(get_fqdn(c)) return -1;
+			if(get_fqdn(c))
+				goto end;
 			if(!get_string(c[OPT_CNAME]))
 				conf_problem(path, "client name unset", r);
 		}
@@ -700,7 +704,7 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	{
 		logp("password not set, falling back to \"password\"\n");
 		if(set_string(c[OPT_PASSWORD], "password"))
-			return -1;
+			goto end;
 	}
 	if(!get_string(c[OPT_SERVER]))
 		conf_problem(path, "server unset", r);
@@ -710,9 +714,15 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 		logp("ssl_peer_cn unset\n");
 		if(server)
 		{
-			logp("falling back to '%s'\n", server);
-			if(set_string(c[OPT_SSL_PEER_CN], server))
-				return -1;
+			char *cp=NULL;
+			if(!(copy=strdup_w(server, __func__)))
+				goto end;
+			
+			if((cp=strchr(copy, ':')))
+				*cp='\0';
+			logp("falling back to '%s'\n", copy);
+			if(set_string(c[OPT_SSL_PEER_CN], copy))
+				goto end;
 		}
 	}
 	if(autoupgrade_os
@@ -741,7 +751,11 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 		for(l=get_strlist(c[OPT_STARTDIR]); l; l=l->next)
 			if(l->flag) logp("%s\n", l->path);
 	}
-	return 0;
+
+	ret=0;
+end:
+	free_w(&copy);
+	return ret;
 }
 
 static int finalise_keep_args(struct conf **c)

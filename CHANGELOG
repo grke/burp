@@ -1,3 +1,15 @@
+2019-05-01 Changes in burp-2.3.6:
+  * 812: Fix counters missing received/sent bytes broken in 2.3.4.
+  * 808: Fix for ssl_peer_cn when server:port syntax is used.
+  * From Orsiris de Jong:
+    - 809: Updates to Windows upgrade script:
+      + Better path fallback and optional conf file update
+      + Removed duplicate error handling
+      + Comments and smaller improvements
+      + 813: Disable config file update by default
+  * From Bob Ryan:
+    - 811: Add ceph (cephfs) fs magic alias.
+
 2019-04-01 Changes in burp-2.3.4:
   * Feature sponsored by Orsiris de Jong:
     - 782: Server failover feature.

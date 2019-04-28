@@ -4,7 +4,6 @@
 #include "log.h"
 #include "alloc.h"
 #include "cntr.h"
-#include "strlist.h"
 #include "prepend.h"
 #include "server/dpth.h"
 
@@ -418,6 +417,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "ssl_ciphers");
 	case OPT_SSL_COMPRESSION:
 	  return sc_int(c[o], 5, 0, "ssl_compression");
+	case OPT_SSL_VERIFY_PEER_EARLY:
+	  return sc_int(c[o], 0, 0, "ssl_verify_peer_early");
 	case OPT_RATELIMIT:
 	  return sc_flt(c[o], 0, 0, "ratelimit");
 	case OPT_NETWORK_TIMEOUT:
@@ -479,6 +480,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "monitor_logfile");
 	case OPT_MONITOR_EXE:
 	  return sc_str(c[o], 0, 0, "monitor_exe");
+	case OPT_BACKUP_FAILOVERS_LEFT:
+	  return sc_int(c[o], 0, 0, "");
 	case OPT_CNAME:
 	  return sc_str(c[o], 0, 0, "cname");
 	case OPT_CNAME_LOWERCASE:
@@ -491,6 +494,10 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "passwd");
 	case OPT_SERVER:
 	  return sc_str(c[o], 0, 0, "server");
+	case OPT_SERVER_FAILOVER:
+	  return sc_lst(c[o], 0, 0, "server_failover");
+	case OPT_FAILOVER_ON_BACKUP_ERROR:
+	  return sc_int(c[o], 0, 0, "failover_on_backup_error");
 	case OPT_ENCRYPTION_PASSWORD:
 	  return sc_str(c[o], 0, 0, "encryption_password");
 	case OPT_AUTOUPGRADE_OS:
@@ -553,7 +560,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_int(c[o], 1, 0, "restore_script_reserved_args");
 	case OPT_SEND_CLIENT_CNTR:
 	  return sc_int(c[o], 0, 0, "send_client_cntr");
-	case OPT_RESTORE_CLIENT:
+	case OPT_SUPER_CLIENT:
 	  return sc_str(c[o], 0, 0, "");
 	case OPT_RESTORE_PATH:
 	  return sc_str(c[o], 0, 0, "restore_path");
@@ -695,9 +702,15 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_N_FAILURE_ARG:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "notify_failure_arg");
+	case OPT_N_FAILURE_BACKUP_FAILOVERS_LEFT:
+	  return sc_int(c[o], 1,
+		CONF_FLAG_CC_OVERRIDE, "notify_failure_on_backup_with_failovers_left");
 	case OPT_RESTORE_CLIENTS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_SORTED, "restore_client");
+	case OPT_SUPER_CLIENTS:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_SORTED, "super_client");
 	case OPT_DEDUP_GROUP:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "dedup_group");
@@ -713,6 +726,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_CLIENT_CAN_LIST:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "client_can_list");
+	case OPT_CLIENT_CAN_MONITOR:
+	  return sc_int(c[o], 1,
+		CONF_FLAG_CC_OVERRIDE, "client_can_monitor");
 	case OPT_CLIENT_CAN_RESTORE:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "client_can_restore");
@@ -773,6 +789,12 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_EXCREG:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_regex");
+	case OPT_INCLOGIC:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_logic");
+	 case OPT_EXCLOGIC:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_logic");
 	case OPT_EXCFS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "exclude_fs");

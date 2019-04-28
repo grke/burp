@@ -648,7 +648,8 @@ static enum sts_e do_stuff_to_send(struct asfd *asfd,
 				// keep going round the loop.
 				return STS_BLOCKED;
 			default:
-				logp("error in rs_async: %d\n", sigresult);
+				logp("error in rs_async: %d %s\n",
+					sigresult, rs_strerror(sigresult));
 				return STS_ERROR;
 		}
 	}
@@ -828,6 +829,13 @@ static enum str_e do_stuff_to_receive(struct asfd *asfd,
 					chmanio, cconfs, last_requested))
 						goto error;
 				return STR_OK;
+			case CMD_INTERRUPT:
+				if(*last_requested
+				  && !strcmp(rbuf->buf, *last_requested))
+					free_w(last_requested);
+				fzp_close(&(rb->protocol1->fzp));
+				sbuf_free_content(rb);
+				return STR_OK;
 			default:
 				iobuf_log_unexpected(rbuf, __func__);
 				goto error;
@@ -838,6 +846,8 @@ static enum str_e do_stuff_to_receive(struct asfd *asfd,
 	switch(rbuf->cmd)
 	{
 		case CMD_DATAPTH:
+			if(iobuf_relative_path_attack(rbuf))
+				goto error;
 			iobuf_move(&rb->protocol1->datapth, rbuf);
 			return STR_OK;
 		case CMD_ATTRIBS:

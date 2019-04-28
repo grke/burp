@@ -8,62 +8,6 @@
 #include "../log.h"
 #include "../strlist.h"
 
-static void xfree_list(char **list, int size)
-{
-	if(!list) return;
-	if(size<0)
-	{
-		for(; *list; list++)
-			if(*list) free_w(list);
-	}
-	else
-	{
-		int i;
-		for(i=0; i<size; i++)
-			if(list[i]) free_w(&list[i]);
-	}
-	free_w(list);
-}
-
-/*
- * Returns NULL-terminated list of tokens found in string src,
- * also sets *size to number of tokens found (list length without final NULL).
- * On failure returns NULL. List itself and tokens are dynamically allocated.
- * Calls to strtok with delimiters in second argument are used (see its docs),
- * but neither src nor delimiters arguments are altered.
- */
-static char **xstrsplit(const char *src, const char *delimiters, size_t *size)
-{
-	size_t allocated;
-	char *init=NULL;
-	char **ret=NULL;
-
-	*size=0;
-	if(!(init=strdup_w(src, __func__))) goto end;
-	if(!(ret=(char **)malloc_w((allocated=10)*sizeof(char *), __func__)))
-		goto end;
-	for(char *tmp=strtok(init, delimiters); tmp; tmp=strtok(NULL, delimiters))
-	{
-		// Check if space is present for another token and terminating NULL.
-		if(allocated<*size+2)
-		{
-			if(!(ret=(char **)realloc_w(ret,
-				(allocated=*size+11)*sizeof(char *), __func__)))
-					return NULL;
-		}
-		if(!(ret[(*size)++]=strdup_w(tmp, __func__)))
-		{
-			ret=NULL;
-			goto end;
-		}
-	}
-	ret[*size]=NULL;
-
-end:
-	free_w(&init);
-	return ret;
-}
-
 static inline int xmin(int a, int b)
 {
 	return a<b?a:b;
@@ -103,11 +47,12 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 	char **splitstr1=NULL;
         WIN32_FIND_DATA ffd;
         HANDLE hFind=INVALID_HANDLE_VALUE;
+	char *tmppath=NULL;
 
 	convert_backslashes(&ig->path);
 	if(ig->path[strlen(ig->path)-1]!='*')
 	{
-		if(!(splitstr1=xstrsplit(ig->path, "*", &len1)))
+		if(!(splitstr1=strsplit_w(ig->path, "*", &len1, __func__)))
 			goto end;
 	}
 	if(len1>2)
@@ -119,23 +64,25 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 	}
 	if(len1>1)
 	{
-		char *tmppath=NULL;
 		if(astrcat(&tmppath, splitstr1[0], __func__)
 		  || !(sav=strdup_w(tmppath, __func__))
 		  || astrcat(&tmppath, "*", __func__))
 			goto end;
-		hFind=FindFirstFileA(tmppath, &ffd);
-		free_w(&tmppath);
 	}
 	else
-		hFind=FindFirstFileA(ig->path, &ffd);
+	{
+		if(astrcat(&tmppath, ig->path, __func__))
+			goto end;
+	}
+
+	hFind=FindFirstFileA(tmppath, &ffd);
 
 	if(hFind==INVALID_HANDLE_VALUE)
 	{
 		LPVOID lpMsgBuf;
-		DWORD dw=GetLastError(); 
+		DWORD dw=GetLastError();
 		FormatMessage(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
 			FORMAT_MESSAGE_FROM_SYSTEM |
 			FORMAT_MESSAGE_IGNORE_INSERTS,
 			NULL,
@@ -143,7 +90,8 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 			(LPTSTR)&lpMsgBuf,
 			0, NULL );
-		logp("Error: %s\n", (char *)lpMsgBuf);
+		logp("include_glob error (%s): %s\n",
+			tmppath, (char *)lpMsgBuf);
 		LocalFree(lpMsgBuf);
 		goto end;
 	}
@@ -154,7 +102,7 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 		   && strcmp(ffd.cFileName, ".")
 		   && strcmp(ffd.cFileName, ".."))
 		{
-			char *tmppath=NULL;
+			free_w(&tmppath);
 			if(len1<2)
 			{
 				if(ig->path[strlen(ig->path)-1]=='*')
@@ -176,9 +124,9 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 				  || astrcat(&tmppath, splitstr1[1], __func__))
 					goto end;
 			}
-			if(add_to_strlist(confs[OPT_INCLUDE], tmppath, 1))
-				goto end;
-			free_w(&tmppath);
+			if(add_to_strlist(confs[OPT_INCLUDE],
+				tmppath, 1))
+					goto end;
 		}
 	}
 	while(FindNextFileA(hFind, &ffd)!=0);
@@ -186,20 +134,96 @@ static int process_entry(struct strlist *ig, struct conf **confs)
 	FindClose(hFind);
 	ret=0;
 end:
+	free_w(&tmppath);
 	if(splitstr1)
 	{
 		free_w(&sav);
-		xfree_list(splitstr1, len1);
+		free_list_w(&splitstr1, len1);
 	}
 	return ret;
 }
 
+static int expand_windows_drives(struct conf **confs)
+{
+	struct strlist *ig_o=NULL;
+	struct strlist *ig_n=NULL;
+	char *drives_detected=NULL;
+
+	if(!(drives_detected=get_fixed_drives()) || !*drives_detected)
+	{
+		logp("Could not detect windows drives.\n");
+		return -1;
+	}
+	logp("windows drives detected: %s\n", drives_detected);
+
+	for(ig_o=get_strlist(confs[OPT_INCGLOB]); ig_o; ig_o=ig_o->next)
+	{
+		if(!strncmp(ig_o->path, "*:", strlen("*:")))
+		{
+			size_t d;
+			for(d=0; d<strlen(drives_detected); d++)
+			{
+				ig_o->path[0]=drives_detected[d];
+				if(strchr(ig_o->path, '*'))
+				{
+					// More to expand later.
+					if(strlist_add(&ig_n,
+						ig_o->path, 1))
+							return -1;
+				}
+				else
+				{
+					// Nothing else to expand, just add it
+					// straight onto the includes - but
+					// only if the expanded path actually
+					// exists.
+					char *rp;
+					if(!(rp=realpath(ig_o->path, NULL)))
+					{
+						switch(errno)
+						{
+							case ENOENT:
+								continue;
+							case ENOMEM:
+								return -1;
+							case EACCES:
+							default:
+								// Add anyway,
+								// for warnings
+								// later.
+								break;
+						}
+					}
+					free_w(&rp);
+
+					if(add_to_strlist(confs[OPT_INCLUDE],
+						ig_o->path, 1))
+							return -1;
+				}
+			}
+			continue;
+		}
+
+		if(strlist_add(&ig_n, ig_o->path, 1))
+			return -1;
+	}
+
+	set_strlist(confs[OPT_INCGLOB], ig_n);
+
+	return 0;
+}
+
 int glob_windows(struct conf **confs)
 {
-	struct strlist *ig;
+	struct strlist *ig=NULL;
+
+	if(expand_windows_drives(confs))
+		return -1;
 
 	for(ig=get_strlist(confs[OPT_INCGLOB]); ig; ig=ig->next)
-		if(process_entry(ig, confs)) return -1;
+		if(process_entry(ig, confs))
+			return -1;
+
 	return 0;
 }
 

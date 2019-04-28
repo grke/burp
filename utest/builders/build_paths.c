@@ -43,10 +43,15 @@ static char *gen_fullpath(const char *prefix, char **comps)
 	uint32_t number_of_components;
 	char *path=NULL;
 	char *file=NULL;
+	char cwd[PATH_MAX];
+
 	number_of_components=prng_next()%6;
+	fail_unless(getcwd(cwd, sizeof(cwd)));
+	fail_unless(!astrcat(&path, cwd, __func__));
+
 	if(prefix)
 	{
-		fail_unless(!astrcat(&path, "", __func__));
+		fail_unless(!astrcat(&path, "/", __func__));
 		fail_unless(!astrcat(&path, prefix, __func__));
 	}
 	for(i=0; i<number_of_components; i++)

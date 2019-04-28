@@ -1,5 +1,31 @@
 Things to watch out for when upgrading.
 
+2.3.4
+-----
+Clients will now error out if using protocol 2 and 'encryption_password' is
+set, because that option is not supported in protocol 2.
+
+2.3.2
+-----
+The 'restore_client' option now takes into consideration the 'client_can_X'
+settings of the original client before considering the 'client_can_X' settings
+of the restore client. To get the previous behaviour, where only the restore
+client's settings were considered, use the new 'super_client' option instead
+of 'restore_client'.
+
+2.2.14
+------
+For security, the burp client will no longer let you restore over symlinks
+that point outside of your desired destination directory. Specifying a
+'-d <directory>' with your restore parameters is now mandatory. If you wish
+to restore everything back to the original locations, you can give '-d /',
+which will also work on Windows clients.
+
+2.2.12
+------
+The command line option to print the version number, is now '-V'.
+It has made way for the new '-v' option, which means 'log to stdout'.
+
 2.2.10
 ------
 The server side options 'address', 'port', 'status_address', and 'status_port'

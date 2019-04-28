@@ -48,6 +48,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/src/client/extra_comms.o \
 	$(OBJDIR)/src/client/extrameta.o \
 	$(OBJDIR)/src/client/find.o \
+	$(OBJDIR)/src/client/find_logic.o \
 	$(OBJDIR)/src/client/glob_windows.o \
 	$(OBJDIR)/src/client/list.o \
 	$(OBJDIR)/src/client/main.o \

@@ -64,6 +64,7 @@ static void run_test(int expected_ret,
         struct async *as;
         struct asfd *asfd;
         struct conf **confs;
+	struct strlist *failover=NULL;
 	char *incexc=NULL;
 
         setup(&as, &confs);
@@ -78,6 +79,7 @@ static void run_test(int expected_ret,
 		as,
 		confs,
 		&action,
+		failover,
 		&incexc
 	)==expected_ret);
 
@@ -166,10 +168,40 @@ static void setup_srestore_denied(struct asfd *asfd, struct conf **confs)
 	setup_extra_comms_end(asfd, &r, &w);
 }
 
+// Neither client or server provide a restoreprefix
+static void setup_srestore_no_restoreprefix1(
+	struct asfd *asfd, struct conf **confs)
+{
+	int r=0; int w=0;
+	set_int(confs[OPT_SERVER_CAN_RESTORE], 1);
+	setup_extra_comms_begin(asfd, &r, &w, "srestore");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore ok");
+
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backup = 20");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "srestore end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore end ok");
+}
+
+// Server provides a restoreprefix, but the client does not.
+static void setup_srestore_no_restoreprefix2(
+	struct asfd *asfd, struct conf **confs)
+{
+	int r=0; int w=0;
+	set_int(confs[OPT_SERVER_CAN_RESTORE], 1);
+	setup_extra_comms_begin(asfd, &r, &w, "srestore");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore ok");
+
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "backup = 20");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreprefix = /tmp");
+	asfd_mock_read(asfd, &r, 0, CMD_GEN, "srestore end");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore end ok");
+}
+
 static void setup_srestore(struct asfd *asfd, struct conf **confs)
 {
 	int r=0; int w=0;
 	set_int(confs[OPT_SERVER_CAN_RESTORE], 1);
+	set_string(confs[OPT_RESTOREPREFIX], "/tmp");
 	setup_extra_comms_begin(asfd, &r, &w, "srestore");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore ok");
 
@@ -201,6 +233,7 @@ static void setup_srestore_orig_client(struct asfd *asfd, struct conf **confs)
 {
 	int r=0; int w=0;
 	set_int(confs[OPT_SERVER_CAN_RESTORE], 1);
+	set_string(confs[OPT_RESTOREPREFIX], "/tmp");
 	setup_extra_comms_begin(asfd, &r, &w, "srestore:orig_client");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore ok");
 
@@ -304,7 +337,7 @@ static void setup_counters(struct asfd *asfd, struct conf **confs)
 
 static void setup_uname(struct asfd *asfd, struct conf **confs)
 {
-	char msg[256]="";
+	char msg[512]="";
 	int r=0; int w=0;
 	struct utsname utsname;
 	fail_unless(!uname(&utsname));
@@ -430,6 +463,8 @@ START_TEST(test_client_extra_comms)
 	run_test(0,  ACTION_BACKUP, setup_srestore_denied, NULL);
 	run_test(0,  ACTION_MONITOR,setup_srestore_action_monitor, NULL);
 	run_test(0,  ACTION_BACKUP, setup_srestore, check_srestore);
+	run_test(-1,  ACTION_BACKUP, setup_srestore_no_restoreprefix1, NULL);
+	run_test(-1,  ACTION_BACKUP, setup_srestore_no_restoreprefix2, NULL);
 	run_test(0,  ACTION_BACKUP,
 		setup_srestore_orig_client, check_srestore_orig_client);
 	run_test(-1, ACTION_BACKUP, setup_switch_client_denied, NULL);

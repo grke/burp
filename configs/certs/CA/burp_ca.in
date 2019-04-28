@@ -2,8 +2,8 @@
 #
 # Copyright: Patrick Koppen
 # License:   GPLv3
-# Version:   1.2
-# Date:      29.12.2012
+
+set -eu -o pipefail
 
 # Locking code to try to make sure that two instances do not run together and
 # corrupt the CA files.
@@ -12,18 +12,10 @@ PIDFILE="$LOCKDIR/pid"
 
 cleanup()
 {
-	# Perform program exit housekeeping
-	# Optionally accepts an exit status
-	rm -rf $LOCKDIR
+	# Perform program exit housekeeping.
+	# Optionally accepts an exit status.
+	rm -rf "$LOCKDIR"
 	trap - INT TERM EXIT
-	exit $1
-}
-
-error_exit()
-{
-	# Display error message and exit
-	[ -n "$2" ] && echo "$(basename $0): error $1 on executing $2" 1>&2
-	cleanup $1
 }
 
 lock()
@@ -47,42 +39,51 @@ lock()
 	fi
 }
 
-set +e
-
 maxwait=60
 sleeptime=1
 slept=0
 
 while ! lock; do
-	sleep $sleeptime
-	let slept+=$sleeptime
+	sleep "$sleeptime"
+	let slept+="$sleeptime"
 	let sleeptime*=2
-	if [ $slept -ge $maxwait ]; then
+	if [ "$slept" -ge "$maxwait" ]; then
 		echo "Failed to acquire lock $LOCKDIR in $slept seconds" 1>&2
 		exit 1
 	fi
 done
 
-# Solaris derivates and AIX don't support 'hostname -f' and, in fact,
-# set the hostname to '-f' with that call.
+# Solaris, AIX, NetBSD and OpenBSD don't support 'hostname -f' and,
+# in fact, set the hostname to '-f' with that call.
+name=
 case "$(uname -s)" in
-	SunOS) name=$( (check-hostname | cut -d' ' -f7) 2>/dev/null ) ;;
-	AIX) name=$(host $(hostname) | awk '{ print $1}' 2>/dev/null ) ;;
-	*) name=$(hostname -f 2>/dev/null) ;;
+	SunOS) name="$(check-hostname | cut -d' ' -f7)" ;;
+	AIX) name="$(host "$(hostname)" | awk '{ print $1}')" ;;
+	NetBSD) name="$(hostname)" ;;
+	OpenBSD) name="$(uname -n)" ;;
+	*) name="$(hostname -f)" ;;
 esac
 # Try NetBSD style.
-[ -n "$name" ] || name=$(hostname 2>/dev/null)
-if [ -z "$name" ] ; then
-	echo "Could not determine hostname" 1>&2
-	error_exit 1 hostname
-fi
+[ -n "$name" ] || name="$(hostname)"
 
-etc=@sysconfdir@
-dir=${etc}/CA
-conf=${etc}/CA.cnf
+etc="@sysconfdir@"
+dir="$etc"/CA
+conf="$etc"/CA.cnf
+days=
 ca_days=7300
 size=2048
-
+init=
+key=
+keypath=
+request=
+requestpath=
+sign=
+batch=
+revoke=
+crl=
+ca=
+dhfile=
+altname=
 def_umask=022
 sec_umask=077
 
@@ -121,67 +122,74 @@ check_second_arg()
 
 while [ $# -gt 0 ]
 do
-	case $1 in
+	case "$1" in
 		-h|--help) help; exit 0 ;;
 		-i|--init) init=yes ;;
 		-k|--key) key=yes ;;
-		-K|--keypath) check_second_arg $#; keypath=$2; shift ;;
+		-K|--keypath) check_second_arg "$#"; keypath="$2"; shift ;;
 		-r|--request) request=yes ;;
-		-R|--requestpath) check_second_arg $#; requestpath=$2; shift ;;
+		-R|--requestpath) check_second_arg "$#"; requestpath="$2"; shift ;;
 		-s|--sign) sign=yes ;;
 		   --batch) batch="-batch" ;;
-		   --revoke) check_second_arg $#; revoke=$2; shift ;;
+		   --revoke) check_second_arg "$#"; revoke="$2"; shift ;;
 		   --crl) crl=yes ;;
-		-d|--dir) check_second_arg $#; dir=$2; shift ;;
-		-c|--config) check_second_arg $#; conf=$2; shift ;;
-		-n|--name) check_second_arg $#; name=$2; shift ;;
-		-D|--days) check_second_arg $#; days="-days $2"; shift ;;
-		   --ca_days) check_second_arg $#; ca_days=$2; shift ;;
-		-S|--size) check_second_arg $#; size=$2; shift ;;
-		-a|--ca) check_second_arg $#; ca=$2; shift ;;
-		-f|--dhfile) check_second_arg $#; dhfile=$2; shift ;;
-		-A|--altname) check_second_arg $#; altname=$2; shift ;;
-		--) shift; break;;
-		-*) echo "$0: error - unrecognized option $1" 1>&2; exit 1;;
-		*) break;;
+		-d|--dir) check_second_arg "$#"; dir="$2"; shift ;;
+		-c|--config) check_second_arg "$#"; conf="$2"; shift ;;
+		-n|--name) check_second_arg "$#"; name="$2"; shift ;;
+		-D|--days) check_second_arg "$#"; days="-days $2"; shift ;;
+		   --ca_days) check_second_arg "$#"; ca_days="$2"; shift ;;
+		-S|--size) check_second_arg "$#"; size="$2"; shift ;;
+		-a|--ca) check_second_arg "$#"; ca="$2"; shift ;;
+		-f|--dhfile) check_second_arg "$#"; dhfile="$2"; shift ;;
+		-A|--altname) check_second_arg "$#"; altname="$2"; shift ;;
+		--) shift; break ;;
+		-*) echo "$0: error - unrecognized option $1" 1>&2; exit 1 ;;
+		*) break ;;
 	esac
 	shift
 done
 
 if [ -n "$dhfile" ] ; then
-	openssl dhparam -dsaparam -out "$dhfile" 2048 || error_exit $? openssl
-	chmod 600 "$dhfile" || error_exit $? chmod
+	openssl dhparam \
+		-dsaparam \
+		-out "$dhfile" \
+		2048
+	chmod 600 "$dhfile"
 fi
 
 if [ -z "$ca" ]; then
-	ca=${name}
+	ca="$name"
 fi
 
 if [ -n "$altname" ]; then
 	altname="subjectAltName=$altname"
 fi
 
+export CA_DIR="$dir"
+
 # init CA
 if [ "$init" = "yes" ]; then
-	echo "Init... ${ca}"
-	if [ ! -f ${conf} ]; then
-		echo "$0: error - config ${conf} missing" 1>&2
-		error_exit 1
+	echo "Init... $ca"
+	if [ ! -f "$conf" ]; then
+		echo "$0: error - config $conf missing" 1>&2
+		exit 1
 	fi
-	if [ -d ${dir} ]; then
-		echo "$0: error - ${dir} exists, ca initialized" 1>&2
-		error_exit 1
+	if [ -d "$dir" ]; then
+		echo "$0: error - $dir exists, ca initialized" 1>&2
+		exit 1
 	fi
   
-	mkdir ${dir}
-	mkdir ${dir}/certs
-	mkdir ${dir}/newcerts
+	mkdir "$dir"
+	mkdir "$dir"/certs
+	mkdir "$dir"/newcerts
 
-	umask ${sec_umask}
-	openssl genrsa -out ${dir}/CA_${ca}.key ${size}
-	umask ${def_umask}
-	TEMP=$(mktemp /tmp/@name@_ca.tmp.XXXXXXXX || echo /tmp/@name@_ca.tmp.$$)
-	cat <<-EOF > ${TEMP}
+	umask "$sec_umask"
+	openssl genrsa \
+		-out "$dir/CA_$ca.key" \
+		"$size"
+	umask "$def_umask"
+	TEMP="$(mktemp "/tmp/@name@_ca.tmp.XXXXXXXX" || echo "/tmp/@name@_ca.tmp.$$")"
+	cat <<-EOF > "$TEMP"
 	RANDFILE                = /dev/urandom
 
 	[ req ]
@@ -194,35 +202,41 @@ if [ "$init" = "yes" ]; then
 	authorityKeyIdentifier=keyid,issuer:always
 
 	[ req_distinguished_name ]
-	commonName                      = ${ca}
+	commonName                      = $ca
 EOF
-	CA_DIR=${dir} openssl req -config ${TEMP} -new -x509 -days $ca_days \
-		-key ${dir}/CA_${ca}.key -out ${dir}/CA_${ca}.crt \
-		-extensions v3_ca || error_exit $? openssl
-	rm -f $TEMP
+	openssl req \
+		-config "$TEMP" \
+		-new -x509 \
+		-days "$ca_days" \
+		-key "$dir/CA_$ca.key" \
+		-out "$dir/CA_$ca.crt" \
+		-extensions v3_ca
+	rm -f "$TEMP"
 
-	: > ${dir}/index.txt
-	echo "00" > ${dir}/serial.txt
-	echo "00" > ${dir}/crlnumber.txt
+	: > "$dir"/index.txt
+	echo "00" > "$dir"/serial.txt
+	echo "00" > "$dir"/crlnumber.txt
 fi
 
-[ -z "$keypath" ] && keypath=${dir}/${name}.key
+[ -z "$keypath" ] && keypath="$dir/$name.key"
 
 # generate key
 if [ "$key" = "yes" ]; then
-	echo "generating key ${name}: ${keypath}"
-	umask ${sec_umask}
-	openssl genrsa -out "${keypath}" ${size} || error_exit $? openssl
-	umask ${def_umask}
+	echo "generating key $name: $keypath"
+	umask "$sec_umask"
+	openssl genrsa \
+		-out "$keypath" \
+		"$size"
+	umask "$def_umask"
 fi
 
 # generate signing request 
-[ -z "$requestpath" ] && requestpath=${dir}/${name}.csr
+[ -z "$requestpath" ] && requestpath="$dir/$name.csr"
 if [ "$request" = "yes" ]; then
-	echo "generating request ${name}"
-        [ -d $(dirname $requestpath) ] || mkdir $(dirname $requestpath)
-	TEMP=$(mktemp /tmp/@name@_ca.tmp.XXXXXXXX || echo /tmp/@name@_ca.tmp.$$)
-	cat <<-EOF > ${TEMP}
+	echo "generating request $name"
+        [ -d "$(dirname "$requestpath")" ] || mkdir "$(dirname "$requestpath")"
+	TEMP="$(mktemp "/tmp/@name@_ca.tmp.XXXXXXXX" || echo "/tmp/@name@_ca.tmp.$$")"
+	cat <<-EOF > "$TEMP"
 	RANDFILE                = /dev/urandom
         req_extensions          = v3_req
 
@@ -235,42 +249,68 @@ if [ "$request" = "yes" ]; then
 	$altname
 
 	[ req_distinguished_name ]
-	commonName                      = ${name}
+	commonName                      = $name
 
 EOF
-	openssl req -config ${TEMP} -new -key "${keypath}" \
-		-out "${requestpath}" -extensions v3_req || error_exit $?  openssl
+	openssl req \
+		-config "$TEMP" \
+		-new \
+		-key "$keypath" \
+		-out "$requestpath" \
+		-extensions v3_req
 	rm -f "$TEMP"
 fi
 
 
 # sign 
 if [ "$sign" = "yes" ]; then
-	serial=$(cat ${dir}/serial.txt)
-	CA_DIR=${dir} openssl ca -config ${conf} -name ca \
-		-in ${dir}/${name}.csr -out $dir/${name}.crt ${days} \
-		-keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
-		${batch} || error_exit $? openssl
-	[ -f ${dir}/newcerts/${serial}.pem ] || exit 0
-	mv ${dir}/newcerts/${serial}.pem ${dir}/certs/${serial}.pem || error_exit $? mv
+	serial="$(cat "$dir"/serial.txt)"
+	if [ -n "$days" ] ; then
+		openssl ca \
+			-config "$conf" \
+			-name ca \
+			-in "$dir/$name.csr" \
+			-out "$dir/$name.crt" \
+			-days "$days" \
+			-keyfile "$dir/CA_$ca.key" \
+			-cert "$dir/CA_$ca.crt" \
+			$batch
+	else
+		openssl ca \
+			-config "$conf" \
+			-name ca \
+			-in "$dir/$name.csr" \
+			-out "$dir/$name.crt" \
+			-keyfile "$dir/CA_$ca.key" \
+			-cert "$dir/CA_$ca.crt" \
+			$batch
+	fi
+	[ -f "$dir/newcerts/$serial.pem" ] || exit 0
+	mv "$dir/newcerts/$serial.pem" "$dir/certs/$serial.pem"
+
 	# rehash the certificates
-	for file in ${dir}/certs/*.pem; do
-		ln -s -f $file \
-			${dir}/certs/`openssl x509 -hash -noout -in $file`.0 || error_exit $? ln
+	for file in "$dir"/certs/*.pem; do
+		hash=$(openssl x509 -hash -noout -in "$file")
+		ln -s -f "$file" "$dir/certs/$hash.0"
 	done
 fi
 
-# revoke
 [ -n "$revoke" ] && \
-	CA_DIR=${dir} openssl ca -config ${conf} -name ca \
-		-revoke ${dir}/certs/${revoke}.pem \
-		-keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt \
-		${batch}
+	openssl ca \
+		-config "$conf" \
+		-name ca \
+		-revoke "$dir/certs/$revoke.pem" \
+		-keyfile "$dir/CA_$ca.key" \
+		-cert "$dir/CA_$ca.crt" \
+		$batch
 
-# crl
 [ -n "$crl" ] && \
-	CA_DIR=${dir} openssl ca -config ${conf} -name ca \
-		-gencrl -out ${dir}/CA_${ca}.crl \
-		-keyfile ${dir}/CA_${ca}.key -cert ${dir}/CA_${ca}.crt
+	openssl ca \
+		-config "$conf" \
+		-name ca \
+		-gencrl \
+		-out "$dir/CA_$ca.crl" \
+		-keyfile "$dir/CA_$ca.key" \
+		-cert "$dir/CA_$ca.crt"
 
 exit 0

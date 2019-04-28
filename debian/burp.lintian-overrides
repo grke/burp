@@ -1,5 +1,0 @@
-# the "wrong" file permissions are for security reasons
-non-standard-file-perm etc/burp/burp-server.conf 0600 != 0644
-non-standard-file-perm etc/burp/burp.conf 0600 != 0644
-non-standard-dir-perm etc/burp/clientconfdir/ 0700 != 0755
-non-standard-dir-perm var/spool/burp/ 0700 != 0755

@@ -335,7 +335,7 @@ static int check_path_does_not_exist(struct asfd *asfd,
 	struct stat statp;
 	if(!lstat(path, &statp))
 	{
-		char msg[512]="";
+		char msg[1024]="";
 		snprintf(msg, sizeof(msg), "Will not accept a client certificate request for '%s' - %s already exists!", client, path);
 		log_and_send(asfd, msg);
 		return -1;

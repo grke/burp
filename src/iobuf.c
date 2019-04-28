@@ -130,10 +130,13 @@ static int do_iobuf_fill_from_fzp(struct iobuf *iobuf, struct fzp *fzp,
 	int extra_bytes)
 {
 	unsigned int s;
-	char lead[5]="";
+	char lead[6]="";
 	char command;
+	int r;
 
-	switch(fzp_read_ensure(fzp, lead, sizeof(lead), __func__))
+	r=fzp_read_ensure(fzp, lead, sizeof(lead)-1, __func__);
+	lead[5]='\0';
+	switch(r)
 	{
 		case 0: break; // OK.
 		case 1: return 1; // Finished OK.
@@ -196,3 +199,12 @@ const char *iobuf_to_printable(struct iobuf *iobuf)
 			"%c:%04X:(binary data)", iobuf->cmd, (int)iobuf->len);
 	return str;
 }
+
+int iobuf_relative_path_attack(struct iobuf *iobuf)
+{
+	if(!has_dot_component(iobuf->buf))
+		return 0;
+	iobuf_log_unexpected(iobuf, __func__);
+	return 1;
+}
+

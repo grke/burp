@@ -34,16 +34,16 @@ Print help and then exit.
 \fB\-?\fR \fB\fR
 Print help and then exit.
 .TP
-\fB\-o\fR \fB[option=value]\fR
-Override a given option. You can use this flag several times to override multiple options.
-You can even reset list options with the special syntax ':=' (example: '-o "include:=/tmp"').
-.TP
 \fB\-i\fR \fB\fR
 Print an index table of symbols that humans may see @name@ produce, and exit.
 .TP
 \fB\-n\fR \fB\fR
 No forking mode. The program will accept a single query, deal with it, and then
 exit. This is useful for debugging. Implies '\-F'. If you intend to debug a protocol2 session, you will also want to run a separate champion chooser process ('\-a c' below).
+.TP
+\fB\-o\fR \fB[option=value]\fR
+Override a given option. You can use this flag several times to override multiple options.
+You can even reset list options with the special syntax ':=' (example: '-o "include:=/tmp"').
 .TP
 \fB\-Q\fR \fB\fR
 Do not log to stdout (overrides config file 'stdout' setting).
@@ -52,6 +52,9 @@ Do not log to stdout (overrides config file 'stdout' setting).
 Dry-run mode to test config file syntax.
 .TP
 \fB\-v\fR \fB\fR
+Log to stdout (overrides config file 'stdout' setting).
+.TP
+\fB\-V\fR \fB\fR
 Print version and exit.
 .TP
 ADDITIONAL SERVER OPTIONS TO USE WITH '\-a c'
@@ -73,7 +76,7 @@ Short for 'config file'. The argument is a path to the config file. The default
 is /etc/@name@/@name@.conf, or %PROGRAMFILES%\\@human_name@\\@name@.conf on Windows.
 .TP
 \fB\-C\fR \fB[client]\fR
-Allows you to specify an alternative client to list or restore from. Requires that the server configuration of the alternative client permits your client to do this. See the 'restore_client' option.
+Allows you to specify an alternative client to list or restore from. Requires that the server configuration of the alternative client permits your client to do this. See the 'restore_client' and 'super_client' options.
 .TP
 \fB\-d\fR \fB[path]\fR
 Short for 'directory'. When restoring, the argument is a path to an alternative directory to restore to. When listing, the argument is the directory to list.
@@ -110,6 +113,9 @@ For use with restores \- strip a number of leading path components.
 .TP
 \fB\-t\fR \fB\fR
 Dry-run mode to test config file syntax.
+.TP
+\fB\-v\fR \fB\fR
+Log to stdout (overrides config file 'stdout' setting).
 .TP
 \fB\-x\fR (on Windows)
 On restore, do not use the Windows VSS API on restore - give this option when you are restoring a backup that contains no VSS data.
@@ -176,20 +182,17 @@ Long list the /home/graham directory of backup 1. These '\-d' versions of the li
 \fB@name@ \-C altclient \-a L\fR
 Long list the top level directory of backup 1 of client 'altclient'.
 .TP
-\fB@name@ \-a r\fR
-Restores all the files in the most recent backup to their original location.
+\fB@name@ \-a r \-d /tmp/restoredir\fR
+Restores all the files in the most recent backup into the directory /tmp/restoredir.
 .TP
-\fB@name@ \-a r \-b 1 \-r myregex\fR
-Restores all the files in backup number 1 that match the regular expression 'myregex' back to their original location.
+\fB@name@ \-a r \-b 1 \-d /tmp/restoredir \-r myregex\fR
+Restores all the files in backup number 1 into the directory /tmp/restoredir, if they match the regular expression 'myregex'.
 .TP
-\fB@name@ \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
-Restores all the files in backup number 1 that match the regular expression 'myregex' into the directory /tmp/restoredir.
+\fB@name@ \-a r \-b 1 \-d /tmp/restoredir \-r myregex \-s 2\fR
+Restores all the files in backup number 1 into the directory /tmp/restore, if they match the regular expression 'myregex', and strip 2 leading path components.
 .TP
-\fB@name@ \-a r \-b 1 \-r myregex \-d /tmp/restoredir \-s 2\fR
-Restores all the files in backup number 1 that match the regular expression 'myregex' into the directory /tmp/restoredir and strip 2 leading path components.
-.TP
-\fB@name@ \-C altclient \-a r \-b 1 \-r myregex \-d /tmp/restoredir\fR
-Restores all the files in backup number 1 of client 'altclient' that match the regular expression 'myregex' into the directory /tmp/restoredir.
+\fB@name@ \-C altclient \-a r \-b 1 \-d /tmp/restoredir \-r myregex\fR
+Restores all the files in backup number 1 of client 'altclient' into the directory /tmp/restoredir, if that match the regular expression 'myregex'.
 .TP
 \fB@name@ \-a v\fR
 Verifies the most recent backup.
@@ -222,7 +225,7 @@ Read additional configuration files.
 Required to run in server mode.
 .TP
 \fBlisten=[address]:[port]\fR
-Defines the main TCP address and port that the server listens on. The default is either '::' or '0.0.0.0', dependent upon compile time options. Specify multiple 'listen' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_children' value.
+Defines the main TCP address and port that the server listens on. Specify multiple 'listen' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_children' value.
 .TP
 \fBlisten_status=[address]:[port]\fR
 Defines the main TCP address and port that the server listens on for status requests. Specify multiple 'listen_status' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_status_children' value. Comment out to have no status server.
@@ -289,7 +292,7 @@ When set to 0, delta differencing will not take place. That is, when a file chan
 Only use librsync when a file is less than the given size. Both the most recently backed up version of a file and the version to be backed up are checked. The default is 0, which means the option is off. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBcompression=zlib[0-9] (or gzip[0-9])\fR
-Choose the level of zlib compression for files stored in backups. Setting 0 or zlib0 turns compression off. The default is zlib9. This option can be overridden by the client configuration files in clientconfdir on the server. 'gzip' is a synonym of 'zlib'.
+Choose the level of zlib compression for files stored in backups. Setting 0 or zlib0 turns compression off. The default is zlib9. This option can be overridden by the client configuration files in clientconfdir on the server. 'gzip' is a synonym of 'zlib'. \fBThis option is applicable to protocol version 1 only.\fR
 .TP
 \fBhard_quota=[B/KB/MB/GB]\fR
 Do not back up the client if the estimated size of all files is greater than the specified size. Example: 'hard_quota = 100GB'. Set to 0 (the default) to have no limit.
@@ -345,14 +348,20 @@ Turn this off to prevent clients from forcing backups with the '\-a b' option. T
 \fBclient_can_list=[0|1]\fR
 Turn this off to prevent clients from listing backups with the '\-a l' option. The default is that clients can list backups. Restore clients can override this setting.
 .TP
+\fBclient_can_monitor=[0|1]\fR
+Turn this off to prevent clients from being able to run the status monitor. The default is that clients can run the status monitor. Restore clients can override this setting.
+.TP
 \fBclient_can_restore=[0|1]\fR
 Turn this off to prevent clients from initiating restores with the '\-a r' option. The default is that clients can initiate restores. Restore clients can override this setting.
 .TP
 \fBclient_can_verify=[0|1]\fR
 Turn this off to prevent clients from initiating a verify job with the '\-a v' option. The default is that clients can initiate a verify job. Restore clients can override this setting.
 .TP
+\fBsuper_client=[client]\fR
+A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client, according to the super_client's client_can permissions (eg, 'client_can_list'). You may specify multiple super_clients. If this is too permissive, you may set a super_client for individual original clients in the individual clientconfdir files, or look at the 'restore_client' option.
+.TP
 \fBrestore_client=[client]\fR
-A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client. You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files. Note that restoring a backup from a Windows computer onto a Linux computer will currently leave the VSS headers in place at the beginning of each file. This will be addressed in a future version of @name@.
+A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client, according to the client_can permissions on both the restore_client and the original_client (eg, 'client_can_list'). You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files.
 .TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/@name@_ca.txt.
@@ -376,6 +385,10 @@ Allowed SSL ciphers. See openssl ciphers for details.
 Choose the level of zlib compression over SSL. Setting 0 or zlib0 turns SSL compression off. Setting non-zero gives zlib5 compression (it is not currently possible for openssl to set any other level). The default is 5. 'gzip' is a synonym of 'zlib'.
 .TP
 .TP
+\fBssl_verify_peer_early=[0|1]\fR
+Verify and authenticate client certificates at SSL layer before receiving or sending @human_name@ traffic. The default is to verify client certificates only after password authentication.
+.TP
+.TP
 \fBssl_dhfile=[path]\fR
 Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-dsaparam \-out dhfile.pem 2048
 .TP
@@ -395,7 +408,7 @@ Path to the script to run when a client connects with the timed backup option. I
 A user-definable argument to the timer script. You can have many of these. The timer_arg options can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBnotify_success_script=[path]\fR
-Path to the script to run when a backup succeeds. User arguments are appended after the first five reserved arguments. An example notify script is provided. The notify_success_script option can be overriddden by the client configuration files in clientconfdir on the server.
+Path to the script to run when a backup succeeds. User arguments are appended after the first six reserved arguments. An example notify script is provided. The notify_success_script option can be overriddden by the client configuration files in clientconfdir on the server.
 .TP
 \fBnotify_success_arg=[string]\fR
 A user-definable argument to the notify success script. You can have many of these. The notify_success_arg options can be overriddden by the client configuration files in clientconfdir on the server.
@@ -411,6 +424,9 @@ The same as notify_success_script, but for backups that failed.
 .TP
 \fBnotify_failure_arg=[string]\fR
 The same as notify_success_arg, but for backups that failed.
+.TP
+\fBnotify_failure_on_backup_with_failovers_left=[0|1]\fR
+In the case where there are server_failover entries left to try, you may not wish to notify on backup failure. The default is on.
 .TP
 \fBdedup_group=[string]\fR
 Enables you to group clients together for file deduplication purposes. For example, you might want to set 'dedup_group=xp' for each Windows XP client, and then run the bedup program on a cron job every other day with the option '\-g xp'.
@@ -490,28 +506,34 @@ Read additional configuration files. On Windows, the glob is unimplemented - you
 \fBmode=client\fR
 Required to run in client mode.
 .TP
-\fBserver=[IP address or hostname]\fR
-Defines the server to connect to.
+\fBserver=[host:port]\fR
+Defines the server to connect to. If you don't specify a port here, you will need to specify it separately.
 .TP
-\fBport=[port number]\fR
+\fBserver_failover=[host:port]\fR
+Defines a failover server to connect to. You can provide more than one 'server_failover' entry. The client will try the next failover server if it fails to connect. IMPORTANT: The burp client currently does not have the capability to have a different SSL profile for each server, so for this to work for you, you will need to have the same CA and certificates on each server.
+.TP
+\fBfailover_on_backup_error=[0|1]\fR
+Failover to failover servers on backup errors as well as failures to connect. The default is off.
+.TP
+\fBport=[port]\fR
 Defines the TCP port on the server that we will send requests to. If this option is set, it is the default for these options, which can be overridden individually: port_backup, port_restore, port_verify, port_list, port_delete. If this option is not set, you will need to set all of the port options separately.
 .TP
-\fBport_backup=[port number]\fR
+\fBport_backup=[port]\fR
 Defines the TCP port on the server that we will send backup requests to. If not set, it defaults to the port option.
 .TP
-\fBport_restore=[port number]\fR
+\fBport_restore=[port]\fR
 Defines the TCP port on the server that we will send restore requests to. If not set, it defaults to the port option.
 .TP
-\fBport_verify=[port number]\fR
+\fBport_verify=[port]\fR
 Defines the TCP port on the server that we will send verify requests to. If not set, it defaults to the port_restore option.
 .TP
-\fBport_list=[port number]\fR
+\fBport_list=[port]\fR
 Defines the TCP port on the server that we will send list requests to. If not set, it defaults to the port option.
 .TP
-\fBport_delete=[port number]\fR
+\fBport_delete=[port]\fR
 Defines the TCP port on the server that we will send delete requests to. If not set, it defaults to the port option.
 .TP
-\fBstatus_port=[port number]\fR
+\fBstatus_port=[port]\fR
 Defines the TCP port that the server is listening on for status requests.
 .TP
 \fBcname=[client name]\fR
@@ -590,14 +612,17 @@ Must match the common name in the SSL certificate that the server gives when it 
 \fBssl_ciphers=[cipher list]\fR
 Allowed SSL ciphers. See openssl ciphers for details.
 .TP
-\fBserver_can_restore=[0|1]\fR
-To prevent the server from initiating restores, set this to 0. The default is 1.
-.TP
 \fBserver_can_override_includes=[0|1]\fR
 To prevent the server from being able to override your local include/exclude list, set this to 0. The default is 1.
 .TP
+\fBserver_can_restore=[0|1]\fR
+To prevent the server from initiating restores, set this to 0. The default is 1. You will also need to give a location for the files to be restored to with the 'restoreprefix' option.
+.TP
+\fBrestoreprefix=[path]\fR
+When restoring, this path will be prefixed to the restore path. The '-d' command line option overrides this setting. This setting is required if you are using server initiated restores.
+.TP
 \fBencryption_password=[password]\fR
-Set this to enable client side file Blowfish encryption. If you do not want encryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring this renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). @human_name@ will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem.
+Set this to enable client side file Blowfish encryption. If you do not want encryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring an encryption_password renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. Take care when copying and pasting special characters between client conf files, as the encoding of the config file matters. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). @human_name@ will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem. \fBThis option is applicable to protocol version 1 only.\fR
 .TP
 \fBglob_after_script_pre=[0|1]\fR
 Set this to 0 if you do not want include_glob settings to be evaluated after the pre script is run. The default is 1.
@@ -662,7 +687,7 @@ Where to look to find the burp binary to use when forking a monitor client. This
 .SH INCLUDES / EXCLUDES
 
 .TP
-The following options specify exactly what is backed up. The client can specify these options, or if you include at least one 'include=' in the client configuration files on the server, the server will override them all.
+The following options specify exactly what is backed up. The client can specify these options, or if you include at least one 'include=' or 'include_glob=' in the client configuration files on the server, the server will override them all.
 .TP
 \fBinclude=[path]\fR
 Path to include in the backup. You can have multiple include lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
@@ -671,13 +696,19 @@ Path to include in the backup. You can have multiple include lines. Use forward 
 Path to exclude from the backup. You can have multiple exclude lines. Use forward slashes '/', not backslashes '\\' as path delimiters.
 .TP
 \fBinclude_glob=[glob expression]\fR
-Include paths that match the glob expression. For example, '/home/*/Documents' will include '/home/user1/Documents' and '/home/user2/Documents' if directories 'user1' and 'user2' exist in '/home'. The Windows implementation currently limit the expression to contain only one '*'.
+Include paths that match the glob expression. For example, '/home/*/Documents' will include '/home/user1/Documents' and '/home/user2/Documents' if directories 'user1' and 'user2' exist in '/home'. The Windows implementation currently limits the expression to contain only one '*', with one exception - you may also specify '*:' to expand to detected fixed drives.
 .TP
 \fBinclude_regex=[regular expression]\fR
 Include paths that match the regular expression. You need at least one 'include' or 'include_glob' option to have files to be matched against the regex. If you have at least one 'include_regex' line, then any path NOT matching the regex will be excluded from your backup.
 .TP
 \fBexclude_regex=[regular expression]\fR
 Exclude paths that match the regular expression.
+.TP
+\fBinclude_logic=[logic expression]\fR
+Not yet implemented. See 'exclude_logic' for details on the 'logic expression' syntax.
+.TP
+\fBexclude_logic=[logic expression]\fR
+Exclude paths that match the 'logic expression'. A 'logic expression' may contain several tests chained with boolean operators. The supported operators are: 'and', 'or', 'not' as well as groups of expressions surrounded by parentheses. The supported tests are: 'file_size', 'file_match', 'path_match' and 'file_ext'. The 'file_size' test supports comparisons with '>', '>=', '<', '<=', '=' and take a size as parameter, example: 'file_size<=5Mb'. The 'file_ext' test takes an extension as parameter, example: 'file_ext=pst'. Finally, the 'file_match'  and 'path_match' tests take a regular expression as parameter, example: file_match=b$. 'file_match' is ran against the filename (exemple 'file1') while 'path_match' is ran against the full path of the file (exemple: '/home/test/file1'). A complete expression may look like '(file_size>=5Mb and file_size<=10Mb) and (file_ext=pst or file_match=movies) and not file_ext=mp3'. There are some limitations though, white-spaces and parentheses must be escaped inside a test either by quoting the expression or escaping a given character: 'file_match="perso(nnal)?"', 'file_match=a\ filename'.
 .TP
 \fBinclude_ext=[extension]\fR
 Extensions to include in the backup. Case insensitive. Nothing else will be included in the backup. You can have multiple include extension lines. For example, set 'txt' to include files that end in '.txt'. You need to specify an 'include' line so that @name@ knows where to start looking.
@@ -773,8 +804,10 @@ Additionally, the following options can be overridden here for each client:
 \fBclient_can_delete\fR
 \fBclient_can_force_backup\fR
 \fBclient_can_list\fR
+\fBclient_can_monitor\fR
 \fBclient_can_restore\fR
 \fBclient_can_verify\fR
+\fBsuper_client\fR
 \fBrestore_client\fR
 \fBcompression\fR
 \fBhard_quota\fR
@@ -789,6 +822,7 @@ Additionally, the following options can be overridden here for each client:
 \fBnotify_success_warnings_only\fR
 \fBnotify_failure_script\fR
 \fBnotify_failure_arg\fR
+\fBnotify_failure_on_backup_with_failovers_left\fR
 \fBdedup_group\fR
 \fBserver_script_pre\fR
 \fBserver_script_pre_arg\fR
@@ -829,10 +863,10 @@ You can queue a backup on the server, to be performed when the client next makes
 
 .SH Server initiated restores
 .TP
-You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. The client can deny server initiated restores by setting "server_can_restore=0" in its @name@.conf. Valid fields to include in the restore file are:
+You can queue a restore on the server, to be performed when the client next makes contact. To do this, you put a file called 'restore' into the top level of the client storage directory. The client can deny server initiated restores by setting "server_can_restore=0" in its @name@.conf. The client also needs to specify 'restoreprefix' in its configuration as a destination for the restored files. Valid fields to include in the restore file are:
 .TP
 \fBorig_client=[client]\fR
-The original client to restore from. Equivalent to '\-C' when initiating a restore from a client. Do not include this line when restoring to the original client. See also the 'restore_client' server option.
+The original client to restore from. Equivalent to '\-C' when initiating a restore from a client. Do not include this line when restoring to the original client. See also the 'restore_client' and 'super_client' server options.
 .TP
 \fBbackup=[number|a]\fR
 The number of the backup to restore from. Equivalent to '\-b' when initiating a restore from the client.
@@ -844,7 +878,7 @@ Whether to overwrite existing files. Equivalent to '\-f' when initiating a resto
 Number of leading path components to strip. Equivalent to '\-s' when initiating a restore from the client.
 .TP
 \fBrestoreprefix=[path]\fR
-Prefix to the restore path. Equivalent to '\-d' when initiating a restore from the client.
+Appended to the client-side 'restoreprefix' setting, and then prefixed to the restore path.
 .TP
 \fBstripfrompath=[string]\fR
 Strip matching string from restore paths (before prefix is prepended).

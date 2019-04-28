@@ -17,6 +17,7 @@
 #include "extra_comms.h"
 #include "list.h"
 #include "monitor.h"
+#include "find_logic.h"
 #include "monitor/status_client_ncurses.h"
 #include "protocol2/restore.h"
 #include "restore.h"
@@ -193,6 +194,9 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 	if(ret==CLIENT_OK) logp("backup finished ok\n");
 
 end:
+	// The include_logic/exclude_logic cache may have been populated
+	// during backup so we clean it here
+	free_logic_cache();
 	return ret;
 error:
 	logp("error in backup\n");
@@ -204,16 +208,30 @@ timer_not_met:
 static int s_server_session_id_context=1;
 
 static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
-	enum action action, struct conf **confs)
+	enum action action, struct conf **confs, const char *server,
+	struct strlist *failover)
 {
-	int port=-1;
+	int ret=-1;
+	int port=0;
 	char portstr[8]="";
 	BIO *sbio=NULL;
 	ssl_load_globals();
+	char *cp=NULL;
+	char *server_copy=NULL;
+
+	if(!(server_copy=strdup_w(server, __func__)))
+		goto end;
+
 	if(!(*ctx=ssl_initialise_ctx(confs)))
 	{
 		logp("error initialising ssl ctx\n");
-		return -1;
+		goto end;
+	}
+
+	if((cp=strrchr(server_copy, ':')))
+	{
+		*cp='\0';
+		port=atoi(cp+1);
 	}
 
 	SSL_CTX_set_session_id_context(*ctx,
@@ -225,22 +243,27 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 		case ACTION_BACKUP:
 		case ACTION_BACKUP_TIMED:
 		case ACTION_TIMER_CHECK:
-			port=get_int(confs[OPT_PORT_BACKUP]);
+			if(get_int(confs[OPT_PORT_BACKUP]))
+				port=get_int(confs[OPT_PORT_BACKUP]);
 			break;
 		case ACTION_RESTORE:
-			port=get_int(confs[OPT_PORT_RESTORE]);
+			if(get_int(confs[OPT_PORT_RESTORE]))
+				port=get_int(confs[OPT_PORT_RESTORE]);
 			break;
 		case ACTION_VERIFY:
-			port=get_int(confs[OPT_PORT_VERIFY]);
+			if(get_int(confs[OPT_PORT_VERIFY]))
+				port=get_int(confs[OPT_PORT_VERIFY]);
 			break;
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:
 		case ACTION_DIFF:
 		case ACTION_DIFF_LONG:
-			port=get_int(confs[OPT_PORT_LIST]);
+			if(get_int(confs[OPT_PORT_LIST]))
+				port=get_int(confs[OPT_PORT_LIST]);
 			break;
 		case ACTION_DELETE:
-			port=get_int(confs[OPT_PORT_DELETE]);
+			if(get_int(confs[OPT_PORT_DELETE]))
+				port=get_int(confs[OPT_PORT_DELETE]);
 			break;
 		case ACTION_MONITOR:
 		{
@@ -249,7 +272,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 			{
 				logp("%s not set\n",
 					confs[OPT_STATUS_PORT]->field);
-				return -1;
+				goto end;
 			}
 			port=atoi(s->path);
 			break;
@@ -260,30 +283,35 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 		case ACTION_STATUS_SNAPSHOT:
 			logp("Unexpected action in %s: %d\n",
 				__func__, action);
-			return -1;
+			goto end;
 	}
 
 	snprintf(portstr, sizeof(portstr), "%d", port);
-	if((*rfd=init_client_socket(get_string(confs[OPT_SERVER]), portstr))<0)
-		return -1;
+	if((*rfd=init_client_socket(server_copy, portstr))<0)
+		goto end;
 
 	if(!(*ssl=SSL_new(*ctx))
 	  || !(sbio=BIO_new_socket(*rfd, BIO_NOCLOSE)))
 	{
 		logp_ssl_err("Problem joining SSL to the socket\n");
-		return -1;
+		goto end;
 	}
 	SSL_set_bio(*ssl, sbio, sbio);
 	if(SSL_connect(*ssl)<=0)
 	{
 		logp_ssl_err("SSL connect error\n");
-		return -1;
+		goto end;
 	}
-	return 0;
+
+	ret=0;
+end:
+	free_w(&server_copy);
+	return ret;
 }
 
 static enum cliret initial_comms(struct async *as,
-	enum action *action, char **incexc, struct conf **confs)
+	enum action *action, char **incexc, struct conf **confs,
+	struct strlist *failover)
 {
 	struct asfd *asfd;
 	char *server_version=NULL;
@@ -323,7 +351,7 @@ static enum cliret initial_comms(struct async *as,
 		goto error;
 	}
 
-	switch(extra_comms_client(as, confs, action, incexc))
+	switch(extra_comms_client(as, confs, action, failover, incexc))
 	{
 		case 0:
 			break; // All OK.
@@ -409,7 +437,8 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 }
 
 static enum cliret do_client(struct conf **confs,
-	enum action action, int vss_restore)
+	enum action action, int vss_restore, const char *server,
+	struct strlist *failover)
 {
 	enum cliret ret=CLIENT_OK;
 	int rfd=-1;
@@ -447,8 +476,9 @@ static enum cliret do_client(struct conf **confs,
 
 	if(act!=ACTION_ESTIMATE)
 	{
-		if(ssl_setup(&rfd, &ssl, &ctx, action, confs))
-			goto could_not_connect;
+		if(ssl_setup(&rfd,
+			&ssl, &ctx, action, confs, server, failover))
+				goto could_not_connect;
 
 		if(!(as=async_alloc())
 		  || as->init(as, act==ACTION_ESTIMATE)
@@ -463,7 +493,7 @@ static enum cliret do_client(struct conf **confs,
 				|| act==ACTION_TIMER_CHECK)
 			as->asfd->set_bulk_packets(as->asfd);
 
-		if((ret=initial_comms(as, &act, &incexc, confs)))
+		if((ret=initial_comms(as, &act, &incexc, confs, failover)))
 			goto end;
 	}
 
@@ -540,7 +570,10 @@ end:
 
 int client(struct conf **confs, enum action action, int vss_restore)
 {
+	int finished=0;
 	enum cliret ret=CLIENT_OK;
+	const char *server=NULL;
+	struct strlist *failover=NULL;
 
 	if(!get_int(confs[OPT_ENABLED]))
 	{
@@ -552,17 +585,59 @@ int client(struct conf **confs, enum action action, int vss_restore)
 	// prevent sleep when idle
 	SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
 #endif
+	server=get_string(confs[OPT_SERVER]);
+	failover=get_strlist(confs[OPT_SERVER_FAILOVER]);
 
-	switch((ret=do_client(confs, action, vss_restore)))
+	while(!finished)
 	{
-		case CLIENT_RECONNECT:
-			logp("Re-opening connection to server\n");
+		ret=do_client(confs,
+			action, vss_restore, server, failover);
+		if(ret==CLIENT_RECONNECT)
+		{
+			logp("Re-opening connection to %s\n", server);
 			// FIX THIS: Want to get rid of this sleep - I do not
 			// remember whether it is actually necessary.
 			sleep(5);
-			ret=do_client(confs, action, vss_restore);
-		default:
-			break;
+			ret=do_client(confs,
+				action, vss_restore, server, failover);
+		}
+		switch(ret)
+		{
+			case CLIENT_OK:
+			case CLIENT_SERVER_TIMER_NOT_MET:
+			case CLIENT_RESTORE_WARNINGS:
+				finished=1;
+				break;
+			case CLIENT_ERROR:
+				if(action!=ACTION_BACKUP
+				  && action!=ACTION_BACKUP_TIMED)
+				{
+					finished=1;
+					break;
+				}
+				if(!get_int(
+					confs[OPT_FAILOVER_ON_BACKUP_ERROR]))
+				{
+					finished=1;
+					break;
+				}
+				// Fall through to failover.
+			case CLIENT_COULD_NOT_CONNECT:
+				if(!failover)
+				{
+					finished=1;
+					break;
+				}
+				logp("Failing over\n");
+				// Use a failover server.
+				server=failover->path;
+				failover=failover->next;
+				break;
+			case CLIENT_RECONNECT:
+				logp("Multiple reconnect requests to %s- this should not happen!", server);
+				finished=1;
+				break;
+		}
 	}
 
 #ifdef HAVE_WIN32

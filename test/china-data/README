@@ -1,0 +1,3 @@
+These directory and file names contain wide-characters and demonstrated a
+Windows restore bug in 2.2.14 and 2.2.16. Included here so that they can be
+run through the automated tests.

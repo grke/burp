@@ -63,13 +63,12 @@ static int in_skiplist(const char *xattr)
 }
 
 static int append_to_extrameta(const char *toappend, char metasymbol,
-	char **xattrtext, size_t *xlen, ssize_t totallen)
+	char **xattrtext, size_t *xlen, uint32_t totallen)
 {
 	char tmp3[10];
 	size_t newlen=0;
-	snprintf(tmp3, sizeof(tmp3), "%c%08X",
-		metasymbol, (unsigned int)totallen);
-	newlen=(*xlen)+9+totallen;
+	snprintf(tmp3, sizeof(tmp3), "%c%08X", metasymbol, totallen);
+	newlen=(*xlen)+9+totallen+1;
 	if(!(*xattrtext=(char *)
 		realloc_w(*xattrtext, newlen, __func__)))
 			return -1;
@@ -77,6 +76,7 @@ static int append_to_extrameta(const char *toappend, char metasymbol,
 	(*xlen)+=9;
 	memcpy((*xattrtext)+(*xlen), toappend, totallen);
 	(*xlen)+=totallen;
+	(*xattrtext)[*xlen]='\0';
 	return 0;
 }
 
@@ -84,11 +84,18 @@ static int append_to_extrameta(const char *toappend, char metasymbol,
 static
 #endif
 char *get_next_xattr_str(struct asfd *asfd, char **data, size_t *l,
-	struct cntr *cntr, ssize_t *s, const char *path)
+	struct cntr *cntr, uint32_t *s, const char *path)
 {
 	char *ret=NULL;
 
-	if((sscanf(*data, "%08X", (unsigned int *)s))!=1)
+	if(*l<8)
+	{
+		logw(asfd, cntr, "length of xattr '%s' %zd is too short for %s\n",
+			*data, *l, path);
+		return NULL;
+	}
+
+	if((sscanf(*data, "%08X", s))!=1)
 	{
 		logw(asfd, cntr, "sscanf of xattr '%s' %zd failed for %s\n",
 			*data, *l, path);
@@ -96,6 +103,12 @@ char *get_next_xattr_str(struct asfd *asfd, char **data, size_t *l,
 	}
 	*data+=8;
 	*l-=8;
+	if(*s>*l)
+	{
+		logw(asfd, cntr, "requested length %d of xattr '%s' %zd is too long for %s\n",
+			*s, *data, *l, path);
+		return NULL;
+	}
 	if(!(ret=(char *)malloc_w((*s)+1, __func__)))
 		return NULL;
 	memcpy(ret, *data, *s);
@@ -129,7 +142,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 	char **xattrtext, size_t *xlen, struct cntr *cntr)
 {
 	int i=0;
-	ssize_t maxlen=0xFFFFFFFF/2;
+	uint32_t maxlen=0xFFFFFFFF/2;
 
 	for(i=0; i<(int)(sizeof(namespaces)/sizeof(int)); i++)
 	{
@@ -138,9 +151,9 @@ int get_xattr(struct asfd *asfd, const char *path,
 		int have_acl=0;
 		char *xattrlist=NULL;
 		char *cnamespace=NULL;
-		ssize_t totallen=0;
+		uint32_t totallen=0;
 		char *toappend=NULL;
-		char z[BSD_BUF_SIZE]="";
+		static char z[BSD_BUF_SIZE*2]="";
 		char cattrname[BSD_BUF_SIZE]="";
 		if((len=extattr_list_link(path, namespaces[i], NULL, 0))<0)
 		{
@@ -181,7 +194,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 			char tmp1[9];
 			char tmp2[9];
 			size_t newlen=0;
-			size_t zlen=0;
+			uint32_t zlen=0;
 			ssize_t vlen=0;
 			char *val=NULL;
 			cnt=xattrlist[j];
@@ -194,7 +207,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 
 			if(have_acl && in_skiplist(z))
 				continue;
-			zlen=strlen(z);
+			zlen=(uint32_t)strlen(z);
 			//printf("\ngot: %s (%s)\n", z, path);
 
 			if((vlen=extattr_list_link(path, namespaces[i],
@@ -230,8 +243,8 @@ int get_xattr(struct asfd *asfd, const char *path,
 				}
 			}
 
-			snprintf(tmp1, sizeof(tmp1), "%08X", (unsigned int)zlen);
-			snprintf(tmp2, sizeof(tmp2), "%08X", (unsigned int)vlen);
+			snprintf(tmp1, sizeof(tmp1), "%08X", zlen);
+			snprintf(tmp2, sizeof(tmp2), "%08X", (uint32_t)vlen);
 			newlen=totallen+8+zlen+8+vlen;
 			if(!(toappend=(char *)realloc_w(toappend, newlen, __func__)))
 			{
@@ -252,8 +265,8 @@ int get_xattr(struct asfd *asfd, const char *path,
 			if(totallen>maxlen)
 			{
 				logw(asfd, cntr,
-				  "xattr length of '%s' grew too long: %lu\n",
-				  path, (unsigned long)totallen);
+				  "xattr length of '%s' grew too long: %d\n",
+				  path, totallen);
 				free_w(&val);
 				free_w(&toappend);
 				free_w(&xattrlist);
@@ -293,7 +306,7 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 	while(l>0)
 	{
 		ssize_t cnt;
-		ssize_t vlen=0;
+		uint32_t vlen=0;
 		int cnspace=0;
 		char *name=NULL;
 
@@ -327,7 +340,7 @@ static int do_set_xattr_bsd(struct asfd *asfd,
 			cnspace, name, value, vlen))!=vlen)
 		{
 			logw(asfd, cntr,
-				"extattr_set_link error on %s %zd!=%zd: %s\n",
+				"extattr_set_link error on %s %zd!=%d: %s\n",
 				path, cnt, vlen, strerror(errno));
 			goto end;
 		}
@@ -368,28 +381,29 @@ int has_xattr(const char *path)
 }
 
 static int get_toappend(struct asfd *asfd, const char *path,
-	char **toappend, const char *xattrlist, ssize_t len, ssize_t *totallen,
+	char **toappend, const char *xattrlist,
+	ssize_t len, uint32_t *totallen,
 	int have_acl,
 	struct cntr *cntr)
 {
 	char *val=NULL;
 	const char *z=NULL;
-	ssize_t maxlen=0xFFFFFFFF/2;
+	uint32_t maxlen=0xFFFFFFFF/2;
 
 	for(z=xattrlist; z-xattrlist < len; z=strchr(z, '\0')+1)
 	{
 		char tmp1[9];
 		char tmp2[9];
 		ssize_t vlen;
-		ssize_t zlen=0;
-		ssize_t newlen=0;
+		uint32_t zlen=0;
+		uint32_t newlen=0;
 
 		free_w(&val);
 
-		if((zlen=strlen(z))>maxlen)
+		if((zlen=(uint32_t)strlen(z))>maxlen)
 		{
 			logw(asfd, cntr,
-				"xattr element of '%s' too long: %zd\n",
+				"xattr element of '%s' too long: %d\n",
 				path, zlen);
 			goto carryon;
 		}
@@ -426,8 +440,8 @@ static int get_toappend(struct asfd *asfd, const char *path,
 			}
 		}
 
-		snprintf(tmp1, sizeof(tmp1), "%08X", (unsigned int)zlen);
-		snprintf(tmp2, sizeof(tmp2), "%08X", (unsigned int)vlen);
+		snprintf(tmp1, sizeof(tmp1), "%08X", zlen);
+		snprintf(tmp2, sizeof(tmp2), "%08X", (uint32_t)vlen);
 		newlen=(*totallen)+8+zlen+8+vlen;
 		if(!(*toappend=(char *)realloc_w(*toappend, newlen, __func__)))
 			goto error;
@@ -443,7 +457,7 @@ static int get_toappend(struct asfd *asfd, const char *path,
 		if(*totallen>maxlen)
 		{
 			logw(asfd, cntr,
-				"xattr length of '%s' grew too long: %zd\n",
+				"xattr length of '%s' grew too long: %d\n",
 				path, *totallen);
 			goto carryon;
 		}
@@ -469,7 +483,7 @@ int get_xattr(struct asfd *asfd, const char *path,
 	int have_acl=0;
 	char *toappend=NULL;
 	char *xattrlist=NULL;
-	ssize_t totallen=0;
+	uint32_t totallen=0;
 
 	if((len=llistxattr(path, NULL, 0))<0)
 	{
@@ -526,7 +540,7 @@ static int do_set_xattr(struct asfd *asfd,
 	l=xlen;
 	while(l>0)
 	{
-		ssize_t s=0;
+		uint32_t s=0;
 		free_w(&name);
 		free_w(&value);
 
@@ -564,6 +578,36 @@ int set_xattr(struct asfd *asfd, const char *path,
 			break;
 	}
 	return -1;
+}
+#endif
+
+#ifdef UTEST
+int fs_supports_xattr(void)
+{
+	FILE *fp;
+	int ret=-1;
+	const char *fname="xattr_test_file";
+	if(!(fp=fopen(fname, "w")))
+	{
+		printf("Could not open %s!\n", fname);
+		return 0;
+	}
+	fclose(fp);
+#ifdef HAVE_SYS_EXTATTR_H
+	ret=extattr_set_link(fname, EXTATTR_NAMESPACE_USER, "comment", "a", strlen("a"));
+#elif HAVE_SYS_XATTR_H
+	ret=lsetxattr(fname, "user.comment", "a", strlen("a"), /*flags*/0);
+#else
+	errno=ENOTSUP;
+#endif
+	if(ret<0 && errno==ENOTSUP)
+	{
+		printf("File system does not support xattrs!\n");
+		unlink(fname);
+		return 0;
+	}
+	unlink(fname);
+	return 1;
 }
 #endif
 

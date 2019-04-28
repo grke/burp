@@ -444,6 +444,14 @@ static void cntr_set_recvbytes(struct cntr *c, uint64_t bytes)
 	set_count_val(c, CMD_BYTES_RECV, bytes);
 }
 
+void cntr_set_bytes(struct cntr *c, struct asfd *asfd)
+{
+	if(!asfd)
+		return;
+	cntr_set_sentbytes(c, asfd->sent);
+	cntr_set_recvbytes(c, asfd->rcvd);
+}
+
 static void quint_print(struct cntr_ent *ent, enum action act)
 {
 	uint64_t a;
@@ -539,7 +547,7 @@ static void bottom_part(struct cntr *c, enum action act)
 	logc("%s\n", bytes_to_human(l));
 }
 
-void cntr_print(struct cntr *cntr, enum action act, struct asfd *asfd)
+void cntr_print(struct cntr *cntr, enum action act)
 {
 	struct cntr_ent *e;
 	time_t now;
@@ -548,11 +556,6 @@ void cntr_print(struct cntr *cntr, enum action act, struct asfd *asfd)
 	char time_end_str[32];
 	if(!cntr) return;
 
-	if(asfd)
-	{
-		cntr_set_sentbytes(cntr, asfd->sent);
-		cntr_set_recvbytes(cntr, asfd->rcvd);
-	}
 	now=time(NULL);
 	start=(time_t)cntr->ent[(uint8_t)CMD_TIMESTAMP]->count;
 	cntr->ent[(uint8_t)CMD_TIMESTAMP_END]->count=(uint64_t)now;
@@ -599,6 +602,7 @@ int cntr_stats_to_file(struct cntr *cntr,
 	int ret=-1;
 	int fd=-1;
 	char *path=NULL;
+	char *pathtmp=NULL;
 	const char *fname=NULL;
 	struct async *as=NULL;
 	struct asfd *wfd=NULL;
@@ -617,12 +621,19 @@ int cntr_stats_to_file(struct cntr *cntr,
 	else
 		return 0;
 
-	if(!(path=prepend_s(directory, fname)))
+	if(!(path=prepend_s(directory, fname))
+	  || !(pathtmp=prepend(path, ".tmp")))
 		goto end;
-	if((fd=open(path, O_WRONLY|O_CREAT, 0666))<0)
+	if((fd=open(
+		pathtmp,
+#ifdef O_NOFOLLOW
+		O_NOFOLLOW|
+#endif
+		O_WRONLY|O_CREAT,
+		0666))<0)
 	{
 		logp("Could not open %s for writing in %s: %s\n",
-			path, __func__, strerror(errno));
+			pathtmp, __func__, strerror(errno));
 		goto end;
 	}
 
@@ -639,9 +650,13 @@ int cntr_stats_to_file(struct cntr *cntr,
 
 	ret=0;
 end:
-	free_w(&path);
 	async_free(&as);
 	asfd_free(&wfd);
+	if(!ret && do_rename(pathtmp, path))
+		ret=-1;
+
+	free_w(&path);
+	free_w(&pathtmp);
 	return ret;
 }
 

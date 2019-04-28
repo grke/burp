@@ -15,7 +15,8 @@ extern int set_xattr(struct asfd *asfd, const char *path,
 
 #ifdef UTEST
 extern char *get_next_xattr_str(struct asfd *asfd, char **data, size_t *l,
-	struct cntr *cntr, ssize_t *s, const char *path);
+	struct cntr *cntr, uint32_t *s, const char *path);
+extern int fs_supports_xattr(void);
 #endif
 
 #endif

@@ -107,8 +107,6 @@ VSSClient::VSSClient(void)
 {
 	m_bCoInitializeCalled=false;
 	m_bCoInitializeSecurityCalled=false;
-	m_dwContext=0; // VSS_CTX_BACKUP;
-	m_bDuringRestore=false;
 	m_bBackupIsInitialized=false;
 	m_pVssObject=NULL;
 	m_pAlistWriterState=new alist(10, not_owned_by_alist);
@@ -136,10 +134,9 @@ VSSClient::~VSSClient(void)
 	if(m_bCoInitializeCalled) CoUninitialize();
 }
 
-BOOL VSSClient::InitializeForBackup(void)
+BOOL VSSClient::InitializeForBackup(struct asfd *asfd, struct cntr *cntr)
 {
-	//return Initialize (VSS_CTX_BACKUP);
-	return Initialize(0);
+	return Initialize(asfd, cntr);
 }
 
 static char *bstrncat(char *dest, const char *src, int maxlen)

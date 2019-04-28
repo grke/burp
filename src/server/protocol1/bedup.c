@@ -668,8 +668,7 @@ static int iterate_over_clients(struct conf **globalcs,
 		struct lock *lock=NULL;
 
 		if(dirinfo->d_ino==0
-		// looks_like...() also avoids '.' and '..'.
-		  || looks_like_tmp_or_hidden_file(dirinfo->d_name)
+		  || !cname_valid(dirinfo->d_name)
 		  || !is_regular_file(globalclientconfdir, dirinfo->d_name))
 			continue;
 

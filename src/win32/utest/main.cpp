@@ -44,10 +44,10 @@
 HINSTANCE appInstance;
 bool have_service_api;
 
-extern int UtestMain(void);
+extern int UtestMain(int argc, char *argv[], char *envp[]);
 
 // Main Windows entry point.
-int main(int argc, char *argv[])
+int main(int argc, char *argv[], char *envp[])
 {
 	int ret;
 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		p_SetProcessShutdownParameters(0x100, 0);
 
 	// Call the main code
-	ret=UtestMain();
+	ret=UtestMain(argc, argv, envp);
 
 	// Terminate our main message loop
 	PostQuitMessage(0);

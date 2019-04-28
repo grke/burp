@@ -5,13 +5,13 @@ Authors
 -------
 
     Wai Keong Phan: First completed a bare metal restore on Windows 7 and wrote
-	the first draft. 
+	the first draft.
 
     Graham Keeling: Edits to the original draft, with help from Wai Keong Phan
-	and Michael Da Cova. 
+	and Michael Da Cova.
 
     Peter Maloney: First completed a bare metal restore on Windows 8, updated
-	the instructions and converted them to the wiki. 
+	the instructions and converted them to the wiki.
 
 Prepare
 -------
@@ -20,9 +20,9 @@ Install burp on the admin box
 
 Install one of these on an admin box
 
-    ADK (Windows 8) 
-    http://www.microsoft.com/en-us/download/details.aspx?id=30652 
-    AIK (Windows 7) 
+    ADK (Windows 8)
+    http://www.microsoft.com/en-us/download/details.aspx?id=30652
+    AIK (Windows 7)
     http://www.microsoft.com/download/en/details.aspx?displaylang=en&id=5753
 
 You should use the latest one. The Windows 8 version works for win8 or older
@@ -31,8 +31,8 @@ You should use the latest one. The Windows 8 version works for win8 or older
 Maybe another boot CD will do also. Basically all that is requires is that it
 has:
 
-    diskpart 
-    burp 
+    diskpart
+    burp
 
 (It has been suggested that a Linux CD would work. It will not, because Linux
 does not know how to restore Windows VSS files)
@@ -47,7 +47,7 @@ Imaging Tools Environment" with administrator rights.
 > cd c:\winpe_amd64
 > copy winpe.wim media\sources\boot.wim
 > dism /mount-wim /wimfile:media\sources\boot.wim /index:1 /mountdir:mount
-       
+
 Put burp on the CD (this assumes you have the burp client installed on the
 admin box)
 
@@ -58,9 +58,9 @@ location (workaround for hardcoded paths)
 
 > xcopy /E Burp BurpClient
 
-        Does BurpClient specify a file name 
-        or directory name on the target 
-        (F = file, D = directory)? D 
+        Does BurpClient specify a file name
+        or directory name on the target
+        (F = file, D = directory)? D
 
 Prepare the BurpRestore directory (currently named Burp)
 
@@ -71,21 +71,21 @@ Prepare the BurpRestore directory (currently named Burp)
 
 Make sure the burp.conf has the right user name and password that the server
 will accept for a restore.
-(burp-server.conf has a line like "restore_client = restore").
+(burp-server.conf has a line like "super_client = restore").
 
 Set cname/username to "restore"
 
 > bin\burp -a l
 
-        This will generate the SSL keys. 
+        This will generate the SSL keys.
 
 If there are problems here, you can go on the server in the /etc/burp/CA
 directory
 
-rm restore.* 
+rm restore.*
 
-    Edit index.txt to remove the "restore*" lines. 
-    Retry. 
+    Edit index.txt to remove the "restore*" lines.
+    Retry.
 
 > cd ..
 > move Burp "C:\winpe_amd64\mount\BurpRestore"
@@ -100,7 +100,7 @@ are booted on the CD.
 > cd "C:\winpe_amd64\mount\BurpRestore"
 > notepad burp.conf
 
-        s|C:/Program Files/Burp|X:/BurpRestore| 
+        s|C:/Program Files/Burp|X:/BurpRestore|
 
 > cd ..\..
 
@@ -108,7 +108,7 @@ Unmount and create iso.
 
 > dism /unmount-wim /mountdir:mount /commit
 > oscdimg -n -betfsboot.com media burprestore2_amd64.iso
-   
+
 
 Burn the iso to a CD to use it in physical machines, or test it in a virtual
 machine.
@@ -155,9 +155,9 @@ Create file system.
 > diskpart
 DISKPART> select disk 0
 DISKPART> create partition primary
-       
+
 TESING: select partition 1
-       
+
 DISKPART> active
 DISKPART> assign letter=C
 DISKPART> format fs=ntfs quick
@@ -168,25 +168,25 @@ Run restore.
 
 > x:
 > cd \BurpRestore
-       
+
 
 Just a test.
 
 > bin\burp -a l -c burp.conf -C $name
-       
+
 
 Run restore (the -f is optional; if it fails, try without).
 
-> bin\burp -a r -f -c burp.conf -C $name
+> bin\burp -a r -f -c burp.conf -C $name -d /
 
-        Be patient... this takes a long time. 
+        Be patient... this takes a long time.
 
 > c:
 > cd \windows\system32
 > shutdown /r
 
         Takes very long to actually shut down... put in the regular Windows CD
-	while you wait. 
+	while you wait.
 
 Run from regular Windows install CD in repair mode "command prompt".
 
@@ -196,13 +196,13 @@ DISKPART> select partition 1
 DISKPART> active
 DISKPART> exit
 > bootrec /rebuildbcd
-       
+
 
 (In Windows 8) close the command prompt by clicking X, then click "continue to
 your OS" or something like that, and it will reboot.
 
     When testing win8 final 64 bit, I forgot to do "bootrec /rebuildbcd" and
-    ran repair instead, which seemed to work. 
+    ran repair instead, which seemed to work.
 
 For Windows 7 and 8: Run the install CD's automatic repair 2 times, then reboot
 to your OS. Don't run it from the same boot as the "bootrec" stuff above or it
@@ -211,9 +211,9 @@ the problem "Missing BootMGR".
 
 Test install:
 
-    firefox (probably only file config, plus default browser set) 
-    burp (includes scheduled task) 
-    .... (something that relies on the registry...) 
+    firefox (probably only file config, plus default browser set)
+    burp (includes scheduled task)
+    .... (something that relies on the registry...)
 
 I found this works well. It seemed like a perfect restore on Windows 7 and 8.
 Only Windows 8 preview had issues.
@@ -228,19 +228,19 @@ needed to fix with these steps.
 
 The fix:
 
-    Boot the installer disk. 
+    Boot the installer disk.
     Run repair mode "refresh" (consider this the 'rebuild the registry and
     delete all your installed stuff' mode).
 
         Boot into OS to finish the "refresh", boot again until you have the
-	login screen. 
-        Log in, and wait for the process to complete. 
+	login screen.
+        Log in, and wait for the process to complete.
 
-    Boot the BurpRestore disk again. 
+    Boot the BurpRestore disk again.
     Repeat the restore without using the "-f" option.
 
         This might be quicker than a full restore. Ideally it would only
 	restore OS stuff (Windows, Program Files) without overwriting other
-	large files on your disk. 
+	large files on your disk.
 
-    Reboot into OS. 
+    Reboot into OS.

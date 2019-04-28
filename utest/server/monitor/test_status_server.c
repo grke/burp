@@ -114,6 +114,71 @@ START_TEST(test_parse_parent_data)
 }
 END_TEST
 
+struct cmd_data
+{
+	const char *buf;
+	char *command;
+	char *client;
+	char *backup;
+	char *logfile;
+	char *browse;
+};
+
+static struct cmd_data d[] = {
+	{ "j:somecmd",
+		"somecmd", NULL, NULL, NULL, NULL },
+	{ "c:testclient:b:4",
+		NULL, "testclient", "4", NULL, NULL },
+	{ "c:testclient:b:4:l:blah",
+		NULL, "testclient", "4", "blah", NULL },
+	{ "c:testclient:b:4:l:blah:p:C:some/path",
+		NULL, "testclient", "4", "blah", "C:some/path" },
+	{ "c:testclient:b:4:l:blah:p:",
+		NULL, "testclient", "4", "blah", "" },
+	{ "c:testclient:b:4:l:blah:p",
+		NULL, "testclient", "4", "blah", NULL },
+};
+
+START_TEST(test_status_server_parse_cmd)
+{
+	FOREACH(d)
+	{
+		char *command=NULL;
+		char *client=NULL;
+		char *backup=NULL;
+		char *logfile=NULL;
+		char *browse=NULL;
+
+		fail_unless(status_server_parse_cmd(
+			d[i].buf,
+			&command,
+			&client,
+			&backup,
+			&logfile,
+			&browse
+		)==0);
+
+		if(d[i].command) fail_unless(!strcmp(command, d[i].command));
+		else fail_unless(command==NULL);
+		if(d[i].client) fail_unless(!strcmp(client, d[i].client));
+		else fail_unless(client==NULL);
+		if(d[i].backup) fail_unless(!strcmp(backup, d[i].backup));
+		else fail_unless(backup==NULL);
+		if(d[i].logfile) fail_unless(!strcmp(logfile, d[i].logfile));
+		else fail_unless(logfile==NULL);
+		if(d[i].browse) fail_unless(!strcmp(browse, d[i].browse));
+		else fail_unless(browse==NULL);
+
+		free_w(&command);
+		free_w(&client);
+		free_w(&backup);
+		free_w(&logfile);
+		free_w(&browse);
+		alloc_check();
+	}
+}
+END_TEST
+
 Suite *suite_server_monitor_status_server(void)
 {
 	Suite *s;
@@ -126,6 +191,7 @@ Suite *suite_server_monitor_status_server(void)
 
 	tcase_add_test(tc_core, test_parse_parent_data_weird);
 	tcase_add_test(tc_core, test_parse_parent_data);
+	tcase_add_test(tc_core, test_status_server_parse_cmd);
 
 	suite_add_tcase(s, tc_core);
 

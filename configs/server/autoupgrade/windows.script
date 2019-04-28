@@ -1,11 +1,43 @@
 @echo off
-REM Burp used to put everything in C:\Program Files\Burp\ until 1.3.11.
-REM But still want old installations to work.
+:: Upgrade script 2019040301
+set product=Burp
 
-IF EXIST "C:\Program Files\Burp\autoupgrade\package.exe" (
-	"C:\Program Files\Burp\autoupgrade\package.exe" /S
-) ELSE (
-	IF EXIST "%~dp0\package.exe" (
-		"%~dp0\package.exe" /S
-	)
+set curdir=%~dp0
+set curdir=%curdir:~0,-1%
+cd "%curdir%"
+
+echo Updating %product%
+IF EXIST "%curdir%\package.exe" start /wait "" "%curdir%\package.exe" /S && GOTO NEXT
+:: Fallback for elder than 1.3.11 burp packages where everything was in C:\Program Files\Burp
+IF EXIST "C:\Program Files\Burp\autoupgrade\package.exe" start /wait "" "C:\Program Files\Burp\autoupgrade\package.exe" /S && GOTO NEXT
+echo Update Failed
+GOTO END
+
+:NEXT
+:: The following optional part replaces server and port directives by server = fqdn:port and optional server_failover = fqdn:port
+:: Comment out the following line and set options below in order to enable config file update
+GOTO END
+set server=my.server.local:4971
+set server_failover=my.other.server.local:443
+set failover_on_backup_error=1
+
+echo Updating configuration
+
+:: The following section does
+:: First let's make a config file backup
+:: Then lets remove server, port and failover_on_backcup_error statements
+:: Add new server_failover to config file if specified Add new 
+:: server_failover to config file if specified Add failover_on_backup_error statement
+:: Put new config in place
+IF EXIST "%curdir%\..\%product%.conf" (
+       copy "%curdir%\..\%product%.conf" "%curdir%\..\%product%.conf.backup" > NUL 2>&1
+       type "%curdir%\..\%product%.conf" | FINDSTR /I /V /R /C:"^server =" | FINDSTR /I /V /R /C:"^port =" | FINDSTR /I /V /R /C:"^failover_on_backup_error =" > "%curdir%\..\%product%.conf.tmp"
+       (echo server = %server%)> "%curdir%\..\%product%.conf"
+       IF NOT "%server_failover%"=="" (echo server_failover = %server_failover%) >> "%curdir%\..\%product%.conf"
+       (echo failover_on_backup_error = %failover_on_backup_error%) >> "%curdir%\..\%product%.conf"
+       type "%curdir%\..\%product%.conf.tmp">> "%curdir%\..\%product%.conf"
+       del "%curdir%\..\%product%.conf.tmp" /S /Q > NUL 2>&1
 )
+
+:END
+exit

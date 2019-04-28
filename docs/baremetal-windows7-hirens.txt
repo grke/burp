@@ -73,11 +73,11 @@ first place, you may need to run the "Network Setup" icon on the desktop.)
 
 Look for the part in burp-server.conf that says:
 
-restore_client = <something>
+super_client = <something>
 
 Change it to this and save it:
 
-restore_client = restore
+super_client = restore
 
 "restore" is now the name of your restore client.
 
@@ -140,7 +140,7 @@ burp -a v -C <client name> -b 3
 To restore the *LATEST* backup TO THE SAME DRIVE LETTERS YOU BACKED UP FROM,
 once you are happy you have the correct and a valid backup; run:
 
-burp -a r -C <client name>
+burp -a r -C <client name> -d /
 (Use the optional '-b <number>' parameter to specify a specific backup)
 
 

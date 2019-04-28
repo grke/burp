@@ -357,8 +357,7 @@ overwrite:
 !EndIf
 
 	FileWrite $R1 "mode = client$\r$\n"
-	FileWrite $R1 "server = $ConfigServerAddress$\r$\n"
-	FileWrite $R1 "port = $ConfigServerPort$\r$\n"
+	FileWrite $R1 "server = $ConfigServerAddress:$ConfigServerPort$\r$\n"
 	FileWrite $R1 "status_port = 4972$\r$\n"
 	FileWrite $R1 "cname = $ConfigClientName$\r$\n"
 	FileWrite $R1 "password = $ConfigPassword$\r$\n"

@@ -89,24 +89,24 @@ void assert_xattr(const char *expected,
 	while(r>0)
 	{
 		size_t e;
-		ssize_t rlen=0;
+		uint32_t xlen=0;
 		char *rval=NULL;
 		char *expe=NULL;
 		int found=0;
 
 		fail_unless((rval=get_next_xattr_str(NULL,
-			&retr, &r, NULL, &rlen, NULL))!=NULL);
+			&retr, &r, NULL, &xlen, NULL))!=NULL);
 
 		expe=(char *)expected+9;
-		e=rlen-9;
+		e=strlen(expected)-9;
 		while(e>0)
 		{
 			char *eval=NULL;
-			ssize_t elen=0;
+			uint32_t elen=0;
 			fail_unless((eval=get_next_xattr_str(NULL,
 				&expe, &e, NULL, &elen, NULL))!=NULL);
-			if(rlen==elen
-			  && !memcmp(rval, eval, rlen))
+			if(xlen==elen
+			  && !memcmp(rval, eval, xlen))
 			{
 				found++;
 				free_w(&eval);
@@ -185,13 +185,12 @@ Suite *suite_client_xattr(void)
 
 	s=suite_create("client_xattr");
 
+	if(!fs_supports_xattr())
+		return s;
+
 	tc_core=tcase_create("Core");
 
-// It seems to be very difficult to get xattrs enabled on a filesystem with
-// NetBSD, so I am skipping the test on NetBSD.
-#ifndef HAVE_NETBSD_OS
 	tcase_add_test(tc_core, test_xattrs);
-#endif
 
 	suite_add_tcase(s, tc_core);
 

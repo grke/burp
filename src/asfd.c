@@ -38,8 +38,19 @@ static int asfd_alloc_buf(struct asfd *asfd, char **buf)
 }
 
 static int extract_buf(struct asfd *asfd,
-	unsigned int len, unsigned int offset)
+	size_t len, size_t offset)
 {
+	if(offset+len>=asfd->bufmaxsize)
+	{
+		logp("%s: offset(%lu)+len(%lu)>=asfd->bufmaxsize(%lu) in %s!",
+			asfd->desc,
+			(unsigned long)offset,
+			(unsigned long)len,
+			(unsigned long)asfd->bufmaxsize,
+			__func__);
+		return -1;
+	}
+
 	if(!(asfd->rbuf->buf=(char *)malloc_w(len+1, __func__)))
 		return -1;
 	if(!(memcpy(asfd->rbuf->buf, asfd->readbuf+offset, len)))
@@ -109,10 +120,16 @@ static int parse_readbuf_standard(struct asfd *asfd)
 			asfd->desc, asfd->readbuf, __func__);
 		return -1;
 	}
+	if(s>=asfd->bufmaxsize)
+	{
+		logp("%s: given buffer length '%d', which is too big!\n",
+			asfd->desc, s);
+		return -1;
+	}
 	if(asfd->readbuflen>=s+5)
 	{
 		asfd->rbuf->cmd=(enum cmd)command;
-		if(extract_buf(asfd, s, 5))
+		if(extract_buf(asfd, (size_t)s, 5))
 			return -1;
 	}
 	return 0;
@@ -189,14 +206,16 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 	asfd->read_blocked_on_write=0;
 
 	ERR_clear_error();
-	r=SSL_read(asfd->ssl,
-	  asfd->readbuf+asfd->readbuflen, asfd->bufmaxsize-asfd->readbuflen);
+	r=SSL_read(
+		asfd->ssl,
+		asfd->readbuf+asfd->readbuflen,
+		asfd->bufmaxsize-asfd->readbuflen
+	);
 
 	switch((e=SSL_get_error(asfd->ssl, r)))
 	{
 		case SSL_ERROR_NONE:
 			asfd->readbuflen+=r;
-			asfd->readbuf[asfd->readbuflen]='\0';
 			asfd->rcvd+=r;
 			break;
 		case SSL_ERROR_ZERO_RETURN:
@@ -216,6 +235,7 @@ static int asfd_do_read_ssl(struct asfd *asfd)
 				asfd->desc);
 			// Fall through to read problem
 		default:
+			asfd->errors++;
 			logp_ssl_err(
 				"%s: network read problem in %s: %d - %d=%s\n",
 				asfd->desc, __func__,
@@ -277,11 +297,13 @@ static int asfd_do_write(struct asfd *asfd)
 			return 0;
 		logp("%s: Got error in %s, (%d=%s)\n", __func__,
 			asfd->desc, errno, strerror(errno));
+		asfd->errors++;
 		return -1;
 	}
 	else if(!w)
 	{
 		logp("%s: Wrote nothing in %s\n", asfd->desc, __func__);
+		asfd->errors++;
 		return -1;
 	}
 	if(asfd->ratelimit) asfd->rlbytes+=w;
@@ -336,8 +358,9 @@ printf("wrote %d: %s\n", w, buf);
 				break;
 			logp("%s: Got network write error\n",
 				asfd->desc);
-			// Fall through to read problem
+			// Fall through to write problem
 		default:
+			asfd->errors++;
 			logp_ssl_err(
 				"%s: network write problem in %s: %d - %d=%s\n",
 				asfd->desc, __func__,
@@ -435,7 +458,12 @@ static int asfd_read(struct asfd *asfd)
 {
 	if(asfd->as->doing_estimate) return 0;
 	while(!asfd->rbuf->buf)
-		if(asfd->as->read_write(asfd->as)) return -1;
+	{
+		if(asfd->errors)
+			return -1;
+		if(asfd->as->read_write(asfd->as))
+			return -1;
+	}
 	return 0;
 }
 
@@ -459,6 +487,8 @@ static int asfd_write(struct asfd *asfd, struct iobuf *wbuf)
 	if(asfd->as->doing_estimate) return 0;
 	while(wbuf->len)
 	{
+		if(asfd->errors)
+			return -1;
 		if(asfd->append_all_to_write_buffer(asfd, wbuf)==APPEND_ERROR)
 			return -1;
 		if(asfd->as->write(asfd->as)) return -1;
@@ -762,7 +792,10 @@ struct asfd *setup_asfd_ncurses_stdin(struct async *as)
 // exit promptly if the client was killed.
 static int read_and_write(struct asfd *asfd)
 {
-	if(asfd->as->read_write(asfd->as)) return -1;
+	// Protect against getting stuck in loops where we are trying to
+	// flush buffers, but keep getting the same error.
+	if(asfd->as->read_write(asfd->as))
+		return -1;
 	if(!asfd->rbuf->buf) return 0;
 	iobuf_log_unexpected(asfd->rbuf, __func__);
 	return -1;
@@ -771,7 +804,12 @@ static int read_and_write(struct asfd *asfd)
 int asfd_flush_asio(struct asfd *asfd)
 {
 	while(asfd && asfd->writebuflen>0)
-		if(read_and_write(asfd)) return -1;
+	{
+		if(asfd->errors)
+			return -1;
+		if(read_and_write(asfd))
+			return -1;
+	}
 	return 0;
 }
 
@@ -779,6 +817,8 @@ int asfd_write_wrapper(struct asfd *asfd, struct iobuf *wbuf)
 {
 	while(1)
 	{
+		if(asfd->errors)
+			return -1;
 		switch(asfd->append_all_to_write_buffer(asfd, wbuf))
 		{
 			case APPEND_OK: return 0;

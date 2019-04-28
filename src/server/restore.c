@@ -625,8 +625,11 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 		act, sdirs, cconfs)) goto end;
 
 	if(cconfs) cntr=get_cntr(cconfs);
-	cntr_print(cntr, act, asfd);
-	cntr_stats_to_file(cntr, bu->path, act);
+	cntr_set_bytes(cntr, asfd);
+	cntr_print(cntr, act);
+	if(cntr_stats_to_file(cntr, bu->path, act))
+		goto end;
+	ret=0;
 end:
 	slist_free(&slist);
 	linkhash_free();

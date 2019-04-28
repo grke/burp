@@ -8,10 +8,12 @@
 #include "../lock.h"
 #include "../log.h"
 #include "../prepend.h"
+#include "compress.h"
 #include "protocol1/backup_phase4.h"
+#include "protocol1/zlibio.h"
 #include "protocol2/backup_phase4.h"
-#include "sdirs.h"
 #include "rubble.h"
+#include "sdirs.h"
 #include "timestamp.h"
 
 static char *get_resume_path(const char *path)
@@ -108,7 +110,7 @@ static int working_delete(struct async *as, struct sdirs *sdirs)
 static int working_resume(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int *resume, struct conf **cconfs)
 {
-	if(get_string(cconfs[OPT_RESTORE_CLIENT]))
+	if(get_string(cconfs[OPT_SUPER_CLIENT]))
 	{
 		// This client is not the original client, resuming might cause
 		// all sorts of trouble.
@@ -154,12 +156,89 @@ static int get_fullrealwork(struct sdirs *sdirs)
 	return 0;
 }
 
+static int do_unlink(const char *path)
+{
+	if(unlink(path))
+	{
+		logp("Could not unlink '%s': %s", path, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+static int fix_log_finishing(struct sdirs *sdirs, struct conf **cconfs)
+{
+	int ret=-1;
+	char *path_log=NULL;
+	char *path_log_gz=NULL;
+	char *path_log_tmp=NULL;
+
+	if(!(path_log=prepend_s(sdirs->finishing, "log"))
+	  || !(path_log_gz=prepend_s(sdirs->finishing, "log.gz"))
+	  || !(path_log_tmp=prepend_s(sdirs->finishing, "log.tmp")))
+		goto end;
+
+	if(is_reg_lstat(path_log)==1)
+	{
+		if(is_reg_lstat(path_log_gz)==1)
+		{
+			// If this has happened, either file should be good to
+			// use. Delete the compressed one, as we will keep
+			// logging to the uncompressed one.
+			do_unlink(path_log_gz);
+			goto end;
+		}
+		else
+		{
+			// Everything is OK.
+			ret=0;
+		}
+	}
+	else
+	{
+		if(is_reg_lstat(path_log_gz)==1)
+		{
+			// Need to inflate so that we can log to it again,
+			// and compress it later.
+			if(zlib_inflate(/*asfd*/NULL, path_log_gz,
+				path_log_tmp, get_cntr(cconfs)))
+					goto end;
+			if(do_rename(path_log_tmp, path_log))
+				goto end;
+			do_unlink(path_log_gz);
+			goto end;
+		}
+		else
+		{
+			logp("Neither %s nor %s exist. That is odd!",
+				path_log, path_log_gz);
+			ret=0;
+		}
+	}
+end:
+	if(!ret)
+	{
+		// Should be OK to re-open the log file now.
+		if(log_fzp_set(path_log, cconfs))
+			ret=-1;
+	}
+
+	free_w(&path_log);
+	free_w(&path_log_gz);
+	free_w(&path_log_tmp);
+	return ret;
+}
+
 static int recover_finishing(struct async *as,
 	struct sdirs *sdirs, struct conf **cconfs)
 {
 	int r;
 	char msg[128]="";
 	struct asfd *asfd=as->asfd;
+
+	if(fix_log_finishing(sdirs, cconfs))
+		return -1;
+
 	logp("Found finishing symlink - attempting to complete prior backup!\n");
 
 	if(append_to_resume_file(sdirs->finishing))
@@ -169,6 +248,9 @@ static int recover_finishing(struct async *as,
 		"Now finalising previous backup of client. "
 		"Please try again later.");
 	asfd->write_str(asfd, CMD_ERROR, msg);
+
+	// Need to check whether the log has been compressed. If it hasn't,
+	// we need to inflate it again.
 
 	// Do not need the client connected any more.
 	// Disconnect.
@@ -191,7 +273,14 @@ static int recover_finishing(struct async *as,
 		logp("Problem with prior backup. Please check the client log on the server.");
 		return -1;
 	}
-	logp("Prior backup completed OK.\n");
+
+	logp("Prior backup completed OK\n");
+        log_fzp_set(NULL, cconfs);
+	compress_filename(sdirs->finishing,
+		"log", "log.gz", get_int(cconfs[OPT_COMPRESSION]));
+
+	// backup_stats?!
+
 
 	// Move the symlink to indicate that we are now in the end
 	// phase.

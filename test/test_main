@@ -267,6 +267,9 @@ add_run_restore_server_initiated()
 	dir="$2$res"
 	test_includes_restore=1
 	local srestore="$target/var/spool/burp/testclient/restore"
+
+	append_client 'restoreprefix = /'
+
 	[ "$PROTOCOL" = "2" ] && \
 	  srestore="$target/var/spool/burp/global/clients/testclient/restore"
 
@@ -372,16 +375,16 @@ cp -r "$includedir/src" "$includedir/src-new" \
 	|| fail "could not cp $includedir/src to $includedir/src-new"
 
 # Move a directory, which simulates deleting and adding new files.
-if [ -d "$includedir/debian" ] \
- && [ ! -e "$includedir/debian-new" ] ; then
-	mv "$includedir/debian" "$includedir/debian-new" \
-	    || fail "could not move $includedir/debian to $includedir/debian-new"
-elif [ ! -e "$includedir/debian" ] \
- && [ -d "$includedir/debian-new" ] ; then
-   mv "$includedir/debian-new" "$includedir/debian" \
-    || fail "could not move $includedir/debian-new to $includedir/debian"
+if [ -d "$includedir/configs" ] \
+ && [ ! -e "$includedir/configs-new" ] ; then
+	mv "$includedir/configs" "$includedir/configs-new" \
+	    || fail "could not move $includedir/configs to $includedir/configs-new"
+elif [ ! -e "$includedir/configs" ] \
+ && [ -d "$includedir/configs-new" ] ; then
+   mv "$includedir/configs-new" "$includedir/configs" \
+    || fail "could not move $includedir/configs-new to $includedir/configs"
 else
-	fail "could not move debian directories" 
+	fail "could not move directory to simulate deletion/addition"
 fi
 
 # Scramble a whole bunch of files
@@ -565,11 +568,10 @@ pre_tweaks_client()
 {
 	start_script_client
 	sed_rep_client 's#= /#= '"$target"'/#g'
-	sed_rep_client 's/port = 4971/port = 4998/g'
 	sed_rep_client 's/port = 4972/port = 4999/g'
 	sed_rep_client 's/^stdout = .*/stdout = 1/g'
 	sed_rep_client 's/^syslog = .*/syslog = 0/g'
-	sed_rep_client 's/^server = .*/server = '"$serveraddress"'/g' "$clientconf"
+	sed_rep_client 's/^server = .*/server = '"$serveraddress":4998'/g' "$clientconf"
 	sed_rep_client 's/^cname = .*/cname = testclient/g' "$clientconf"
 	sed_rep_client 's/^password = .*/password = abcdefgh/g' "$clientconf"
 }
@@ -881,8 +883,11 @@ all_tests()
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
 	comp_enc_change_test off off on
-	comp_enc_change_test off on  on
-	comp_enc_change_test on  on  on
+	if [ "$PROTOCOL" != "2" ] ; then
+		# Encryption not supported in protocol 2.
+		comp_enc_change_test off on  on
+		comp_enc_change_test on  on  on
+	fi
 
 	start_test "Permissions"
 	add_chown 755 "$includedir/utest/test_cmd.c"

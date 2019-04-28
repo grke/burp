@@ -32,9 +32,12 @@ Untrustworthy users
 
 You are a site administrator with a burp server and several clients, you don't
 trust your users. You have the ability to turn off various client abilities by
-editing the server configuration: 
+editing the server configuration:
 
+   * client_can_delete=0
+   * client_can_diff=0
    * client_can_force_backup=0
    * client_can_list=0
+   * client_can_monitor=0
    * client_can_restore=0
    * client_can_verify=0

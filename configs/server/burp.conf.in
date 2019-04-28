@@ -34,11 +34,13 @@ umask = 0022
 syslog = 1
 stdout = 0
 # The following options can restrict what the client can do.
-# Restore clients can override all of these expect for force_backup.
+# Restore clients can override all of these except for force_backup.
 client_can_delete = 1
+client_can_diff = 1
 # Set client_can_force_backup to 0 to only allow timed backups.
 client_can_force_backup = 1
 client_can_list = 1
+client_can_monitor = 1
 # Set client_can_restore to 0 if you want restores to only be initialised by
 # the server.
 client_can_restore = 1
@@ -169,10 +171,10 @@ timer_arg = Sat,Sun,00,01,02,03,04,05,06,07,08,17,18,19,20,21,22,23
 #server_script_post_notify = 0
 
 # Clients that are able to list and restore files belonging to any other
-# client. If this is too permissive, you may set a restore_client for
+# client. If this is too permissive, you may set a super_client for
 # individual original clients in the individual clientconfdir files.
-# restore_client = someclient
-# restore_client = someotherclient
+# super_client = someclient
+# super_client = someotherclient
 
 # Whether or not the server process should cache the tree when a monitor client
 # is browsing a backup. Advantage: speed. Disadvantage: more memory is used.

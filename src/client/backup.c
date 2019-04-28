@@ -62,7 +62,11 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 #ifdef HAVE_WIN32
 	win32_enable_backup_privileges();
 #ifdef WIN32_VSS
-	if(win32_start_vss(confs)) return ret;
+	if(win32_start_vss(asfd, confs))
+	{
+		log_and_send(asfd, "Problem with VSS\n");
+		return ret;
+	}
 #endif
 	if(action==ACTION_BACKUP_TIMED) set_low_priority();
 #endif
@@ -87,8 +91,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 			ret=1;
 			goto end;
 		case ACTION_ESTIMATE:
-			cntr_print(get_cntr(confs),
-				ACTION_ESTIMATE, NULL/*asfd*/);
+			cntr_print(get_cntr(confs), ACTION_ESTIMATE);
 			break;
 		default:
 			// Now, the server will be telling us what data we need

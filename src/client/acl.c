@@ -109,10 +109,10 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 	int ret=0;
 	char pre[10]="";
 	char *tmp=NULL;
-	ssize_t tlen=0;
+	uint32_t tlen=0;
 	char *ourtext=NULL;
 	char *oldtext=*acltext;
-	ssize_t maxlen=0xFFFFFFFF/2;
+	uint32_t maxlen=0xFFFFFFFF/2;
 
 	if(!(tmp=acl_to_text(acl, NULL)))
 	{
@@ -120,15 +120,15 @@ static int get_acl_string(struct asfd *asfd, acl_t acl, char **acltext,
 		goto end; // carry on
 	}
 
-	tlen=strlen(tmp);
+	tlen=(uint32_t)strlen(tmp);
 
 	if(tlen>maxlen)
 	{
-		logw(asfd, cntr, "ACL of '%s' too long: %zd\n", path, tlen);
+		logw(asfd, cntr, "ACL of '%s' too long: %d\n", path, tlen);
 		goto end; // carry on
 	}
 
-	snprintf(pre, sizeof(pre), "%c%08X", type, (unsigned int)tlen);
+	snprintf(pre, sizeof(pre), "%c%08X", type, tlen);
 	if(!(ourtext=prepend(pre, tmp))
 	  || !(*acltext=prepend_len(oldtext,
 		*alen, ourtext, tlen+9, "", 0, alen)))

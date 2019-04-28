@@ -96,8 +96,6 @@ end:
 	if(do_rename(phase1tmp, sdirs->phase1data))
 		goto error;
 
-	//cntr_print(p1cntr, cntr, ACTION_BACKUP);
-
 	logp("End phase1 (file system scan)\n");
 	ret=0;
 error:

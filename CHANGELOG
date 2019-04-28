@@ -1,3 +1,129 @@
+2019-04-01 Changes in burp-2.3.4:
+  * Feature sponsored by Orsiris de Jong:
+    - 782: Server failover feature.
+           You may specify multiple server:port combinations in the client
+           burp.conf. They will each be tried in turn until a connection is
+           made. Orsiris's use case is that he has clients that may or not be
+           on restricted networks where ports are blocked. You may also
+           configure the client to try the next server:port if a backup
+           actually failed.
+  * 800: Create backup_stats before phase4, so that it exists if a backup
+         is interrupted during phase4 and resumed.
+  * 803: Man page notes about file encoding and encryption_password.
+  * 806: Error out on protocol 2 with encryption_password set.
+  * From melak:
+    - Manpage clarification about compression/encryption and protocol version.
+
+2019-03-03 Changes in burp-2.3.2:
+  * 796: Fix not compressing log on phase3/4 resume.
+  * 797: Fix wide-character restores on Windows.
+  * 794: Fix burp not starting with only one listen address.
+  * 735: restore_client client_can_X behaviour.
+    - Obey the original client permissions.
+    - Add super_client option, which behaves as restore_client used to.
+    - Also add client_can_monitor permission.
+  * Correct 'listen' section in the manpage.
+    - There is no longer a default or compile-time options.
+  * Run utests with valgrind in automatic testing suite.
+  * Fix valgrind errors.
+  * Fix minor memory leaks in timer code.
+  * Fix potential buffer overruns when decoding attribs.
+  * 769: ca_name and ca_server_name cannot be the same, so error
+    early, to avoid certificate problems.
+  * 774: Fix incorrect action names passed to server_post_script.
+  * 775: Fix empty action in server_post_script.
+  * 790: On restore, mention target directory in the client output.
+  * Use librsync's rs_strerror() for better error messages.
+  * Update freebsd test instance to freebsd 12.
+    - Fix compiler warnings.
+  * Remove LT_INIT, it seems to cause more problems than it solves.
+  * Fix 'PACKAGE_URL undeclared' for older versions of autoconf.
+  * From Orsiris de Jong:
+    - Backup tool script minor fixes
+
+2019-02-23 Changes in burp-2.2.18:
+  * 797: Fix wide-character restores on Windows.
+  * 794: Fix burp not starting with only one listen address.
+
+2019-02-02 Changes in burp-2.3.0:
+  * 777: Make include_glob able to detect windows drive letters.
+  * From Olivier Cherrier:
+    - NetBSD/OpenBSD fix for burp_ca.
+  * 780: More logging for VSS.
+  * Remove non-widechar Windows functions.
+  * From Calogero Lo Leggio:
+    - Remove debian packaging files from upstream repository
+  * From Orsiris de Jong:
+    - Backup tool script 0.4.6.
+
+2019-01-01 Changes in burp-2.2.16:
+  * 786: Don't run relative attack detection on CMD_FINGERPRINT.
+  * 785: Fix incorrect xattr buffer size.
+  * 784: Fix compiler warning d->d_name always evaluates to true.
+  * From Michael Hanselmann:
+    - Remove unused sbuf_print_alloc_stats prototype
+
+2018-12-12 Changes in burp-2.2.14:
+  * Fix restoring with compressed/encrypted trailing vss data.
+  * Protect the client against restoring over symlinks that point
+    outside of the desired destination directory. Giving a restore
+    directory is now mandatory. Make '-d /' work on Windows.
+  * 753: More logging for VSS.
+  * Protect against malicious relative paths in sbuf parsing.
+  * 766: Don't run xattr tests if the filesystem doesn't support them.
+  * Check lengths in xattr/extrameta/acl.
+  * Avoid path attacks via cname.
+  * Fix 'configure --enable-xattr=no'.
+  * Buffer safety check in asfd::extract_buf().
+  * Clean up burp_ca and make it more secure.
+  * Fix buffer overrun in client-side long list.
+  * Fix buffer overrun in asfd_do_read_ssl().
+  * 766: Correct gzip os type in utest/server/test_restore.c.
+  * From Michael Hanselmann:
+    - Add option to verify client certificate early.
+    - Use "O_NOFOLLOW" as appropriate.
+    - Sanitise autoupgrade os name.
+    - Random delay on password mismatch.
+    - Sleep before giving auth failure message.
+    - 772: Ensure O_NOATIME is passed to system calls.
+    - 770: In extra_comms: Avoid calling unlink(2) with NULL.
+    - 768: In run_script: Limit number of arguments to avoid stack overflow.
+    - 767: Avoid interactive question on CentOS when overwriting binary.
+
+2018-10-01 Changes in burp-2.2.12:
+  * From ziirish:
+    - 253: 'logic' rules parser with new exclude_logic option.
+  * 753: Send error to server when there is a VSS problem.
+  * 754: Fixes for find_logic code.
+  * 756: Man page correction about number of notify args.
+    Also rename 'warnings' to 'warning_count' in notify_script.
+  * 675: Stdout command line options.
+    '-v' now overrides stdout=0 in the config file, to be 1.
+    '-Q' now overrides stdout=1 in the config file, to be 0, and turns
+         off the progress counter.
+    '-v' used to be the version option - that is now '-V'.
+  * 743: Fix broken status monitor command parsing.
+  * 759: Log backup start/resume/complete/failure in the main log.
+  * 760: Fix and prevent possibility of infinite loops on error in asfd code.
+  * 758, 763: Read errors should interrupt backing up a file.
+
+2018-09-01 Changes in burp-2.2.10:
+  * 737, 738: Multiple listen addresses.
+  * 747: Fix for ACLs not getting restored on directories, and fix metadata
+    client side counters.
+  * 744: Fix for truncated .created file.
+  * 750: fail_on_warning config option.
+  * From ziirish:
+    - 742: Clarify backup_script_pre documentation.
+    - 746: Add '-o' flag to override configuration options on the command line.
+    - 3: Implement 'include_regex' .
+  * From Orsiris de Jong and hakong:
+    - 740: Updates for backup tool script, including calendar.
+  * From pablodav:
+    - Fix Windows upgrade script getting stuck after execution.
+  * Add j:response-markers-on/off monitor commands.
+  * Fix utests for travis mac builds, they have a new gzip version.
+
 2018-08-01 Changes in burp-2.2.8:
   * Do not try to log remotely with client side post_scripts.
   * 693: Fix RS_BLAKE2_SIG_MAGIC detection.
@@ -38,7 +164,7 @@
     - mingw-w64-v5.0.3
     - mpc-1.1.0
     - mpfr-4.0.1
-  * From deajan:
+  * From Orsiris de Jong:
     - 703: Add server port to Windows installer.
     - 693: Update Windows to librsync-2.0.2.
   * 693: Increase protocol1 strong length from 8 to 16.
@@ -50,7 +176,7 @@
   * 680: Strip trailing slashes from cross_filesystem option.
   * 689: Make list show working/finishing backups.
   * 707: Fix superfluous newlines on file vanished warnings.
-  * From deajan:
+  * From Orsiris de Jong:
          - 661: Add backup_tool_script housekeeping script.
   * All the fixes from burp-2.1.32.
 
@@ -59,7 +185,7 @@
          use of hostname for cname.
   * 698: Fix for 'could not open current/incexc' warning on first backup.
   * 699: Remove use of strcasestr so that AIX is happy.
-  * From deajan:
+  * From Orsiris de Jong:
     - 701: Fix for broken Windows installer command line switches.
     - Man page tweak for rblk_memory_max.
   * From jirib:
@@ -72,7 +198,7 @@
   * Bug fix for some utests accidentally closing stdin.
   * Protocol 2: Hash table for rblk lookups on restore/verify.
     Add rblk_memory_max option for configuring its size.
-  * From deajan:
+  * From Orsiris de Jong:
     - Replaced bits (b) with bytes (B) for quotas in man page.
   * From John Stoffel:
     - configure check for pkg-config.
@@ -141,7 +267,7 @@
     path, such as openbsd.
   * From josvo:
     - Use ComputerName from Windows registry as suggested cname.
-  * From deajan:
+  * From Orsiris de Jong:
     - Added /nopowermode option to the Windows installer, with checkbox.
       This allows you to run timed backups when the laptop is not plugged in.
     - Update README and src/win32/README files.
@@ -179,13 +305,13 @@
   * Follow AC_INIT defines throughout the codebase, including the Windows
     installer.
   * Log strerror(errno) when failing to write a lock.
-  * From deajan:
+  * From Orsiris de Jong:
     - Add systemd file for running Burp without root privileges.
 
 2017-08-01 Changes in burp-2.1.14:
   * From Marek Szuba:
     - Use pkg-config to detect ncurses.
-  * From deajan:
+  * From Orsiris de Jong:
     - Fix burp service file for RHEL / CentOS 7 - should be 'forking'.
   * From Xaltonon:
     - Add proper key-derivation (and IV) for client encryption.

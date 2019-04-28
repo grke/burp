@@ -163,7 +163,7 @@ static const char *get_features(enum protocol protocol, int srestore,
 	if(version && !strcmp(version, "1.4.40"))
 		old_version=1;
 
-	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:%s%smsg:%s%s", srestore?"srestore:":"", old_version?"":"counters_json:", proto, rshash);
+	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:failover:%s%smsg:%s%s", srestore?"srestore:":"", old_version?"":"counters_json:", proto, rshash);
 	return features;
 }
 
@@ -676,7 +676,7 @@ static void checks_orig_client(struct conf **confs, struct conf **cconfs,
 	const char *orig_client;
 	const char *restore_client;
 	fail_unless(!strcmp(get_string(cconfs[OPT_CNAME]), "cli2"));
-	restore_client=get_string(cconfs[OPT_RESTORE_CLIENT]);
+	restore_client=get_string(cconfs[OPT_SUPER_CLIENT]);
 	orig_client=get_string(cconfs[OPT_ORIG_CLIENT]);
 	fail_unless(!strcmp(orig_client, restore_client));
 }
@@ -730,6 +730,7 @@ START_TEST(test_server_extra_comms)
 {
 	run_test(0, setup_no_version, NULL);
 	run_test(0, setup_old_version, NULL);
+
 	run_test(-1, setup_unexpected_first_string, NULL);
 	run_test(-1, setup_1_3_0_write_problem, NULL);
 	run_test(-1, setup_feature_write_problem, NULL);

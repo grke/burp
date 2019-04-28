@@ -70,6 +70,8 @@ struct asfd
 	size_t writebuflen;
 	int write_blocked_on_read;
 
+	int errors;
+
 	struct asfd *next;
 
 	// Stuff for the champ chooser server.

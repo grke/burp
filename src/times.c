@@ -32,10 +32,10 @@ const char *time_taken(time_t d)
 	int minutes=0;
 	int hours=0;
 	int days=0;
-	char ss[4]="";
-	char ms[4]="";
-	char hs[4]="";
-	char ds[4]="";
+	char ss[8]="";
+	char ms[8]="";
+	char hs[8]="";
+	char ds[8]="";
 	seconds=d % 60;
 	minutes=(d/60) % 60;
 	hours=(d/60/60) % 24;

@@ -128,7 +128,8 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 		   to restore from */
 	  || append_to_feat(&feat, "orig_client:")
 		/* clients can tell the server what kind of system they are. */
-          || append_to_feat(&feat, "uname:"))
+          || append_to_feat(&feat, "uname:")
+          || append_to_feat(&feat, "failover:"))
 		goto end;
 
 	if(storage
@@ -212,6 +213,11 @@ static int do_autoupgrade(struct asfd *asfd, struct vers *vers,
 	ret=0;
 	if(os && *os)
 	{
+		// Sanitise path separators
+		for(char *i=os; *i; ++i)
+			if(*i == '/' || *i == '\\' || *i == ':')
+				*i='-';
+
 		ret=autoupgrade_server(asfd, vers->ser,
 			vers->cli, os, get_cntr(globalcs),
 			autoupgrade_dir);
@@ -290,7 +296,8 @@ static int extra_comms_read(struct async *as,
 			const char *restore_path=get_string(
 				cconfs[OPT_RESTORE_PATH]);
 			// Client will not accept the restore.
-			unlink(restore_path);
+			if (restore_path)
+				unlink(restore_path);
 			if(set_string(cconfs[OPT_RESTORE_PATH], NULL))
 				goto end;
 			logp("Client not accepting server initiated restore.\n");
@@ -430,6 +437,13 @@ static int extra_comms_read(struct async *as,
 		{
 			set_int(cconfs[OPT_MESSAGE], 1);
 			set_int(globalcs[OPT_MESSAGE], 1);
+		}
+		else if(!strncmp_w(rbuf->buf, "backup_failovers_left="))
+		{
+			int l;
+			l=atoi(rbuf->buf+strlen("backup_failovers_left="));
+			set_int(cconfs[OPT_BACKUP_FAILOVERS_LEFT], l);
+			set_int(globalcs[OPT_BACKUP_FAILOVERS_LEFT], l);
 		}
 		else
 		{

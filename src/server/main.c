@@ -14,12 +14,14 @@
 #include "ca.h"
 #include "child.h"
 #include "main.h"
+#include "run_action.h"
 #include "monitor/status_server.h"
 
 static int hupreload=0;
 static int hupreload_logged=0;
 static int gentleshutdown=0;
 static int gentleshutdown_logged=0;
+static struct fzp *devnull;
 
 // These will also be used as the exit codes of the program and are therefore
 // unsigned integers.
@@ -234,11 +236,12 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	}
 	SSL_set_bio(ssl, sbio, sbio);
 
-	/* Do not try to check peer certificate straight away.
-	   Clients can send a certificate signing request when they have
-	   no certificate. */
-	SSL_set_verify(ssl, SSL_VERIFY_PEER
-		/* | SSL_VERIFY_FAIL_IF_NO_PEER_CERT */, 0);
+	/* Check peer certificate straight away if the "verify_peer_early"
+	   option is enabled. Otherwise clients may send a certificate signing
+	   request when they have no certificate. */
+	SSL_set_verify(ssl, SSL_VERIFY_PEER |
+		(get_int(confs[OPT_SSL_VERIFY_PEER_EARLY])?SSL_VERIFY_FAIL_IF_NO_PEER_CERT:0),
+		0);
 
 	if(ssl_do_accept(ssl))
 		goto end;
@@ -254,15 +257,15 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	{
 		// Add an annoying delay in case they are tempted to
 		// try repeatedly.
-		log_and_send(as->asfd, "unable to authorise on server");
 		sleep(1);
+		log_and_send(as->asfd, "unable to authorise on server");
 		goto end;
 	}
 
 	if(!get_int(cconfs[OPT_ENABLED]))
 	{
-		log_and_send(as->asfd, "client not enabled on server");
 		sleep(1);
+		log_and_send(as->asfd, "client not enabled on server");
 		goto end;
 	}
 
@@ -305,6 +308,14 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		if(!setup_asfd(as, "status server parent socket", &status_rfd,
 			/*listen*/""))
 				goto end;
+                if(!client_can_monitor(cconfs))
+		{
+			logp("Not allowing monitor request from %s\n", cname);
+			if(as->asfd->write_str(asfd, CMD_GEN,
+				"Monitor is not allowed"))
+					ret=-1;
+			goto end;
+		}
 	}
 
 	ret=child(as, is_status_server, status_wfd, confs, cconfs);
@@ -576,10 +587,18 @@ static int daemonise(void)
 		return -1;
 	}
 
-	/* close std* */
-	close(STDIN_FILENO);
 	close(STDOUT_FILENO);
 	close(STDERR_FILENO);
+	// It turns out that if I close stdin (fd=0), and have exactly one
+	// listen address configured (listen=0.0.0.0:4971), with no
+	// listen_status configured, then the socket file descriptor will be 0.
+	// In this case, select() in async.c will raise an exception on fd=0.
+	// It does not raise an exception if you have a socket fd 0 and 1
+	// (ie, two listen addresses).
+	// Seems like a linux bug to me. Anyway, hack around it by immediately
+	// opening /dev/null, so that the sockets can never get fd=0.
+	close(STDIN_FILENO);
+	devnull=fzp_open("/dev/null", "w");
 
 	return 0;
 }
@@ -865,6 +884,7 @@ int server(struct conf **confs, const char *conffile,
 end:
 	ret=SERVER_OK;
 error:
+	fzp_close(&devnull);
 
 // FIX THIS: Have an enum for a return value, so that it is more obvious what
 // is happening, like client.c does.

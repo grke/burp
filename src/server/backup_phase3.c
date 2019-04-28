@@ -16,10 +16,20 @@
 static const char *get_rmanifest_relative(struct sdirs *sdirs,
 	struct conf **confs)
 {
-	const char *cp;
-	cp=sdirs->rmanifest+strlen(get_string(confs[OPT_DIRECTORY]));
-	while(cp && *cp=='/') cp++;
-	return cp;
+	size_t s;
+	const char *directory;
+
+	directory=get_string(confs[OPT_DIRECTORY]);
+	s=strlen(directory);
+
+	if(!strncmp(sdirs->rmanifest, directory, s))
+	{
+		const char *cp;
+		cp=sdirs->rmanifest+strlen(directory);
+		while(cp && *cp=='/') cp++;
+		return cp;
+	}
+	return sdirs->rmanifest;
 }
 
 // Combine the phase1 and phase2 files into a new manifest.

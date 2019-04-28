@@ -25,12 +25,21 @@
 #include "rubble.h"
 #include "timer.h"
 
+static void log_rshash(struct conf **confs)
+{
+	if(get_protocol(confs)!=PROTO_1) return;
+	logp("Using librsync hash %s\n",
+		rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
+}
+
 static int open_log(struct asfd *asfd,
-	struct sdirs *sdirs, struct conf **cconfs)
+	struct sdirs *sdirs, struct conf **cconfs, int resume)
 {
 	int ret=-1;
 	char *logpath=NULL;
 	const char *peer_version=get_string(cconfs[OPT_PEER_VERSION]);
+
+	logp("Backup %s: %s\n", resume?"resumed":"started", sdirs->rworking);
 
 	if(!(logpath=prepend_s(sdirs->rworking, "log"))) goto end;
 	if(log_fzp_set(logpath, cconfs))
@@ -39,8 +48,10 @@ static int open_log(struct asfd *asfd,
 		goto end;
 	}
 
+	logp("Backup %s\n", resume?"resumed":"started");
 	logp("Client version: %s\n", peer_version?:"");
 	logp("Protocol: %d\n", (int)get_protocol(cconfs));
+	log_rshash(cconfs);
 	if(get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
 		logp("Client is Windows\n");
 
@@ -139,20 +150,21 @@ static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 	}
 }
 
-static void log_rshash(struct conf **confs)
-{
-	if(get_protocol(confs)!=PROTO_1) return;
-	logp("Using librsync hash %s\n",
-		rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
-}
-
-static void set_cntr_bno(struct cntr *cntr, struct sdirs *sdirs)
+static char *get_bno_from_sdirs(struct sdirs *sdirs)
 {
 	char *cp=NULL;
 	// Should be easier than this.
 	if(!(cp=strrchr(sdirs->rworking, '/')))
+		return NULL;
+	return cp+1;
+}
+
+static void set_cntr_bno(struct cntr *cntr, struct sdirs *sdirs)
+{
+	char *bno=get_bno_from_sdirs(sdirs);
+	if(!bno)
 		return;
-	cntr->bno=atoi(cp+1);
+	cntr->bno=atoi(bno);
 }
 
 static int do_backup_server(struct async *as, struct sdirs *sdirs,
@@ -164,15 +176,13 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
 
-	logp("in do_backup_server\n");
-
-	log_rshash(cconfs);
-
 	if(resume)
 	{
 		if(sdirs_get_real_working_from_symlink(sdirs)
-		  || sdirs_get_real_manifest(sdirs, protocol)
-		  || open_log(asfd, sdirs, cconfs))
+		  || sdirs_get_real_manifest(sdirs, protocol))
+			goto error;
+
+		if(open_log(asfd, sdirs, cconfs, resume))
 			goto error;
 
 		set_cntr_bno(cntr, sdirs);
@@ -182,8 +192,10 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		// Not resuming - need to set everything up fresh.
 		if(sdirs_create_real_working(sdirs,
 			get_string(cconfs[OPT_TIMESTAMP_FORMAT]))
-		  || sdirs_get_real_manifest(sdirs, protocol)
-		  || open_log(asfd, sdirs, cconfs))
+		  || sdirs_get_real_manifest(sdirs, protocol))
+			goto error;
+
+		if(open_log(asfd, sdirs, cconfs, resume))
 			goto error;
 
 		set_cntr_bno(cntr, sdirs);
@@ -239,6 +251,12 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
+	// Write backup_stats before flipping the symlink, so that is there
+	// even if phase4 is interrupted.
+	cntr_set_bytes(cntr, asfd);
+	if(cntr_stats_to_file(cntr, sdirs->working, ACTION_BACKUP))
+		goto error;
+
 	if(do_rename(sdirs->working, sdirs->finishing))
 		goto error;
 
@@ -248,8 +266,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		goto error;
 	}
 
-	cntr_print(cntr, ACTION_BACKUP, asfd);
-	cntr_stats_to_file(cntr, sdirs->rworking, ACTION_BACKUP);
+	cntr_print(cntr, ACTION_BACKUP);
 
 	if(protocol==PROTO_2)
 	{
@@ -267,6 +284,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 
 	logp("Backup completed.\n");
 	log_fzp_set(NULL, cconfs);
+	logp("Backup completed: %s\n", sdirs->rworking);
 	compress_filename(sdirs->rworking,
 		"log", "log.gz", get_int(cconfs[OPT_COMPRESSION]));
 
@@ -275,7 +293,14 @@ error:
 	ret=-1;
 end:
 
+	if(ret)
+		logp("Backup failed\n");
 	log_fzp_set(NULL, cconfs);
+	if(ret)
+	{
+		// Make an entry in the main output, for failed backups.
+		logp("Backup failed: %s\n", sdirs->rworking);
+	}
 	return ret;
 }
 
@@ -288,7 +313,7 @@ int run_backup(struct async *as, struct sdirs *sdirs, struct conf **cconfs,
 	struct iobuf *rbuf=asfd->rbuf;
 	const char *cname=get_string(cconfs[OPT_CNAME]);
 
-	if(get_string(cconfs[OPT_RESTORE_CLIENT]))
+	if(get_string(cconfs[OPT_SUPER_CLIENT]))
 	{
 		// This client is not the original client, so a backup might
 		// cause all sorts of trouble.

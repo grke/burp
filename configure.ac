@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl require a recent autoconf
 AC_PREREQ([2.61])
 
-AC_INIT([Burp],[2.2.9],[https://github.com/grke/burp/issues],[burp],[http://burp.grke.net/])
+AC_INIT([Burp],[2.3.5],[https://github.com/grke/burp/issues],[burp],[http://burp.grke.net/])
 AC_CONFIG_AUX_DIR([autoconf])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -44,7 +44,7 @@ dnl --------------------------------------------------
 dnl Libtool config
 dnl --------------------------------------------------
 
-LT_INIT([disable-static])
+#LT_INIT([disable-static])
 
 dnl --------------------------------------------------
 dnl OS determination
@@ -439,7 +439,7 @@ if test "$enable_xattr" != "no"; then
 fi
 
 dnl Then check for the Linux or OSX implementation
-if test "$have_xattr" = "no"; then
+if test "$enable_xattr" != "no" && test "$have_xattr" = "no" ; then
   AC_CHECK_HEADERS([sys/xattr.h],
     [
       AC_CHECK_FUNCS([llistxattr lgetxattr lsetxattr listxattr getxattr setxattr],

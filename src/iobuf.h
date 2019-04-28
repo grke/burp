@@ -39,4 +39,6 @@ extern int iobuf_fill_from_fzp_data(struct iobuf *iobuf, struct fzp *fzp);
 
 extern const char *iobuf_to_printable(struct iobuf *iobuf);
 
+extern int iobuf_relative_path_attack(struct iobuf *iobuf);
+
 #endif

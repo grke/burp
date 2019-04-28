@@ -83,7 +83,7 @@ int set_extrameta(struct asfd *asfd,
 {
 	size_t l=0;
 	char cmdtmp='\0';
-	unsigned int s=0;
+	uint32_t s=0;
 	const char *metadata=NULL;
 	int errors=0;
 
@@ -92,15 +92,29 @@ int set_extrameta(struct asfd *asfd,
 	while(l>0)
 	{
 		char *m=NULL;
+		if(l<9)
+		{
+			logw(asfd, cntr,
+				"length of metadata '%s' %d is too short for %s\n",
+				metadata, (uint32_t)l, path);
+			return -1;
+		}
 		if((sscanf(metadata, "%c%08X", &cmdtmp, &s))!=2)
 		{
 			logw(asfd, cntr,
-				"sscanf of metadata failed for %s: %s\n",
-				path, metadata);
+				"sscanf of metadata '%s' %d failed for %s\n",
+				metadata, (uint32_t)l, path);
 			return -1;
 		}
 		metadata+=9;
 		l-=9;
+		if(s>l)
+		{
+			logw(asfd, cntr, "requested length %d of metadata '%s' %d is too long for %s\n",
+				s, metadata, (uint32_t)l, path);
+			return -1;
+
+		}
 		if(!(m=(char *)malloc_w(s+1, __func__)))
 			return -1;
 		memcpy(m, metadata, s);

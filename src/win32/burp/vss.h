@@ -41,6 +41,9 @@
 #ifndef __VSS_H_
 #define __VSS_H_
 
+#include "../../asfd.h"
+#include "../../cntr.h"
+
 // Some forward declarations.
 struct IVssAsync;
 
@@ -51,7 +54,7 @@ public:
 	virtual ~VSSClient();
 
 	// Backup Process
-	BOOL InitializeForBackup();
+	BOOL InitializeForBackup(struct asfd *asfd, struct cntr *cntr);
 	virtual BOOL CreateSnapshots(char *szDriveLetters)=0;
 	virtual BOOL CloseBackup()=0;
 	virtual const char* GetDriverName()=0;
@@ -66,9 +69,12 @@ public:
 	void DestroyWriterInfo();
 	void AppendWriterInfo(int nState, const char* pszInfo);
 	const BOOL IsInitialized() { return m_bBackupIsInitialized; };
-	 
+
 private:
-	virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore=FALSE)=0;
+	virtual BOOL Initialize(
+		struct asfd *asfd,
+		struct cntr *cntr
+	)=0;
 	virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync *pAsync)=0;
 	virtual BOOL QuerySnapshotSet(GUID snapshotSetID)=0;
 
@@ -77,12 +83,9 @@ protected:
 
 	BOOL m_bCoInitializeCalled;
 	BOOL m_bCoInitializeSecurityCalled;
-	DWORD m_dwContext;
 
 	IUnknown *m_pVssObject;
 	GUID m_uidCurrentSnapshotSet;
-	// TRUE if we are during restore
-	BOOL m_bDuringRestore;
 	BOOL m_bBackupIsInitialized;
 
 	// drive A will be stored on position 0,Z on pos. 25
@@ -102,7 +105,10 @@ public:
 	virtual BOOL CloseBackup();
 	virtual const char *GetDriverName() { return "VSS WinXP"; };
 private:
-	virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
+	virtual BOOL Initialize(
+		struct asfd *asfd,
+		struct cntr *cntr
+	);
 	virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync *pAsync);
 	virtual BOOL QuerySnapshotSet(GUID snapshotSetID);
 	BOOL CheckWriterStatus();   
@@ -117,7 +123,10 @@ public:
 	virtual BOOL CloseBackup();   
 	virtual const char *GetDriverName() { return "VSS Win 2003"; };
 private:
-	virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
+	virtual BOOL Initialize(
+		struct asfd *asfd,
+		struct cntr *cntr
+	);
 	virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync *pAsync);
 	virtual BOOL QuerySnapshotSet(GUID snapshotSetID);
 	BOOL CheckWriterStatus();
@@ -132,7 +141,10 @@ public:
 	virtual BOOL CloseBackup();   
 	virtual const char *GetDriverName() { return "VSS Vista"; };
 private:
-	virtual BOOL Initialize(DWORD dwContext, BOOL bDuringRestore);
+	virtual BOOL Initialize(
+		struct asfd *asfd,
+		struct cntr *cntr
+	);
 	virtual BOOL WaitAndCheckForAsyncOperation(IVssAsync *pAsync);
 	virtual BOOL QuerySnapshotSet(GUID snapshotSetID);
 	BOOL CheckWriterStatus();

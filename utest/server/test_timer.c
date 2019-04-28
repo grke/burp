@@ -46,12 +46,10 @@ static char *setup_tz(const char *offset)
 static void tear_down_tz(char **tz)
 {
 	if(tz && *tz)
-	{
 		setenv("TZ", *tz, 1);
-		free_w(tz);
-	}
 	else
 		unsetenv("TZ");
+	free_w(tz);
 }
 
 struct data
@@ -298,12 +296,12 @@ static void run_test(struct data *d)
 
 	if(d->manual_file)
 	{
-		char *manual=NULL;
 		fail_unless(!astrcat(&manual, sdirs->clients, __func__)
 		  && !astrcat(&manual, "/", __func__)
 		  && !astrcat(&manual, cname, __func__)
 		  && !astrcat(&manual, "/backup", __func__));
 		build_file(manual, "");
+		fail_unless(is_reg_lstat(manual)==1);
 	}
 
 	timer_ret=run_timer_internal(cname, sdirs, timer_args,
@@ -312,10 +310,12 @@ static void run_test(struct data *d)
 
 	if(manual)
 	{
-		fail_unless(is_reg_lstat(manual)==1);
+		// Should be unlinked, and therefore return -1.
+		fail_unless(is_reg_lstat(manual)==-1);
 		free_w(&manual);
 	}
 
+	strlists_free(&timer_args);
 	sdirs_free(&sdirs);
 	cleanup();
 
@@ -324,10 +324,12 @@ static void run_test(struct data *d)
 
 START_TEST(test_timer_internal)
 {
+	alloc_check_init();
 	FOREACH(d)
 	{
 		run_test(&d[i]);
 	}
+	alloc_check();
 }
 END_TEST
 
@@ -344,11 +346,13 @@ START_TEST(test_timer)
 	// Just for coverage
 	struct conf **confs=NULL;
 	struct sdirs *sdirs=NULL;
+	alloc_check_init();
 	confs=setup_conf();
 	sdirs=setup_sdirs(PROTO_1, "testclient");
 	fail_unless(run_timer(/*asfd*/NULL, sdirs, confs)==1);
 	confs_free(&confs);
 	sdirs_free(&sdirs);
+	alloc_check();
 }
 END_TEST
 
@@ -357,12 +361,14 @@ START_TEST(test_timer_script)
 	// Just for coverage
 	struct conf **confs=NULL;
 	struct sdirs *sdirs=NULL;
+	alloc_check_init();
 	confs=setup_conf();
 	sdirs=setup_sdirs(PROTO_1, "testclient");
 	set_string(confs[OPT_TIMER_SCRIPT], "somepath");
 	fail_unless(run_timer(/*asfd*/NULL, sdirs, confs)==1);
 	confs_free(&confs);
 	sdirs_free(&sdirs);
+	alloc_check();
 }
 END_TEST
 

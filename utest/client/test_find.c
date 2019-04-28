@@ -3,6 +3,7 @@
 #include "../../src/alloc.h"
 #include "config.h"
 #include "../../src/client/find.h"
+#include "../../src/client/find_logic.h"
 #include "../../src/conffile.h"
 #include "../../src/fsops.h"
 #include "../../src/prepend.h"
@@ -73,6 +74,8 @@ static void tear_down(struct FF_PKT **ff, struct conf ***confs)
 	confs_free(confs);
 	strlists_free(&expected);
 	fail_unless(recursive_delete(BASE)==0);
+	// cleanup our logic caches
+	free_logic_cache();
 	alloc_check();
 }
 
@@ -192,22 +195,24 @@ static void run_find(const char *buf, struct FF_PKT *ff, struct conf **confs)
 	fail_unless(!recursive_delete(CONFBASE));
 }
 
-static char extra_config[1024]="";
+static char extra_config[8192]="";
 
 static void do_test(void setup_entries(void))
 {
 	struct FF_PKT *ff;
-	char buf[4096];
+	char *buf=NULL;
 	struct conf **confs=NULL;
 	ff=setup(&confs);
 
 	setup_entries();
 	e=expected;
 
-	snprintf(buf, sizeof(buf), "%s%s", MIN_CLIENT_CONF, extra_config);
+	fail_unless(!astrcat(&buf, MIN_CLIENT_CONF, __func__));
+	fail_unless(!astrcat(&buf, extra_config, __func__));
 
 	run_find(buf, ff, confs);
 
+	free_w(&buf);
 	tear_down(&ff, &confs);
 }
 
@@ -399,6 +404,30 @@ static void include_regex(void)
 		fullpath);
 }
 
+static void exclude_logic(void)
+{
+	add_dir(     FOUND, "");
+	add_file(    FOUND, "a", 2);
+	add_file(NOT_FOUND, "a.ost", 6);
+	add_file(    FOUND, "b.ost", 2);
+	add_file(NOT_FOUND, "caa", 15);
+	add_file(NOT_FOUND, "cbb", 16);
+	add_file(    FOUND, "cc", 15);
+	add_file(    FOUND, "haaaab", 9);
+	add_file(NOT_FOUND, "haaab", 8);
+	add_file(NOT_FOUND, "y", 4);
+	add_file(    FOUND, "z", 2);
+	snprintf(extra_config, sizeof(extra_config),
+		 "include=%s\n"
+		 "exclude_logic=file_size>=5 and file_ext=ost\n"
+		 "exclude_logic=(file_size>=3 and file_size<=5) or (file_size=8 and path_match=^%s/.*b$)\n"
+		 "exclude_logic=(file_size>=10 and file_size<=20) and (file_ext=zoro or file_match='^c(a|b)')\n"
+		 "exclude_logic=(file_size>=30 or file_size<2\n"
+		 "exclude_logic=this expression isnt valid\n"
+		 "exclude_logic=another unvalid expression\n",
+		 fullpath, fullpath);
+}
+
 static void multi_includes(void)
 {
 	add_dir( NOT_FOUND, "");
@@ -439,6 +468,7 @@ START_TEST(test_find)
 	do_test(exclude_regex);
 	do_test(include_regex);
 	do_test(multi_includes);
+	do_test(exclude_logic);
 }
 END_TEST
 

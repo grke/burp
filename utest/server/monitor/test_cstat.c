@@ -125,6 +125,7 @@ START_TEST(test_cstat_set_backup_list_fail_bu_get_list)
 	// But cstat_set_backup_list() will return OK anyway.
 	fail_unless(!cstat_set_backup_list(cstat));
 	fail_unless(cstat->bu==NULL);
+	tear_down(&cstat);
 }
 END_TEST
 
@@ -543,9 +544,9 @@ START_TEST(test_cstat_permitted)
 	// they are pretending to be.
 	// In this case, cli2 is 'us'.
 	fail_unless(!set_string(monitor_cconfs[OPT_CNAME], "cli2"));
-	fail_unless(!set_string(monitor_cconfs[OPT_RESTORE_CLIENT], "is_set"));
+	fail_unless(!set_string(monitor_cconfs[OPT_SUPER_CLIENT], "is_set"));
 	fail_unless(cstat_permitted(cstat, monitor_cconfs, NULL)==0);
-	fail_unless(!set_string(monitor_cconfs[OPT_RESTORE_CLIENT], NULL));
+	fail_unless(!set_string(monitor_cconfs[OPT_SUPER_CLIENT], NULL));
 
 	// Clients can see another client if we are listed in its
 	// restore_clients list.

@@ -129,7 +129,7 @@ static int conf_error(const char *conf_path, int line)
 	return -1;
 }
 
-static int get_file_size(const char *v, uint64_t *dest, const char *conf_path, int line)
+int get_file_size(const char *v, uint64_t *dest, const char *conf_path, int line)
 {
 	// Store in bytes, allow k/m/g.
 	const char *cp=NULL;
@@ -183,6 +183,7 @@ static struct fstype fstypes[]={
 	{ "ext4",		0x0000EF53 },
 	{ "ecryptfs",		0x0000F15F },
 	{ "cgroup",		0x0027E0EB },
+	{ "ceph",		0x00C36400 },
 	{ "tmpfs",		0x01021994 },
 	{ "zfs",		0x2FC12FC1 },
 	{ "jfs",		0x3153464A },
@@ -466,14 +467,23 @@ static int server_conf_checks(struct conf **c, const char *path, int *r)
 	if(get_string(c[OPT_CA_CONF]))
 	{
 		int ca_err=0;
-		if(!get_string(c[OPT_CA_NAME]))
+		const char *ca_name=get_string(c[OPT_CA_NAME]);
+		const char *ca_server_name=get_string(c[OPT_CA_SERVER_NAME]);
+		if(!ca_name)
 		{
 			logp("ca_conf set, but ca_name not set\n");
 			ca_err++;
 		}
-		if(!get_string(c[OPT_CA_SERVER_NAME]))
+		if(!ca_server_name)
 		{
 			logp("ca_conf set, but ca_server_name not set\n");
+			ca_err++;
+		}
+		if(ca_name
+		  && ca_server_name
+		  && !strcmp(ca_name, ca_server_name))
+		{
+			logp("ca_name and ca_server_name cannot be the same\n");
 			ca_err++;
 		}
 		if(!get_string(c[OPT_CA_BURP_CA]))
@@ -672,27 +682,20 @@ static int general_conf_checks(struct conf **c, const char *path, int *r)
 
 static int client_conf_checks(struct conf **c, const char *path, int *r)
 {
+	int ret=-1;
+	char *copy=NULL;
 	const char *autoupgrade_os=get_string(c[OPT_AUTOUPGRADE_OS]);
-
-	if(!get_int(c[OPT_PORT_BACKUP]))
-		conf_problem(path, "port_backup unset", r);
-	if(!get_int(c[OPT_PORT_RESTORE]))
-		conf_problem(path, "port_restore unset", r);
-	if(!get_int(c[OPT_PORT_VERIFY]))
-		conf_problem(path, "port_verify unset", r);
-	if(!get_int(c[OPT_PORT_LIST]))
-		conf_problem(path, "port_list unset", r);
-	if(!get_int(c[OPT_PORT_DELETE]))
-		conf_problem(path, "port_delete unset", r);
 
 	if(!get_string(c[OPT_CNAME]))
 	{
-		if(get_cname_from_ssl_cert(c)) return -1;
+		if(get_cname_from_ssl_cert(c))
+			goto end;
 		// There was no error. This is probably a new install.
 		// Try getting the fqdn and using that.
 		if(!get_string(c[OPT_CNAME]))
 		{
-			if(get_fqdn(c)) return -1;
+			if(get_fqdn(c))
+				goto end;
 			if(!get_string(c[OPT_CNAME]))
 				conf_problem(path, "client name unset", r);
 		}
@@ -701,7 +704,7 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 	{
 		logp("password not set, falling back to \"password\"\n");
 		if(set_string(c[OPT_PASSWORD], "password"))
-			return -1;
+			goto end;
 	}
 	if(!get_string(c[OPT_SERVER]))
 		conf_problem(path, "server unset", r);
@@ -711,9 +714,15 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 		logp("ssl_peer_cn unset\n");
 		if(server)
 		{
-			logp("falling back to '%s'\n", server);
-			if(set_string(c[OPT_SSL_PEER_CN], server))
-				return -1;
+			char *cp=NULL;
+			if(!(copy=strdup_w(server, __func__)))
+				goto end;
+			
+			if((cp=strchr(copy, ':')))
+				*cp='\0';
+			logp("falling back to '%s'\n", copy);
+			if(set_string(c[OPT_SSL_PEER_CN], copy))
+				goto end;
 		}
 	}
 	if(autoupgrade_os
@@ -742,7 +751,11 @@ static int client_conf_checks(struct conf **c, const char *path, int *r)
 		for(l=get_strlist(c[OPT_STARTDIR]); l; l=l->next)
 			if(l->flag) logp("%s\n", l->path);
 	}
-	return 0;
+
+	ret=0;
+end:
+	free_w(&copy);
+	return ret;
 }
 
 static int finalise_keep_args(struct conf **c)
@@ -1057,6 +1070,7 @@ static int finalise_client_ports(struct conf **c)
 
 	for(p=get_strlist(c[OPT_PORT]); p; p=p->next)
 		port=atoi(p->path);
+
 	if(!port)
 		return 0;
 
@@ -1291,6 +1305,65 @@ int conf_parse_incexcs_buf(struct conf **c, const char *incexc)
 	return 0;
 }
 
+/* The client runs this when the server overrides the incexcs for restore. */
+int conf_parse_incexcs_srestore(struct conf **c, const char *incexc)
+{
+	int ret=-1;
+	char *rp=NULL;
+	char *oldprefix=NULL;
+	char *srvprefix=NULL;
+	char *newprefix=NULL;
+	const char *rpfield=c[OPT_RESTOREPREFIX]->field;
+
+	if(!(rp=get_string(c[OPT_RESTOREPREFIX])))
+	{
+		logp("The client side must specify a %s!\n", rpfield);
+		goto end;
+	}
+	if(!(oldprefix=strdup_w(rp, __func__)))
+		goto end;
+
+	free_incexcs(c);
+	if(conf_load_lines_from_buf(incexc, c)
+	  || conf_finalise(c))
+		goto end;
+
+	if((srvprefix=get_string(c[OPT_RESTOREPREFIX])))
+	{
+		if(has_dot_component(srvprefix))
+		{
+			logp("The server gave %s '%s', which is not allowed!",
+				rpfield, srvprefix);
+			goto end;
+		}
+		if(!strcmp(oldprefix, "/"))
+		{
+			// Avoid double slash.
+			if(!(newprefix=prepend_s("", srvprefix)))
+				goto end;
+		}
+		else
+		{
+			if(!(newprefix=prepend_s(oldprefix, srvprefix)))
+				goto end;
+		}
+		if(set_string(c[OPT_RESTOREPREFIX], newprefix))
+			goto end;
+		if(build_path_w(newprefix))
+			goto end;
+	}
+	else
+	{
+		if(set_string(c[OPT_RESTOREPREFIX], oldprefix))
+			goto end;
+	}
+	ret=0;
+end:
+	free_w(&oldprefix);
+	free_w(&newprefix);
+	return ret;
+}
+
 static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 {
 	int i=0;
@@ -1434,6 +1507,18 @@ int conf_load_overrides(struct conf **globalcs, struct conf **cconfs,
 	return do_conf_load_overrides(globalcs, cconfs, path, NULL);
 }
 
+int cname_valid(const char *cname)
+{
+	if(!cname) return 0;
+	if(cname[0]=='.'
+	  || strchr(cname, '/') // Avoid path attacks.
+	  || strchr(cname, '\\') // Be cautious of backslashes too.
+	  // I am told that emacs tmp files end with '~'.
+	  || cname[strlen(cname)-1]=='~')
+		return 0;
+	return 1;
+}
+
 int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 {
 	int ret=-1;
@@ -1442,9 +1527,9 @@ int conf_load_clientconfdir(struct conf **globalcs, struct conf **cconfs)
 
 	if(conf_init_save_cname_and_version(cconfs)) goto end;
 	cname=get_string(cconfs[OPT_CNAME]);
-	if(looks_like_tmp_or_hidden_file(cname))
+	if(!cname_valid(cname))
 	{
-		logp("client name '%s' is invalid\n", cname);
+		logp("client name '%s' is not valid\n", cname);
 		goto end;
 	}
 
@@ -1477,6 +1562,9 @@ int conf_load_global_only(const char *path, struct conf **globalcs)
 static int restore_client_allowed(struct conf **cconfs, struct conf **sconfs)
 {
 	struct strlist *r;
+	for(r=get_strlist(sconfs[OPT_SUPER_CLIENTS]); r; r=r->next)
+		if(!strcmp(r->path, get_string(cconfs[OPT_CNAME])))
+			return 2;
 	for(r=get_strlist(sconfs[OPT_RESTORE_CLIENTS]); r; r=r->next)
 		if(!strcmp(r->path, get_string(cconfs[OPT_CNAME])))
 			return 1;
@@ -1489,6 +1577,7 @@ int conf_switch_to_orig_client(struct conf **globalcs,
 	struct conf **cconfs, const char *orig_client)
 {
 	int ret=-1;
+	int is_super=0;
 	struct conf **sconfs=NULL;
 
 	// If we are already the wanted client, no need to switch.
@@ -1511,8 +1600,52 @@ int conf_switch_to_orig_client(struct conf **globalcs,
 	set_int(sconfs[OPT_SEND_CLIENT_CNTR],
 		get_int(cconfs[OPT_SEND_CLIENT_CNTR]));
 
-	if(!restore_client_allowed(cconfs, sconfs))
-		goto end;
+	switch(restore_client_allowed(cconfs, sconfs))
+	{
+		case 1:
+			break;
+		case 2:
+			is_super=1;
+			break;
+		default:
+			goto end;
+	}
+
+	// Restore client can never force backup.
+	set_int(sconfs[OPT_CLIENT_CAN_FORCE_BACKUP], 0);
+
+	if(is_super)
+	{
+		set_int(sconfs[OPT_CLIENT_CAN_DELETE],
+			get_int(cconfs[OPT_CLIENT_CAN_DELETE]));
+		set_int(sconfs[OPT_CLIENT_CAN_DIFF],
+			get_int(cconfs[OPT_CLIENT_CAN_DIFF]));
+		set_int(sconfs[OPT_CLIENT_CAN_LIST],
+			get_int(cconfs[OPT_CLIENT_CAN_LIST]));
+		set_int(sconfs[OPT_CLIENT_CAN_MONITOR],
+			get_int(cconfs[OPT_CLIENT_CAN_MONITOR]));
+		set_int(sconfs[OPT_CLIENT_CAN_RESTORE],
+			get_int(cconfs[OPT_CLIENT_CAN_RESTORE]));
+		set_int(sconfs[OPT_CLIENT_CAN_VERIFY],
+			get_int(cconfs[OPT_CLIENT_CAN_VERIFY]));
+	}
+	else
+	{
+		// For the rest of the client_can things, do not allow them on
+		// orig_client if we do not have them ourselves.
+		if(!get_int(cconfs[OPT_CLIENT_CAN_DELETE]))
+			set_int(sconfs[OPT_CLIENT_CAN_DELETE], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_DIFF]))
+			set_int(sconfs[OPT_CLIENT_CAN_DIFF], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_LIST]))
+			set_int(sconfs[OPT_CLIENT_CAN_LIST], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_MONITOR]))
+			set_int(sconfs[OPT_CLIENT_CAN_MONITOR], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_RESTORE]))
+			set_int(sconfs[OPT_CLIENT_CAN_RESTORE], 0);
+		if(!get_int(cconfs[OPT_CLIENT_CAN_VERIFY]))
+			set_int(sconfs[OPT_CLIENT_CAN_VERIFY], 0);
+	}
 
 	if(set_string(sconfs[OPT_RESTORE_PATH],
 		get_string(cconfs[OPT_RESTORE_PATH])))
@@ -1525,7 +1658,7 @@ int conf_switch_to_orig_client(struct conf **globalcs,
 	confs_init(cconfs);
 	confs_memcpy(cconfs, sconfs);
 	confs_null(sconfs);
-	if(set_string(cconfs[OPT_RESTORE_CLIENT],
+	if(set_string(cconfs[OPT_SUPER_CLIENT],
 		get_string(cconfs[OPT_CNAME]))) goto end;
 	if(set_string(cconfs[OPT_ORIG_CLIENT],
 		get_string(cconfs[OPT_CNAME]))) goto end;

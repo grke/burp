@@ -75,13 +75,12 @@ error:
 
 static int client_can_generic(struct conf **cconfs, enum conf_opt o)
 {
-	// Always allow restore_clients, unless we are talking about forcing
-	// a backup.
-	if(get_string(cconfs[OPT_RESTORE_CLIENT])
-	  && o!=OPT_CLIENT_CAN_FORCE_BACKUP)
-		return 1;
-
 	return get_int(cconfs[o]);
+}
+
+int client_can_monitor(struct conf **cconfs)
+{
+	return client_can_generic(cconfs, OPT_CLIENT_CAN_MONITOR);
 }
 
 static int client_can_restore(struct conf **cconfs)
@@ -89,7 +88,7 @@ static int client_can_restore(struct conf **cconfs)
 	const char *restore_path=get_string(cconfs[OPT_RESTORE_PATH]);
 
 	// If there is a restore file on the server, it is always OK.
-	if(is_reg_lstat(restore_path)==1)
+	if(restore_path && is_reg_lstat(restore_path)==1)
 	{
 		// Remove the file.
 		unlink(restore_path);
@@ -502,6 +501,14 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	// Only backup action left to deal with.
 	ret=run_backup(as, sdirs,
 		cconfs, incexc, timer_ret, resume);
+
+	// If this is a backup failure and the client has more servers
+	// to failover to, do not notify.
+	if(ret
+	  && get_int(cconfs[OPT_N_FAILURE_BACKUP_FAILOVERS_LEFT])
+	  && get_int(cconfs[OPT_BACKUP_FAILOVERS_LEFT]))
+		return ret;
+
 	if(*timer_ret<0)
 		maybe_do_notification(as->asfd, ret,
 			"", "error running timer script",

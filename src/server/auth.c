@@ -10,6 +10,57 @@
 #include "../log.h"
 #include "auth.h"
 
+#include <time.h>
+#include <assert.h>
+#include <openssl/rand.h>
+
+#ifndef UTEST
+static
+#endif
+int compare_password(const char *secret, const char *client_supplied)
+{
+	int ret, status;
+
+	status = strcmp(secret, client_supplied);
+
+	// To prevent timing attacks passwords a random sleep is inserted when
+	// the strings didn't match.
+	//
+	// Normally a constant-length string comparison would be preferred.
+	// That doesn't work well here because the length of the secret value
+	// (the configured password) is not known until measured which could
+	// leak the length.
+	if (status != 0) {
+		unsigned char delay_bytes[4] = {0};
+		uint32_t delay_nsec = 999999999;
+
+		assert(sizeof(delay_bytes) == sizeof(delay_nsec));
+
+		if (RAND_bytes(delay_bytes, sizeof(delay_bytes)) != 1) {
+			unsigned long err = ERR_get_error();
+			logp("RAND_bytes failed: %s\n", ERR_error_string(err, NULL));
+			// Keep going without random delay
+		} else {
+			memcpy(&delay_nsec, delay_bytes, sizeof(delay_nsec));
+		}
+
+		struct timespec req = {0};
+
+		// Biased, but good enough for the purpose (the random number
+		// is not what's important)
+		req.tv_nsec = delay_nsec % 1000000000;
+
+		ret = nanosleep(&req, NULL);
+		if (ret) {
+			logp("nanosleep failed with return value %d: %s\n",
+				ret, strerror(errno));
+			return -1;
+		}
+	}
+
+	return status;
+}
+
 #ifndef UTEST
 static
 #endif
@@ -22,7 +73,12 @@ int check_passwd(const char *passwd, const char *plain_text)
 		return 0;
 
 	encrypted=crypt(plain_text, passwd);
-	return encrypted && !strcmp(encrypted, passwd);
+	if (encrypted == NULL) {
+		logp("crypt function failed: %s\n", strerror(errno));
+		return -1;
+	}
+
+	return !compare_password(passwd, encrypted);
 #endif
 #endif
 	logp("Server compiled without crypt support - cannot use passwd option\n");
@@ -64,7 +120,7 @@ static int check_client_and_password(struct conf **globalcs,
 			return -1;
 		}
 		// check against plain text
-		if(conf_password && strcmp(conf_password, password))
+		if(conf_password && compare_password(conf_password, password))
 		{
 			logp("password rejected for client %s\n", cname);
 			return -1;

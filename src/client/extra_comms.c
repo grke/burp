@@ -32,7 +32,7 @@ static const char *server_supports_autoupgrade(const char *feat)
 #include <librsync.h>
 
 int extra_comms_client(struct async *as, struct conf **confs,
-	enum action *action, char **incexc)
+	enum action *action, struct strlist *failover, char **incexc)
 {
 	int ret=-1;
 	char *feat=NULL;
@@ -90,7 +90,7 @@ int extra_comms_client(struct async *as, struct conf **confs,
 				goto end;
 			if(*incexc)
 			{
-				if(conf_parse_incexcs_buf(confs, *incexc))
+				if(conf_parse_incexcs_srestore(confs, *incexc))
 					goto end;
 				*action=ACTION_RESTORE;
 				log_restore_settings(confs, 1);
@@ -178,11 +178,16 @@ int extra_comms_client(struct async *as, struct conf **confs,
 #endif
 		if(clientos)
 		{
-			char msg[128]="";
-			snprintf(msg, sizeof(msg),
-				"uname=%s", clientos);
-			if(asfd->write_str(asfd, CMD_GEN, msg))
+			char *msg=NULL;
+			if(astrcat(&msg, "uname=", __func__)
+			  || astrcat(&msg, clientos, __func__))
 				goto end;
+			if(asfd->write_str(asfd, CMD_GEN, msg))
+			{
+				free_w(&msg);
+				goto end;
+			}
+			free_w(&msg);
 		}
 	}
 
@@ -226,6 +231,17 @@ int extra_comms_client(struct async *as, struct conf **confs,
 			goto end;
 		}
 		set_protocol(confs, PROTO_2);
+	}
+
+        if(get_protocol(confs)==PROTO_2
+          && get_string(confs[OPT_ENCRYPTION_PASSWORD]))
+	{
+		char msg[64]="";
+		snprintf(msg, sizeof(msg),
+			"%s is not supported in protocol 2",
+				confs[OPT_ENCRYPTION_PASSWORD]->field);
+		log_and_send(asfd, msg);
+		goto end;
 	}
 
 	if(server_supports(feat, ":msg:"))
@@ -294,6 +310,23 @@ int extra_comms_client(struct async *as, struct conf **confs,
 			goto end;
 
 		goto end;
+	}
+
+	if(server_supports(feat, ":failover:"))
+	{
+		if(*action==ACTION_BACKUP
+		  || *action==ACTION_BACKUP_TIMED)
+		{
+			char msg[32]="";
+			int left=0;
+			struct strlist *f=NULL;
+			for(f=failover; f; f=f->next)
+				left++;
+			snprintf(msg, sizeof(msg),
+				"backup_failovers_left=%d", left);
+			if(asfd->write_str(asfd, CMD_GEN, msg))
+				goto end;
+		}
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")

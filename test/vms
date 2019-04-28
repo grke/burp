@@ -50,6 +50,8 @@ function docker_run()
 
 docker_run "./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var --with-coverage"
 docker_run "make coverage"
+echo "Running utests with valgrind"
+docker_run "valgrind --error-exitcode=1 --suppressions=valgrind.supp -q ./runner"
 
 scp -r $ssh_opts "$host:burp/burp-coverage" .
 

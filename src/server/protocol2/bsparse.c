@@ -160,7 +160,7 @@ static struct cstat *get_client_list(const char *cdir, struct conf **globalcs)
 	char **clients=NULL;
 	struct cstat *cnew=NULL;
 	const char *clientconfdir=get_string(globalcs[OPT_CLIENTCONFDIR]);
-	if(entries_in_directory_alphasort(cdir, &clients, &count, 1/*atime*/))
+	if(entries_in_directory_alphasort(cdir, &clients, &count, 1/*atime*/, 1/*follow_symlinks*/))
 		goto error;
 	for(i=0; i<count; i++)
 	{

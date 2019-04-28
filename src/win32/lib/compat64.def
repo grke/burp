@@ -1,6 +1,6 @@
 LIBRARY compat.dll
 EXPORTS
- 
+
 ; compat.o
 _Z11win32_utimePKcP4stat
 _Z11strncasecmpPKcS0_i
@@ -61,13 +61,15 @@ utime
 _Z9forkchildPP3fzpS1_S1_PKcPKPc
 _Z17forkchild_no_waitPP3fzpS1_S1_PKcPKPc
 _Z15win32_getfsnamePKcPcy
- 
+_Z8realpathPKcPc
+_Z16get_fixed_drivesv
+
 ; print.o
 _Z10__vsprintfPcPKcS_
 ; _Z11__vsnprintfPcyPKcS_
 ; _Z10__snprintfPcyPKcz
 _Z9__sprintfPcPKcz
 ; _Z4doprPcyPKcS_PFvS_PyyiE
- 
+
 ; winapi.o
 _Z17InitWinAPIWrapperv

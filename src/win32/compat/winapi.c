@@ -48,24 +48,24 @@ t_LookupPrivilegeValue  p_LookupPrivilegeValue=NULL;
 
 t_SetProcessShutdownParameters p_SetProcessShutdownParameters=NULL;
 
-t_CreateFileA           p_CreateFileA=NULL;
 t_CreateFileW           p_CreateFileW=NULL;
-t_CreateDirectoryA      p_CreateDirectoryA;
-t_CreateDirectoryW      p_CreateDirectoryW;
+t_CreateDirectoryW      p_CreateDirectoryW=NULL;
 
-t_OpenEncryptedFileRawA  p_OpenEncryptedFileRawA=NULL;
+t_GetFinalPathNameByHandleW  p_GetFinalPathNameByHandleW=NULL;
+
+t_GetLogicalDriveStringsW  p_GetLogicalDriveStringsW=NULL;
+
+t_GetDriveTypeW  p_GetDriveTypeW=NULL;
+
 t_OpenEncryptedFileRawW  p_OpenEncryptedFileRawW=NULL;
 
 t_wunlink               p_wunlink=NULL;
 t_wmkdir                p_wmkdir=NULL;
 
-t_GetFileAttributesA    p_GetFileAttributesA=NULL;
 t_GetFileAttributesW    p_GetFileAttributesW=NULL;
 
-t_GetFileAttributesExA  p_GetFileAttributesExA=NULL;
 t_GetFileAttributesExW  p_GetFileAttributesExW=NULL;
 
-t_SetFileAttributesA    p_SetFileAttributesA=NULL;
 t_SetFileAttributesW    p_SetFileAttributesW=NULL;
 t_BackupRead            p_BackupRead=NULL;
 t_BackupWrite           p_BackupWrite=NULL;
@@ -74,16 +74,12 @@ t_MultiByteToWideChar   p_MultiByteToWideChar=NULL;
 
 t_AttachConsole         p_AttachConsole=NULL;
 
-t_FindFirstFileA        p_FindFirstFileA=NULL;
 t_FindFirstFileW        p_FindFirstFileW=NULL;
 
-t_FindNextFileA         p_FindNextFileA=NULL;
 t_FindNextFileW         p_FindNextFileW=NULL;
 
-t_SetCurrentDirectoryA  p_SetCurrentDirectoryA=NULL;
 t_SetCurrentDirectoryW  p_SetCurrentDirectoryW=NULL;
 
-t_GetCurrentDirectoryA  p_GetCurrentDirectoryA=NULL;
 t_GetCurrentDirectoryW  p_GetCurrentDirectoryW=NULL;
 
 t_GetVolumePathNameW    p_GetVolumePathNameW=NULL;
@@ -91,10 +87,9 @@ t_GetVolumeNameForVolumeMountPointW p_GetVolumeNameForVolumeMountPointW=NULL;
 
 t_SHGetFolderPath       p_SHGetFolderPath=NULL;
 
-t_CreateProcessA        p_CreateProcessA=NULL;
 t_CreateProcessW        p_CreateProcessW=NULL;
 
-void InitWinAPIWrapper() 
+void InitWinAPIWrapper()
 {
 	OSVERSIONINFO osversioninfo={ sizeof(OSVERSIONINFO) };
 
@@ -112,24 +107,8 @@ void InitWinAPIWrapper()
 	if(hLib)
 	{
 		// Create process calls.
-		p_CreateProcessA=(t_CreateProcessA)
-			GetProcAddress(hLib, "CreateProcessA");
 		p_CreateProcessW=(t_CreateProcessW)
 			GetProcAddress(hLib, "CreateProcessW");
-
-		// Create file calls.
-		p_CreateFileA=(t_CreateFileA)
-			GetProcAddress(hLib, "CreateFileA");
-		p_CreateDirectoryA=(t_CreateDirectoryA)
-			GetProcAddress(hLib, "CreateDirectoryA");
-
-		// Attribute calls.
-		p_GetFileAttributesA=(t_GetFileAttributesA)
-			GetProcAddress(hLib, "GetFileAttributesA");
-		p_GetFileAttributesExA=(t_GetFileAttributesExA)
-			GetProcAddress(hLib, "GetFileAttributesExA");
-		p_SetFileAttributesA=(t_SetFileAttributesA)
-			GetProcAddress(hLib, "SetFileAttributesA");
 
 		// Process calls.
 		p_SetProcessShutdownParameters=(t_SetProcessShutdownParameters)
@@ -141,24 +120,19 @@ void InitWinAPIWrapper()
 		p_MultiByteToWideChar=(t_MultiByteToWideChar)
 			GetProcAddress(hLib, "MultiByteToWideChar");
 
-		// Find files.
-		p_FindFirstFileA=(t_FindFirstFileA)
-			GetProcAddress(hLib, "FindFirstFileA"); 
-		p_FindNextFileA=(t_FindNextFileA)
-			GetProcAddress(hLib, "FindNextFileA");
-
-		// Get and set directory.
-		p_GetCurrentDirectoryA=(t_GetCurrentDirectoryA)
-			GetProcAddress(hLib, "GetCurrentDirectoryA");
-		p_SetCurrentDirectoryA=(t_SetCurrentDirectoryA)
-			GetProcAddress(hLib, "SetCurrentDirectoryA");
-
 		if(g_platform_id!=VER_PLATFORM_WIN32_WINDOWS)
 		{
 			p_CreateFileW=(t_CreateFileW)
 				GetProcAddress(hLib, "CreateFileW");
 			p_CreateDirectoryW=(t_CreateDirectoryW)
 				GetProcAddress(hLib, "CreateDirectoryW");
+
+			p_GetFinalPathNameByHandleW=(t_GetFinalPathNameByHandleW)
+				GetProcAddress(hLib, "GetFinalPathNameByHandleW");
+			p_GetLogicalDriveStringsW=(t_GetLogicalDriveStringsW)
+				GetProcAddress(hLib, "GetLogicalDriveStringsW");
+			p_GetDriveTypeW=(t_GetDriveTypeW)
+				GetProcAddress(hLib, "GetDriveTypeW");
 
 			// backup calls.
 			p_BackupRead=(t_BackupRead)
@@ -216,8 +190,6 @@ void InitWinAPIWrapper()
 			p_LookupPrivilegeValue=(t_LookupPrivilegeValue)
 				GetProcAddress(hLib, "LookupPrivilegeValueA");
 
-			p_OpenEncryptedFileRawA=(t_OpenEncryptedFileRawA)
-				GetProcAddress(hLib, "OpenEncryptedFileRawA");
 			p_OpenEncryptedFileRawW=(t_OpenEncryptedFileRawW)
 				GetProcAddress(hLib, "OpenEncryptedFileRawW");
 		}

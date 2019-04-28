@@ -142,94 +142,126 @@ void attribs_decode(struct sbuf *sb)
 	static const char *p;
 	static int64_t val;
 	static struct stat *statp;
+	static int eaten;
 
 	if(!(p=sb->attr.buf)) return;
 	statp=&sb->statp;
 
 	if(sb->protocol2)
 	{
-		// Protocol1 does not have this field.
-		p += from_base64(&val, p);
-		sb->protocol2->index=val;
-		p++;
+		// In protocol2, the first component (index) sometimes gets
+		// stripped off of the attributes, so look out for that.
+		if(*p!=' ')
+		{
+			// Protocol1 does not have this field.
+			if(!(eaten=from_base64(&val, p)))
+				return;
+			p+=eaten;
+			sb->protocol2->index=val;
+		}
+
 		// Compression for protocol2.
-		p += from_base64(&val, p);
+		if(!(eaten=from_base64(&val, p)))
+			return;
+		p+=eaten;
 		sb->compression=val;
-		p++;
+
 		// Encryption for protocol2.
-		p += from_base64(&val, p);
+		if(!(eaten=from_base64(&val, p)))
+			return;
+		p+=eaten;
 		sb->encryption=val;
-		p++;
 	}
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_dev, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_ino, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_mode, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_nlink, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_uid, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_gid, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_rdev, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_size, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 #ifdef HAVE_WIN32
 	//   plug(statp->st_blksize, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	//   plug(statp->st_blocks, val);
 #else
 	plug(statp->st_blksize, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_blocks, val);
 #endif
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_atime, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_mtime, val);
-	p++;
-	p += from_base64(&val, p);
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 	plug(statp->st_ctime, val);
 
 	// FreeBSD user flags.
-	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
-	{
-		p++;
-		if(!*p) return;
-		p += from_base64(&val, p);
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
 #ifdef HAVE_CHFLAGS
-		plug(statp->st_flags, val);
-	}
-	else
-	{
-		statp->st_flags  = 0;
+	statp->st_flags=0;
+	plug(statp->st_flags, val);
 #endif
-	}
 
 	// Look for winattr.
 	sb->winattr=0;
-	if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
-	{
-		p++;
-		p += from_base64(&val, p);
-		sb->winattr=val;
-	}
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
+	sb->winattr=val;
 
 	if(sb->protocol1)
 	{
@@ -237,31 +269,22 @@ void attribs_decode(struct sbuf *sb)
 		sb->encryption=ENCRYPTION_UNSET;
 
 		// Compression for protocol1.
-		if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
-		{
-			p++;
-			if(!*p) return;
-			p += from_base64(&val, p);
-			sb->compression=val;
-		}
+		if(!(eaten=from_base64(&val, p)))
+			return;
+		p+=eaten;
+		sb->compression=val;
 
 		// Encryption for protocol1.
-		if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
-		{
-			p++;
-			if(!*p) return;
-			p += from_base64(&val, p);
-			sb->encryption=val;
-		}
+		if(!(eaten=from_base64(&val, p)))
+			return;
+		p+=eaten;
+		sb->encryption=val;
 
 		// Salt for protocol1.
-		if(*p == ' ' || (*p != 0 && *(p+1) == ' '))
-		{
-			p++;
-			if(!*p) return;
-			p += from_base64(&val, p);
-			sb->protocol1->salt=val;
-		}
+		if(!(eaten=from_base64(&val, p)))
+			return;
+		p+=eaten;
+		sb->protocol1->salt=val;
 	}
 }
 
@@ -307,7 +330,7 @@ int attribs_set_file_times(struct asfd *asfd,
 
 uint64_t decode_file_no(struct iobuf *iobuf)
 {
-	int64_t val;
+	int64_t val=0;
 	from_base64(&val, iobuf->buf);
 	return (uint64_t)val;
 }
@@ -315,9 +338,11 @@ uint64_t decode_file_no(struct iobuf *iobuf)
 uint64_t decode_file_no_and_save_path(struct iobuf *iobuf, char **save_path)
 {
 	int64_t val;
+	int eaten;
 	char *p=iobuf->buf;
-	p+=from_base64(&val, iobuf->buf);
-	*save_path=p+1;
+	if(!(eaten=from_base64(&val, iobuf->buf)))
+		return 0;
+	*save_path=p+eaten+1;
 	return (uint64_t)val;
 }
 

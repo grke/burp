@@ -1,13 +1,12 @@
 # This is an example config file for the @name@ client.
 
 mode = client
-port = 4971
-# A different port to use for restores - see the man page for more options.
-#port_restore = 5971
+server = @server_address@:4971
 status_port = 4972
-server = @server_address@
 password = abcdefgh
 cname = testclient
+# A different port to use for restores - see the man page for more options.
+#port_restore = 5971
 # Choose the protocol to use.
 # 0 to decide automatically, 1 to force protocol1 mode (file level granularity
 # with a pseudo mirrored storage on the server and optional rsync). 2 forces
@@ -31,8 +30,11 @@ progress_counter = 1
 # randomise = 1200
 
 # Set server_can_restore to 0 if you do not want the server to be able to
-# initiate a restore.
+# initiate a restore (setting it to 1 also requires 'restoreprefix').
 server_can_restore = 0
+# This option is prefixed to the path of all restores, and is overridden by
+# '-d' on the command line.
+# restoreprefix = /my/restore/directory
 
 # Set server_can_override_includes to 0 if you do not want the server to be
 # able to override the local include/exclude list. The default is 1.
@@ -41,6 +43,8 @@ server_can_restore = 0
 # Set an encryption password if you do not trust the server with your data.
 # Note that this will mean that network deltas will not be possible. Each time
 # a file changes, the whole file will be transferred on the next backup.
+# On restoration, take care when copying and pasting special characters between
+# client conf files, as the encoding of the config file matters.
 # encryption_password = My^$pAsswIrD%@
 
 # More configuration files can be read, using syntax like the following

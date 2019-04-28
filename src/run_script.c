@@ -127,6 +127,7 @@ int run_script_to_buf(struct asfd *asfd,
 	struct fzp *serr=NULL;
 	struct fzp *sout=NULL;
 	char *cmd[64]={ NULL };
+	const int maxcmd = sizeof(cmd) / sizeof(cmd[0]);
 	struct strlist *sl;
 #ifndef HAVE_WIN32
 	struct cntr *cntr=NULL;
@@ -134,8 +135,8 @@ int run_script_to_buf(struct asfd *asfd,
 #endif
 	if(!args || !args[0]) return 0;
 
-	for(a=0; args[a]; a++) cmd[l++]=(char *)args[a];
-	for(sl=userargs; sl; sl=sl->next) cmd[l++]=sl->path;
+	for(a=0; args[a] && l < (maxcmd - 1); a++) cmd[l++]=(char *)args[a];
+	for(sl=userargs; sl && l < (maxcmd - 1); sl=sl->next) cmd[l++]=sl->path;
 	cmd[l++]=NULL;
 
 #ifndef HAVE_WIN32

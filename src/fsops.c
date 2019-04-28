@@ -60,18 +60,15 @@ int mkpath(char **rpath, const char *limit)
 	int ret=-1;
 	char *cp=NULL;
 	struct stat buf;
-#ifdef HAVE_WIN32
-	int windows_stupidity=0;
-#endif
+
 	if((cp=strrchr(*rpath, '/')))
 	{
 		*cp='\0';
 #ifdef HAVE_WIN32
 		if(strlen(*rpath)==2 && (*rpath)[1]==':')
 		{
-			(*rpath)[1]='\0';
-			windows_stupidity++;
-		}
+			// We are down to the drive letter, which is OK.
+		} else
 #endif
 		if(!**rpath)
 		{
@@ -128,16 +125,12 @@ int mkpath(char **rpath, const char *limit)
 
 	ret=0;
 end:
-#ifdef HAVE_WIN32
-	if(windows_stupidity) (*rpath)[1]=':';
-#endif
 	if(cp) *cp='/';
 	return ret;
 }
 
 int build_path(const char *datadir, const char *fname, char **rpath, const char *limit)
 {
-	//logp("build path: '%s/%s'\n", datadir, fname);
 	if(!(*rpath=prepend_s(datadir, fname))) return -1;
 	if(mkpath(rpath, limit))
 	{
@@ -347,16 +340,6 @@ int init_fs_max(const char *path)
 	return 0;
 }
 
-int looks_like_tmp_or_hidden_file(const char *filename)
-{
-	if(!filename) return 0;
-	if(filename[0]=='.' // Also avoids '.' and '..'.
-	  // I am told that emacs tmp files end with '~'.
-	  || filename[strlen(filename)-1]=='~')
-		return 1;
-	return 0;
-}
-
 static int do_get_entries_in_directory(DIR *directory, char ***nl,
 	int *count, int (*compar)(const void *, const void *))
 {
@@ -413,7 +396,7 @@ error:
 }
 
 static int entries_in_directory(const char *path, char ***nl,
-	int *count, int atime,
+	int *count, int atime, int follow_symlinks,
 	int (*compar)(const char **, const char **))
 {
 	int ret=0;
@@ -428,7 +411,11 @@ static int entries_in_directory(const char *path, char ***nl,
 	}
 #if defined(O_DIRECTORY) && defined(O_NOATIME)
 	int dfd=-1;
-	if((dfd=open(path, O_RDONLY|O_DIRECTORY|atime?0:O_NOATIME))<0
+	if((dfd=open(path, O_RDONLY|O_DIRECTORY|(atime?0:O_NOATIME)
+#ifdef O_NOFOLLOW
+	  |(follow_symlinks?0:O_NOFOLLOW)
+#endif
+	  ))<0
 	  || !(directory=fdopendir(dfd)))
 #else
 // Mac OS X appears to have no O_NOATIME and no fdopendir(), so it should
@@ -453,7 +440,7 @@ static int entries_in_directory(const char *path, char ***nl,
 
 int filter_dot(const struct dirent *d)
 {
-	if(!d->d_name
+	if(!d
 	  || !strcmp(d->d_name, ".")
 	  || !strcmp(d->d_name, ".."))
 		return 0;
@@ -466,9 +453,10 @@ static int my_alphasort(const char **a, const char **b)
 }
 
 int entries_in_directory_alphasort(const char *path, char ***nl,
-	int *count, int atime)
+	int *count, int atime, int follow_symlinks)
 {
-	return entries_in_directory(path, nl, count, atime, my_alphasort);
+	return entries_in_directory(path, nl, count, atime, follow_symlinks,
+		my_alphasort);
 }
 
 #define FULL_CHUNK      4096

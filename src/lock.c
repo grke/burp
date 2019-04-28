@@ -43,7 +43,14 @@ void lock_get_quick(struct lock *lock)
 	lock->status=GET_LOCK_GOT;
 	return;
 #else
-	if((lock->fd=open(lock->path, O_WRONLY|O_CREAT, 0666))<0)
+	if((lock->fd=open(
+		lock->path,
+#ifdef O_NOFOLLOW
+		O_NOFOLLOW|
+#endif
+		O_WRONLY|O_CREAT,
+		0666
+	))<0)
 	{
 		logp("Could not open lock file %s: %s\n",
 			lock->path, strerror(errno));

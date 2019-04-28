@@ -89,6 +89,7 @@ enum conf_opt
 	OPT_SSL_PEER_CN,
 	OPT_SSL_CIPHERS,
 	OPT_SSL_COMPRESSION,
+	OPT_SSL_VERIFY_PEER_EARLY,
 	OPT_USER,
 	OPT_GROUP,
 	OPT_RATELIMIT,
@@ -130,6 +131,7 @@ enum conf_opt
 	OPT_MONITOR_BROWSE_CACHE,
 	OPT_MONITOR_EXE,
 	OPT_STORAGE,
+	OPT_BACKUP_FAILOVERS_LEFT,
 
 	// Client options.
 	OPT_CNAME, // set on the server when client connects
@@ -144,6 +146,8 @@ enum conf_opt
 	OPT_PASSWD, // also a clientconfdir option
 	OPT_ENABLED, // also a clientconfdir option
 	OPT_SERVER,
+	OPT_SERVER_FAILOVER,
+	OPT_FAILOVER_ON_BACKUP_ERROR,
 	OPT_ENCRYPTION_PASSWORD,
 	OPT_AUTOUPGRADE_OS,
 	OPT_AUTOUPGRADE_DIR, // also a server option
@@ -162,6 +166,8 @@ enum conf_opt
 	OPT_EXCEXT, // exclude extensions
 	OPT_INCREG, // include (regular expression)
 	OPT_EXCREG, // exclude (regular expression)
+	OPT_INCLOGIC, // include logic expression
+	OPT_EXCLOGIC, // exclude logic expression
 	OPT_EXCFS, // exclude filesystems
 	OPT_INCFS, // include filesystems
 	OPT_EXCOM, // exclude from compression
@@ -261,8 +267,10 @@ enum conf_opt
 
 	OPT_N_FAILURE_SCRIPT,
 	OPT_N_FAILURE_ARG,
-	// List of clients that are permitted to restore the files from our client.
+	OPT_N_FAILURE_BACKUP_FAILOVERS_LEFT,
+
 	OPT_RESTORE_CLIENTS,
+	OPT_SUPER_CLIENTS,
 
 	OPT_DEDUP_GROUP,
 
@@ -270,6 +278,7 @@ enum conf_opt
 	OPT_CLIENT_CAN_DIFF,
 	OPT_CLIENT_CAN_FORCE_BACKUP,
 	OPT_CLIENT_CAN_LIST,
+	OPT_CLIENT_CAN_MONITOR,
 	OPT_CLIENT_CAN_RESTORE,
 	OPT_CLIENT_CAN_VERIFY,
 	OPT_SERVER_CAN_RESTORE,
@@ -278,10 +287,10 @@ enum conf_opt
 	// counters on resume/verify/restore.
 	OPT_SEND_CLIENT_CNTR,
 
-	// Set on the server to the restore client name (the one that you
+	// Set on the server to the super client name (the one that you
 	// connected with) when the client has switched to a different set of
 	// client backups.
-	OPT_RESTORE_CLIENT,
+	OPT_SUPER_CLIENT,
 	// Path to the server initiated restore file.
 	OPT_RESTORE_PATH,
 

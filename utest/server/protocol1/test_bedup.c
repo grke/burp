@@ -162,7 +162,7 @@ START_TEST(test_bedup_non_burp_link_above_max_links)
 	fail_unless(!run_bedup(ARR_LEN(argv), (char **)argv));
 
 	fail_unless(!entries_in_directory_alphasort(BASE,
-		&entries, &count, 1/*atime*/));
+		&entries, &count, 1/*atime*/, 1/*nofollow*/));
 	fail_unless(count==5);
 	for(i=0; i<count; i++)
 	{

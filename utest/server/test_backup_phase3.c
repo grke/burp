@@ -182,7 +182,7 @@ static void generate_manifest_compressed(
 static void check_manifest(
 	const char *path, struct mdata *m, size_t mlen)
 {
-	char expected[256];
+	char expected[1024];
 	snprintf(expected, sizeof(expected), "%s.expected", path);
 	generate_manifest_compressed(expected, m, mlen);
 	assert_files_compressed_equal(expected, path);

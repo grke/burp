@@ -885,7 +885,7 @@ int do_restore_client(struct asfd *asfd,
 						case 1: continue;
 						default: goto error;
 					}
-				}
+				  }
 
 				  if(!overwrite_ok(sb, overwrite,
 #ifdef HAVE_WIN32

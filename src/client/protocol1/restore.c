@@ -36,8 +36,8 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	}
 	enccompressed=dpth_protocol1_is_compressed(sb->compression,
 		sb->protocol1->datapth.buf);
+
 /*
-	printf("%s \n", fname);
 	if(encpassword && !enccompressed)
 		printf("encrypted and not compressed\n");
 	else if(!encpassword && enccompressed)

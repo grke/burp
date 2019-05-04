@@ -50,8 +50,8 @@ build_and_install()
 		[ "$f" = ".git" ] && continue
 		cp -ar ../"$f" "$build" || fail "could not copy ../$f to $build"
 	done || exit 1
-	# Add some wide-character directories/files.
-	cp -ar china-data "$build"
+	# Add some extra directories/files.
+	cp -ar fs-data "$build"
 
 	# Create a target directory, compile burp and install it into the
 	# target.

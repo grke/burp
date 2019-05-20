@@ -53,7 +53,7 @@ static void check_dynamic_paths(struct sdirs *sdirs, enum protocol protocol,
 	fail_unless(sdirs->treepath==NULL);
 	fail_unless(sdirs->relink==NULL);
 
-	fail_unless(sdirs_create_real_working(sdirs,
+	fail_unless(sdirs_create_real_working(sdirs, 1,
 		DEFAULT_TIMESTAMP_FORMAT)==0);
 	fail_unless(sdirs_get_real_manifest(sdirs, protocol)==0);
 	fail_unless(timestamp_read(sdirs->timestamp, tstmp, sizeof(tstmp))==0);

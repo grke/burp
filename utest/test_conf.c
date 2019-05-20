@@ -69,6 +69,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_REGEX:
 		case OPT_SUPER_CLIENT:
 		case OPT_MONITOR_EXE:
+		case OPT_SEED_SRC:
+		case OPT_SEED_DST:
 			fail_unless(get_string(c[o])==NULL);
 			break;
 		case OPT_RATELIMIT:

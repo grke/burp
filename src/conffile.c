@@ -829,6 +829,27 @@ static int add_to_cross_filesystem(struct conf **c, const char *path)
 	return add_to_strlist(c[OPT_FSCHGDIR], path, 0);
 }
 
+static int check_start_dirs_and_seed(struct conf **c)
+{
+	int errors=0;
+	struct strlist *s=NULL;
+	const char *src=get_string(c[OPT_SEED_SRC]);
+	if(!src)
+		return 0;
+
+	for(s=get_strlist(c[OPT_STARTDIR]); s; s=s->next)
+	{
+		if(!is_subdir(src, s->path))
+		{
+			logp("ERROR: Starting directories need to be within %s:%s: %s\n",
+				c[OPT_SEED_SRC]->field, src, s->path);
+			errors++;
+		}
+	}
+
+	return errors;
+}
+
 // This decides which directories to start backing up, and which
 // are subdirectories which don't need to be started separately.
 static int finalise_start_dirs(struct conf **c)
@@ -878,6 +899,10 @@ static int finalise_start_dirs(struct conf **c)
 		}
 		last_ie=s;
 	}
+
+	if(check_start_dirs_and_seed(c))
+		return -1;
+
 	return 0;
 }
 

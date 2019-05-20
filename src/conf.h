@@ -171,6 +171,8 @@ enum conf_opt
 	OPT_INCFS, // include filesystems
 	OPT_EXCOM, // exclude from compression
 	OPT_INCGLOB, // include (glob expression)
+	OPT_SEED_SRC,
+	OPT_SEED_DST,
 	OPT_CROSS_ALL_FILESYSTEMS,
 	OPT_READ_ALL_FIFOS,
 	OPT_FIFOS,

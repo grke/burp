@@ -69,7 +69,8 @@ extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);
 extern int manio_write_sbuf(struct manio *manio, struct sbuf *sb);
 
 extern int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
-	struct manio *srcmanio, struct manio *dstmanio);
+	struct manio *srcmanio, struct manio *dstmanio,
+	const char *seed_src, const char *seed_dst);
 extern int manio_forward_through_sigs(struct sbuf *csb, struct manio *manio);
 
 extern void man_off_t_free(man_off_t **offset);

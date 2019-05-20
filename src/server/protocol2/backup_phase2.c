@@ -60,7 +60,8 @@ static int unchanged(struct sbuf *csb, struct sbuf *sb,
 	if(!(fpath=strdup_w(manios->changed->offset->fpath, __func__)))
 		goto end;
 	if(manio_copy_entry(csb, sb,
-		manios->current, manios->unchanged)<0)
+		manios->current, manios->unchanged,
+		/*seed_src*/NULL, /*seed_dst*/NULL)<0)
 			goto end;
 	if(strcmp(fpath, manios->changed->offset->fpath))
 	{

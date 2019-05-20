@@ -46,6 +46,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 	enum protocol protocol=get_protocol(confs);
 	struct cntr *cntr=get_cntr(confs);
 	const char *rmanifest_relative=NULL;
+	char *seed_src=get_string(confs[OPT_SEED_SRC]);
+	char *seed_dst=get_string(confs[OPT_SEED_DST]);
 
 	logp("Begin phase3 (merge manifests)\n");
 
@@ -69,8 +71,11 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			switch(manio_read(unmanio, usb))
 			{
-				case -1: goto end;
-				case 1: manio_close(&unmanio);
+				case -1:
+					goto end;
+				case 1:
+					manio_close(&unmanio);
+					break;
 			}
 		}
 
@@ -79,8 +84,11 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			switch(manio_read(chmanio, csb))
 			{
-				case -1: goto end;
-				case 1: manio_close(&chmanio);
+				case -1:
+					goto end;
+				case 1:
+					manio_close(&chmanio);
+					break;
 			}
 		}
 
@@ -88,7 +96,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				usb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(usb, usb, unmanio, newmanio))
+			switch(manio_copy_entry(usb, usb, unmanio, newmanio,
+				seed_src, seed_dst))
 			{
 				case -1: goto end;
 				case 1: manio_close(&unmanio);
@@ -98,7 +107,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(csb, csb, chmanio, newmanio))
+			switch(manio_copy_entry(csb, csb, chmanio, newmanio,
+				seed_src, seed_dst))
 			{
 				case -1: goto end;
 				case 1: manio_close(&chmanio);
@@ -113,7 +123,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 			// They were the same - write one.
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(csb, csb, chmanio, newmanio))
+			switch(manio_copy_entry(csb, csb, chmanio, newmanio,
+				seed_src, seed_dst))
 			{
 				case -1: goto end;
 				case 1: manio_close(&chmanio);
@@ -123,7 +134,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				usb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(usb, usb, unmanio, newmanio))
+			switch(manio_copy_entry(usb, usb, unmanio, newmanio,
+				seed_src, seed_dst))
 			{
 				case -1: goto end;
 				case 1: manio_close(&unmanio);
@@ -133,7 +145,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		{
 			if(write_status(CNTR_STATUS_MERGING,
 				csb->path.buf, cntr)) goto end;
-			switch(manio_copy_entry(csb, csb, chmanio, newmanio))
+			switch(manio_copy_entry(csb, csb, chmanio, newmanio,
+				seed_src, seed_dst))
 			{
 				case -1: goto end;
 				case 1: manio_close(&chmanio);

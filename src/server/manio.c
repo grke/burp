@@ -551,18 +551,88 @@ int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
 int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
-	struct manio *srcmanio, struct manio *dstmanio)
+	struct manio *srcmanio, struct manio *dstmanio,
+	const char *seed_src, const char *seed_dst)
 {
 	int ars;
-	struct iobuf copy;
+	struct iobuf copy1;
+	struct iobuf copy2;
 	struct blk *blk;
+	memset(&copy1, 0, sizeof(copy1));
+	memset(&copy2, 0, sizeof(copy2));
 	if(!(blk=blk_alloc()))
 		goto error;
 
 	// Use the most recent stat for the new manifest.
 	if(dstmanio)
 	{
-		if(manio_write_sbuf(dstmanio, sb)) goto error;
+		int e=0;
+		struct iobuf save1;
+		struct iobuf save2;
+		memset(&save1, 0, sizeof(save1));
+		memset(&save2, 0, sizeof(save2));
+	
+		// When seeding, adjust the prefixes, but we need to remember
+		// the original too.
+		if(seed_src && seed_dst)
+		{
+			char *tmp=sb->path.buf+strlen(seed_src);
+			if(!(copy1.buf=strdup_w(seed_dst, __func__)))
+				goto error;
+			if(astrcat(&copy1.buf, "/", __func__))
+				goto error;
+			if(*tmp=='/')
+				tmp++;
+			if(astrcat(&copy1.buf, tmp, __func__))
+				goto error;
+			copy1.len=strlen(copy1.buf);
+			copy1.cmd=sb->path.cmd;
+
+			if(sb->protocol1 && sb->protocol1->datapth.buf
+			  && !strncmp(sb->protocol1->datapth.buf,
+				TREE_DIR, strlen(TREE_DIR)))
+			{
+				tmp=sb->protocol1->datapth.buf
+					+strlen(TREE_DIR)
+					+strlen(seed_src);
+				if(*tmp=='/')
+					tmp++;
+				if(!(copy2.buf=strdup_w(TREE_DIR, __func__)))
+					goto error;
+				if(*seed_dst!='/'
+				  && astrcat(&copy2.buf, "/", __func__))
+					goto error;
+				if(astrcat(&copy2.buf, seed_dst, __func__)
+				  || astrcat(&copy2.buf, "/", __func__)
+				  || astrcat(&copy2.buf, tmp, __func__))
+					goto error;
+				copy2.len=strlen(copy2.buf);
+				copy2.cmd=sb->protocol1->datapth.cmd;
+			}
+
+			save1=sb->path;
+			sb->path=copy1;
+
+			if(copy2.buf)
+			{
+				save2=sb->protocol1->datapth;
+				sb->protocol1->datapth=copy2;
+			}
+		}
+		e=manio_write_sbuf(dstmanio, sb);
+		if(copy1.buf)
+		{
+			sb->path=save1;
+			iobuf_free_content(&copy1);
+		}
+		if(copy2.buf)
+		{
+			sb->protocol1->datapth=save2;
+			iobuf_free_content(&copy2);
+		}
+		if(e)
+			goto error;
+
 		if(dstmanio->protocol==PROTO_1)
 		{
 			sbuf_free_content(csb);
@@ -571,9 +641,9 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 		}
 	}
 
-	copy.len=csb->path.len;
-	copy.cmd=csb->path.cmd;
-	if(!(copy.buf=strdup_w(csb->path.buf, __func__)))
+	copy1.len=csb->path.len;
+	copy1.cmd=csb->path.cmd;
+	if(!(copy1.buf=strdup_w(csb->path.buf, __func__)))
 		goto error;
 	while(1)
 	{
@@ -584,15 +654,15 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 			// Finished.
 			sbuf_free_content(csb);
 			blk_free(&blk);
-			iobuf_free_content(&copy);
+			iobuf_free_content(&copy1);
 			return 1;
 		}
 
 		// Got something.
-		if(iobuf_pathcmp(&csb->path, &copy))
+		if(iobuf_pathcmp(&csb->path, &copy1))
 		{
 			// Found the next entry.
-			iobuf_free_content(&copy);
+			iobuf_free_content(&copy1);
 			blk_free(&blk);
 			return 0;
 		}
@@ -619,7 +689,8 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 
 error:
 	blk_free(&blk);
-	iobuf_free_content(&copy);
+	iobuf_free_content(&copy1);
+	iobuf_free_content(&copy2);
 	return -1;
 }
 
@@ -627,7 +698,7 @@ int manio_forward_through_sigs(struct sbuf *csb, struct manio *manio)
 {
 	// Call manio_copy_entry with nothing to write to, so
 	// that we forward through the sigs in manio.
-	return manio_copy_entry(csb, NULL, manio, NULL);
+	return manio_copy_entry(csb, NULL, manio, NULL, NULL, NULL);
 }
 
 man_off_t *manio_tell(struct manio *manio)

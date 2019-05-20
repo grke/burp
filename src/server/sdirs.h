@@ -64,7 +64,7 @@ extern void sdirs_free_content(struct sdirs *sdirs);
 extern void sdirs_free(struct sdirs **sdirs);
 
 extern int sdirs_get_real_manifest(struct sdirs *sdirs, enum protocol protocol);
-extern int sdirs_create_real_working(struct sdirs *sdirs,
+extern int sdirs_create_real_working(struct sdirs *sdirs, uint64_t bno,
 	const char *timestamp_format);
 extern int sdirs_get_real_working_from_symlink(struct sdirs *sdirs);
 

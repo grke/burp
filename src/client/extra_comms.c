@@ -36,6 +36,8 @@ int extra_comms_client(struct async *as, struct conf **confs,
 {
 	int ret=-1;
 	char *feat=NULL;
+	char *seed_src=NULL;
+	char *seed_dst=NULL;
 	struct asfd *asfd;
 	struct iobuf *rbuf;
 	const char *orig_client=NULL;
@@ -277,6 +279,33 @@ int extra_comms_client(struct async *as, struct conf **confs,
 			if(asfd->write_str(asfd, CMD_GEN, msg))
 				goto end;
 		}
+	}
+
+	seed_src=get_string(confs[OPT_SEED_SRC]);
+	seed_dst=get_string(confs[OPT_SEED_DST]);
+	if(seed_src && *seed_src
+	  && seed_dst && *seed_dst
+	  && server_supports(feat, ":seed:"))
+	{
+		char *msg=NULL;
+		logp("Seeding from %s\n", seed_src);
+		if(astrcat(&msg, "seed_src=", __func__)
+		  || astrcat(&msg, seed_src, __func__)
+		  || asfd->write_str(asfd, CMD_GEN, msg))
+		{
+			free_w(&msg);
+			goto end;
+		}
+		free_w(&msg);
+		logp("Seeding to %s\n", seed_dst);
+		if(astrcat(&msg, "seed_dst=", __func__)
+		  || astrcat(&msg, seed_dst, __func__)
+		  || asfd->write_str(asfd, CMD_GEN, msg))
+		{
+			free_w(&msg);
+			goto end;
+		}
+		free_w(&msg);
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")

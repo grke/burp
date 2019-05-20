@@ -1083,6 +1083,43 @@ p1b_done:
 	return 0;
 }
 
+static int maybe_move_seed_dir(struct sdirs *sdirs, struct conf **cconfs)
+{
+	int ret=-1;
+	char *fullsrc=NULL;
+	char *fulldst=NULL;
+	char *seed_src=NULL;
+	char *seed_dst=NULL;
+	if(!sdirs || !cconfs)
+		return 0;
+	seed_src=get_string(cconfs[OPT_SEED_SRC]);
+	seed_dst=get_string(cconfs[OPT_SEED_DST]);
+	if(!seed_src || !seed_dst)
+		return 0;
+
+	// Need to move the data from the client to the correct
+	// location.
+	if(!(fullsrc=prepend_s(sdirs->datadirtmp, TREE_DIR))
+	  || !(fulldst=prepend_s(sdirs->datadirtmp, TREE_DIR))
+	  || astrcat(&fullsrc, seed_src, __func__))
+		goto end;
+	if(*seed_dst!='/'
+	  && astrcat(&fulldst, "/", __func__))
+		goto end;
+	if(astrcat(&fulldst, seed_dst, __func__))
+		goto end;
+	if(build_path_w(fulldst))
+		goto end;
+	if(do_rename(fullsrc, fulldst))
+		goto end;
+
+	ret=0;
+end:
+	free_w(&fullsrc);
+	free_w(&fulldst);
+	return ret;
+}
+
 int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int resume, struct conf **cconfs)
 {
@@ -1090,7 +1127,6 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	man_off_t *p1pos=NULL;
 	struct manio *p1manio=NULL;
 	struct dpth *dpth=NULL;
-	char *deltmppath=NULL;
 	char *last_requested=NULL;
 	struct manio *chmanio=NULL; // changed data
 	struct manio *ucmanio=NULL; // unchanged data
@@ -1261,7 +1297,11 @@ end:
 		logp("error closing %s in %s\n", sdirs->unchanged, __func__);
 		ret=-1;
 	}
-	free_w(&deltmppath);
+	if(maybe_move_seed_dir(sdirs, cconfs))
+	{
+		logp("error moving seed dir\n");
+		ret=-1;
+	}
 	free_w(&last_requested);
 	sbuf_free(&cb);
 	sbuf_free(&p1b);

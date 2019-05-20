@@ -804,6 +804,10 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_INCGLOB:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_STRLIST_SORTED, "include_glob");
+	case OPT_SEED_SRC:
+	  return sc_str(c[o], 0, 0, "seed_src");
+	case OPT_SEED_DST:
+	  return sc_str(c[o], 0, 0, "seed_dst");
 	case OPT_CROSS_ALL_FILESYSTEMS:
 	  return sc_int(c[o], 0, CONF_FLAG_INCEXC, "cross_all_filesystems");
 	case OPT_READ_ALL_FIFOS:

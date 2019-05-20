@@ -147,6 +147,12 @@ Show a particular path in a backup (requires \-C and \-b).
 \fB\-l\fR \fB[path]\fR
 Log file for status monitor - useful for debugging.
 
+.TP
+ADDITIONAL CLIENT OPTIONS TO USE WITH '\-a b'
+.TP
+\fB\-o seed_src=<directory> -o seed_dst=<directory>\fR
+Make a seeding backup. The source directory is replaced with the destination directory on completion. Both paths need to be absolute. Your configured include paths need to be the same as the source directory, or within the source directory. There must be no other existing backups of the client running the seed job. A use case might be to make an initial backup of a local hard drive, and then to ship the hard drive to a remote location for subsequent backups.
+
 .SH EXAMPLES
 .TP
 \fB@name@ \-a b\fR

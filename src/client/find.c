@@ -510,14 +510,6 @@ static int found_directory(struct asfd *asfd,
 
 	our_device=ff_pkt->statp.st_dev;
 
-	if((nbret=nobackup_directory(get_strlist(confs[OPT_NOBACKUP]),
-		ff_pkt->fname)))
-	{
-		if(nbret<0) goto end; // Error.
-		ret=0; // Do not back it up.
-		goto end;
-	}
-
 	/* Build a canonical directory name with a trailing slash in link var */
 	len=strlen(fname);
 	link_len=len+200;
@@ -540,6 +532,16 @@ static int found_directory(struct asfd *asfd,
 
 	if(my_send_file_w(asfd, ff_pkt, top_level, confs))
 		goto end;
+
+	// After my_send_file_w, so that we backup the directory itself.
+	if((nbret=nobackup_directory(get_strlist(confs[OPT_NOBACKUP]),
+		ff_pkt->fname)))
+	{
+		if(nbret<0) goto end; // Error.
+		ret=0; // Do not back it up.
+		goto end;
+	}
+
 	if(ff_pkt->type==FT_REPARSE || ff_pkt->type==FT_JUNCTION)
 	{
 		// Ignore.

@@ -318,13 +318,13 @@ static void nobackup(void)
 {
 	add_dir(     FOUND, "");
 	add_file(    FOUND, "a",   1);
-	add_dir (NOT_FOUND, "d");
+	add_dir (    FOUND, "d");
 	add_file(NOT_FOUND, "d/.nobackup", 0);
 	add_file(NOT_FOUND, "d/b", 1);
 	add_dir (NOT_FOUND, "d/i");
 	add_file(NOT_FOUND, "d/x", 1);
 	add_file(    FOUND, "e",   3);
-	add_dir (NOT_FOUND, "f");
+	add_dir (    FOUND, "f");
 	add_file(NOT_FOUND, "f/.exclude", 0);
 	add_file(NOT_FOUND, "f/b", 1);
 	add_dir (    FOUND, "g");

@@ -1,3 +1,8 @@
+2019-06-01 Changes in burp-2.3.8:
+  * 653: Seed functionality.
+  * 815: .nobackup/.exclude does not stop the directory itself from being
+         in the backup, only the contents.
+
 2019-05-01 Changes in burp-2.3.6:
   * 812: Fix counters missing received/sent bytes broken in 2.3.4.
   * 808: Fix for ssl_peer_cn when server:port syntax is used.

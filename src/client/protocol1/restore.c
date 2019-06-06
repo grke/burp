@@ -79,9 +79,12 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 				fname, __func__);
 			ret=-1;
 		}
-#endif
+		// For Windows, only set the attribs when it closes the file,
+		// so that trailing vss does not get blocked after having set
+		// a read-only attribute.
 		if(!ret) attribs_set(asfd, rpath,
 			&sb->statp, sb->winattr, cntr);
+#endif
 	}
 	if(ret)
 	{

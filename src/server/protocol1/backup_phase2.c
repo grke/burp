@@ -268,8 +268,6 @@ static enum processed_e process_unchanged_file(struct sbuf *p1b, struct sbuf *cb
 	p1b->protocol1->salt=cb->protocol1->salt;
 	p1b->compression=cb->compression;
 	p1b->encryption=cb->encryption;
-	// Why is winattr not getting sent in phase1?
-	p1b->winattr=cb->winattr;
 	// Need to free attr so that it is reallocated, because it may get
 	// longer than what the client told us in phase1.
 	iobuf_free_content(&p1b->attr);

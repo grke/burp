@@ -119,6 +119,7 @@ static int do_to_server(struct asfd *asfd,
 	sb->compression=compression;
 	sb->encryption=encryption;
 	sb->statp=ff->statp;
+	sb->winattr=ff->winattr;
 	attribs_encode(sb);
 
 #ifdef HAVE_WIN32

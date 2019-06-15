@@ -201,7 +201,7 @@ void add_fd_to_sets(int fd, fd_set *read_set, fd_set *write_set, fd_set *err_set
 }
 
 #ifndef HAVE_WIN32
-static int get_address_and_port(struct sockaddr_storage *addr,
+int get_address_and_port(struct sockaddr_storage *addr,
 	char *addrstr, size_t len, uint16_t *port)
 {
 	struct sockaddr_in *s4;
@@ -226,18 +226,6 @@ static int get_address_and_port(struct sockaddr_storage *addr,
 	return 0;
 }
 #endif
-
-int log_peer_address(struct sockaddr_storage *addr)
-{
-#ifndef HAVE_WIN32
-	uint16_t port=0;
-	char addrstr[INET6_ADDRSTRLEN]="";
-	if(get_address_and_port(addr, addrstr, INET6_ADDRSTRLEN, &port))
-		return -1;
-	logp("Connect from peer: %s:%d\n", addrstr, port);
-#endif
-	return 0;
-}
 
 int set_peer_env_vars(struct sockaddr_storage *addr)
 {

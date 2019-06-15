@@ -248,6 +248,9 @@ int authorise_server(struct asfd *asfd,
 	if(asfd->write_str(asfd, CMD_GEN, "ok"))
 		goto end;
 
+	if(set_string(cconfs[OPT_CONNECT_CLIENT], cname))
+		goto end;
+
 	ret=0;
 end:
 	iobuf_free_content(rbuf);

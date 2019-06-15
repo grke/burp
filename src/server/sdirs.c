@@ -121,6 +121,7 @@ int sdirs_create_real_working(
 static int do_common_dirs(struct sdirs *sdirs, const char *manual_delete)
 {
 	if(!(sdirs->created=prepend_s(sdirs->client, ".created"))
+	  || !(sdirs->command=prepend_s(sdirs->client, ".command"))
 	  || !(sdirs->working=prepend_s(sdirs->client, "working"))
 	  || !(sdirs->finishing=prepend_s(sdirs->client, "finishing"))
 	  || !(sdirs->current=prepend_s(sdirs->client, "current"))
@@ -250,6 +251,7 @@ void sdirs_free_content(struct sdirs *sdirs)
         free_w(&sdirs->clients);
         free_w(&sdirs->client);
         free_w(&sdirs->created);
+        free_w(&sdirs->command);
 
         free_w(&sdirs->working);
         free_w(&sdirs->rworking);

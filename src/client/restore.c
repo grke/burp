@@ -726,7 +726,7 @@ int do_restore_client(struct asfd *asfd,
 		const char *restore_prefix=get_string(confs[OPT_RESTOREPREFIX]);
 		if(!restore_prefix)
 		{
-			logw(asfd, cntr,
+			logw(NULL, cntr,
 				"You must specify a restore directory (-d)!\n");
 			goto error;
 		}

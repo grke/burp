@@ -171,7 +171,6 @@ int child(struct async *as, int is_status_server,
 				goto end;
 		wasfd->attempt_reads=0;
 	}
-
 	/* Has to be before the chuser/chgrp stuff to allow clients to switch
 	   to different clients when both clients have different user/group
 	   settings. */
@@ -203,7 +202,8 @@ int child(struct async *as, int is_status_server,
 		}
 	}
 
-	if(as->asfd->read(as->asfd)) goto end;
+	if(as->asfd->read(as->asfd))
+		goto end;
 
 	// If this is a status server, run the status server.
 	if(is_status_server)

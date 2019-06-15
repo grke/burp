@@ -390,16 +390,17 @@ static const char *buf_to_notify_str(struct iobuf *rbuf)
 {
 	const char *buf=rbuf->buf;
 	if(!strncmp_w(buf, "backup")) return "backup";
+	else if(!strncmp_w(buf, "delete")) return "delete";
+	else if(!strncmp_w(buf, "diff")) return "diff";
+	else if(!strncmp_w(buf, "list")) return "list";
 	else if(!strncmp_w(buf, "restore")) return "restore";
 	else if(!strncmp_w(buf, "verify")) return "verify";
-	else if(!strncmp_w(buf, "delete")) return "delete";
-	else if(!strncmp_w(buf, "list")) return "list";
 	else return "unknown";
 }
 
-static int maybe_write_first_created_file(struct sdirs *sdirs)
+static int maybe_write_first_created_file(struct sdirs *sdirs,
+	const char *tstmp)
 {
-	char tstmp[48]="";
 	if(is_reg_lstat(sdirs->created)>0
 	  || is_lnk_lstat(sdirs->current)>0
 	  || is_lnk_lstat(sdirs->currenttmp)>0
@@ -407,12 +408,28 @@ static int maybe_write_first_created_file(struct sdirs *sdirs)
 	  || is_lnk_lstat(sdirs->finishing)>0)
 		return 0;
 
-	if(timestamp_get_new(/*index*/0,
-		tstmp, sizeof(tstmp),
-		/*bufforfile*/NULL, /*bs*/0,
-		/*format*/NULL))
-			return -1;
 	return timestamp_write(sdirs->created, tstmp);
+}
+
+static int log_command(struct async *as,
+	struct sdirs *sdirs, struct conf **cconfs, const char *tstmp)
+{
+	struct fzp *fzp=NULL;
+	struct asfd *asfd=as->asfd;
+	struct iobuf *rbuf=asfd->rbuf;
+	char *cname=get_string(cconfs[OPT_CONNECT_CLIENT]);
+
+	if(rbuf->cmd!=CMD_GEN)
+		return 0;
+
+	if(!(fzp=fzp_open(sdirs->command, "a")))
+		return -1;
+	fzp_printf(fzp, "%s %s %s %s\n", tstmp, asfd->peer_addr, cname,
+		iobuf_to_printable(rbuf));
+	if(fzp_close(&fzp))
+		return -1;
+
+	return 0;
 }
 
 static int run_action_server_do(struct async *as, struct sdirs *sdirs,
@@ -421,6 +438,7 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	int ret;
 	int resume=0;
 	char msg[256]="";
+	char tstmp[48]="";
 	struct iobuf *rbuf=as->asfd->rbuf;
 
 	// Make sure some directories exist.
@@ -432,8 +450,16 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 		return -1;
 	}
 
-	if(maybe_write_first_created_file(sdirs))
-		return -1;
+	if(timestamp_get_new(/*index*/0,
+		tstmp, sizeof(tstmp),
+		/*bufforfile*/NULL, /*bs*/0,
+		/*format*/NULL))
+			return -1;
+
+	// Carry on if these fail, otherwise you will not be able to restore
+	// from readonly backups.
+	maybe_write_first_created_file(sdirs, tstmp);
+	log_command(as, sdirs, cconfs, tstmp);
 
 	if(rbuf->cmd!=CMD_GEN)
 		return unknown_command(as->asfd, __func__);

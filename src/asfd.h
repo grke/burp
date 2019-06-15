@@ -46,6 +46,7 @@ struct asfd
 	char *desc;
 	enum asfd_streamtype streamtype;
 	char *listen;
+	const char *peer_addr;
 
 	int network_timeout;
 	int max_network_timeout;

@@ -19,7 +19,6 @@ extern int set_blocking(int fd);
 extern char *get_tmp_filename(const char *basis);
 extern void add_fd_to_sets(int fd,
 	fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd);
-extern int log_peer_address(struct sockaddr_storage *addr);
 extern int set_peer_env_vars(struct sockaddr_storage *addr);
 extern int set_keepalive(int fd, int value);
 extern int init_client_socket(const char *host, const char *port);
@@ -63,6 +62,9 @@ extern int breakpoint(int breaking, const char *func);
 
 #ifdef HAVE_WIN32
 extern void convert_backslashes(char **path);
+#else
+extern int get_address_and_port(struct sockaddr_storage *addr,
+	char *addrstr, size_t len, uint16_t *port);
 #endif
 
 #endif

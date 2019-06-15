@@ -21,6 +21,7 @@ struct sdirs
 	char *clients;
 	char *client;
 	char *created;
+	char *command;
 
 	char *working; // Symlink.
 	char *rworking; // Real.

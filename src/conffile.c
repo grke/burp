@@ -1672,6 +1672,9 @@ int conf_switch_to_orig_client(struct conf **globalcs,
 			set_int(sconfs[OPT_CLIENT_CAN_VERIFY], 0);
 	}
 
+	if(set_string(sconfs[OPT_CONNECT_CLIENT],
+		get_string(cconfs[OPT_CONNECT_CLIENT])))
+			goto end;
 	if(set_string(sconfs[OPT_RESTORE_PATH],
 		get_string(cconfs[OPT_RESTORE_PATH])))
 			goto end;

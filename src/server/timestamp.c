@@ -45,7 +45,10 @@ void timestamp_write_to_buf(char *buf, size_t s,
 	const char *fmt=DEFAULT_TIMESTAMP_FORMAT;
 	if(format) fmt=format;
 	strftime(tmpbuf, sizeof(tmpbuf), fmt, localtime(t));
-	snprintf(buf, s, "%07" PRIu64 " %s", index, tmpbuf);
+	if(index)
+		snprintf(buf, s, "%07" PRIu64 " %s", index, tmpbuf);
+	else
+		snprintf(buf, s, "%s", tmpbuf);
 }
 
 int timestamp_get_new(uint64_t index,

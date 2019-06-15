@@ -566,6 +566,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "restore_path");
 	case OPT_ORIG_CLIENT:
 	  return sc_str(c[o], 0, CONF_FLAG_INCEXC_RESTORE, "orig_client");
+	case OPT_CONNECT_CLIENT:
+	  return sc_str(c[o], 0, 0, "");
 	case OPT_CNTR:
 	  return sc_cntr(c[o], 0, 0, "");
 	case OPT_BREAKPOINT:

@@ -1,3 +1,9 @@
+2019-07-01 Changes in burp-2.3.10:
+  * Upgrade Windows depkgs to openssl-1.1.1c.
+  * 739: Log each client command in the server storage directory.
+  * 817: Bug fix - send winattr field in phase1.
+  * 816: Bug fix - vss trailing data readonly problem on restore.
+
 2019-06-01 Changes in burp-2.3.8:
   * 653: Seed functionality.
   * 815: .nobackup/.exclude does not stop the directory itself from being

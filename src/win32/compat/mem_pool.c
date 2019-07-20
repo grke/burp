@@ -37,19 +37,14 @@ struct s_pool_ctl
 #define NLEN (MAX_NAME_LENGTH+2)
 
 // Define default Pool buffer sizes.
-static struct s_pool_ctl pool_ctl[] = {
-	{  256,  256, 0, 0, NULL }, // PM_NOPOOL no pooling
-	{  NLEN, NLEN,0, 0, NULL }, // PM_NAME Burp name
-	{  256,  256, 0, 0, NULL }, // PM_FNAME filename buffers
-	{  512,  512, 0, 0, NULL }, // PM_MESSAGE message buffer
-	{ 1024, 1024, 0, 0, NULL }  // PM_EMSG error message buffer
+static struct s_pool_ctl pool_ctl = {
+	256, 256, 0, 0, NULL
 };
 
 // Memory allocation control structures and storage.
 struct abufhead
 {
 	int32_t ablen;         // Buffer length in bytes
-	int32_t pool;          // pool
 	struct abufhead *next; // pointer to next free buffer
 };
 
@@ -60,37 +55,30 @@ struct abufhead
 
 #define HEAD_SIZE BALIGN(sizeof(struct abufhead))
 
-char *sm_get_pool_memory(int pool)
+char *sm_get_pool_memory()
 {
 	struct abufhead *buf;
 
-	if(pool>PM_MAX)
+	if(pool_ctl.free_buf)
 	{
-		fprintf(stderr, "MemPool index %d larger than max %d\n",
-			pool, PM_MAX);
-		exit(1);
-	}
-	if(pool_ctl[pool].free_buf)
-	{
-		buf=pool_ctl[pool].free_buf;
-		pool_ctl[pool].free_buf=buf->next;
-		pool_ctl[pool].in_use++;
-		if(pool_ctl[pool].in_use>pool_ctl[pool].max_used)
-			pool_ctl[pool].max_used=pool_ctl[pool].in_use;
+		buf=pool_ctl.free_buf;
+		pool_ctl.free_buf=buf->next;
+		pool_ctl.in_use++;
+		if(pool_ctl.in_use>pool_ctl.max_used)
+			pool_ctl.max_used=pool_ctl.in_use;
 		return (char *)buf+HEAD_SIZE;
 	}
 
-	if(!(buf=(struct abufhead *)malloc(pool_ctl[pool].size+HEAD_SIZE)))
+	if(!(buf=(struct abufhead *)malloc(pool_ctl.size+HEAD_SIZE)))
 	{
 		fprintf(stderr, "Out of memory requesting %d bytes\n",
-			pool_ctl[pool].size);
+			pool_ctl.size);
 		exit(1);
 	}
-	buf->ablen=pool_ctl[pool].size;
-	buf->pool=pool;
-	pool_ctl[pool].in_use++;
-	if(pool_ctl[pool].in_use>pool_ctl[pool].max_used)
-		pool_ctl[pool].max_used=pool_ctl[pool].in_use;
+	buf->ablen=pool_ctl.size;
+	pool_ctl.in_use++;
+	if(pool_ctl.in_use>pool_ctl.max_used)
+		pool_ctl.max_used=pool_ctl.in_use;
 	return (char *)buf+HEAD_SIZE;
 }
 
@@ -112,7 +100,6 @@ static char *sm_realloc_pool_memory(char *obuf, int32_t size)
 {
 	char *cp=(char *)obuf;
 	void *buf;
-	int pool;
 
 	ASSERT(obuf);
 	cp-=HEAD_SIZE;
@@ -120,9 +107,8 @@ static char *sm_realloc_pool_memory(char *obuf, int32_t size)
 	if(!(buf=realloc(cp, size+HEAD_SIZE)))
 		exit(1);
 	((struct abufhead *)buf)->ablen=size;
-	pool=((struct abufhead *)buf)->pool;
-	if(size>pool_ctl[pool].max_allocated)
-		pool_ctl[pool].max_allocated=size;
+	if(size>pool_ctl.max_allocated)
+		pool_ctl.max_allocated=size;
 	return ((char *)buf)+HEAD_SIZE;
 }
 
@@ -137,18 +123,11 @@ char *sm_check_pool_memory_size(char *obuf, int32_t size)
 void sm_free_pool_memory(char *obuf)
 {
 	struct abufhead *buf;
-	int pool;
 
 	ASSERT(obuf);
 	buf=(struct abufhead *)((char *)obuf-HEAD_SIZE);
-	pool=buf->pool;
-	pool_ctl[pool].in_use--;
-	if(!pool)
-		free((char *)buf); // Free nonpooled memory.
-	else
-	{
-		// Otherwise link it to the free pool chain.
-		buf->next = pool_ctl[pool].free_buf;
-		pool_ctl[pool].free_buf = buf;
-	}
+	pool_ctl.in_use--;
+	// Link it to the free pool chain.
+	buf->next = pool_ctl.free_buf;
+	pool_ctl.free_buf = buf;
 }

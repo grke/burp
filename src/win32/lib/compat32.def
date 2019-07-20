@@ -7,7 +7,6 @@ _Z11strncasecmpPKcS0_i
 _Z11win32_cgetsPci
 _Z11win32_chdirPKc
 _Z11win32_chmodPKctx
-_Z11win32_fputsPKcP6_iobuf
 _Z11win32_mkdirPKc
 _Z12UTF8_2_wcharPPcPKc
 _Z12gettimeofdayP7timevalP8timezone

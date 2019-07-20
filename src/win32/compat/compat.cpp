@@ -66,8 +66,8 @@ void SetVSSPathConvert(t_pVSSPathConvert pPathConvert,
 static void Win32ConvInitCache(void)
 {
 	if(g_pWin32ConvUTF8Cache) return;
-	g_pWin32ConvUTF8Cache=sm_get_pool_memory(PM_FNAME);
-	g_pWin32ConvUCS2Cache=sm_get_pool_memory(PM_FNAME);
+	g_pWin32ConvUTF8Cache=sm_get_pool_memory();
+	g_pWin32ConvUCS2Cache=sm_get_pool_memory();
 }
 
 void Win32ConvCleanupCache(void)
@@ -86,9 +86,6 @@ void Win32ConvCleanupCache(void)
 
 	g_dwWin32ConvUTF8strlen=0;
 }
-
-// To allow the usage of the original version in this file here
-#undef fputs
 
 //#define USE_WIN32_COMPAT_IO 1
 #define USE_WIN32_32KPATHCONVERSION 1
@@ -158,7 +155,7 @@ void conv_unix_to_win32_path(const char *name, char *win32_name, DWORD dwSize)
 	 */
 	if(g_pVSSPathConvert)
 	{
-		char *pszBuf=sm_get_pool_memory (PM_FNAME);
+		char *pszBuf=sm_get_pool_memory ();
 		pszBuf=sm_check_pool_memory_size(pszBuf, dwSize);
 		snprintf(pszBuf, strlen(tname)+1, "%s", tname);
 		g_pVSSPathConvert(pszBuf, tname, dwSize);
@@ -175,7 +172,7 @@ char *unix_name_to_win32(char *name)
 	// One extra byte should suffice, but we double it.
 	// Add MAX_PATH bytes for VSS shadow copy name.
 	DWORD dwSize=2*strlen(name)+MAX_PATH;
-	tmp=sm_get_pool_memory(PM_FNAME);
+	tmp=sm_get_pool_memory();
 	tmp=sm_check_pool_memory_size(tmp, dwSize);
 	conv_unix_to_win32_path(name, tmp, dwSize);
 	if(tmp) ret=strdup(tmp);
@@ -203,8 +200,8 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 	if(wcslen(name)>3 && !wcsncmp(name, L"\\\\?\\", 4))
 		return pszUCSPath;
 
-	wchar_t *pwszBuf=(wchar_t *)sm_get_pool_memory(PM_FNAME);
-	wchar_t *pwszCurDirBuf=(wchar_t *)sm_get_pool_memory(PM_FNAME);
+	wchar_t *pwszBuf=(wchar_t *)sm_get_pool_memory();
+	wchar_t *pwszCurDirBuf=(wchar_t *)sm_get_pool_memory();
 	DWORD dwCurDirPathSize=0;
 
 	// Get buffer with enough size (name+max 6. wchars+1 null terminator.
@@ -357,7 +354,7 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 		pwszBuf=(wchar_t *)sm_check_pool_memory_size((char *)pwszBuf,
 			(dwBufCharsNeeded+MAX_PATH)*sizeof(wchar_t));
 		// Create temp. buffer.
-		wchar_t *pszBuf=(wchar_t *)sm_get_pool_memory(PM_FNAME);
+		wchar_t *pszBuf=(wchar_t *)sm_get_pool_memory();
 		pszBuf=(wchar_t *)sm_check_pool_memory_size((char *)pszBuf,
 			(dwBufCharsNeeded+MAX_PATH)*sizeof(wchar_t));
 		if(bAddPrefix) nParseOffset=4;
@@ -485,7 +482,7 @@ char *make_win32_path_UTF8_2_wchar_w(const char *pszUTF)
 {
 	int size=0;
 	char *ret=NULL;
-	char *tmp=sm_get_pool_memory(PM_FNAME);
+	char *tmp=sm_get_pool_memory();
 
 	size=make_win32_path_UTF8_2_wchar(&tmp, pszUTF);
 	if(size>0)
@@ -649,7 +646,7 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 	// use unicode
 	if(p_FindFirstFileW)
 	{
-		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, file);
 
 		h=p_FindFirstFileW((LPCWSTR)pwszBuf, &info_w);
@@ -720,7 +717,7 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 		h=INVALID_HANDLE_VALUE;
 		if(p_GetFileAttributesW)
 		{
-			char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+			char *pwszBuf=sm_get_pool_memory();
 			make_win32_path_UTF8_2_wchar(&pwszBuf, file);
 			if(p_CreateFileW)
 			{
@@ -746,7 +743,7 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 				(LPDWORD)&bytes, (LPOVERLAPPED)0);
 			if(ok)
 			{
-				char *utf8=sm_get_pool_memory(PM_NAME);
+				char *utf8=sm_get_pool_memory();
 				wchar_2_UTF8(utf8, (wchar_t *)
 				  rdb->SymbolicLinkReparseBuffer.PathBuffer);
 				if(!strncasecmp(utf8, "\\??\\volume{", 11))
@@ -840,7 +837,7 @@ static int stat2(const char *file, struct stat *sb, uint64_t *winattr)
 
 	if(p_GetFileAttributesW)
 	{
-		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, tmpbuf);
 
 		attr=p_GetFileAttributesW((LPCWSTR) pwszBuf);
@@ -888,7 +885,7 @@ static int do_stat(const char *file, struct stat *sb, uint64_t *winattr)
 	if(p_GetFileAttributesExW)
 	{
 		// Dynamically allocate enough space for UCS2 filename.
-		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, file);
 
 		BOOL b=p_GetFileAttributesExW((LPCWSTR)pwszBuf,
@@ -1200,7 +1197,7 @@ struct dirent *readdir(DIR *dirp)
 		// Convert to wchar_t.
 		if(p_FindFirstFileW)
 		{
-			char *pwcBuf=sm_get_pool_memory(PM_FNAME);
+			char *pwcBuf=sm_get_pool_memory();
 			make_win32_path_UTF8_2_wchar(&pwcBuf, dp->spec);
 
 			dp->dirh=p_FindFirstFileW((LPCWSTR)pwcBuf,
@@ -1293,7 +1290,7 @@ static int win32_chmod_old(const char *path, mode_t mode)
 
 	if(p_GetFileAttributesW)
 	{
-		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, path);
 
 		attr=p_GetFileAttributesW((LPCWSTR)pwszBuf);
@@ -1346,7 +1343,7 @@ static int win32_chmod_new(const char *path, int64_t winattr)
 
 	if(p_GetFileAttributesW)
 	{
-		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, path);
 
 		attr=p_GetFileAttributesW((LPCWSTR) pwszBuf);
@@ -1382,7 +1379,7 @@ int win32_chdir(const char *dir)
 {
 	if(p_SetCurrentDirectoryW)
 	{
-		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, dir);
 
 		BOOL b=p_SetCurrentDirectoryW((LPCWSTR)pwszBuf);
@@ -1405,7 +1402,7 @@ int win32_mkdir(const char *dir)
 {
 	if(p_wmkdir)
 	{
-		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, dir);
 
 		int n=p_wmkdir((LPCWSTR)pwszBuf);
@@ -1430,7 +1427,7 @@ char *win32_getcwd(char *buf, int maxlen)
 
 	if(p_GetCurrentDirectoryW)
 	{
-		char *pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char *pwszBuf=sm_get_pool_memory();
 		pwszBuf=sm_check_pool_memory_size(pwszBuf,
 			maxlen*sizeof(wchar_t));
 
@@ -1448,53 +1445,6 @@ char *win32_getcwd(char *buf, int maxlen)
 	backslashes_to_forward_slashes(buf);
 
 	return buf;
-}
-
-int win32_fputs(const char *string, FILE *stream)
-{
-	/* We use WriteConsoleA / WriteConsoleA
-	   so we can be sure that unicode support works on win32.
-	   with fallback if something fails. */
-
-	HANDLE hOut=GetStdHandle(STD_OUTPUT_HANDLE);
-	if(hOut
-	  && (hOut!=INVALID_HANDLE_VALUE)
-	  && (stream==stdout))
-	{
-		char *pwszBuf=sm_get_pool_memory(PM_MESSAGE);
-
-		DWORD dwCharsWritten;
-		DWORD dwChars;
-
-		dwChars=UTF8_2_wchar(&pwszBuf, string);
-
-		// Try WriteConsoleW.
-		if(WriteConsoleW(hOut,
-			pwszBuf, dwChars-1, &dwCharsWritten, NULL))
-		{
-			sm_free_pool_memory(pwszBuf);
-			return dwCharsWritten;
-		}
-
-		// Convert to local codepage and try WriteConsoleA.
-		char* pszBuf=sm_get_pool_memory(PM_MESSAGE);
-		pszBuf=sm_check_pool_memory_size(pszBuf, dwChars+1);
-
-		dwChars=p_WideCharToMultiByte(GetConsoleOutputCP(),
-			0, (LPCWSTR)pwszBuf, -1, pszBuf, dwChars, NULL, NULL);
-		sm_free_pool_memory(pwszBuf);
-
-		if(WriteConsoleA(hOut,
-			pszBuf, dwChars-1, &dwCharsWritten, NULL))
-		{
-			sm_free_pool_memory(pszBuf);
-			return dwCharsWritten;
-		}
-		sm_free_pool_memory(pszBuf);
-	}
-
-	// Fall back.
-	return fputs(string, stream);
 }
 
 char *win32_cgets(char* buffer, int len)
@@ -1566,7 +1516,7 @@ int win32_unlink(const char *filename)
 
 	if(p_wunlink)
 	{
-		char* pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char* pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, filename);
 
 		nRetCode=_wunlink((LPCWSTR) pwszBuf);
@@ -1934,7 +1884,7 @@ int win32_utime(const char *fname, struct stat *statp)
 
 	if(p_CreateFileW)
 	{
-		char* pwszBuf=sm_get_pool_memory(PM_FNAME);
+		char* pwszBuf=sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar(&pwszBuf, tmpbuf);
 
 		h=p_CreateFileW((LPCWSTR)pwszBuf,
@@ -1972,7 +1922,7 @@ int win32_getfsname(const char *path, char *fsname, size_t fsname_size)
 	// I do not think anyone still needs non-Unicode stuff.
 	WCHAR fsname_ucs2[MAX_PATH + 1];
 	{
-		WCHAR *pwsz_path=(WCHAR*)sm_get_pool_memory(PM_FNAME);
+		WCHAR *pwsz_path=(WCHAR*)sm_get_pool_memory();
 		make_win32_path_UTF8_2_wchar((char**)&pwsz_path, path);
 		int path_len=wcslen(pwsz_path);
 		if (path_len && pwsz_path[path_len-1] != '\\')
@@ -2043,7 +1993,7 @@ char *realpath(const char *path, char *resolved_path)
 	SetLastError(0);
 	conv_unix_to_win32_path(path, tmpbuf, _MAX_PATH);
 
-	pwszBuf=sm_get_pool_memory(PM_FNAME);
+	pwszBuf=sm_get_pool_memory();
 
 	if(p_CreateFileW)
 	{
@@ -2086,7 +2036,7 @@ char *realpath(const char *path, char *resolved_path)
 		goto end;
 	}
 
-	pwszBuf=sm_get_pool_memory(PM_FNAME);
+	pwszBuf=sm_get_pool_memory();
 	if(p_GetFinalPathNameByHandleW(h,
 		(LPWSTR)pwszBuf, size, 0)<junk_len)
 			goto end;

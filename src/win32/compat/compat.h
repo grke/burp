@@ -338,11 +338,9 @@ extern "C" void syslog(int type, const char *fmt, ...);
 
 #define getcwd win32_getcwd
 #define chdir win32_chdir
-#define fputs win32_fputs
 char *win32_getcwd(char *buf, int maxlen);
 int win32_chdir(const char *buf);
 int win32_mkdir(const char *buf);
-int win32_fputs(const char *string, FILE *stream);
 int win32_unlink(const char *filename);
 int win32_chmod(const char *, mode_t, int64_t);
 

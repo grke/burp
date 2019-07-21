@@ -155,7 +155,7 @@ void conv_unix_to_win32_path(const char *name, char *win32_name, DWORD dwSize)
 	 */
 	if(g_pVSSPathConvert)
 	{
-		char *pszBuf=sm_get_pool_memory ();
+		char *pszBuf=sm_get_pool_memory();
 		pszBuf=sm_check_pool_memory_size(pszBuf, dwSize);
 		snprintf(pszBuf, strlen(tname)+1, "%s", tname);
 		g_pVSSPathConvert(pszBuf, tname, dwSize);
@@ -436,8 +436,11 @@ static bool bstrcmp(const char *s1, const char *s2)
 /* If we find the utf8 string in cache, we use the cached ucs2 version.
    We compare the stringlength first (quick check) and then compare the
    content.            */
-int make_win32_path_UTF8_2_wchar(char **pszUCS, const char *pszUTF, BOOL *pBIsRawPath)
-{
+int make_win32_path_UTF8_2_wchar(
+	char **pszUCS,
+	const char *pszUTF,
+	BOOL *pBIsRawPath
+) {
 	if(!g_pWin32ConvUTF8Cache)
 		Win32ConvInitCache();
 	else if(g_dwWin32ConvUTF8strlen==strlen(pszUTF))
@@ -488,7 +491,6 @@ char *make_win32_path_UTF8_2_wchar_w(const char *pszUTF)
 	if(size>0)
 	{
 		ret=(char *)malloc(2*strlen(pszUTF)+MAX_PATH);
-		//ret=(char *)malloc((size+1)*sizeof(WCHAR));
 		wcscpy((LPWSTR)ret, (LPWSTR)tmp);
 	}
 	sm_free_pool_memory(tmp);
@@ -2036,7 +2038,7 @@ char *realpath(const char *path, char *resolved_path)
 		goto end;
 	}
 
-	pwszBuf=sm_get_pool_memory();
+	pwszBuf=sm_check_pool_memory_size(pwszBuf, size);
 	if(p_GetFinalPathNameByHandleW(h,
 		(LPWSTR)pwszBuf, size, 0)<junk_len)
 			goto end;

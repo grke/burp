@@ -25,20 +25,12 @@ struct s_pool_ctl
 {
 	int32_t size;              // default size
 	int32_t max_allocated;     // max allocated
-	int32_t max_used;          // max buffers used
-	int32_t in_use;            // number in use
 	struct abufhead *free_buf; // pointer to free buffers
 };
 
-// Maximum Name length including EOS.
-#define MAX_NAME_LENGTH 128
-
-// Burp Name length plus extra.
-#define NLEN (MAX_NAME_LENGTH+2)
-
 // Define default Pool buffer sizes.
 static struct s_pool_ctl pool_ctl = {
-	256, 256, 0, 0, NULL
+	256, 256, NULL
 };
 
 // Memory allocation control structures and storage.
@@ -63,9 +55,6 @@ char *sm_get_pool_memory()
 	{
 		buf=pool_ctl.free_buf;
 		pool_ctl.free_buf=buf->next;
-		pool_ctl.in_use++;
-		if(pool_ctl.in_use>pool_ctl.max_used)
-			pool_ctl.max_used=pool_ctl.in_use;
 		return (char *)buf+HEAD_SIZE;
 	}
 
@@ -76,9 +65,6 @@ char *sm_get_pool_memory()
 		exit(1);
 	}
 	buf->ablen=pool_ctl.size;
-	pool_ctl.in_use++;
-	if(pool_ctl.in_use>pool_ctl.max_used)
-		pool_ctl.max_used=pool_ctl.in_use;
 	return (char *)buf+HEAD_SIZE;
 }
 
@@ -126,7 +112,6 @@ void sm_free_pool_memory(char *obuf)
 
 	ASSERT(obuf);
 	buf=(struct abufhead *)((char *)obuf-HEAD_SIZE);
-	pool_ctl.in_use--;
 	// Link it to the free pool chain.
 	buf->next = pool_ctl.free_buf;
 	pool_ctl.free_buf = buf;

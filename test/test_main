@@ -247,9 +247,9 @@ add_run_restore()
 	dir="$2$res"
 	test_includes_restore=1
 	makedir_client "$dir"
-# If vss has been stripped, need to add the '-x' option to the restore.
+# If vss has been stripped, need to add the '-X' option to the restore.
 	nowinapi=
-	[ -n "$STRIP_VSS" -a "$protocol" = 1 ] && nowinapi='-x'
+	[ -n "$STRIP_VSS" -a "$protocol" = 1 ] && nowinapi='-X'
 cat >> "$clientscript" << EOF
 echo "Starting test client restore of backup $bno"
 rm -rf "$dir" || fail

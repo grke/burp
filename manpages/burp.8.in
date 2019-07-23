@@ -117,11 +117,11 @@ Dry-run mode to test config file syntax.
 \fB\-v\fR \fB\fR
 Log to stdout (overrides config file 'stdout' setting).
 .TP
-\fB\-x\fR (on Windows)
-On restore, do not use the Windows VSS API on restore - give this option when you are restoring a backup that contains no VSS data.
+\fB\-x\fR
+On restore, do not use the Windows VSS API, and strip out the VSS data. Works both on Windows and non-Windows.
 .TP
-\fB\-x\fR (on non-Windows)
-On restore, strip the Windows VSS data - give this option when you are restoring a backup that contains VSS data.
+\fB\-X\fR (Windows only)
+On restore, do not use the Windows VSS API and do not attempt to strip out the VSS data. Give this option when you are restoring a backup that contains no VSS data.
 .TP
 \fB\-a s\fR \fB\fR
 Run this to connect to a running server to get a live monitor of the status of all your backup clients. The live monitor requires ncurses support at compile time.

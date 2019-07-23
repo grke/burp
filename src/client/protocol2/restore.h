@@ -6,9 +6,9 @@ struct sbuf;
 #include "../../protocol2/blk.h"
 
 extern int write_protocol2_data(struct asfd *asfd,
-        struct BFILE *bfd, struct blk *blk, int vss_restore);
+        struct BFILE *bfd, struct blk *blk, enum vss_restore vss_restore);
 extern int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	struct BFILE *bfd, int vss_restore, struct cntr *cntr);
+	struct BFILE *bfd, enum vss_restore vss_restore, struct cntr *cntr);
 
 #endif

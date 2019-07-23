@@ -37,6 +37,13 @@ enum rshash
 	RSHASH_BLAKE2
 };
 
+enum vss_restore
+{
+	VSS_RESTORE_OFF=0,
+	VSS_RESTORE_OFF_STRIP,
+	VSS_RESTORE_ON
+};
+
 enum conf_type
 {
 	CT_STRING=0,
@@ -101,6 +108,7 @@ enum conf_opt
 	OPT_MESSAGE,
 	OPT_CNAME_LOWERCASE, // force lowercase cname, client or server option
 	OPT_CNAME_FQDN, // use fqdn cname, client or server option
+	OPT_VSS_RESTORE,
 
 	// Server options.
 	OPT_LISTEN,

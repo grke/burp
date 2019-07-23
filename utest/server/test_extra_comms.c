@@ -163,7 +163,7 @@ static const char *get_features(enum protocol protocol, int srestore,
 	if(version && !strcmp(version, "1.4.40"))
 		old_version=1;
 
-	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:failover:%s%smsg:%s%sseed:", srestore?"srestore:":"", old_version?"":"counters_json:", proto, rshash);
+	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:failover:vss_restore:%s%smsg:%s%sseed:", srestore?"srestore:":"", old_version?"":"counters_json:", proto, rshash);
 	return features;
 }
 

@@ -98,7 +98,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 
 static int restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	struct sbuf *sb, const char *fname, enum action act,
-	char **metadata, size_t *metalen, int vss_restore,
+	char **metadata, size_t *metalen, enum vss_restore vss_restore,
 	struct cntr *cntr, const char *encyption_password)
 {
 	int ret=0;
@@ -154,7 +154,8 @@ end:
 static int restore_metadata(struct asfd *asfd,
 	struct BFILE *bfd, struct sbuf *sb,
 	const char *fname, enum action act,
-	int vss_restore, struct cntr *cntr, const char *encryption_password)
+	enum vss_restore vss_restore,
+	struct cntr *cntr, const char *encryption_password)
 {
 	int ret=-1;
 	size_t metalen=0;
@@ -211,7 +212,7 @@ end:
 
 int restore_switch_protocol1(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	struct BFILE *bfd, int vss_restore, struct cntr *cntr,
+	struct BFILE *bfd, enum vss_restore vss_restore, struct cntr *cntr,
 	const char *encryption_password)
 {
 	switch(sb->path.cmd)

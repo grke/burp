@@ -269,7 +269,7 @@ int extra_comms_client(struct async *as, struct conf **confs,
 		if(*action==ACTION_BACKUP
 		  || *action==ACTION_BACKUP_TIMED)
 		{
-			char msg[32]="";
+			char msg[64]="";
 			int left=0;
 			struct strlist *f=NULL;
 			for(f=failover; f; f=f->next)
@@ -306,6 +306,18 @@ int extra_comms_client(struct async *as, struct conf **confs,
 			goto end;
 		}
 		free_w(&msg);
+	}
+
+	if(server_supports(feat, ":vss_restore:"))
+	{
+		enum vss_restore vss_restore=(enum vss_restore)
+			get_int(confs[OPT_VSS_RESTORE]);
+		if(vss_restore==VSS_RESTORE_OFF
+		  && asfd->write_str(asfd, CMD_GEN, "vss_restore=off"))
+			goto end;
+		if(vss_restore==VSS_RESTORE_OFF_STRIP
+		  && asfd->write_str(asfd, CMD_GEN, "vss_restore=strip"))
+			goto end;
 	}
 
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")

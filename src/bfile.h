@@ -13,14 +13,12 @@ enum bf_mode
 	BF_WRITE /* BackupWrite */
 };
 
-#ifndef HAVE_WIN32
 struct mysid
 {
         struct bsid sid;
         size_t needed_s;
         size_t needed_d;
 };
-#endif
 
 struct BFILE
 {
@@ -43,9 +41,9 @@ struct BFILE
 	int berrno;          /* errno */
 #else
 	int fd;
-	int vss_strip;
-	struct mysid mysid;
 #endif
+	struct mysid mysid;
+	int vss_strip;
 	int set_attribs_on_close;
 
 	// Let us try using function pointers.
@@ -59,9 +57,8 @@ struct BFILE
 		int atime, struct cntr *cntr, enum protocol protocol);
 #ifdef HAVE_WIN32
 	void (*set_win32_api)(struct BFILE *bfd, int on);
-#else
-	void (*set_vss_strip)(struct BFILE *bfd, int vss_strip);
 #endif
+	void (*set_vss_strip)(struct BFILE *bfd, int on);
 };
 
 extern struct BFILE *bfile_alloc(void);

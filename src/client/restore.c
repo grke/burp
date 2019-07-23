@@ -131,8 +131,9 @@ static int make_link(
 }
 
 // FIX THIS: Maybe should be in bfile.c.
-enum ofr_e open_for_restore(struct asfd *asfd, struct BFILE *bfd, const char *path,
-	struct sbuf *sb, int vss_restore, struct cntr *cntr,
+enum ofr_e open_for_restore(struct asfd *asfd,
+	struct BFILE *bfd, const char *path,
+	struct sbuf *sb, enum vss_restore vss_restore, struct cntr *cntr,
 	enum protocol protocol)
 {
 	static int flags;
@@ -172,12 +173,27 @@ enum ofr_e open_for_restore(struct asfd *asfd, struct BFILE *bfd, const char *pa
 
 	bfile_init(bfd, sb->winattr, cntr);
 	bfd->set_attribs_on_close=1;
+	switch(vss_restore)
+	{
+		case VSS_RESTORE_OFF:
 #ifdef HAVE_WIN32
-	bfd->set_win32_api(bfd, vss_restore);
-#else
-	// Abuse the vss_restore option to mean vss_strip on non-Windows.
-	bfd->set_vss_strip(bfd, !vss_restore);
+			bfd->set_win32_api(bfd, 0);
 #endif
+			bfd->set_vss_strip(bfd, 0);
+			break;
+		case VSS_RESTORE_OFF_STRIP:
+#ifdef HAVE_WIN32
+			bfd->set_win32_api(bfd, 0);
+#endif
+			bfd->set_vss_strip(bfd, 1);
+			break;
+		case VSS_RESTORE_ON:
+#ifdef HAVE_WIN32
+			bfd->set_win32_api(bfd, 1);
+#endif
+			bfd->set_vss_strip(bfd, 0);
+			break;
+	}
 	flags=O_WRONLY|O_BINARY
 #ifdef O_NOFOLLOW
 	|O_NOFOLLOW
@@ -702,7 +718,7 @@ end:
 }
 
 int do_restore_client(struct asfd *asfd,
-	struct conf **confs, enum action act, int vss_restore)
+	struct conf **confs, enum action act)
 {
 	int ret=-1;
 	char msg[512]="";
@@ -719,7 +735,10 @@ int do_restore_client(struct asfd *asfd,
 	const char *strip_path=get_string(confs[OPT_STRIP_FROM_PATH]);
 	const char *backup=get_string(confs[OPT_BACKUP]);
 	const char *regex=get_string(confs[OPT_REGEX]);
-	const char *encryption_password=get_string(confs[OPT_ENCRYPTION_PASSWORD]);
+	const char *encryption_password=
+		get_string(confs[OPT_ENCRYPTION_PASSWORD]);
+	enum vss_restore vss_restore=
+		(enum vss_restore)get_int(confs[OPT_VSS_RESTORE]);
 
 	if(act==ACTION_RESTORE)
 	{

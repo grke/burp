@@ -368,7 +368,7 @@ end:
 }
 
 static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
-	int vss_restore, struct conf **confs)
+	struct conf **confs)
 {
 	enum cliret ret=CLIENT_OK;
 	const char *r_script_pre=get_string(confs[OPT_R_SCRIPT_PRE]);
@@ -396,7 +396,7 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 	if(ret==CLIENT_OK)
 	{
 		if(do_restore_client(asfd, confs,
-			action, vss_restore)) ret=CLIENT_ERROR;
+			action)) ret=CLIENT_ERROR;
 	}
 	if((ret==CLIENT_OK || get_int(confs[OPT_R_SCRIPT_POST_RUN_ON_FAIL]))
 	  && r_script_post)
@@ -429,7 +429,7 @@ static enum cliret restore_wrapper(struct asfd *asfd, enum action action,
 }
 
 static enum cliret do_client(struct conf **confs,
-	enum action action, int vss_restore, const char *server,
+	enum action action, const char *server,
 	struct strlist *failover)
 {
 	enum cliret ret=CLIENT_OK;
@@ -506,7 +506,7 @@ static enum cliret do_client(struct conf **confs,
 			break;
 		case ACTION_RESTORE:
 		case ACTION_VERIFY:
-			ret=restore_wrapper(asfd, act, vss_restore, confs);
+			ret=restore_wrapper(asfd, act, confs);
 			break;
 		case ACTION_ESTIMATE:
 			if(do_backup_client(asfd, confs, act, 0))
@@ -560,7 +560,8 @@ end:
 	return ret;
 }
 
-int client(struct conf **confs, enum action action, int vss_restore)
+int client(struct conf **confs,
+	enum action action)
 {
 	int finished=0;
 	enum cliret ret=CLIENT_OK;
@@ -583,13 +584,13 @@ int client(struct conf **confs, enum action action, int vss_restore)
 	while(!finished)
 	{
 		ret=do_client(confs,
-			action, vss_restore, server, failover);
+			action, server, failover);
 		if(ret==CLIENT_RECONNECT)
 		{
 			logp("Re-opening connection to %s\n", server);
 			sleep(5);
 			ret=do_client(confs,
-				action, vss_restore, server, failover);
+				action, server, failover);
 		}
 		switch(ret)
 		{

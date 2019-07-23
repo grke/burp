@@ -9,11 +9,11 @@ enum ofr_e
 };
 
 extern enum ofr_e open_for_restore(struct asfd *asfd, struct BFILE *bfd,
-	const char *path, struct sbuf *sb, int vss_restore,
+	const char *path, struct sbuf *sb, enum vss_restore vss_restore,
 	struct cntr *cntr, enum protocol protocol);
 
 extern int do_restore_client(struct asfd *asfd,
-	struct conf **confs, enum action act, int vss_restore);
+	struct conf **confs, enum action act);
 
 // These are for the protocol1 restore to use, until it is unified more fully
 // with protocol2.

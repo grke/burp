@@ -14,7 +14,7 @@
 #include "restore.h"
 
 int write_protocol2_data(struct asfd *asfd,
-	struct BFILE *bfd, struct blk *blk, int vss_restore)
+	struct BFILE *bfd, struct blk *blk, enum vss_restore vss_restore)
 {
 	if(bfd->mode==BF_CLOSED)
 		logp("Got data without an open file\n");
@@ -37,7 +37,7 @@ static int start_restore_file(struct asfd *asfd,
 	struct sbuf *sb,
 	const char *fname,
 	enum action act,
-	int vss_restore,
+	enum vss_restore vss_restore,
 	struct cntr *cntr)
 {
 	int ret=-1;
@@ -175,7 +175,7 @@ static int restore_metadata(
 
 int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
-	struct BFILE *bfd, int vss_restore, struct cntr *cntr)
+	struct BFILE *bfd, enum vss_restore vss_restore, struct cntr *cntr)
 {
 	switch(sb->path.cmd)
 	{

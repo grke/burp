@@ -76,17 +76,21 @@ static int check_srestore(struct conf **confs, const char *path)
 static int want_to_restore(int srestore, struct sbuf *sb,
 	regex_t *regex, enum action act , struct conf **cconfs)
 {
-	if(act==ACTION_RESTORE
-	  && !get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
+	if(act==ACTION_RESTORE)
 	{
-		// Do not send VSS data to non-windows.
-		if(sbuf_is_vssdata(sb))
-			return 0;
-		// Do not send VSS directory data to non-windows.
-		if(S_ISDIR(sb->statp.st_mode)
-		  && sbuf_is_filedata(sb)
-		  && !sbuf_is_metadata(sb))
-			return 0;
+		// Do not send VSS data to non-windows, or to windows client
+		// that asked us not to send it.
+		if(!get_int(cconfs[OPT_CLIENT_IS_WINDOWS])
+		  || get_int(cconfs[OPT_VSS_RESTORE])!=VSS_RESTORE_ON)
+		{
+			if(sbuf_is_vssdata(sb))
+				return 0;
+			// Do not send VSS directory data to non-windows.
+			if(S_ISDIR(sb->statp.st_mode)
+			  && sbuf_is_filedata(sb)
+			  && !sbuf_is_metadata(sb))
+				return 0;
+		}
 	}
 	return (!srestore || check_srestore(cconfs, sb->path.buf))
 	  && (!regex || regex_check(regex, sb->path.buf));

@@ -570,6 +570,8 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "");
 	case OPT_CNTR:
 	  return sc_cntr(c[o], 0, 0, "");
+	case OPT_VSS_RESTORE:
+	  return sc_int(c[o], VSS_RESTORE_ON, 0, "");
 	case OPT_BREAKPOINT:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "breakpoint");

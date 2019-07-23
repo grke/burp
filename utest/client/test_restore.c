@@ -194,8 +194,7 @@ static void run_test(int expected_ret,
 
 	setup_callback(asfd, slist);
 
-	result=do_restore_client(asfd, confs,
-		ACTION_RESTORE, 0 /* vss_restore */);
+	result=do_restore_client(asfd, confs, ACTION_RESTORE);
 	fail_unless(result==expected_ret);
 
 	slist_free(&slist);

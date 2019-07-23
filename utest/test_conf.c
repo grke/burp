@@ -117,6 +117,9 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_BACKUP_FAILOVERS_LEFT:
 			fail_unless(get_int(c[o])==0);
 			break;
+		case OPT_VSS_RESTORE:
+			fail_unless(get_int(c[o])==VSS_RESTORE_ON);
+			break;
 		case OPT_DAEMON:
 		case OPT_STDOUT:
 		case OPT_FORK:

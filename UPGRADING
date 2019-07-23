@@ -1,5 +1,17 @@
 Things to watch out for when upgrading.
 
+2.3.12
+------
+On Windows, the '-x' option has been split into two different options - '-x'
+and '-X'.
+'-x': Restore without using the Windows VSS api, and attempt to strip out any
+      VSS data. This now works the same as the non-Windows client, and is a new
+      option for Windows.
+'-X': Restore without using the Windows VSS api, and do not attempt to strip
+      out any VSS data. This option only exists on Windows, and was the
+      behaviour that you previously got with '-x'. Use this if your backup
+      contains no VSS data.
+
 2.3.4
 -----
 Clients will now error out if using protocol 2 and 'encryption_password' is

@@ -25,7 +25,8 @@ static void usage_server(void)
 	printf("  -a c          Run as a stand-alone champion chooser.\n");
 	printf("  -c <path>     Path to conf file (default: %s).\n", config_default_path());
 	printf("  -d <path>     a single client in the status monitor.\n");
-	printf("  -o <option>   Override a given configuration option (you can use this flag several times).\n");
+	printf("  -o <option>   Override a given configuration option\n");
+	printf("                (you can use this flag several times).\n");
 	printf("  -F            Stay in the foreground.\n");
 	printf("  -g            Generate initial CA certificates and exit.\n");
 	printf("  -h|-?         Print this text and exit.\n");
@@ -74,10 +75,12 @@ static void usage_client(void)
 	printf("  -r <regex>     Specify a regular expression.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -t             Dry-run to test config file syntax.\n");
-	printf("  -v             Log to stdout.\n");
 	printf("  -V             Print version and exit.\n");
+	printf("  -v             Log to stdout.\n");
 #ifdef HAVE_WIN32
-	printf("  -x             Do not use the Windows VSS API when restoring.\n");
+	printf("  -X             Do not use the Windows VSS API when restoring.\n");
+	printf("  -x             Do not use the Windows VSS API when restoring,\n");
+	printf("                 and strip out VSS data.\n");
 #else
 	printf("  -x             Strip Windows VSS data when restoring.\n");
 	printf("Options to use with '-a S':\n");
@@ -301,7 +304,7 @@ int real_main(int argc, char *argv[])
 #ifndef HAVE_WIN32
 	int generate_ca_only=0;
 #endif
-	int vss_restore=1;
+	enum vss_restore vss_restore=VSS_RESTORE_ON;
 	int test_confs=0;
 	enum burp_mode mode;
 	struct strlist *cli_overrides=NULL;
@@ -316,7 +319,7 @@ int real_main(int argc, char *argv[])
 		return run_bsparse(argc, argv);
 #endif
 
-	while((option=getopt(argc, argv, "a:b:c:C:d:o:fFghijl:nq:Qr:s:tvVxz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:C:c:d:o:Ffghijl:nQq:r:s:tVvXxz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -329,21 +332,21 @@ int real_main(int argc, char *argv[])
 				if(!backup2 && backup) backup2=optarg;
 				if(!backup) backup=optarg;
 				break;
-			case 'c':
-				conffile=optarg;
-				break;
 			case 'C':
 				orig_client=optarg;
+				break;
+			case 'c':
+				conffile=optarg;
 				break;
 			case 'd':
 				restoreprefix=optarg; // for restores
 				browsedir=optarg; // for lists
 				break;
-			case 'f':
-				forceoverwrite=1;
-				break;
 			case 'F':
 				daemon=0;
+				break;
+			case 'f':
+				forceoverwrite=1;
 				break;
 			case 'g':
 #ifndef HAVE_WIN32
@@ -363,12 +366,12 @@ int real_main(int argc, char *argv[])
 			case 'o':
 				strlist_add(&cli_overrides, optarg, 0);
 				break;
-			case 'q':
-				randomise=atoi(optarg);
-				break;
 			case 'Q':
 				strlist_add(&cli_overrides, "progress_counter=0", 0);
 				strlist_add(&cli_overrides, "stdout=0", 0);
+				break;
+			case 'q':
+				randomise=atoi(optarg);
 				break;
 			case 'r':
 				regex=optarg;
@@ -376,15 +379,18 @@ int real_main(int argc, char *argv[])
 			case 's':
 				strip=atoi(optarg);
 				break;
-			case 'v':
-				strlist_add(&cli_overrides, "stdout=1", 0);
-				break;
 			case 'V':
 				printf("%s-%s\n", progname(), PACKAGE_VERSION);
 				ret=0;
 				goto end;
+			case 'v':
+				strlist_add(&cli_overrides, "stdout=1", 0);
+				break;
+			case 'X':
+				vss_restore=VSS_RESTORE_OFF;
+				break;
 			case 'x':
-				vss_restore=0;
+				vss_restore=VSS_RESTORE_OFF_STRIP;
 				break;
 			case 't':
 				test_confs=1;
@@ -486,6 +492,7 @@ int real_main(int argc, char *argv[])
 	}
 	else if(mode==BURP_MODE_CLIENT)
 	{
+		set_int(confs[OPT_VSS_RESTORE], vss_restore);
 		switch(act)
 		{
 			case ACTION_BACKUP:
@@ -536,7 +543,7 @@ int real_main(int argc, char *argv[])
 	}
 	else
 	{
-		ret=client(confs, act, vss_restore);
+		ret=client(confs, act);
 	}
 
 end:

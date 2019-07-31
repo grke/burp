@@ -1,3 +1,10 @@
+2019-08-01 Changes in burp-2.3.12:
+  * Fix Windows memory breakage when restoring long paths.
+  * Add long directories to tests.
+  * Simplify windows mempool code.
+  * Ability to choose to attempt to strip VSS on Windows restore or not, as
+    well as disabling the Windows restore api, with '-x' and '-X' and options.
+
 2019-07-01 Changes in burp-2.3.10:
   * Upgrade Windows depkgs to openssl-1.1.1c.
   * 739: Log each client command in the server storage directory.

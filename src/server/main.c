@@ -867,7 +867,7 @@ int server(struct conf **confs, const char *conffile,
 	{
 		if(daemonise()
 		// Need to write the new pid to the already open lock fd.
-		  || lock_write_pid_and_prog(lock))
+		  || lock_write_pid(lock))
 			goto error;
 	}
 

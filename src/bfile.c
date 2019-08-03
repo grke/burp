@@ -120,10 +120,17 @@ static int bfile_open_encrypted(struct BFILE *bfd,
 	char *win32_fname=NULL;
 	char *win32_fname_wchar=NULL;
 
+	bfd->mode=BF_CLOSED;
 	if(!(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
+	{
 		logp("could not get widename!");
+		goto end;
+	}
 	if(!(win32_fname=unix_name_to_win32((char *)fname)))
-		return -1;
+	{
+		logp("could not get win32_fname of %s!", fname);
+		goto end;
+	}
 
 	if((flags & O_CREAT) /* Create */
 	  || (flags & O_WRONLY)) /* Open existing for write */
@@ -148,6 +155,7 @@ static int bfile_open_encrypted(struct BFILE *bfd,
 	else
 		bfd->mode=BF_READ;
 
+end:
 	free_w(&win32_fname_wchar);
 	free_w(&win32_fname);
 	return bfd->mode==BF_CLOSED;
@@ -174,16 +182,21 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 	char *win32_fname=NULL;
 	char *win32_fname_wchar=NULL;
 
+	bfd->mode=BF_CLOSED;
+
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 		return bfile_open_encrypted(bfd, fname, flags, mode);
 
-	if(!p_CreateFileW) return -1;
-
-	if(!(win32_fname=unix_name_to_win32((char *)fname))) return -1;
-
-	if(p_CreateFileW && p_MultiByteToWideChar
-	  && !(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
+	if(!(win32_fname=unix_name_to_win32((char *)fname)))
+	{
+		logp("could not get win32_fname of %s!\n", fname);
+		goto end;
+	}
+	if(!(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
+	{
 		logp("could not get widename!");
+		goto end;
+	}
 
 	if(flags & O_CREAT)
 	{
@@ -207,15 +220,14 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 			dwflags=0;
 		}
 
-		if(p_CreateFileW && p_MultiByteToWideChar)
-			// unicode open for create write
-			bfd->fh=p_CreateFileW((LPCWSTR)win32_fname_wchar,
-				dwaccess,      /* Requested access */
-				0,             /* Shared mode */
-				NULL,          /* SecurityAttributes */
-				CREATE_ALWAYS, /* CreationDisposition */
-				dwflags,       /* Flags and attributes */
-				NULL);         /* TemplateFile */
+		// unicode open for create write
+		bfd->fh=p_CreateFileW((LPCWSTR)win32_fname_wchar,
+			dwaccess,      /* Requested access */
+			0,             /* Shared mode */
+			NULL,          /* SecurityAttributes */
+			CREATE_ALWAYS, /* CreationDisposition */
+			dwflags,       /* Flags and attributes */
+			NULL);         /* TemplateFile */
 
 		bfd->mode=BF_WRITE;
 	}
@@ -236,18 +248,16 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 			dwflags=0;
 		}
 
-		if(p_CreateFileW && p_MultiByteToWideChar)
-			// unicode open for open existing write
-			bfd->fh=p_CreateFileW((LPCWSTR)win32_fname_wchar,
-				dwaccess,      /* Requested access */
-				0,             /* Shared mode */
-				NULL,          /* SecurityAttributes */
-				OPEN_EXISTING, /* CreationDisposition */
-				dwflags,       /* Flags and attributes */
-				NULL);         /* TemplateFile */
+		// unicode open for open existing write
+		bfd->fh=p_CreateFileW((LPCWSTR)win32_fname_wchar,
+			dwaccess,      /* Requested access */
+			0,             /* Shared mode */
+			NULL,          /* SecurityAttributes */
+			OPEN_EXISTING, /* CreationDisposition */
+			dwflags,       /* Flags and attributes */
+			NULL);         /* TemplateFile */
 
 		bfd->mode=BF_WRITE;
-
 	}
 	else
 	{
@@ -271,15 +281,14 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 				| FILE_SHARE_WRITE;
 		}
 
-		if(p_CreateFileW && p_MultiByteToWideChar)
-			// unicode open for open existing read
-			bfd->fh=p_CreateFileW((LPCWSTR)win32_fname_wchar,
-				dwaccess,      /* Requested access */
-				dwshare,       /* Share modes */
-				NULL,          /* SecurityAttributes */
-				OPEN_EXISTING, /* CreationDisposition */
-				dwflags,       /* Flags and attributes */
-				NULL);         /* TemplateFile */
+		// unicode open for open existing read
+		bfd->fh=p_CreateFileW((LPCWSTR)win32_fname_wchar,
+			dwaccess,      /* Requested access */
+			dwshare,       /* Share modes */
+			NULL,          /* SecurityAttributes */
+			OPEN_EXISTING, /* CreationDisposition */
+			dwflags,       /* Flags and attributes */
+			NULL);         /* TemplateFile */
 
 		bfd->mode=BF_READ;
 	}
@@ -291,9 +300,11 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 	}
 	else
 	{
+		free_w(&bfd->path);
 		if(!(bfd->path=strdup_w(fname, __func__)))
-			return -1;
+			goto end;
 	}
+end:
 	bfd->lpContext=NULL;
 	free_w(&win32_fname_wchar);
 	free_w(&win32_fname);
@@ -323,7 +334,11 @@ static int bfile_close(struct BFILE *bfd, struct asfd *asfd)
 
 	if(!bfd) return 0;
 
-	if(bfd->mode==BF_CLOSED) return 0;
+	if(bfd->mode==BF_CLOSED)
+	{
+		ret=0;
+		goto end;
+	}
 
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 		return bfile_close_encrypted(bfd, asfd);
@@ -478,6 +493,7 @@ static int bfile_open(struct BFILE *bfd,
 		bfd->mode=BF_WRITE;
 	else
 		bfd->mode=BF_READ;
+	free_w(&bfd->path);
 	if(!(bfd->path=strdup_w(fname, __func__)))
 		return -1;
 	if(bfd->vss_strip)

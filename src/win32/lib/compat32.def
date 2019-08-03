@@ -46,7 +46,6 @@ _Z7waitpidiPii
 _Z8WSA_Initv
 _Z8closedirPv
 _Z8closelogv
-_Z8getArgv0PKc
 _Z8getgrgidj
 _Z8getpwuidj
 _Z8pathconfPKci

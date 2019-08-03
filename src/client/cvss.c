@@ -291,6 +291,7 @@ int get_vss(BFILE *bfd, char **vssdata, size_t *vlen)
 	snprintf(*vssdata, 9, "%c%08X", META_VSS, (unsigned int)*vlen);
 	memcpy((*vssdata)+9, tmp, *vlen);
 	(*vlen)+=9;
+	free_w(&tmp);
 	return 0;
 error:
 	free_w(&tmp);

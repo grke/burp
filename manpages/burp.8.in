@@ -477,7 +477,7 @@ Path to certificate authority configuration file. The CA configuration file will
 Name of the CA that the server will generate when using the ca_conf option.
 .TP
 \fBca_server_name=[name]\fR
-The name that the server will put into its own SSL certficates when using the ca_conf option.
+The name that the server will put into its own SSL certificates when using the ca_conf option.
 .TP
 \fBca_@name@_ca=[path]\fR
 Path to the @name@_ca script when using the ca_conf option.
@@ -498,10 +498,10 @@ You can have multiple labels, and they can be overridden in the client configura
 Set this to 0 if you want to disable all clients. The default is 1. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
 .TP
 \fBrblk_memory_max=[B/KB/MB/GB]\fR
-The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256MB. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
+The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256MB. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
 .TP
 \fBfail_on_warning=[0|1]\fR
-If a warning is generated during a backup, fail the backup. The default is 0. This option can be overriden per-client in the client configuration files in clientconfdir on the server.
+If a warning is generated during a backup, fail the backup. The default is 0. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
 
 .SH CLIENT CONFIGURATION FILE OPTIONS
 
@@ -714,7 +714,7 @@ Exclude paths that match the regular expression.
 Not yet implemented. See 'exclude_logic' for details on the 'logic expression' syntax.
 .TP
 \fBexclude_logic=[logic expression]\fR
-Exclude paths that match the 'logic expression'. A 'logic expression' may contain several tests chained with boolean operators. The supported operators are: 'and', 'or', 'not' as well as groups of expressions surrounded by parentheses. The supported tests are: 'file_size', 'file_match', 'path_match' and 'file_ext'. The 'file_size' test supports comparisons with '>', '>=', '<', '<=', '=' and take a size as parameter, example: 'file_size<=5Mb'. The 'file_ext' test takes an extension as parameter, example: 'file_ext=pst'. Finally, the 'file_match'  and 'path_match' tests take a regular expression as parameter, example: file_match=b$. 'file_match' is ran against the filename (exemple 'file1') while 'path_match' is ran against the full path of the file (exemple: '/home/test/file1'). A complete expression may look like '(file_size>=5Mb and file_size<=10Mb) and (file_ext=pst or file_match=movies) and not file_ext=mp3'. There are some limitations though, white-spaces and parentheses must be escaped inside a test either by quoting the expression or escaping a given character: 'file_match="perso(nnal)?"', 'file_match=a\ filename'.
+Exclude paths that match the 'logic expression'. A 'logic expression' may contain several tests chained with boolean operators. The supported operators are: 'and', 'or', 'not' as well as groups of expressions surrounded by parentheses. The supported tests are: 'file_size', 'file_match', 'path_match' and 'file_ext'. The 'file_size' test supports comparisons with '>', '>=', '<', '<=', '=' and take a size as parameter, example: 'file_size<=5Mb'. The 'file_ext' test takes an extension as parameter, example: 'file_ext=pst'. Finally, the 'file_match'  and 'path_match' tests take a regular expression as parameter, example: file_match=b$. 'file_match' is ran against the filename (example 'file1') while 'path_match' is ran against the full path of the file (example: '/home/test/file1'). A complete expression may look like '(file_size>=5Mb and file_size<=10Mb) and (file_ext=pst or file_match=movies) and not file_ext=mp3'. There are some limitations though, white-spaces and parentheses must be escaped inside a test either by quoting the expression or escaping a given character: 'file_match="perso(nnal)?"', 'file_match=a\ filename'.
 .TP
 \fBinclude_ext=[extension]\fR
 Extensions to include in the backup. Case insensitive. Nothing else will be included in the backup. You can have multiple include extension lines. For example, set 'txt' to include files that end in '.txt'. You need to specify an 'include' line so that @name@ knows where to start looking.

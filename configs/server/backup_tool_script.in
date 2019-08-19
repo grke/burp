@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PROGRAM="backup_tool_script"
-PROGRAM_VERSION=0.4.9
-PROGRAM_BUILD=2019081801
+PROGRAM_VERSION=0.5.0
+PROGRAM_BUILD=2019081901
 AUTHOR="(C) 2017-2019 by Orsiris de Jong"
 CONTACT="http://www.netpower.fr - ozy@netpower.fr"
 IS_STABLE=true
@@ -1551,12 +1551,21 @@ function ListOutdatedClients {
 
 	local found=false
 	local clientAlertBody
-
+	local recentBackupTimestamp
+	local CurrentTimestamp
+	
 	Logger "Checking for outdated clients." "NOTICE"
 
 	for client in "${CLIENT_LIST[@]}"; do
-		recentBackups=$(find "$backupDir$client" -maxdepth 2 -name "backup_stats"  -and ! -path "*working*" -ctime -$oldDays | wc -l)
-		if [ $recentBackups -le 0 ]; then
+		if [ -f "$backupDir$client/current/backup_stats" ]; then
+			# This extracts time_end timestamp from last backup stats
+			recentBackupTimestamp=$(awk '/"name": "time_end"/{p=1}{if(p>0){p=p+1}}{if(p==4){print $2}}' "$backupDir$client/current/backup_stats")
+				else
+			recentBackupTimestamp=0
+		fi
+		# Current timestamp
+		currentTimestamp="$(date +%s)"
+		if [ $((currentTimestamp - (24*3600*oldDays))) -gt $recentBackupTimestamp ]; then
 			Logger "Client [$client] has no backups newer than [$oldDays] days." "ERROR"
 			if [ $CLIENTS_ALERT_OUTDATED == true ]; then
 				clientAlertBody="${CLIENT_ALERT_BODY_OUTDATED/"[CLIENT]"/$client}"
@@ -1723,6 +1732,11 @@ function VerifyService {
 	local serviceStartCommand
 
 	local i
+	
+	if [ "$serviceName" == "" ]; then
+		Logger "No service name(s) given." "WARN"
+		return
+	fi
 
 	IFS=',' read -a serviceNameArray <<< "$serviceName"
 	for i in "${serviceNameArray[@]}"; do
@@ -1869,7 +1883,7 @@ CLIENT_LIST=()
 GIVEN_CLIENT=""
 declare -A CLIENT_EMAIL
 VSS_STRIP_DIR=""
-VERIFY_SERVICE=""
+VERIFY_SERVICE=false
 VERIFY_WARNINGS=false
 VERIFY_QUOTAS=false
 CLIENTS_ALERT_QUOTAS=false
@@ -1964,8 +1978,13 @@ function GetCommandlineArguments {
 			shift
 			;;
 			-j)
-			VERIFY_SERVICE="${2}"
+			VERIFY_SERVICE=true
+			VERIFY_SERVICES_NAMES="${2}"
 			shift
+			;;
+			--verify-service=*)
+			VERIFY_SERVICE=true
+			VERIFY_SERVICE_NAMES="${1##*=}"
 			;;
 			-A|--client-alert-quotas)
 			CLIENTS_ALERT_QUOTAS=true
@@ -1979,9 +1998,6 @@ function GetCommandlineArguments {
 			;;
 			--clientconfdir=*)
 			CLIENT_CONF_DIR="${1##*=}"
-			;;
-			--verify-service=*)
-			VERIFY_SERVICE="${1##*=}"
 			;;
 			-w|--verify-warnings)
 			VERIFY_WARNINGS=true
@@ -2057,8 +2073,8 @@ if [ "$VSS_STRIP_DIR" != "" ]; then
 	fi
 fi
 
-if [ "$VERIFY_SERVICE" != "" ]; then
-	VerifyService "$VERIFY_SERVICE" "$SERVICE_TYPE"
+if [ "$VERIFY_SERVICE" == true ]; then
+	VerifyService "$VERIFY_SERVICES_NAMES" "$SERVICE_TYPE"
 fi
 
 if [ "$BACKUP_DIR" != "" ]; then
@@ -2118,6 +2134,8 @@ if [ "$VERIFY_BACKUPS" != "" ]; then
 fi
 
 # v0.5.0
+# - Outdated backups are now chekced against backup_stats file instead backup dir ctime (resolves no outdated backup after copy issue)
+# - Check against missing service names for service verification
 # - Ported minor fixes from osync project
 #       - Prettier logs
 #       - Fixed run files cleanup

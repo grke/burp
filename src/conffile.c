@@ -1310,7 +1310,8 @@ int conf_load_lines_from_buf(const char *buf, struct conf **c)
 	return ret;
 }
 
-/* The server runs this when parsing a restore file on the server. */
+/* The server runs this when parsing a restore file on the server. Called
+   elsewhere too. */
 int conf_parse_incexcs_path(struct conf **c, const char *path)
 {
 	free_incexcs(c);
@@ -1349,6 +1350,7 @@ int conf_parse_incexcs_srestore(struct conf **c, const char *incexc)
 		goto end;
 
 	free_incexcs(c);
+	set_string(c[OPT_RESTOREPREFIX], NULL);
 	if(conf_load_lines_from_buf(incexc, c)
 	  || conf_finalise(c))
 		goto end;

@@ -31,7 +31,9 @@ For security, the burp client will no longer let you restore over symlinks
 that point outside of your desired destination directory. Specifying a
 '-d <directory>' with your restore parameters is now mandatory. If you wish
 to restore everything back to the original locations, you can give '-d /',
-which will also work on Windows clients.
+which will also work on Windows clients. If you wish server-initiated restores
+to restore to original locations, you should add '-d /' to the timed job
+in the client side.
 
 2.2.12
 ------

@@ -20,7 +20,7 @@ With RHEL or CentOS 6/7, this command should install them for you:
 With RHEL or Centos 8, the following commands should install them for you:
   1. Install epel-release repo to have librsync-devel dependency
   dnf install epel-release
-  2. Instlall uthash-devel from PowerTools repo
+  2. Install uthash-devel from PowerTools repo
   dnf --enablerepo=PowerTools list uthash-devel
   3. Install other libraries and tools
   dnf install make gcc librsync-devel openssl-devel libacl-devel \

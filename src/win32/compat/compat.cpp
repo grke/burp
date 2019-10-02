@@ -616,6 +616,57 @@ static const char *errorString(void)
 	return rval;
 }
 
+// Explicitly open the file to read the reparse point, then call
+// DeviceIoControl to find out if it points to a volume or to a directory.
+static void reparse_or_mount_song_and_dance(
+	const char *file,
+	struct stat *sb,
+	DWORD reparse_tag
+) {
+	char dummy[1000]="";
+	char *utf8=NULL;
+	char *pwszBuf=NULL;
+	REPARSE_DATA_BUFFER *rdb=NULL;
+	HANDLE h=INVALID_HANDLE_VALUE;
+	DWORD bytes;
+
+	pwszBuf=sm_get_pool_memory();
+	make_win32_path_UTF8_2_wchar(&pwszBuf, file);
+	rdb=(REPARSE_DATA_BUFFER *)dummy;
+
+	h=CreateFileW((LPCWSTR)pwszBuf, GENERIC_READ,
+		FILE_SHARE_READ, NULL, OPEN_EXISTING,
+		FILE_FLAG_BACKUP_SEMANTICS
+		| FILE_FLAG_OPEN_REPARSE_POINT,
+		NULL);
+	sm_free_pool_memory(pwszBuf);
+
+	if(h==INVALID_HANDLE_VALUE)
+		return;
+	rdb->ReparseTag=reparse_tag;
+	if(!DeviceIoControl(h, FSCTL_GET_REPARSE_POINT,
+		NULL, 0, // in buffer, bytes
+		(LPVOID)rdb,
+		(DWORD)sizeof(dummy), // out buffer, btyes
+		(LPDWORD)&bytes, (LPOVERLAPPED)0))
+			return;
+
+	utf8=sm_get_pool_memory();
+
+	wchar_2_UTF8(utf8,
+		(wchar_t *)rdb->SymbolicLinkReparseBuffer.PathBuffer);
+	if(!strncasecmp(utf8, "\\??\\volume{", 11))
+		sb->st_rdev=WIN32_MOUNT_POINT;
+	else // Points to a directory so we ignore it.
+		sb->st_rdev=WIN32_JUNCTION_POINT;
+	sm_free_pool_memory(utf8);
+
+	CloseHandle(h);
+}
+
+// Not defined in the mingw that I am currently using.
+#define IO_REPARSE_TAG_FILE_PLACEHOLDER	0x80000015L
+
 static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 {
 	WIN32_FIND_DATAW info_w; // window's file info
@@ -702,61 +753,18 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 	   A mount point is a reparse point where another volume
 	   is mounted, so it is like a Unix mount point (change of
 	   filesystem).  */
+	sb->st_rdev=0;
 	if(*pdwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-		sb->st_rdev=WIN32_MOUNT_POINT;
-	else
-		sb->st_rdev=0;
-
-	if((*pdwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-	  && (*pdwReserved0 & IO_REPARSE_TAG_MOUNT_POINT))
 	{
 		sb->st_rdev=WIN32_MOUNT_POINT;
-		/* Now to find out if the directory is a mount point or
-		   a reparse point, we must do a song and a dance.
-		   Explicitly open the file to read the reparse point, then
-		   call DeviceIoControl to find out if it points to a Volume
-		   or to a directory. */
-		h=INVALID_HANDLE_VALUE;
-		if(p_GetFileAttributesW)
-		{
-			char *pwszBuf=sm_get_pool_memory();
-			make_win32_path_UTF8_2_wchar(&pwszBuf, file);
-			if(p_CreateFileW)
-			{
-				h=CreateFileW((LPCWSTR)pwszBuf, GENERIC_READ,
-					FILE_SHARE_READ, NULL, OPEN_EXISTING,
-					FILE_FLAG_BACKUP_SEMANTICS
-					| FILE_FLAG_OPEN_REPARSE_POINT,
-					NULL);
-			}
-			sm_free_pool_memory(pwszBuf);
-		}
-		if(h!=INVALID_HANDLE_VALUE)
-		{
-			char dummy[1000];
-			REPARSE_DATA_BUFFER *rdb=(REPARSE_DATA_BUFFER *)dummy;
-			rdb->ReparseTag=IO_REPARSE_TAG_MOUNT_POINT;
-			DWORD bytes;
-			bool ok;
-			ok=DeviceIoControl(h, FSCTL_GET_REPARSE_POINT,
-				NULL, 0, // in buffer, bytes
-				(LPVOID)rdb,
-				(DWORD)sizeof(dummy), // out buffer, btyes
-				(LPDWORD)&bytes, (LPOVERLAPPED)0);
-			if(ok)
-			{
-				char *utf8=sm_get_pool_memory();
-				wchar_2_UTF8(utf8, (wchar_t *)
-				  rdb->SymbolicLinkReparseBuffer.PathBuffer);
-				if(!strncasecmp(utf8, "\\??\\volume{", 11))
-					sb->st_rdev=WIN32_MOUNT_POINT;
-				else // Points to a directory so we ignore it.
-					sb->st_rdev=WIN32_JUNCTION_POINT;
-				sm_free_pool_memory(utf8);
-			}
-			CloseHandle(h);
-		}
+		if(*pdwReserved0 & IO_REPARSE_TAG_MOUNT_POINT)
+			reparse_or_mount_song_and_dance(file, sb,
+				IO_REPARSE_TAG_MOUNT_POINT);
+		else if(*pdwReserved0 & IO_REPARSE_TAG_FILE_PLACEHOLDER)
+			reparse_or_mount_song_and_dance(file, sb,
+				IO_REPARSE_TAG_FILE_PLACEHOLDER);
 	}
+
 	sb->st_size=*pnFileSizeHigh;
 	sb->st_size<<=32;
 	sb->st_size|=*pnFileSizeLow;

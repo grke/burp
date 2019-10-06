@@ -1,3 +1,5 @@
+2019-10-06 Changes in burp-2.3.16:
+  * 832: Avoid 'could not stat' on OneDrive reparse points.
   * Upgrade Windows depkgs to:
      - openssl-1.1.1d.
      - pcre-8.43.

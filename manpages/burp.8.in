@@ -64,8 +64,8 @@ Run as if forked via a connection from this client.
 
 .SH CLIENT OPTIONS
 .TP
-\fB\-a\fR \fB[b|t|r|l|L|v|delete|e|T|d|D]\fR
-Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, verify, delete, estimate, timer check, diff, or long diff, respectively.
+\fB\-a\fR \fB[b|t|r|l|L|p|v|delete|e|T|d|D]\fR
+Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, parseable list, verify, delete, estimate, timer check, diff, or long diff, respectively.
 .TP
 \fB\-b\fR \fB[number|a]\fR
 Short for 'backup number'. The argument is a number, or 'a' to select all
@@ -184,6 +184,9 @@ Long list the top level directory of backup 1.
 .TP
 \fB@name@ \-a L \-b 1 \-d '/home/graham'\fR
 Long list the /home/graham directory of backup 1. These '\-d' versions of the list function provide the ability to 'browse' backups.
+.TP
+\fB@name@ \-a p \-b 1\fR
+Lists all the files in backup number 1 in @name@-parseable format.
 .TP
 \fB@name@ \-C altclient \-a L\fR
 Long list the top level directory of backup 1 of client 'altclient'.

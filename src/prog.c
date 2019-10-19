@@ -55,6 +55,7 @@ static void usage_client(void)
 	printf("                  l: list (this is the default when an action is not given)\n");
 	printf("                  L: long list\n");
 	printf("                  m: monitor interface\n");
+	printf("                  p: parseable list\n");
 	printf("                  r: restore\n");
 #ifndef HAVE_WIN32
 	printf("                  s: status monitor (ncurses)\n");
@@ -157,6 +158,8 @@ static int parse_action(enum action *act, const char *optarg)
 		*act=ACTION_LIST;
 	else if(!strncmp(optarg, "List", 1))
 		*act=ACTION_LIST_LONG;
+	else if(!strncmp(optarg, "parseablelist", 1))
+		*act=ACTION_LIST_PARSEABLE;
 	else if(!strncmp(optarg, "status", 1))
 		*act=ACTION_STATUS;
 	else if(!strncmp(optarg, "Status", 1))
@@ -419,6 +422,9 @@ int real_main(int argc, char *argv[])
 		// result of the printfs of logp straight away.
 		setvbuf(stdout, NULL, _IONBF, 0);
 	}
+
+	if(act==ACTION_LIST_PARSEABLE)
+		strlist_add(&cli_overrides, "stdout=0", 0);
 
 	conf_set_cli_overrides(cli_overrides);
 	if(!(confs=confs_alloc()))

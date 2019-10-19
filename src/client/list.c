@@ -9,6 +9,8 @@
 #include "../times.h"
 #include "list.h"
 
+static int parseable_format=0;
+
 /* Note: The chars in this function are not the same as in the CMD_ set.
    These are for printing to the screen only. */
 static char *encode_mode(mode_t mode, char *buf)
@@ -73,6 +75,14 @@ static int ls_long_output(struct sbuf *sb)
 
 static void ls_short_output(struct sbuf *sb)
 {
+	if(parseable_format)
+	{
+		printf("%c%04X%s\n",
+			sb->path.cmd,
+			(unsigned int)sb->path.len,
+			sb->path.buf);
+		return;
+	}
 	printf("%s\n", sb->path.buf);
 }
 
@@ -95,12 +105,15 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 	const char *backup2=get_string(confs[OPT_BACKUP2]);
 	const char *browsedir=get_string(confs[OPT_BROWSEDIR]);
 	const char *regex=get_string(confs[OPT_REGEX]);
+
+	parseable_format=act==ACTION_LIST_PARSEABLE;
 //logp("in do_list\n");
 
 	switch(act)
 	{
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:
+		case ACTION_LIST_PARSEABLE:
 			if(browsedir && regex)
 			{
 				logp("You cannot specify both a directory and a regular expression when listing.\n");
@@ -140,13 +153,16 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 		if(asfd->read(asfd)) break;
 		if(rbuf->cmd==CMD_MESSAGE)
 		{
-			printf("%s\n", rbuf->buf);
+			if(!parseable_format)
+				printf("%s\n", rbuf->buf);
 			if(!strcmp(rbuf->buf, "no backups"))
 				ret=0;
 			goto end;
 		}
 		else if(rbuf->cmd==CMD_TIMESTAMP)
 		{
+			if(parseable_format)
+				continue;
 			// A backup timestamp, just print it.
 			printf("Backup: %s\n", rbuf->buf);
 			if(browsedir)

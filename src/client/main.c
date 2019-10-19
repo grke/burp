@@ -256,6 +256,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 			break;
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:
+		case ACTION_LIST_PARSEABLE:
 		case ACTION_DIFF:
 		case ACTION_DIFF_LONG:
 			if(get_int(confs[OPT_PORT_LIST]))
@@ -534,6 +535,7 @@ static enum cliret do_client(struct conf **confs,
 			// for simple diffs on the client side.
 		case ACTION_LIST:
 		case ACTION_LIST_LONG:
+		case ACTION_LIST_PARSEABLE:
 		default:
 			if(do_list_client(asfd, act, confs)) goto error;
 			break;

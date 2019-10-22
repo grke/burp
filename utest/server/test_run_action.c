@@ -23,20 +23,27 @@ struct parsedata
 	enum action act;
 	const char *backupnostr;
 	const char *restoreregex;
+	const char *input;
 	int ret;
 };
 
 static struct parsedata pd[] = {
-	{ "restore 1:regex", ACTION_RESTORE, "1", "regex", 0 },
-	{ "restore 2:", ACTION_RESTORE, "2", NULL, 0 },
-	{ "restore 3", ACTION_RESTORE, "3", NULL, 0 },
-	{ "verify 1:regex", ACTION_VERIFY, "1", "regex", 0 },
-	{ "verify 2:", ACTION_VERIFY, "2", NULL, 0 },
-	{ "verify 3", ACTION_VERIFY, "3", NULL, 0 },
-	{ "backup 3", (enum action)0, NULL, NULL, -1 },
-	{ "restore1:regex", (enum action)0, NULL, NULL, -1 },
-	{ "", (enum action)0, NULL, NULL, -1 },
-	{ NULL, (enum action)0, NULL, NULL, -1 },
+	{ "restore 1:regex", ACTION_RESTORE, "1", "regex", NULL, 0 },
+	{ "restore 2:", ACTION_RESTORE, "2", NULL, NULL, 0 },
+	{ "restore 3", ACTION_RESTORE, "3", NULL, NULL, 0 },
+	{ "restore restore_list 1:regex", ACTION_RESTORE, "1", "regex", "", 0 },
+	{ "restore restore_list 2:", ACTION_RESTORE, "2", NULL, "", 0 },
+	{ "restore restore_list 3", ACTION_RESTORE, "3", NULL, "", 0 },
+	{ "verify 1:regex", ACTION_VERIFY, "1", "regex", NULL, 0 },
+	{ "verify 2:", ACTION_VERIFY, "2", NULL, NULL, 0 },
+	{ "verify 3", ACTION_VERIFY, "3", NULL, NULL, 0 },
+	{ "backup 3", (enum action)0, NULL, NULL, NULL, -1 },
+	{ "verify restore_list 1:regex", ACTION_VERIFY, "1", "regex", "", 0 },
+	{ "verify restore_list 2:", ACTION_VERIFY, "2", NULL, "", 0 },
+	{ "verify restore_list 3", ACTION_VERIFY, "3", NULL, "", 0 },
+	{ "restore1:regex", (enum action)0, NULL, NULL, NULL, -1 },
+	{ "", (enum action)0, NULL, NULL, NULL, -1 },
+	{ NULL, (enum action)0, NULL, NULL, NULL, -1 },
 };
 
 static void run_parse_test(struct parsedata *p)
@@ -53,14 +60,20 @@ static void run_parse_test(struct parsedata *p)
 	{
 		const char *backupnostr=NULL;
 		const char *restoreregex=NULL;
+		const char *input=NULL;
 		fail_unless(act==p->act);
 		backupnostr=get_string(confs[OPT_BACKUP]);
 		restoreregex=get_string(confs[OPT_REGEX]);
+		input=get_string(confs[OPT_RESTORE_LIST]);
 		fail_unless(!strcmp(backupnostr, p->backupnostr));
-		if(!p->restoreregex)
-			fail_unless(restoreregex==NULL);
-		else
+		if(p->restoreregex)
 			fail_unless(!strcmp(restoreregex, p->restoreregex));
+		else
+			fail_unless(restoreregex==NULL);
+		if(p->input)
+			fail_unless(!strcmp(input, p->input));
+		else
+			fail_unless(input==NULL);
 	}
 
 	confs_free(&confs);

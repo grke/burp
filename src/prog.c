@@ -57,6 +57,7 @@ static void usage_client(void)
 	printf("                  m: monitor interface\n");
 	printf("                  p: parseable list\n");
 	printf("                  r: restore\n");
+	printf("                  R: Restore (matching ordered paths on stdin)\n");
 #ifndef HAVE_WIN32
 	printf("                  s: status monitor (ncurses)\n");
 	printf("                  S: status monitor snapshot\n");
@@ -64,6 +65,7 @@ static void usage_client(void)
 	printf("                  t: timed backup\n");
 	printf("                  T: check backup timer, but do not actually backup\n");
 	printf("                  v: verify\n");
+	printf("                  V: Verify (matching ordered paths on stdin)\n");
 	printf("  -b <number>    Backup number (default: the most recent backup).\n");
 	printf("  -c <path>      Path to conf file (default: %s).\n", config_default_path());
 	printf("  -d <directory> Directory to restore to, or directory to list.\n");
@@ -142,7 +144,8 @@ static void usage(void)
 	usage_client();
 }
 
-static int parse_action(enum action *act, const char *optarg)
+static int parse_action(enum action *act, const char *optarg,
+	struct strlist **cli_overrides)
 {
 	if(!strncmp(optarg, "backup", 1))
 		*act=ACTION_BACKUP;
@@ -152,8 +155,18 @@ static int parse_action(enum action *act, const char *optarg)
 		*act=ACTION_TIMER_CHECK;
 	else if(!strncmp(optarg, "restore", 1))
 		*act=ACTION_RESTORE;
+	else if(!strncmp(optarg, "Restore", 1))
+	{
+		*act=ACTION_RESTORE;
+		strlist_add(cli_overrides, "restore_list=/dev/stdin", 0);
+	}
 	else if(!strncmp(optarg, "verify", 1))
 		*act=ACTION_VERIFY;
+	else if(!strncmp(optarg, "Verify", 1))
+	{
+		*act=ACTION_VERIFY;
+		strlist_add(cli_overrides, "restore_list=/dev/stdin", 0);
+	}
 	else if(!strncmp(optarg, "list", 1))
 		*act=ACTION_LIST;
 	else if(!strncmp(optarg, "List", 1))
@@ -327,7 +340,8 @@ int real_main(int argc, char *argv[])
 		switch(option)
 		{
 			case 'a':
-				if(parse_action(&act, optarg)) goto end;
+				if(parse_action(&act, optarg,
+					&cli_overrides)) goto end;
 				break;
 			case 'b':
 				// The diff command may have two backups

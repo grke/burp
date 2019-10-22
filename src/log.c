@@ -187,6 +187,8 @@ void log_restore_settings(struct conf **cconfs, int srestore)
 	if(get_string(cconfs[OPT_BACKUP]))
 		logp("backup = '%s'\n",
 			get_string(cconfs[OPT_BACKUP]));
+	logp("restore_list = %s\n",
+		get_string(cconfs[OPT_RESTORE_LIST])?"true":"false");
 	if(srestore)
 	{
 		// This are unknown unless doing a server initiated restore.

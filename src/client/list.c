@@ -77,8 +77,11 @@ static void ls_short_output(struct sbuf *sb)
 {
 	if(parseable_format)
 	{
+		// Just make everything a CMD_FILE, when reading in for
+		// restore input, the type of file system entry will just
+		// be ignored.
 		printf("%c%04X%s\n",
-			sb->path.cmd,
+			CMD_FILE,
 			(unsigned int)sb->path.len,
 			sb->path.buf);
 		return;

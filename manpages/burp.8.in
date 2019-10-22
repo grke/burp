@@ -64,8 +64,8 @@ Run as if forked via a connection from this client.
 
 .SH CLIENT OPTIONS
 .TP
-\fB\-a\fR \fB[b|t|r|l|L|p|v|delete|e|T|d|D]\fR
-Short for 'action'. The arguments mean backup, timed backup, restore, list, long list, parseable list, verify, delete, estimate, timer check, diff, or long diff, respectively.
+\fB\-a\fR \fB[b|t|r|R|l|L|p|v|V|delete|e|T|d|D]\fR
+Short for 'action'. The arguments mean backup, timed backup, restore, Restore, list, long list, parseable list, verify, Verify, delete, estimate, timer check, diff, or long diff, respectively.
 .TP
 \fB\-b\fR \fB[number|a]\fR
 Short for 'backup number'. The argument is a number, or 'a' to select all
@@ -185,9 +185,6 @@ Long list the top level directory of backup 1.
 \fB@name@ \-a L \-b 1 \-d '/home/graham'\fR
 Long list the /home/graham directory of backup 1. These '\-d' versions of the list function provide the ability to 'browse' backups.
 .TP
-\fB@name@ \-a p \-b 1\fR
-Lists all the files in backup number 1 in @name@-parseable format.
-.TP
 \fB@name@ \-C altclient \-a L\fR
 Long list the top level directory of backup 1 of client 'altclient'.
 .TP
@@ -214,6 +211,18 @@ Deletes backup number 1. Note that @name@ will not delete backup directories tha
 .TP
 \fB@name@ \-a d \-b 1 \-b 2\fR
 Report the differences between backups 1 and 2 (use \-a D for more verbosity).
+.TP
+\fB@name@ \-a p \-b 1\fR
+Lists all the files in backup number 1, in @name@-parsable list format. You may append something like '>/tmp/restore_list' to send to a file, edit, then use as an input for restoring. As in the following command:
+.TP
+\fB@name@ \-a r \-b 1 \-o restore_list=/tmp/restore_list\fR
+Restores from backup 7, matching the list of files given in /tmp/restore_list. The files given must be ordered as they would be in the output of a burp list command.
+.TP
+\fB@name@ \-a p -b 6 | @name@ \-a R \-b 7\fR
+Restores from backup 7, matching the list of files on standard input, which is provided by @name@'s list of backup 6 ('\-a R' is shorthand for '\-a r \-o restore_list=\-').
+.TP
+\fB@name@ \-a p -b 6 | @name@ \-a V \-b 7\fR
+Verifies from backup 7, matching the list of files on standard input, which is provided by @name@'s list of backup 6 ('\-a V' is shorthand for '\-a v \-o restore_list=\-').
 .TP
 \fB@name@ \-a s\fR
 Run the ncurses status monitor.

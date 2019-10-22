@@ -739,6 +739,7 @@ int do_restore_client(struct asfd *asfd,
 		get_string(confs[OPT_ENCRYPTION_PASSWORD]);
 	enum vss_restore vss_restore=
 		(enum vss_restore)get_int(confs[OPT_VSS_RESTORE]);
+	const char *restore_list=get_string(confs[OPT_RESTORE_LIST]);
 
 	if(act==ACTION_RESTORE)
 	{
@@ -768,13 +769,31 @@ int do_restore_client(struct asfd *asfd,
 	bfile_init(bfd, 0, cntr);
 	bfd->set_attribs_on_close=1;
 
-	snprintf(msg, sizeof(msg), "%s %s:%s", act_str(act),
-		backup?backup:"", regex?regex:"");
-	logp("doing %s\n", msg);
-	if(asfd->write_str(asfd, CMD_GEN, msg)
-	  || asfd_read_expect(asfd, CMD_GEN, "ok"))
+	snprintf(msg, sizeof(msg), "%s%s %s:%s",
+		act_str(act),
+		restore_list?" restore_list":"",
+		backup?backup:"",
+		regex?regex:"");
+
+	logp("Doing %s\n", msg);
+	if(asfd->write_str(asfd, CMD_GEN, msg))
 		goto error;
-	logp("doing %s confirmed\n", act_str(act));
+	if(restore_list)
+	{
+		if(!strcmp(restore_list, "-"))
+			restore_list="/dev/stdin";
+		logp("Reading from: '%s'\n", restore_list);
+		if(asfd_read_expect(asfd, CMD_GEN, "ok restore_list"))
+			goto error;
+		if(send_a_file(asfd, restore_list, cntr))
+			goto error;
+	}
+	else
+	{
+		if(asfd_read_expect(asfd, CMD_GEN, "ok"))
+			goto error;
+	}
+	logp("Doing %s confirmed\n", act_str(act));
 	if(act==ACTION_RESTORE)
 		logp("Directory: '%s'\n", restore_desired_dir);
 

@@ -129,7 +129,8 @@ static int do_common_dirs(struct sdirs *sdirs, const char *manual_delete)
 	  || !(sdirs->timestamp=prepend_s(sdirs->working, "timestamp"))
 	  || !(sdirs->phase1data=prepend_s(sdirs->working, "phase1.gz"))
 	  || !(sdirs->changed=prepend_s(sdirs->working, "changed"))
-	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged")))
+	  || !(sdirs->unchanged=prepend_s(sdirs->working, "unchanged"))
+	  || !(sdirs->restore_list=prepend_s(sdirs->client, "restore_list")))
 		return -1;
 	if(manual_delete)
 	{
@@ -271,6 +272,8 @@ void sdirs_free_content(struct sdirs *sdirs)
 	free_w(&sdirs->rmanifest);
         free_w(&sdirs->cmanifest);
 	free_w(&sdirs->phase1data);
+
+	free_w(&sdirs->restore_list);
 
 	free_w(&sdirs->lockdir);
 	lock_free(&sdirs->lock_storage_for_write);

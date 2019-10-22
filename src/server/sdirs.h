@@ -42,6 +42,8 @@ struct sdirs
 	char *cmanifest; // Path to current (previous) manifest.
 	char *phase1data;
 
+	char *restore_list; // For restore file lists from the client.
+
 	char *lockdir;
 	// For backup/delete, lock all storage directories for other
 	// backups/deletes.

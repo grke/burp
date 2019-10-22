@@ -138,9 +138,13 @@ static void maybe_do_notification(struct asfd *asfd,
 	}
 }
 
-static int parse_restore_str(const char *str, enum action *act,
-	char **backupnostr, char **restoreregex)
-{
+static int parse_restore_str(
+	const char *str,
+	enum action *act,
+	int *input,
+	char **backupnostr,
+	char **restoreregex
+) {
 	int ret=-1;
 	char *cp=NULL;
 	char *copy=NULL;
@@ -170,6 +174,12 @@ static int parse_restore_str(const char *str, enum action *act,
 		goto end;
 	}
 	cp++;
+	*input=0;
+	if(!strncmp_w(cp, "restore_list "))
+	{
+		cp+=strlen("restore_list ");
+		*input=1;
+	}
 	if(!(*backupnostr=strdup_w(cp, __func__)))
 		goto end;
 	if((cp=strchr(*backupnostr, ':')))
@@ -193,12 +203,15 @@ int parse_restore_str_and_set_confs(const char *str, enum action *act,
 	struct conf **cconfs)
 {
 	int ret=-1;
+	int input=0;
 	char *backupnostr=NULL;
 	char *restoreregex=NULL;
 
-	if(parse_restore_str(str, act, &backupnostr, &restoreregex))
+	if(parse_restore_str(str, act, &input, &backupnostr, &restoreregex))
 		goto end;
 
+	if(set_string(cconfs[OPT_RESTORE_LIST], input?"":NULL))
+		goto end;
 	if(set_string(cconfs[OPT_BACKUP], backupnostr))
 		goto end;
 	if(restoreregex && *restoreregex
@@ -247,8 +260,21 @@ static int run_restore(struct asfd *asfd,
 		goto end;
 	}
 
-	if(asfd->write_str(asfd, CMD_GEN, "ok"))
-		goto end;
+	if(get_string(cconfs[OPT_RESTORE_LIST]))
+	{
+		// Should start receiving the input file here.
+		if(asfd->write_str(asfd, CMD_GEN, "ok restore_list"))
+			goto end;
+		if(receive_a_file(asfd, sdirs->restore_list, get_cntr(cconfs)))
+		{
+			goto end;
+		}
+	}
+	else
+	{
+		if(asfd->write_str(asfd, CMD_GEN, "ok"))
+			goto end;
+	}
 
 	ret=do_restore_server(asfd, sdirs, act,
 		srestore, &dir_for_notify, cconfs);
@@ -489,7 +515,11 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	// backup directory they are interested in.
 	if(!strncmp_w(rbuf->buf, "restore ")
 	  || !strncmp_w(rbuf->buf, "verify "))
-		return run_restore(as->asfd, sdirs, cconfs, srestore);
+	{
+		ret=run_restore(as->asfd, sdirs, cconfs, srestore);
+		unlink(sdirs->restore_list);
+		return ret;
+	}
 
 	if(strncmp_w(rbuf->buf, "backup")
 	  && strncmp_w(rbuf->buf, "Delete "))

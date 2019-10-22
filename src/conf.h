@@ -161,6 +161,7 @@ enum conf_opt
 	OPT_CA_CSR_DIR,
 	OPT_RANDOMISE,
 	OPT_SERVER_CAN_OVERRIDE_INCLUDES,
+	OPT_RESTORE_LIST,
 
 	// This block of client stuff is all to do with what files to backup.
 	OPT_STARTDIR,

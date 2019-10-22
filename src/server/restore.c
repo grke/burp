@@ -60,7 +60,7 @@ static int srestore_matches(struct strlist *s, const char *path)
 }
 
 // Used when restore is initiated from the server.
-static int check_srestore(struct conf **confs, const char *path)
+static int srestore_check(struct conf **confs, const char *path)
 {
 	struct strlist *l=get_strlist(confs[OPT_INCEXCDIR]);
 
@@ -73,9 +73,59 @@ static int check_srestore(struct conf **confs, const char *path)
 	return 0;
 }
 
-static int want_to_restore(int srestore, struct sbuf *sb,
-	regex_t *regex, enum action act , struct conf **cconfs)
+static int restore_list_check(
+	struct asfd *asfd,
+	struct cntr *cntr,
+	struct fzp *rl_fzp,
+	struct iobuf *rl_iobuf,
+	const char *path
+)
 {
+	char *last=NULL;
+
+	do {
+		if(!rl_iobuf->buf)
+		{
+			switch(iobuf_fill_from_fzp(rl_iobuf, rl_fzp))
+			{
+				case 0: break; // OK, read something.
+				case 1: return 0; // Finished, no match.
+				default: return -1; // Error.
+			}
+		}
+
+		if(last && pathcmp(rl_iobuf->buf, last)!=1)
+		{
+			logw(asfd, cntr,
+				"Input file ordering problem: '%s' '%s'",
+					last, rl_iobuf->buf);
+		}
+
+		switch(pathcmp(rl_iobuf->buf, path))
+		{
+			case 0: return 1; // Successful match.
+			case 1: return 0; // Ahead in input, no match.
+			default:
+				// Behind, need to read more from input.
+				free_w(&last);
+				last=rl_iobuf->buf;
+				rl_iobuf->buf=NULL;
+		}
+	} while (1);
+
+	return 0;
+}
+
+static int want_to_restore(
+	struct asfd *asfd,
+	int srestore,
+	struct fzp *input_fzp,
+	struct iobuf *input_iobuf,
+	struct sbuf *sb,
+	regex_t *regex,
+	enum action act,
+	struct conf **cconfs
+) {
 	if(act==ACTION_RESTORE)
 	{
 		// Do not send VSS data to non-windows, or to windows client
@@ -92,19 +142,43 @@ static int want_to_restore(int srestore, struct sbuf *sb,
 				return 0;
 		}
 	}
-	return (!srestore || check_srestore(cconfs, sb->path.buf))
-	  && (!regex || regex_check(regex, sb->path.buf));
+	return
+	  (!input_fzp
+		|| restore_list_check(asfd, get_cntr(cconfs),
+			input_fzp, input_iobuf, sb->path.buf))
+	  && (!srestore
+		|| srestore_check(cconfs, sb->path.buf))
+	  && (!regex
+		|| regex_check(regex, sb->path.buf));
+}
+
+static int maybe_open_restore_list(
+	struct conf **cconfs,
+	struct fzp **rl_fzp,
+	struct iobuf **rl_iobuf,
+	struct sdirs *sdirs
+) {
+	if(!get_string(cconfs[OPT_RESTORE_LIST]))
+		return 0;
+
+	if(!(*rl_fzp=fzp_open(sdirs->restore_list, "rb"))
+	  || !(*rl_iobuf=iobuf_alloc()))
+		return -1;
+
+	return 0;
 }
 
 static int setup_cntr(struct asfd *asfd, const char *manifest,
 	regex_t *regex, int srestore, struct conf **cconfs, enum action act,
-	struct bu *bu)
+	struct bu *bu, struct sdirs *sdirs)
 {
 	int ars=0;
 	int ret=-1;
 	struct fzp *fzp=NULL;
 	struct sbuf *sb=NULL;
 	struct cntr *cntr=NULL;
+	struct fzp *rl_fzp=NULL;
+	struct iobuf *rl_iobuf=NULL;
 
 	cntr=get_cntr(cconfs);
 	if(!cntr) return 0;
@@ -112,6 +186,9 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 
 // FIX THIS: this is only trying to work for protocol1.
 	if(get_protocol(cconfs)!=PROTO_1) return 0;
+
+	if(maybe_open_restore_list(cconfs, &rl_fzp, &rl_iobuf, sdirs))
+		goto end;
 
 	if(!(sb=sbuf_alloc(PROTO_1))) goto end;
 	if(!(fzp=fzp_gzopen(manifest, "rb")))
@@ -129,7 +206,9 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 		}
 		else
 		{
-			if(want_to_restore(srestore, sb, regex, act, cconfs))
+			if(want_to_restore(asfd, srestore,
+				rl_fzp, rl_iobuf,
+				sb, regex, act, cconfs))
 			{
 				cntr_add_phase1(cntr, sb->path.cmd, 0);
 				if(sb->endfile.buf)
@@ -143,6 +222,8 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	ret=0;
 end:
+	iobuf_free(&rl_iobuf);
+	fzp_close(&rl_fzp);
 	sbuf_free(&sb);
 	fzp_close(&fzp);
 	return ret;
@@ -442,6 +523,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
 	struct iobuf interrupt;
+	struct fzp *rl_fzp=NULL;
+	struct iobuf *rl_iobuf=NULL;
 
 	iobuf_init(&interrupt);
 
@@ -460,6 +543,9 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 					goto end;
 		}
 	}
+
+	if(maybe_open_restore_list(cconfs, &rl_fzp, &rl_iobuf, sdirs))
+		goto end;
 
 	if(!(manio=manio_open(manifest, "rb", protocol))
 	  || !(need_data=sbuf_alloc(protocol))
@@ -569,7 +655,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 			sbuf_free_content(need_data);
 		}
 
-		if(want_to_restore(srestore, sb, regex, act, cconfs))
+		if(want_to_restore(asfd, srestore, rl_fzp, rl_iobuf,
+			sb, regex, act, cconfs))
 		{
 			last_ent_was_skipped=0;
 			if(restore_ent(asfd, &sb, slist,
@@ -594,6 +681,8 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 		sbuf_free_content(sb);
 	}
 end:
+	iobuf_free(&rl_iobuf);
+	fzp_close(&rl_fzp);
 	blk_free(&blk);
 	sbuf_free(&sb);
 	sbuf_free(&need_data);
@@ -744,7 +833,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	// This is the equivalent of a phase1 scan during backup.
 
 	if(setup_cntr(asfd, manifest,
-		regex, srestore, cconfs, act, bu))
+		regex, srestore, cconfs, act, bu, sdirs))
 			goto end;
 
 	if(!manifest_count)

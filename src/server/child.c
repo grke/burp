@@ -194,7 +194,7 @@ int child(struct async *as, int is_status_server,
 	if( (!confs_user  || (cconfs_user && strcmp(confs_user, cconfs_user)))
 	  ||(!confs_group ||(cconfs_group && strcmp(confs_group,cconfs_group))))
 	{
-		if(chuser_and_or_chgrp(cconfs_user, cconfs_group))
+		if(chuser_and_or_chgrp(cconfs_user, cconfs_group, 0))
 		{
 			log_and_send(as->asfd,
 				"chuser_and_or_chgrp failed on server");

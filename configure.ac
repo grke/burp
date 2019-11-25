@@ -278,6 +278,20 @@ AC_CHECK_HEADERS([librsync.h],
 
 AC_SUBST([RSYNC_LIBS])
 
+dnl -----------------------------------------------------------
+dnl Check for headers, functions and libraries required to
+dnl support keeping readall capabilities
+dnl -----------------------------------------------------------
+
+have_readall=no
+AC_CHECK_HEADERS(sys/prctl.h sys/capability.h)
+AC_CHECK_FUNCS(prctl setreuid)
+AC_CHECK_LIB([cap], [cap_set_proc], [CAP_LIBS="-lcap"], [CAP_LIBS=])
+if test x$CAP_LIBS = x-lcap; then
+   have_readall=yes
+   AC_DEFINE(HAVE_LIBCAP, 1, [Define if you have libcap])
+fi
+AC_SUBST([CAP_LIBS])
 
 dnl --------------------------------------------------------------------------
 dnl Check whether librsync has RS_BLAKE2_SIG_MAGIC
@@ -536,6 +550,7 @@ AC_MSG_NOTICE([                   acl: ${have_acl}])
 AC_MSG_NOTICE([                 crypt: ${have_crypt}])
 AC_MSG_NOTICE([                  ipv6: ${enable_ipv6}])
 AC_MSG_NOTICE([               ncurses: ${have_ncurses}])
+AC_MSG_NOTICE([               readall: ${have_readall}])
 AC_MSG_NOTICE([               openssl: ${have_ssl}])
 AC_MSG_NOTICE([                 xattr: ${have_xattr}])
 AC_MSG_NOTICE([                  zlib: ${ac_cv_header_zlib_h}])

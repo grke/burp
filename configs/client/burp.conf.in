@@ -54,6 +54,11 @@ server_can_restore = 0
 # Run as different user/group.
 # user=graham
 # group=nogroup
+# Set to 1 to keep 'readall' capability (linux only) when dropping privileges
+# (default is 0, do not keep capability). Readall capability allows process
+# to read all files (even not owned by user) without requiring root privileges.
+# When using readall=1 if user= is not set it's assumed nobody.
+# readall=1
 
 cross_filesystem=/home
 cross_all_filesystems=0

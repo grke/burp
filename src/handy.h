@@ -9,6 +9,16 @@
 
 #include "bfile.h"
 
+#undef ENABLE_KEEP_READALL_CAPS_SUPPORT
+#if defined(HAVE_SYS_PRCTL_H) && defined(HAVE_SYS_CAPABILITY_H) && \
+	defined(HAVE_PRCTL) && defined(HAVE_SETREUID) && defined(HAVE_LIBCAP)
+# include <sys/prctl.h>
+# include <sys/capability.h>
+# if defined(PR_SET_KEEPCAPS)
+#  define ENABLE_KEEP_READALL_CAPS_SUPPORT
+# endif
+#endif
+
 #define min(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -23,7 +33,7 @@ extern int set_peer_env_vars(struct sockaddr_storage *addr);
 extern int set_keepalive(int fd, int value);
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);
-extern int chuser_and_or_chgrp(const char *user, const char *group);
+extern int chuser_and_or_chgrp(const char *user, const char *group, int readall);
 extern int dpth_protocol1_is_compressed(int compressed, const char *datapath);
 #ifndef HAVE_WIN32
 extern void setup_signal(int sig, void handler(int sig));

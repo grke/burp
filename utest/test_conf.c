@@ -82,6 +82,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_B_SCRIPT_POST_RUN_ON_FAIL:
 		case OPT_R_SCRIPT_POST_RUN_ON_FAIL:
 		case OPT_SEND_CLIENT_CNTR:
+		case OPT_READALL:
 		case OPT_BREAKPOINT:
 		case OPT_SYSLOG:
 		case OPT_PROGRESS_COUNTER:

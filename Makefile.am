@@ -118,7 +118,8 @@ main_LDADD = \
 	$(NCURSES_LIBS) \
 	$(OPENSSL_LIBS) \
 	$(RSYNC_LIBS) \
-	$(ZLIBS)
+	$(ZLIBS) \
+	$(CAP_LIBS)
 
 main_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
@@ -399,7 +400,8 @@ runner_LDADD = \
 	$(NCURSES_LIBS) \
 	$(RSYNC_LIBS) \
 	$(OPENSSL_LIBS) \
-	$(ZLIBS)
+	$(ZLIBS) \
+	$(CAP_LIBS)
 
 coverage: check
 if WITH_COVERAGE

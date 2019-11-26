@@ -413,8 +413,6 @@ static void windows_reparse_point_fiddling(struct FF_PKT *ff_pkt)
 	 *  IO_REPARSE_TAG_MOUNT_POINT      0xA0000003
 	 * which can be either a link to a Volume (WIN32_MOUNT_POINT)
 	 * or a link to a directory (WIN32_JUNCTION_POINT)
-	 *
-	 * Ignore WIN32_REPARSE_POINT and WIN32_JUNCTION_POINT
 	 */
 	if (ff_pkt->statp.st_rdev == WIN32_REPARSE_POINT) {
 		ff_pkt->type = FT_REPARSE;

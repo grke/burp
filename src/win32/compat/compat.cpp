@@ -630,6 +630,8 @@ static void reparse_or_mount_song_and_dance(
 	HANDLE h=INVALID_HANDLE_VALUE;
 	DWORD bytes;
 
+	sb->st_rdev=WIN32_MOUNT_POINT;
+
 	pwszBuf=sm_get_pool_memory();
 	make_win32_path_UTF8_2_wchar(&pwszBuf, file);
 	rdb=(REPARSE_DATA_BUFFER *)dummy;
@@ -663,9 +665,6 @@ static void reparse_or_mount_song_and_dance(
 
 	CloseHandle(h);
 }
-
-// Not defined in the mingw that I am currently using.
-#define IO_REPARSE_TAG_FILE_PLACEHOLDER	0x80000015L
 
 static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 {
@@ -755,15 +754,7 @@ static int statDir(const char *file, struct stat *sb, uint64_t *winattr)
 	   filesystem).  */
 	sb->st_rdev=0;
 	if(*pdwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-	{
-		sb->st_rdev=WIN32_MOUNT_POINT;
-		if(*pdwReserved0 & IO_REPARSE_TAG_MOUNT_POINT)
-			reparse_or_mount_song_and_dance(file, sb,
-				IO_REPARSE_TAG_MOUNT_POINT);
-		else if(*pdwReserved0 & IO_REPARSE_TAG_FILE_PLACEHOLDER)
-			reparse_or_mount_song_and_dance(file, sb,
-				IO_REPARSE_TAG_FILE_PLACEHOLDER);
-	}
+		reparse_or_mount_song_and_dance(file, sb, *pdwReserved0);
 
 	sb->st_size=*pnFileSizeHigh;
 	sb->st_size<<=32;

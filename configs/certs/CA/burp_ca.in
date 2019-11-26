@@ -190,8 +190,6 @@ if [ "$init" = "yes" ]; then
 	umask "$def_umask"
 	TEMP="$(mktemp "/tmp/@name@_ca.tmp.XXXXXXXX" || echo "/tmp/@name@_ca.tmp.$$")"
 	cat <<-EOF > "$TEMP"
-	RANDFILE                = /dev/urandom
-
 	[ req ]
 	distinguished_name      = req_distinguished_name
 	prompt                  = no
@@ -237,7 +235,6 @@ if [ "$request" = "yes" ]; then
         [ -d "$(dirname "$requestpath")" ] || mkdir "$(dirname "$requestpath")"
 	TEMP="$(mktemp "/tmp/@name@_ca.tmp.XXXXXXXX" || echo "/tmp/@name@_ca.tmp.$$")"
 	cat <<-EOF > "$TEMP"
-	RANDFILE                = /dev/urandom
         req_extensions          = v3_req
 
 	[ req ]

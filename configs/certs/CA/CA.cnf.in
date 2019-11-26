@@ -1,6 +1,5 @@
 # simple config for burp_ca
 
-RANDFILE                = /dev/urandom
 CA_DIR                  = @sysconfdir@/CA
 
 

@@ -40,7 +40,6 @@ echo "generating key %name%: %keypath%"
 REM Need to create a config file for openssl in order to make a certicate
 REM signing request. There must be a neater way to do it than one line at a time
 REM and %tmpconf% at the end each time.
-echo RANDFILE = /dev/urandom > "%tmpconf%"
 echo [ req ] >> "%tmpconf%"
 echo distinguished_name = req_distinguished_name >> "%tmpconf%"
 echo prompt = no >> "%tmpconf%"

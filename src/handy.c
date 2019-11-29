@@ -453,11 +453,11 @@ int chuser_and_or_chgrp(const char *user, const char *group, int readall)
 			strerror(errno));
 		goto err;
 	}
-#endif
-	return 0;
 err:
 	free_w(&username);
 	return -1;
+#endif
+	return 0;
 }
 
 // Not in dpth.c so that Windows client can see it.

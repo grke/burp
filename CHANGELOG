@@ -1,3 +1,10 @@
+2019-11-01 Chnages in burp-2.3.18:
+  * 30: Add option to take a list of paths for restore.
+  * Add '-a p' option, for outputing parseable file lists.
+  * 832: Try to be more generic about IO_REPARSE tags.
+  * From Vitalio:
+    - Implement support of keeping readall capabilities after UID/GID switch.
+
 2019-10-06 Changes in burp-2.3.16:
   * 832: Avoid 'could not stat' on OneDrive reparse points.
   * Upgrade Windows depkgs to:

@@ -336,7 +336,7 @@ void setup_signal(int sig, void handler(int sig))
 }
 
 /* Function based on src/lib/priv.c from bacula. */
-int chuser_and_or_chgrp(const char *user, const char *group)
+int chuser_and_or_chgrp(const char *user, const char *group, int readall)
 {
 #ifndef HAVE_WIN32
 	struct passwd *passw = NULL;
@@ -345,6 +345,9 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 	uid_t uid;
 	char *username=NULL;
 
+	// Allow setting readall=1 without setting user
+	if(readall && !user)
+		user="nobody";
 	if(!user && !group) return 0;
 
 	if(user)
@@ -377,22 +380,29 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 		{
 			logp("could not find group '%s': %s\n", group,
 				strerror(errno));
-			free_w(&username);
-			return -1;
+			goto err;
 		}
 		gid=grp->gr_gid;
+	} else {
+		// Resolve gid to group name for logp()
+		if (!(grp=getgrgid(gid)))
+		{
+			logp("could not find group for gid %d: %s\n", gid,
+				strerror(errno));
+			goto err;
+		}
+		group=grp->gr_name;
+		grp=NULL;
 	}
 	if(gid!=getgid() // do not do it if we already have the same gid.
 	  && initgroups(username, gid))
 	{
 		if(grp)
-			logp("could not initgroups for group '%s', user '%s': %s\n", group, user, strerror(errno));
+			logp("could not initgroups for group '%s', user '%s': %s\n", group, username, strerror(errno));
 		else
-			logp("could not initgroups for user '%s': %s\n", user, strerror(errno));
-		free_w(&username);
-		return -1;
+			logp("could not initgroups for user '%s': %s\n", username, strerror(errno));
+		goto err;
 	}
-	free_w(&username);
 	if(grp)
 	{
 		if(gid!=getgid() // do not do it if we already have the same gid
@@ -400,18 +410,54 @@ int chuser_and_or_chgrp(const char *user, const char *group)
 		{
 			logp("could not set group '%s': %s\n", group,
 				strerror(errno));
-			return -1;
+			goto err;
 		}
 	}
-	if(uid!=getuid() // do not do it if we already have the same uid
+	if (readall)
+	{
+#ifdef ENABLE_KEEP_READALL_CAPS_SUPPORT
+		cap_t caps;
+		// Make capabilities pass through setreuid
+		if(prctl(PR_SET_KEEPCAPS, 1))
+		{
+			logp("prctl(PR_SET_KEEPCAPS) failed: %s\n", strerror(errno));
+			goto err;
+		}
+		if(setreuid(uid, uid))
+		{
+			logp("Could not switch to user=%s (uid=%u): %s\n", username, uid, strerror(errno));
+			goto err;
+		}
+		// `ep' is Effective and Permitted
+		caps=cap_from_text("cap_dac_read_search=ep");
+		if(!caps)
+		{
+			logp("cap_from_text() failed: %s\n", strerror(errno));
+			goto err;
+		}
+		if(cap_set_proc(caps) < 0)
+		{
+			logp("cap_set_proc() failed: %s\n", strerror(errno));
+			goto err;
+		}
+		cap_free(caps);
+		logp("Privileges switched to %s keeping readall capability.\n", username);
+#else
+		logp("Keep readall capabilities is not implemented on this platform yet\n");
+		goto err;
+#endif
+	} else if(uid!=getuid() // do not do it if we already have the same uid
 	  && setuid(uid))
 	{
 		logp("could not set specified user '%s': %s\n", username,
 			strerror(errno));
-		return -1;
+		goto err;
 	}
 #endif
 	return 0;
+err:
+	free_w(&username);
+	return -1;
 }
 
 // Not in dpth.c so that Windows client can see it.

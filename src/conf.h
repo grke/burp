@@ -315,6 +315,9 @@ enum conf_opt
 	// For testing.
 	OPT_BREAKPOINT,
 
+	// readall capability
+	OPT_READALL,
+
 	OPT_MAX
 };
 

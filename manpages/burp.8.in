@@ -333,6 +333,9 @@ Run as a particular user. This can be overridden by the client configuration fil
 \fBgroup=[groupname]\fR
 Run as a particular group. This can be overridden by the client configuration files in clientconfdir on the server.
 .TP
+\fBreadall=[0|1]\fR
+Keep readall capability when dropping root privileges (default 0). When enabled changes default atime to 1.
+.TP
 \fBumask=[umask]\fR
 Set the file creation umask. Default is 0022.
 .TP

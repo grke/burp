@@ -1,4 +1,4 @@
-2019-11-01 Chnages in burp-2.3.18:
+2019-12-01 Changes in burp-2.3.18:
   * 30: Add option to take a list of paths for restore.
   * Add '-a p' option, for outputing parseable file lists.
   * 832: Try to be more generic about IO_REPARSE tags.

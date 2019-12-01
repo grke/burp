@@ -338,7 +338,9 @@ void setup_signal(int sig, void handler(int sig))
 /* Function based on src/lib/priv.c from bacula. */
 int chuser_and_or_chgrp(const char *user, const char *group, int readall)
 {
-#ifndef HAVE_WIN32
+#ifdef HAVE_WIN32
+	return 0;
+#else
 	struct passwd *passw = NULL;
 	struct group *grp = NULL;
 	gid_t gid;
@@ -453,11 +455,11 @@ int chuser_and_or_chgrp(const char *user, const char *group, int readall)
 			strerror(errno));
 		goto err;
 	}
+	return 0;
 err:
 	free_w(&username);
 	return -1;
 #endif
-	return 0;
 }
 
 // Not in dpth.c so that Windows client can see it.

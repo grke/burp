@@ -12,10 +12,19 @@ With debian or ubuntu, this command should install them for you:
   apt-get install make pkg-config check g++ \
 	librsync-dev libz-dev libssl-dev uthash-dev
 
-With RHEL or CentOS, this command should install them for you:
+With RHEL or CentOS 6/7, this command should install them for you:
   yum install make gcc gcc-c++ bzip2 pkgconfig \
         librsync-devel libzip-devel openssl-devel uthash-devel \
         libacl-devel ncurses-devel openssl-perl
+
+With RHEL or Centos 8, the following commands should install them for you:
+  1. Install epel-release repo to have librsync-devel dependency
+  dnf install epel-release
+  2. Install uthash-devel from PowerTools repo
+  dnf --enablerepo=PowerTools list uthash-devel
+  3. Install other libraries and tools
+  dnf install make gcc librsync-devel openssl-devel libacl-devel \
+         ncurses-devel zlib-devel
 
 If you are checking out directly from git, you will also need to get some
 extra packages in order to generate the configure file:
@@ -29,6 +38,11 @@ RHEL / CentOS:
 Change to the burp source directory and run:
   autoreconf -vif
   ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var
+  
+When using automake 1.16.1, ./configure may fail because of subdir dependency checks bug
+In that case, run configure as follows:
+
+  ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var --disable-dependency-tracking
 
 Then run "make". All being well, burp will compile successfully. Run "make
 install" and then "make install-configs" as root to install.

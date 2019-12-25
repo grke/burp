@@ -1,57 +1,51 @@
 Quick start
 -----------
 
-The following assumes that you are not installing the burp server via a
-distribution's package management system.
+The following assumes that you are installing the burp server from source.
 
 You need to compile burp on a unix-based operating system first. Make sure
 that you have openssl, zlib, librsync, and uthash libraries and development
 packages installed.
 
-With debian or ubuntu, this command should install them for you:
-  apt-get install make pkg-config check g++ \
-	librsync-dev libz-dev libssl-dev uthash-dev
+ - Debian/Ubuntu:
+	apt-get install make pkg-config check g++ \
+		librsync-dev libz-dev libssl-dev uthash-dev
 
-With RHEL or CentOS 6/7, this command should install them for you:
-  yum install make gcc gcc-c++ bzip2 pkgconfig \
-        librsync-devel libzip-devel openssl-devel uthash-devel \
-        libacl-devel ncurses-devel openssl-perl
+ - RHEL or CentOS 6/7:
+	yum install make gcc gcc-c++ bzip2 pkgconfig \
+		librsync-devel libzip-devel openssl-devel uthash-devel \
+		libacl-devel ncurses-devel openssl-perl
 
-With RHEL or Centos 8, the following commands should install them for you:
-  1. Install epel-release repo to have librsync-devel dependency
-  dnf install epel-release
-  2. Install uthash-devel from PowerTools repo
-  dnf --enablerepo=PowerTools list uthash-devel
-  3. Install other libraries and tools
-  dnf install make gcc librsync-devel openssl-devel libacl-devel \
-         ncurses-devel zlib-devel
+ - RHEL or Centos 8:
+	dnf install epel-release
+	dnf --enablerepo=PowerTools list uthash-devel
+	dnf install make gcc librsync-devel openssl-devel libacl-devel \
+		ncurses-devel zlib-devel
 
-If you are checking out directly from git, you will also need to get some
-extra packages in order to generate the configure file:
+After this point, make sure you are standing in the burp source directory. 
 
-Debian / Ubunutu:
-  apt-get install autoconf automake libtool
+If you are taking the source directly from git:
+	Install these extra packages with your distribution's package manager:
+		autoconf automake libtool
+		autoreconf -vif
 
-RHEL / CentOS:
-  yum install autoconf automake libtool
+Now run the configure script, noting that if you are using automake >= 1.16.1,
+you may need to add '--disable-dependency-tracking':
+	./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var
 
-Change to the burp source directory and run:
-  autoreconf -vif
-  ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var
-  
-When using automake 1.16.1, ./configure may fail because of subdir dependency checks bug
-In that case, run configure as follows:
+Then run:
+	make
 
-  ./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var --disable-dependency-tracking
+All being well, burp will compile successfully. Install it as root:
+	make install
 
-Then run "make". All being well, burp will compile successfully. Run "make
-install" and then "make install-configs" as root to install.
-The "make install-configs" command will overwrite configuration files in
-/etc/burp, so you will probably not want to do that if you have an existing
-burp installation.
+Now install configuration files. Note that this will overwrite existing
+configuration files in /etc/burp, so you will probably not want to run this if
+you have an existing burp installation:
+	make install-configs
 
-Start the burp server with this command:
-  burp -c /etc/burp/burp-server.conf
+Start the burp server:
+	burp -c /etc/burp/burp-server.conf
 
 By default, the server will fork into the background and run as a daemon. To
 stay in the foreground, add the '-F' option. The first time that the server
@@ -76,7 +70,7 @@ The example client configuration file is /etc/burp/burp.conf.
 It will backup /home by default.
 
 You can either force a backup by hand:
-  burp -a b
+	burp -a b
 
 Or add a regular cron job like the following to /etc/cron.d/burp (or
 equivalent). This makes the client ask the server every twenty minutes whether
@@ -126,7 +120,8 @@ Mac client
 The installation on a Mac is performed via Homebrew (http://brew.sh).
 After installing Homebrew, with an admin account you just have to open a
 Terminal and type the command:
-"brew install burp"
+	brew install burp
+
 Burp will be installed in the subdirectories of /usr/local (see Homebrew
 website for details on the subdirectories).
 

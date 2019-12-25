@@ -549,6 +549,13 @@ int manio_write_sbuf(struct manio *manio, struct sbuf *sb)
 	return sbuf_to_manifest(sb, manio->fzp);
 }
 
+int manio_write_cntr(struct manio *manio, struct sbuf *sb,
+	enum cntr_manio what)
+{
+	if(!manio->fzp && manio_open_next_fpath(manio)) return -1;
+	return sbuf_to_manifest_cntr(sb, manio->fzp, what);
+}
+
 // Return -1 on error, 0 on OK, 1 for srcmanio finished.
 int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 	struct manio *srcmanio, struct manio *dstmanio,

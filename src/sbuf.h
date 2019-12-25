@@ -57,6 +57,14 @@ struct sbuf
 	struct sbuf *next;
 };
 
+enum cntr_manio
+{
+	CNTR_MANIO_NEW='n',
+	CNTR_MANIO_CHANGED='c',
+	CNTR_MANIO_SAME='u',
+	CNTR_MANIO_DELETED='d',
+};
+
 extern struct sbuf *sbuf_alloc(enum protocol protocol);
 extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf **sb);
@@ -69,6 +77,8 @@ extern int sbuf_is_metadata(struct sbuf *sb);
 extern int sbuf_is_estimatable(struct sbuf *sb);
 
 extern int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp);
+extern int sbuf_to_manifest_cntr(struct sbuf *sb, struct fzp *fzp,
+	enum cntr_manio what);
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 

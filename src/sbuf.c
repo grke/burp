@@ -128,6 +128,14 @@ int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp)
 	return 0;
 }
 
+int sbuf_to_manifest_cntr(struct sbuf *sb, struct fzp *fzp,
+	enum cntr_manio what)
+{
+	if(!sb->path.buf) return 0;
+	fzp_printf(fzp, "%c", (char)what);
+	return iobuf_send_msg_fzp(&sb->path, fzp);
+}
+
 // Like pathcmp, but sort entries that have the same paths so that metadata
 // comes later, and vss comes earlier, and trailing vss comes later.
 int sbuf_pathcmp(struct sbuf *a, struct sbuf *b)

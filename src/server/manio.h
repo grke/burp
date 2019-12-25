@@ -3,6 +3,7 @@
 
 #include "../burp.h"
 #include "../conf.h"
+#include "../sbuf.h"
 #include "sdirs.h"
 
 #define MANIO_MODE_READ		"rb"
@@ -67,6 +68,8 @@ extern int manio_read(struct manio *manio, struct sbuf *sb);
 
 extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);
 extern int manio_write_sbuf(struct manio *manio, struct sbuf *sb);
+extern int manio_write_cntr(struct manio *manio, struct sbuf *sb,
+	enum cntr_manio what);
 
 extern int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 	struct manio *srcmanio, struct manio *dstmanio,

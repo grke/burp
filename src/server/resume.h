@@ -6,8 +6,13 @@
 
 struct dpth;
 
-extern man_off_t *do_resume(struct sdirs *sdirs,
-	struct dpth *dpth, struct conf **cconfs);
+extern int do_resume(
+	man_off_t **pos_phase1,
+	man_off_t **pos_current,
+	struct sdirs *sdirs,
+	struct dpth *dpth,
+	struct conf **cconfs
+);
 
 #ifdef UTEST
 // For changed manifest.

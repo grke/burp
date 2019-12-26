@@ -199,6 +199,7 @@ static struct fstype fstypes[]={
 	{ "ramfs",		0x858458F6 },
 	{ "btrfs",		0x9123683E },
 	{ "hugetlbfs",		0x958458F6 },
+	{ "smb2",		0xFE534D42 },
 	{ "cifs",		0xFF534D42 },
 	{ NULL,			0 },
 };

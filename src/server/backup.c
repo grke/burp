@@ -274,6 +274,8 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	cntr_set_bytes(cntr, asfd);
 	if(cntr_stats_to_file(cntr, sdirs->working, ACTION_BACKUP))
 		goto error;
+	unlink(sdirs->counters_d);
+	unlink(sdirs->counters_n);
 
 	if(do_rename(sdirs->working, sdirs->finishing))
 		goto error;

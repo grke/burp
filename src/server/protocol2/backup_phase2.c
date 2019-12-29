@@ -98,6 +98,9 @@ static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
 	{
 		// Got an unchanged file.
 		cntr_add_same(cntr, sb->path.cmd);
+		// No actual data saved - goes in counters_n.
+		if(manio_write_cntr(manios->counters_n, sb, CNTR_MANIO_SAME))
+			return -1;
 		return unchanged(csb, sb, manios, chfd);
 	}
 
@@ -109,11 +112,19 @@ static int found_in_current_manifest(struct sbuf *csb, struct sbuf *sb,
 		// changed. We already have the attributes, but may need to
 		// get extra meta data.
 		cntr_add_same(cntr, sb->path.cmd);
+		// No actual data saved - goes in counters_n.
+		if(manio_write_cntr(manios->counters_n, sb, CNTR_MANIO_SAME))
+			return -1;
 		return unchanged(csb, sb, manios, chfd);
 	}
 
 	// File data changed.
 	cntr_add_changed(cntr, sb->path.cmd);
+	// Data has been saved - goes in counters_d, or the counters
+	// will be out of sequence.
+	if(manio_write_cntr(manios->counters_d, sb, CNTR_MANIO_CHANGED))
+		return -1;
+
 	if(manio_forward_through_sigs(csb, manios->current)<0)
 		return -1;
 	return 1;
@@ -129,6 +140,10 @@ static int entry_changed(struct sbuf *sb,
 
 	if(finished)
 	{
+		// Data has been saved - goes in counters_d, or the counters
+		// will be out of sequence.
+		if(manio_write_cntr(manios->counters_d, sb, CNTR_MANIO_NEW))
+			return -1;
 		cntr_add_new(cntr, sb->path.cmd);
 		return 1;
 	}
@@ -146,6 +161,10 @@ static int entry_changed(struct sbuf *sb,
 				sbuf_free(csb);
 				finished=1;
 				cntr_add_new(cntr, sb->path.cmd);
+				// Data has been saved - goes in counters_d,
+				// or the counters will be out of sequence.
+				if(manio_write_cntr(manios->counters_d,
+					sb, CNTR_MANIO_NEW)) return -1;
 				return 1;
 			case -1: return -1;
 		}
@@ -165,6 +184,10 @@ static int entry_changed(struct sbuf *sb,
 		else if(pcmp>0)
 		{
 			cntr_add_new(cntr, sb->path.cmd);
+			// Data has been saved - goes in counters_d,
+			// or the counters will be out of sequence.
+			if(manio_write_cntr(manios->counters_d,
+				sb, CNTR_MANIO_NEW)) return -1;
 			return 1;
 		}
 //		cntr_add_deleted(cntr, (*csb)->path.cmd);
@@ -174,6 +197,10 @@ static int entry_changed(struct sbuf *sb,
 			case 1: // Reached the end.
 				sbuf_free(csb);
 				cntr_add_new(cntr, sb->path.cmd);
+				// Data has been saved - goes in counters_d,
+				// or the counters will be out of sequence.
+				if(manio_write_cntr(manios->counters_d,
+					sb, CNTR_MANIO_NEW)) return -1;
 				return 1;
 			case -1: return -1;
 		}
@@ -857,7 +884,8 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 	struct slist *slist=NULL;
 	struct iobuf wbuf;
 	struct dpth *dpth=NULL;
-	man_off_t *p1pos=NULL;
+	man_off_t *pos_phase1=NULL;
+	man_off_t *pos_current=NULL;
 	struct manios *manios=NULL;
 	// This is used to tell the client that a number of consecutive blocks
 	// have been found and can be freed.
@@ -919,13 +947,15 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 			goto end;
 	if(resume)
 	{
-		if(!(p1pos=do_resume(sdirs, dpth, confs)))
-			goto end;
+		if(do_resume(&pos_phase1, &pos_current,
+			sdirs, dpth, confs))
+				goto end;
 		if(cntr_send_sdirs(asfd, sdirs, confs, CNTR_STATUS_BACKUP))
 			goto end;
 	}
 
-	if(!(manios=manios_open_phase2(sdirs, p1pos, PROTO_2))
+	if(!(manios=manios_open_phase2(sdirs,
+		pos_phase1, pos_current, PROTO_2))
 	  || !(slist=slist_alloc())
 	  || !(csb=sbuf_alloc(PROTO_2)))
 		goto end;
@@ -1041,7 +1071,8 @@ end:
 	if(chfd) iobuf_free_content(chfd->rbuf);
 	dpth_free(&dpth);
 	manios_close(&manios);
-	man_off_t_free(&p1pos);
+	man_off_t_free(&pos_phase1);
+	man_off_t_free(&pos_current);
 	blks_generate_free();
 	hash_delete_all();
 	return ret;

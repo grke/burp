@@ -37,6 +37,8 @@ struct sdirs
 	char *timestamp;
 	char *changed;
 	char *unchanged;
+	char *counters_d; // file data entries
+	char *counters_n; // non file data entries
 	char *manifest; // Path to manifest (via working).
 	char *rmanifest; // Path to manifest (real).
 	char *cmanifest; // Path to current (previous) manifest.

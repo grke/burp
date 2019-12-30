@@ -57,7 +57,7 @@ static int delete_backup(struct sdirs *sdirs, const char *cname, struct bu *bu,
 	if(sdirs->global_sparse)
 	{
 		const char *candidate_str=bu->path+strlen(sdirs->base)+1;
-		if(remove_from_global_sparse(
+		if(remove_backup_from_global_sparse(
 			sdirs->global_sparse, candidate_str))
 				return -1;
 	}

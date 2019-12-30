@@ -262,9 +262,11 @@ main_SOURCES = \
 	src/server/protocol2/champ_chooser/incoming.c src/server/protocol2/champ_chooser/incoming.h \
 	src/server/protocol2/champ_chooser/scores.c src/server/protocol2/champ_chooser/scores.h \
 	src/server/protocol2/champ_chooser/sparse.c src/server/protocol2/champ_chooser/sparse.h \
+	src/server/protocol2/clist.c src/server/protocol2/clist.h \
 	src/server/protocol2/dpth.c src/server/protocol2/dpth.h \
 	src/server/protocol2/rblk.c src/server/protocol2/rblk.h \
 	src/server/protocol2/restore.c src/server/protocol2/restore.h \
+	src/server/protocol2/sparse_min.c src/server/protocol2/sparse_min.h \
 	src/yajl/yajl.c \
 	src/yajl/yajl_alloc.c src/yajl/yajl_alloc.h \
 	src/yajl/yajl_buf.c src/yajl/yajl_buf.h \

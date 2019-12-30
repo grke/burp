@@ -37,7 +37,7 @@ extern int get_next_set_of_hooks(struct hooks **hnew, struct sbuf *sb,
 	struct fzp *spzp, char **path, uint64_t **fingerprints, size_t *len);
 #endif
 
-extern int remove_from_global_sparse(const char *global_sparse,
+extern int remove_backup_from_global_sparse(const char *global_sparse,
 	const char *candidate_str);
 
 #endif

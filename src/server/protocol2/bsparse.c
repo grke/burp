@@ -16,10 +16,12 @@
 #include "../protocol2/backup_phase4.h"
 #include "../sdirs.h"
 #include "bsigs.h"
+#include "clist.h"
 #include "champ_chooser/champ_chooser.h"
+#include "sparse_min.h"
 
-static struct cstat *clist=NULL;
 static struct lock *sparse_lock=NULL;
+static struct cstat *clist=NULL;
 
 static int usage(void)
 {
@@ -32,7 +34,7 @@ static int usage(void)
 	return 1;
 }
 
-static void release_locks(void)
+static void release_locks(struct cstat *clist)
 {
 	struct cstat *c;
 	struct sdirs *s;
@@ -50,15 +52,15 @@ static void release_locks(void)
 
 static void sighandler(__attribute__ ((unused)) int signum)
 {
-	release_locks();
+	release_locks(clist);
 	exit(1);
 }
 
-static struct sdirs *get_sdirs(struct conf **globalcs)
+static struct sdirs *get_sdirs(struct conf **conf)
 {
 	struct sdirs *sdirs=NULL;
 	if(!(sdirs=sdirs_alloc())
-	  || sdirs_init_from_confs(sdirs, globalcs))
+	  || sdirs_init_from_confs(sdirs, conf))
 		sdirs_free(&sdirs);
 	return sdirs;
 }
@@ -90,16 +92,16 @@ error:
 static struct conf **load_conf(const char *configfile,
 	const char *directory, const char *dedup_group)
 {
-	struct conf **globalcs=NULL;
-	if(!(globalcs=confs_alloc())
-	  || confs_init(globalcs)
-	  || conf_load_global_only(configfile, globalcs)
-	  || set_string(globalcs[OPT_CNAME], "fake")
-	  || set_string(globalcs[OPT_DIRECTORY], directory)
-	  || set_string(globalcs[OPT_DEDUP_GROUP], dedup_group)
-	  || set_protocol(globalcs, PROTO_2))
-		confs_free(&globalcs);
-	return globalcs;
+	struct conf **conf=NULL;
+	if(!(conf=confs_alloc())
+	  || confs_init(conf)
+	  || conf_load_global_only(configfile, conf)
+	  || set_string(conf[OPT_CNAME], "fake")
+	  || set_string(conf[OPT_DIRECTORY], directory)
+	  || set_string(conf[OPT_DEDUP_GROUP], dedup_group)
+	  || set_protocol(conf, PROTO_2))
+		confs_free(&conf);
+	return conf;
 }
 
 static void setup_sighandler(void)
@@ -119,7 +121,7 @@ static int get_sparse_lock(const char *sparse)
 	return 0;
 }
 
-static int get_client_locks(void)
+static int get_client_locks(struct cstat *clist)
 {
 	struct cstat *c;
 	struct sdirs *s;
@@ -150,69 +152,6 @@ static int get_client_locks(void)
 		}
 	}
 	return 0;
-}
-
-static struct cstat *get_client_list(const char *cdir, struct conf **globalcs)
-{
-	int i=0;
-	int count=0;
-	char *fullpath=NULL;
-	char **clients=NULL;
-	struct cstat *cnew=NULL;
-	const char *clientconfdir=get_string(globalcs[OPT_CLIENTCONFDIR]);
-	if(entries_in_directory_alphasort(cdir, &clients, &count, 1/*atime*/, 1/*follow_symlinks*/))
-		goto error;
-	for(i=0; i<count; i++)
-	{
-		free_w(&fullpath);
-		if(!(fullpath=prepend_s(cdir, clients[i])))
-			goto end;
-		switch(is_dir_lstat(fullpath))
-		{
-			case 0: continue;
-			case 1: break;
-			default: logp("is_dir(%s): %s\n",
-				 fullpath, strerror(errno));
-					goto error;
-		}
-
-		if(set_string(globalcs[OPT_CNAME], clients[i]))
-			goto error;
-
-		// Have a good entry. Add it to the list.
-		if(!(cnew=cstat_alloc())
-		  || !(cnew->sdirs=sdirs_alloc())
-		  || (sdirs_init_from_confs((struct sdirs *)cnew->sdirs,
-			globalcs))
-		  || cstat_init(cnew, clients[i], clientconfdir))
-			goto error;
-		cstat_add_to_list(&clist, cnew);
-		cnew=NULL;
-	}
-	goto end;
-error:
-	cstat_list_free(&clist);
-end:
-	for(i=0; i<count; i++)
-		free_w(&(clients[i]));
-	free_v((void **)&clients);
-	free_w(&fullpath);
-	if(cnew)
-	{
-		sdirs_free((struct sdirs **)&cnew->sdirs);
-		cstat_free(&cnew);
-	}
-	return clist;
-}
-
-static void clist_free(void)
-{
-	struct cstat *c;
-	if(!clist)
-		return;
-	for(c=clist; c; c=c->next)
-		sdirs_free((struct sdirs **)&c->sdirs);
-	cstat_list_free(&clist);
 }
 
 static int merge_in_client_sparse_indexes(struct cstat *c,
@@ -269,7 +208,7 @@ int run_bsparse(int argc, char *argv[])
 	char *dedup_group=NULL;
 	const char *configfile=NULL;
 	struct sdirs *sdirs=NULL;
-	struct conf **globalcs=NULL;
+	struct conf **conf=NULL;
 
 	base64_init();
 	configfile=config_default_path();
@@ -300,8 +239,8 @@ int run_bsparse(int argc, char *argv[])
 	logp("directory: %s\n", directory);
 	logp("dedup_group: %s\n", dedup_group);
 
-	if(!(globalcs=load_conf(configfile, directory, dedup_group))
-	  || !(sdirs=get_sdirs(globalcs)))
+	if(!(conf=load_conf(configfile, directory, dedup_group))
+	  || !(sdirs=get_sdirs(conf)))
 		goto end;
 
 	logp("clients: %s\n", sdirs->clients);
@@ -312,25 +251,28 @@ int run_bsparse(int argc, char *argv[])
 	if(get_sparse_lock(sdirs->global_sparse))
 		goto end;
 
-	if(!get_client_list(sdirs->clients, globalcs))
+	if(get_client_list(&clist, sdirs->clients, conf))
 	{
 		logp("Did not find any client directories\n");
 		goto end;
 	}
 
-	if(get_client_locks())
+	if(get_client_locks(clist))
 		goto end;
 
 	if(merge_in_all_sparse_indexes(sdirs->global_sparse))
 		goto end;
 
+	if(sparse_minimise(conf, sdirs->global_sparse, sparse_lock, clist))
+		goto end;
+
 	ret=0;
 end:
-	release_locks();
+	release_locks(clist);
 	sdirs_free(&sdirs);
 	free_w(&directory);
 	free_w(&dedup_group);
-	confs_free(&globalcs);
-	clist_free();
+	confs_free(&conf);
+	clist_free(&clist);
 	return ret;
 }

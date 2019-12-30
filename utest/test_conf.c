@@ -223,6 +223,9 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_RBLK_MEMORY_MAX:
 			fail_unless(get_uint64_t(c[o])==256*1024*1024);
 			break;
+		case OPT_SPARSE_SIZE_MAX:
+			fail_unless(get_uint64_t(c[o])==256*1024*1024);
+			break;
 		case OPT_WORKING_DIR_RECOVERY_METHOD:
 			fail_unless(get_e_recovery_method(c[o])==
 				RECOVERY_METHOD_DELETE);

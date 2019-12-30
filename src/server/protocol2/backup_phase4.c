@@ -2,6 +2,7 @@
 #include "../../alloc.h"
 #include "../../bu.h"
 #include "../../cmd.h"
+#include "../../cstat.h"
 #include "../../fsops.h"
 #include "../../fzp.h"
 #include "../../lock.h"
@@ -15,6 +16,8 @@
 #include "../../server/sdirs.h"
 #include "champ_chooser/champ_chooser.h"
 #include "backup_phase4.h"
+#include "clist.h"
+#include "sparse_min.h"
 
 static int hookscmp(struct hooks *a, struct hooks *b)
 {
@@ -380,9 +383,11 @@ static char *get_global_sparse_tmp(const char *global)
 	return prepend_n(global, "tmp", strlen("tmp"), ".");
 }
 
-int merge_into_global_sparse(const char *sparse, const char *global,
-	struct lock *lock)
-{
+int merge_into_global_sparse(
+	const char *sparse,
+	const char *global_sparse,
+	struct lock *lock
+) {
 	int ret=-1;
 	struct stat statp;
 	char *tmpfile=NULL;
@@ -394,16 +399,16 @@ int merge_into_global_sparse(const char *sparse, const char *global,
 		goto end;
 	}
 
-	if(!(tmpfile=get_global_sparse_tmp(global)))
+	if(!(tmpfile=get_global_sparse_tmp(global_sparse)))
 		goto end;
 
-	if(!lstat(global, &statp)) globalsrc=global;
+	if(!lstat(global_sparse, &statp)) globalsrc=global_sparse;
 
 	if(merge_sparse_indexes(tmpfile, globalsrc, sparse))
 		goto end;
 
 	// FIX THIS: nasty race condition needs to be recoverable.
-	if(do_rename(tmpfile, global))
+	if(do_rename(tmpfile, global_sparse))
 		goto end;
 
 	ret=0;
@@ -412,22 +417,33 @@ end:
 	return ret;
 }
 
-static int lock_and_merge_into_global_sparse(const char *sparse,
-	const char *global)
-{
+static int lock_and_merge_into_global_sparse(
+	const char *sparse,
+	const char *global_sparse,
+	struct conf **conf,
+	struct sdirs *sdirs
+) {
 	int ret=-1;
 	struct lock *lock=NULL;
+	struct cstat *clist=NULL;
 	
-	if(!(lock=try_to_get_sparse_lock(global)))
+	if(!(lock=try_to_get_sparse_lock(global_sparse)))
 		goto end;
 
-	if(merge_into_global_sparse(sparse, global, lock))
+	if(merge_into_global_sparse(sparse, global_sparse, lock))
+		goto end;
+
+	if(get_client_list(&clist, sdirs->clients, conf))
+		goto end;
+
+	if(sparse_minimise(conf, sdirs->global_sparse, lock, clist))
 		goto end;
 
 	ret=0;
 end:
 	lock_release(lock);
 	lock_free(&lock);
+	clist_free(&clist);
 	return ret;
 }
 
@@ -626,8 +642,9 @@ int backup_phase4_server_protocol2(struct sdirs *sdirs, struct conf **confs)
 		merge_sparse_indexes))
 			goto end;
 
-	if(lock_and_merge_into_global_sparse(sparse, sdirs->global_sparse))
-		goto end;
+	if(lock_and_merge_into_global_sparse(sparse,
+		sdirs->global_sparse, confs, sdirs))
+			goto end;
 
 	logp("End phase4 (sparse generation)\n");
 
@@ -743,7 +760,7 @@ end:
 	return ret;
 }
 
-int remove_from_global_sparse(const char *global_sparse,
+int remove_backup_from_global_sparse(const char *global_sparse,
 	const char *candidate_str)
 {
 	int ret=-1;
@@ -796,7 +813,8 @@ int remove_from_global_sparse(const char *global_sparse,
 	}
 
 	// FIX THIS: nasty race condition needs to be recoverable.
-	if(do_rename(tmpfile, global_sparse)) goto end;
+	if(do_rename(tmpfile, global_sparse))
+		goto end;
 
 	ret=0;
 end:

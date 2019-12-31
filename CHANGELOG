@@ -1,3 +1,13 @@
+2020-01-01 Changes in burp-2.3.20:
+  * 597: Protocol 2 - prune the sparse index.
+  * 800: Correct counters after resume.
+  * 837: Fix bug where user= config causes exit.
+  * Tidy up README.
+  * From Orsiris de Jong:
+    - Add Centos 8 building instructions to README.
+  * From Bob Ryan:
+    - Add smb2 magic id.
+
 2019-12-01 Changes in burp-2.3.18:
   * 30: Add option to take a list of paths for restore.
   * Add '-a p' option, for outputing parseable file lists.

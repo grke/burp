@@ -118,9 +118,9 @@ Q. What is the best file system to use on the server?
 
 <P>
 <FONT COLOR="#000000">
-A. So far, I have done all my testing on ext3, and it works for me. The main
+A. I have done all my testing on ext4, and it works for me. The main
 concern is not to run out of file system inodes. You can configure the number
-of inodes when you create the ext3 file system, but you cannot change the
+of inodes when you create the ext4 file system, but you cannot change the
 number later without reformatting.
 <BR>
 <BR>

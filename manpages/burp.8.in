@@ -516,7 +516,7 @@ Set this to 0 if you want to disable all clients. The default is 1. This option 
 The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256MB. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
 .TP
 \fBsparse_size_max=[B/KB/MB/GB]\fR
-The maximum (uncompressed) size of the sparse file of each dedup_group. The default is 256MB. If the sparse file grows beyond this size, entries will be removed starting with the oldest, unless it is the only one left for a client.
+The maximum (uncompressed) size of the sparse file of each protocol 2 dedup_group. The default is 256MB. If the sparse file grows beyond this size, entries will be removed starting with the oldest, unless it is the only one left for a client.
 .TP
 \fBfail_on_warning=[0|1]\fR
 If a warning is generated during a backup, fail the backup. The default is 0. This option can be overridden per-client in the client configuration files in clientconfdir on the server.

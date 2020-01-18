@@ -11,10 +11,11 @@ packages installed.
 	apt-get install make pkg-config check g++ \
 		librsync-dev libz-dev libssl-dev uthash-dev
 
- - RHEL or CentOS 6/7:
+ - RHEL or CentOS 7:
+	yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 	yum install make gcc gcc-c++ bzip2 pkgconfig \
 		librsync-devel libzip-devel openssl-devel uthash-devel \
-		libacl-devel ncurses-devel openssl-perl
+		libacl-devel ncurses-devel openssl-perl libcap-devel
 
  - RHEL or Centos 8:
 	dnf install epel-release

@@ -196,16 +196,30 @@ static int do_protocol2_dirs(struct sdirs *sdirs,
 	return 0;
 }
 
-int sdirs_init_from_confs(struct sdirs *sdirs, struct conf **confs)
-{
+int sdirs_init_from_confs_plus_cname(
+	struct sdirs *sdirs,
+	struct conf **confs,
+	const char *cname
+) {
 	return sdirs_init(
 		sdirs,
 		get_protocol(confs),
 		get_string(confs[OPT_DIRECTORY]),
-		get_string(confs[OPT_CNAME]),
+		cname,
 		get_string(confs[OPT_CLIENT_LOCKDIR]),
 		get_string(confs[OPT_DEDUP_GROUP]),
 		get_string(confs[OPT_MANUAL_DELETE])
+	);
+}
+
+int sdirs_init_from_confs(
+	struct sdirs *sdirs,
+	struct conf **confs
+) {
+	return sdirs_init_from_confs_plus_cname(
+		sdirs,
+		confs,
+		get_string(confs[OPT_CNAME])
 	);
 }
 

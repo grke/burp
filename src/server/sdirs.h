@@ -62,6 +62,12 @@ struct sdirs
 
 extern struct sdirs *sdirs_alloc(void);
 extern int sdirs_init_from_confs(struct sdirs *sdirs, struct conf **confs);
+extern int sdirs_init_from_confs_plus_cname(
+        struct sdirs *sdirs,
+        struct conf **confs,
+        const char *cname
+);
+
 extern int sdirs_init(struct sdirs *sdirs, enum protocol protocol,
 	const char *directory, const char *cname, const char *conf_lockdir,
 	const char *dedup_group, const char *manual_delete);

@@ -40,14 +40,17 @@ int get_client_list(
 					goto error;
 		}
 
-		if(set_string(conf[OPT_CNAME], clients[i]))
-			goto error;
-
 		// Have a good entry. Add it to the list.
 		if(!(cnew=cstat_alloc())
-		  || !(cnew->sdirs=sdirs_alloc())
-		  || (sdirs_init_from_confs((struct sdirs *)cnew->sdirs, conf))
-		  || cstat_init(cnew, clients[i], clientconfdir))
+		  || !(cnew->sdirs=sdirs_alloc()))
+			goto error;
+		// Cannot just set OPT_CNAME to clients[i] on conf, as it
+		// overrides our current settings, which are needed later.
+		// Pass clients[i] through.
+		if((sdirs_init_from_confs_plus_cname(
+		  (struct sdirs *)cnew->sdirs, conf, clients[i])))
+			goto error;
+		if(cstat_init(cnew, clients[i], clientconfdir))
 			goto error;
 		cstat_add_to_list(clist, cnew);
 		cnew=NULL;

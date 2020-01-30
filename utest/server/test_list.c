@@ -642,6 +642,23 @@ START_TEST(test_check_browsedir_alloc_error)
 }
 END_TEST
 
+START_TEST(test_maybe_fake_directory)
+{
+	char *attr;
+	struct sbuf *mb;
+	fail_unless((mb=sbuf_alloc(PROTO_1))!=NULL);
+	fail_unless((attr=strdup_w("120398102938", __func__))!=NULL);
+	iobuf_set(&mb->attr, CMD_ATTRIBS, attr, strlen(attr));
+
+	// Check that it does not explode on re-encoding attribs that are
+	// longer than the buffer we just allocated.
+	maybe_fake_directory(mb);
+
+	sbuf_free(&mb);
+	alloc_check();
+}
+END_TEST
+
 Suite *suite_server_list(void)
 {
 	Suite *s;
@@ -659,6 +676,7 @@ Suite *suite_server_list(void)
 	tcase_add_test(tc_core, test_check_browsedir_windows);
 	tcase_add_test(tc_core, test_check_browsedir_windows_blank);
 	tcase_add_test(tc_core, test_check_browsedir_alloc_error);
+	tcase_add_test(tc_core, test_maybe_fake_directory);
 
 	suite_add_tcase(s, tc_core);
 

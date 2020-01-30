@@ -21,6 +21,7 @@ extern int check_browsedir(const char *browsedir,
 	char **last_bd_match);
 
 #ifdef UTEST
+extern void maybe_fake_directory(struct sbuf *mb);
 extern int do_list_server_work(
 	int list_server_callback(const char *fullpath));
 #endif

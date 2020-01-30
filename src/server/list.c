@@ -84,7 +84,10 @@ void list_server_free(void)
 	regex_free(&regex);
 }
 
-static void maybe_fake_directory(struct sbuf *mb)
+#ifndef UTEST
+static
+#endif
+void maybe_fake_directory(struct sbuf *mb)
 {
 	if(S_ISDIR(mb->statp.st_mode))
 		return;
@@ -92,6 +95,10 @@ static void maybe_fake_directory(struct sbuf *mb)
 	// Make sure the directory bit is set.
 	mb->statp.st_mode &= ~(S_IFMT);
 	mb->statp.st_mode |= S_IFDIR;
+
+	// Need to free attr so that it is reallocated, because it may get
+	// longer than what we initially had.
+	iobuf_free_content(&mb->attr);
 	attribs_encode(mb);
 }
 

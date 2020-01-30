@@ -1,3 +1,8 @@
+2020-02-01 Changes in burp-2.3.22:
+  * 845: Fix possible segfault in server-side listing.
+  * 841: Fix protocol2 bug where cname was overwritten.
+  * Man page and README tweaks.
+
 2020-01-01 Changes in burp-2.3.20:
   * 597: Protocol 2 - prune the sparse index.
   * 800: Correct counters after resume.

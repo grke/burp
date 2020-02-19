@@ -1,7 +1,7 @@
 #include "burp.h"
 #include "cmd.h"
 
-static char *cmd_to_text(enum cmd cmd)
+char *cmd_to_text(enum cmd cmd)
 {
 	static char buf[256];
 	size_t len=sizeof(buf);

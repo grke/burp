@@ -72,6 +72,7 @@ enum cmd
 
 
 extern void cmd_print_all(void);
+extern char *cmd_to_text(enum cmd cmd);
 extern int cmd_is_filedata(enum cmd cmd);
 extern int cmd_is_vssdata(enum cmd cmd);
 extern int cmd_is_link(enum cmd cmd);

@@ -173,6 +173,36 @@ static int restore_metadata(
 	return 0;
 }
 
+static int unsupported_interrupt_and_warn(
+	struct asfd *asfd,
+	struct sbuf *sb,
+	struct cntr *cntr,
+	const char *fname,
+	enum action act
+) {
+	char msg[256]="";
+	snprintf(msg, sizeof(msg),
+		"restore not yet supported for %s: %s",
+		cmd_to_text(sb->path.cmd), fname);
+	switch(act)
+	{
+		case ACTION_RESTORE:
+			if(restore_interrupt(asfd, sb, msg, cntr, PROTO_2))
+				return -1;
+			break;
+		default:
+			if(cntr)
+			{
+				cntr_add(cntr, CMD_WARNING, 1);
+				logp("WARNING: %s\n", msg);
+				if(asfd->write_str(asfd, CMD_WARNING, msg))
+					return -1;
+			}
+			break;
+	}
+	return 0; // Try to carry on with other files.
+}
+
 int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 	const char *fullpath, enum action act,
 	struct BFILE *bfd, enum vss_restore vss_restore, struct cntr *cntr)
@@ -192,8 +222,8 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 				goto error;
 			}
 			break;
-/* FIX THIS: Encryption currently not working in protocol2
 		case CMD_ENC_FILE:
+/* FIX THIS: Encryption currently not working in protocol2
 			if(start_restore_file(asfd,
 				bfd, sb, fullpath, act,
 				vss_restore, confs))
@@ -201,20 +231,28 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 				logp("restore_file error\n");
 				goto error;
 			}
-			break;
 */
+			if(unsupported_interrupt_and_warn(
+				asfd, sb, cntr, fullpath, act))
+					return -1;
+			break;
 		case CMD_METADATA:
 			if(restore_metadata(asfd,
 				sb, fullpath, act, cntr))
 					goto error;
 			break;
-/* FIX THIS: Encryption and EFS not supported yet.
 		case CMD_ENC_METADATA:
+/* FIX THIS: Encryption not supported yet.
 			if(restore_metadata(
 				bfd, sb, fullpath, act, confs))
 					goto error;
+*/
+			if(unsupported_interrupt_and_warn(
+				asfd, sb, cntr, fullpath, act))
+					return -1;
 			break;
 		case CMD_EFS_FILE:
+/* FIX THIS: EFS not supported yet.
 			if(start_restore_file(asfd,
 				bfd, sb,
 				fullpath, act,
@@ -223,8 +261,11 @@ int restore_switch_protocol2(struct asfd *asfd, struct sbuf *sb,
 				logp("restore_file error\n");
 				goto error;
 			}
-			break;
 */
+			if(unsupported_interrupt_and_warn(
+				asfd, sb, cntr, fullpath, act))
+					return -1;
+			break;
 		default:
 			logp("unknown cmd: %c\n", sb->path.cmd);
 			goto error;

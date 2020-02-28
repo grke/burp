@@ -1,0 +1,8 @@
+[Unit]
+Description=Timer setting for burp backup client
+
+[Timer]
+OnCalendar=*:0/30
+
+[Install]
+WantedBy=timers.target

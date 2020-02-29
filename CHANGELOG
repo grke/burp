@@ -1,3 +1,16 @@
+2020-03-01 Changes in burp-2.3.24:
+  * 848: Protocol 2 - warn and skip on verify/restore of unsupported
+    file types.
+  * From Dan Tihelka:
+    Improve systemd services a bit
+    - Use type=simple and foreground mode in the server's service file.
+      The forking is not necessary under systemd and it also nicely catches all
+      the stdout/stderr messages when running in "foreground"
+    - Create client service and timer units.
+      The client is triggered every 30 minutes by the timer unit.
+  * Move systemd files to a generic systemd directory.
+    - Remove unmaintained distro-specific init scripts and specfiles.
+
 2020-02-01 Changes in burp-2.3.22:
   * 845: Fix possible segfault in server-side listing.
   * 841: Fix protocol2 bug where cname was overwritten.

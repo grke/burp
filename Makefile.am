@@ -5,9 +5,6 @@ AM_CPPFLAGS = -fno-strict-aliasing
 CLEANFILES =
 
 EXTRA_DIST = \
-	android/build-script-android \
-	android/burp_ca \
-	android/README \
 	configs/client/burp.conf.in \
 	configs/server/burp.conf.in \
 	configs/server/summary_script.in \

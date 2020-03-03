@@ -769,7 +769,7 @@ static int run_server(struct conf **confs, const char *conffile)
 						if(!get_int(confs[OPT_FORK]))
 						{
 							gentleshutdown++;
-							ret=1;
+							ret=0; // process_incoming_client() finished without errors
 							goto end;
 						}
 						continue;

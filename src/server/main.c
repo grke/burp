@@ -1,3 +1,8 @@
+
+#ifdef HAVE_SYSTEMD
+#include  <systemd/sd-daemon.h>
+#endif
+
 #include "../burp.h"
 #include "../asfd.h"
 #include "../async.h"
@@ -90,6 +95,22 @@ static void log_listen_socket(const char *desc,
 		desc, addr, port, max_children);
 }
 
+// It is OK when *addr == address. If addr == NULL, only port is set
+static int split_addr(char * address, char ** addr, char ** port)
+{
+	if(!(*port=strrchr(address, ':')))
+	{
+		logp("Could not parse '%s'\n", address);
+		return -1;
+	}
+	if (addr != NULL) {
+		*addr = address;
+		*port[0]='\0';
+	}
+	(*port)++;
+	return 0;
+}
+
 static int init_listen_socket(struct strlist *address,
 	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
 {
@@ -103,13 +124,8 @@ static int init_listen_socket(struct strlist *address,
 
 	if(!(a=strdup_w(address->path, __func__)))
 		goto error;
-	if(!(port=strrchr(a, ':')))
-	{
-		logp("Could not parse '%s'\n", address->path);
+	if (split_addr(a, &a, &port))
 		goto error;
-	}
-	*port='\0';
-	port++;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family=AF_UNSPEC;
@@ -720,11 +736,38 @@ static int maybe_update_status_child_client_lists(struct async *mainas)
 	return update_status_child_client_lists(mainas);
 }
 
+#ifdef HAVE_SYSTEMD
+static int check_addr_for_desc(const struct strlist *addresses, int fd, enum asfd_fdtype * fdtype, const char ** addr, const char ** desc)
+{
+	const struct strlist *a;
+	char * portstr;
+	int port;
+
+	for(a=addresses; a; a=a->next) {
+		if (split_addr(a->path, NULL, & portstr))
+			continue;
+		port = strtoul(portstr, NULL, 10);
+		// Check the port
+		if (sd_is_socket_inet(fd,AF_UNSPEC,0,-1,port)) {
+			*fdtype = ASFD_FD_SERVER_LISTEN_MAIN;
+			*addr = a->path;
+			return 0;
+		}
+	}
+	*desc = NULL;
+	return 1;
+}
+#endif
+
 static int run_server(struct conf **confs, const char *conffile)
 {
+#ifdef HAVE_SYSTEMD
+	int fd;
+#endif
 	int ret=-1;
 	SSL_CTX *ctx=NULL;
 	int found_normal_child=0;
+	int n;
 	struct asfd *asfd=NULL;
 	struct async *mainas=NULL;
 	struct strlist *addresses=get_strlist(confs[OPT_LISTEN]);
@@ -745,11 +788,51 @@ static int run_server(struct conf **confs, const char *conffile)
 	  || mainas->init(mainas, 0))
 		goto end;
 
-	if(init_listen_sockets(addresses, mainas,
-		ASFD_FD_SERVER_LISTEN_MAIN, "server")
-	  || init_listen_sockets(addresses_status, mainas,
-		ASFD_FD_SERVER_LISTEN_STATUS, "server status"))
-			goto end;
+#ifdef HAVE_SYSTEMD
+        n = sd_listen_fds(0);
+        if (n > 1) {
+		logp("Too many file descriptors received.\n");
+                goto end;
+	}
+	if (n == 1) {
+		fd = SD_LISTEN_FDS_START + 0;
+
+		// Use the sever config file to determine if the request is from listen or listen_status port
+		char const * desc;
+		char const * addr;
+		enum asfd_fdtype fdtype;
+
+		desc = "server by socket activation";
+		if (!check_addr_for_desc(addresses, fd, & fdtype, & addr, & desc))
+                {
+			desc = "server status by socket activation";
+			if (!check_addr_for_desc(addresses_status, fd, & fdtype, & addr, & desc))
+			{
+				logp("Strange address.\n");
+				desc = "unknown";
+				addr = "";
+			}
+		}
+
+		// Disable forking and daemonising (behave like -F -n)
+		set_int(confs[OPT_FORK], 0);
+		set_int(confs[OPT_DAEMON], 0);
+
+		if(!(asfd=setup_asfd(mainas, desc, &fd, addr)))
+		    goto end;
+		asfd->fdtype=fdtype;
+	}
+#else
+        n = 0;
+#endif
+	if (n == 0) {
+		if(init_listen_sockets(addresses, mainas,
+			ASFD_FD_SERVER_LISTEN_MAIN, "server")
+			|| init_listen_sockets(addresses_status, mainas,
+			ASFD_FD_SERVER_LISTEN_STATUS, "server status")) {
+				goto end;
+		}
+	}
 
 	while(!hupreload)
 	{

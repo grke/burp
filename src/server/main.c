@@ -737,7 +737,7 @@ static int maybe_update_status_child_client_lists(struct async *mainas)
 }
 
 #ifdef HAVE_SYSTEMD
-static int check_addr_for_desc(const struct strlist *addresses, int fd, enum asfd_fdtype * fdtype, const char ** addr, const char ** desc)
+static int check_addr_for_desc(const struct strlist *addresses, int fd, enum asfd_fdtype * fdtype, const char ** addr)
 {
 	const struct strlist *a;
 	char * portstr;
@@ -754,7 +754,6 @@ static int check_addr_for_desc(const struct strlist *addresses, int fd, enum asf
 			return 0;
 		}
 	}
-	*desc = NULL;
 	return 1;
 }
 #endif
@@ -790,37 +789,35 @@ static int run_server(struct conf **confs, const char *conffile)
 
 #ifdef HAVE_SYSTEMD
         n = sd_listen_fds(0);
-        if (n > 1) {
-		logp("Too many file descriptors received.\n");
-                goto end;
-	}
-	if (n == 1) {
-		fd = SD_LISTEN_FDS_START + 0;
-
-		// Use the sever config file to determine if the request is from listen or listen_status port
-		char const * desc;
-		char const * addr;
-		enum asfd_fdtype fdtype;
-
-		desc = "server by socket activation";
-		if (!check_addr_for_desc(addresses, fd, & fdtype, & addr, & desc))
-                {
-			desc = "server status by socket activation";
-			if (!check_addr_for_desc(addresses_status, fd, & fdtype, & addr, & desc))
-			{
-				logp("Strange address.\n");
-				desc = "unknown";
-				addr = "";
-			}
-		}
-
+	if (n >= 1) {
 		// Disable forking and daemonising (behave like -F -n)
 		set_int(confs[OPT_FORK], 0);
 		set_int(confs[OPT_DAEMON], 0);
 
-		if(!(asfd=setup_asfd(mainas, desc, &fd, addr)))
-		    goto end;
-		asfd->fdtype=fdtype;
+		for (int fdnum = SD_LISTEN_FDS_START; fdnum < SD_LISTEN_FDS_START + n; fdnum++)
+		{
+			// Use the sever config file to determine if the request is from listen or listen_status port
+			char const * desc;
+			char const * addr;
+			enum asfd_fdtype fdtype;
+
+			desc = "server by socket activation";
+			if (!check_addr_for_desc(addresses, fdnum, & fdtype, & addr))
+			{
+				desc = "server status by socket activation";
+				if (!check_addr_for_desc(addresses_status, fdnum, & fdtype, & addr))
+				{
+					logp("Strange address.\n");
+					desc = "unknown";
+					addr = "";
+				}
+			}
+
+			fd = fdnum;
+			if(!(asfd=setup_asfd(mainas, desc, &fd, addr)))
+			    goto end;
+			asfd->fdtype=fdtype;
+                }
 	}
 #else
         n = 0;

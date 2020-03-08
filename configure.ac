@@ -353,6 +353,40 @@ AC_SUBST([NCURSES_LIBS])
 
 
 dnl -----------------------------------------------------------
+dnl Check whether libsystemd is available
+dnl -----------------------------------------------------------
+
+have_systemd=no
+m4_ifdef([PKG_CHECK_MODULES],
+  [
+    PKG_CHECK_MODULES([systemd], [libsystemd],
+      [
+       have_systemd=yes
+       SYSTEMD_LIBS="$systemd_LIBS"
+       CFLAGS="$CFLAGS $systemd_CFLAGS -DHAVE_SYSTEMD=1"
+       AC_DEFINE([HAVE_SYSTEMD], [1], [Set to 1 if we have systemd])
+      ],
+      [
+       AC_CHECK_HEADERS([systemd/sd-daemon.h],
+         [
+           AC_CHECK_LIB([systemd], [sd_listen_fds],
+             [
+               SYSTEMD_LIBS="-lsystemd"
+               have_systemd=yes
+               AC_DEFINE([HAVE_SYSTEMD], [1], [Set to 1 if we have systemd])
+             ]
+           )
+         ]
+       )
+      ]
+    )
+  ]
+)
+
+AC_SUBST([SYSTEMD_LIBS])
+
+
+dnl -----------------------------------------------------------
 dnl Check whether libcheck ('Check') is available
 dnl -----------------------------------------------------------
 
@@ -550,6 +584,7 @@ AC_MSG_NOTICE([                   acl: ${have_acl}])
 AC_MSG_NOTICE([                 crypt: ${have_crypt}])
 AC_MSG_NOTICE([                  ipv6: ${enable_ipv6}])
 AC_MSG_NOTICE([               ncurses: ${have_ncurses}])
+AC_MSG_NOTICE([               systemd: ${have_systemd}])
 AC_MSG_NOTICE([               readall: ${have_readall}])
 AC_MSG_NOTICE([               openssl: ${have_ssl}])
 AC_MSG_NOTICE([                 xattr: ${have_xattr}])

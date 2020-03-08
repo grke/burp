@@ -762,6 +762,7 @@ static int run_server(struct conf **confs, const char *conffile)
 {
 #ifdef HAVE_SYSTEMD
 	int fd;
+	int socket_activated = 0;
 #endif
 	int ret=-1;
 	SSL_CTX *ctx=NULL;
@@ -790,9 +791,7 @@ static int run_server(struct conf **confs, const char *conffile)
 #ifdef HAVE_SYSTEMD
         n = sd_listen_fds(0);
 	if (n >= 1) {
-		// Disable forking and daemonising (behave like -F -n)
-		set_int(confs[OPT_FORK], 0);
-		set_int(confs[OPT_DAEMON], 0);
+		socket_activated = 1;
 
 		for (int fdnum = SD_LISTEN_FDS_START; fdnum < SD_LISTEN_FDS_START + n; fdnum++)
 		{
@@ -918,6 +917,21 @@ static int run_server(struct conf **confs, const char *conffile)
 				break;
 			}
 		}
+
+#ifdef HAVE_SYSTEMD
+		if (socket_activated) {
+			// count the number of running childs
+			n = 0;
+			for(asfd=mainas->asfd; asfd; asfd=asfd->next) {
+				if (asfd->pid > 1)
+					n++;
+			}
+			if (n <= 0) {
+				gentleshutdown++;
+				break;
+			}
+                }
+#endif
 	}
 
 	if(hupreload) logp("got SIGHUP reload signal\n");

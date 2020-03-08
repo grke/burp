@@ -353,37 +353,54 @@ AC_SUBST([NCURSES_LIBS])
 
 
 dnl -----------------------------------------------------------
-dnl Check whether libsystemd is available
+dnl Check whether systemd integration is allowed and libsystemd is available
 dnl -----------------------------------------------------------
 
-have_systemd=no
-m4_ifdef([PKG_CHECK_MODULES],
-  [
-    PKG_CHECK_MODULES([systemd], [libsystemd],
-      [
-       have_systemd=yes
-       SYSTEMD_LIBS="$systemd_LIBS"
-       CFLAGS="$CFLAGS $systemd_CFLAGS -DHAVE_SYSTEMD=1"
-       AC_DEFINE([HAVE_SYSTEMD], [1], [Set to 1 if we have systemd])
-      ],
-      [
-       AC_CHECK_HEADERS([systemd/sd-daemon.h],
-         [
-           AC_CHECK_LIB([systemd], [sd_listen_fds],
-             [
-               SYSTEMD_LIBS="-lsystemd"
-               have_systemd=yes
-               AC_DEFINE([HAVE_SYSTEMD], [1], [Set to 1 if we have systemd])
-             ]
-           )
-         ]
-       )
-      ]
-    )
-  ]
+AC_MSG_CHECKING([whether to enable systemd integration])
+AC_ARG_ENABLE([systemd],
+  [AS_HELP_STRING([--enable-systemd],
+    [enable systemd integration @<:@default=auto@:>@])],
+  [],
+  [enable_systemd=auto]
 )
+AC_MSG_RESULT([$enable_systemd])
 
-AC_SUBST([SYSTEMD_LIBS])
+have_systemd=no
+
+if test "$enable_systemd" != "no"; then
+  m4_ifdef([PKG_CHECK_MODULES],
+    [
+      PKG_CHECK_MODULES([systemd], [libsystemd],
+        [
+         have_systemd=yes
+         SYSTEMD_LIBS="$systemd_LIBS"
+         CFLAGS="$CFLAGS $systemd_CFLAGS -DHAVE_SYSTEMD=1"
+         AC_DEFINE([HAVE_SYSTEMD], [1], [Set to 1 if we have systemd])
+        ],
+        [
+         AC_CHECK_HEADERS([systemd/sd-daemon.h],
+           [
+             AC_CHECK_LIB([systemd], [sd_listen_fds],
+               [
+                 SYSTEMD_LIBS="-lsystemd"
+                 have_systemd=yes
+                 AC_DEFINE([HAVE_SYSTEMD], [1], [Set to 1 if we have systemd])
+               ]
+             )
+           ]
+           [
+             if test "$enable_systemd" = "yes"; then
+               AC_MSG_ERROR([systemd integration cannot be enabled; perhaps systemd is not installed?])
+             fi
+           ]
+         )
+        ]
+      )
+    ]
+  )
+
+  AC_SUBST([SYSTEMD_LIBS])
+fi
 
 
 dnl -----------------------------------------------------------

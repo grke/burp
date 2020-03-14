@@ -1,8 +1,3 @@
-
-#ifdef HAVE_SYSTEMD
-#include  <systemd/sd-daemon.h>
-#endif
-
 #include "../burp.h"
 #include "../asfd.h"
 #include "../async.h"
@@ -21,6 +16,10 @@
 #include "main.h"
 #include "run_action.h"
 #include "monitor/status_server.h"
+
+#ifdef HAVE_SYSTEMD
+#include  <systemd/sd-daemon.h>
+#endif
 
 static int hupreload=0;
 static int hupreload_logged=0;
@@ -95,19 +94,16 @@ static void log_listen_socket(const char *desc,
 		desc, addr, port, max_children);
 }
 
-// It is OK when *addr == address. If addr == NULL, only port is set
-static int split_addr(char * address, char ** addr, char ** port)
+static int split_addr(char **address, char **port)
 {
-	if(!(*port=strrchr(address, ':')))
+	char *cp;
+	if(!(cp=strrchr(*address, ':')))
 	{
-		logp("Could not parse '%s'\n", address);
+		logp("Could not parse '%s'\n", *address);
 		return -1;
 	}
-	if (addr != NULL) {
-		*addr = address;
-		*port[0]='\0';
-	}
-	(*port)++;
+	*cp='\0';
+	*port=cp+1;
 	return 0;
 }
 
@@ -124,7 +120,7 @@ static int init_listen_socket(struct strlist *address,
 
 	if(!(a=strdup_w(address->path, __func__)))
 		goto error;
-	if (split_addr(a, &a, &port))
+	if(split_addr(&a, &port))
 		goto error;
 
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -737,24 +733,94 @@ static int maybe_update_status_child_client_lists(struct async *mainas)
 }
 
 #ifdef HAVE_SYSTEMD
-static int check_addr_for_desc(const struct strlist *addresses, int fd, enum asfd_fdtype * fdtype, const char ** addr)
-{
-	const struct strlist *a;
-	char * portstr;
+static int check_addr_for_desc(
+	const struct strlist *addresses,
+	int fd,
+	const char **addr
+) {
 	int port;
+	int ret=-1;
+	char *a=NULL;
+	char *portstr;
+	const struct strlist *address;
 
-	for(a=addresses; a; a=a->next) {
-		if (split_addr(a->path, NULL, & portstr))
-			continue;
-		port = strtoul(portstr, NULL, 10);
-		// Check the port
-		if (sd_is_socket_inet(fd,AF_UNSPEC,0,-1,port)) {
-			*fdtype = ASFD_FD_SERVER_LISTEN_MAIN;
-			*addr = a->path;
+	for(address=addresses; address; address=address->next)
+	{
+		free_w(&a);
+		if(!(a=strdup_w(address->path, __func__)))
+			goto end;
+		if(split_addr(&a, &portstr))
+			goto end;
+		port=strtoul(portstr, NULL, 10);
+		if(sd_is_socket_inet(fd, AF_UNSPEC, 0, -1, port))
+		{
+			*addr=address->path;
 			return 0;
 		}
 	}
-	return 1;
+end:
+	free_w(&a);
+	return ret;
+}
+
+static int socket_activated_init_listen_sockets(
+	struct async *mainas,
+	struct strlist *addresses,
+	struct strlist *addresses_status
+) {
+	int n=0;
+
+        n=sd_listen_fds(0);
+	if(n<0)
+	{
+		logp("sd_listen_fds() error: %d %s\n",
+			n, strerror(errno));
+		return -1;
+	}
+	else if(!n)
+		return 0;
+
+	logp("Socket activated\n");
+
+	for(int fdnum=SD_LISTEN_FDS_START;
+		fdnum<SD_LISTEN_FDS_START+n; fdnum++)
+	{
+		int fd=-1;
+		const char *desc=NULL;
+		const char *addr=NULL;
+		struct asfd *newfd=NULL;
+		enum asfd_fdtype fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
+
+		if(!check_addr_for_desc(addresses,
+			fdnum, &addr))
+		{
+			desc="server by socket activation";
+			fdtype=ASFD_FD_SERVER_LISTEN_MAIN;
+		}
+		else if(!check_addr_for_desc(addresses_status,
+			fdnum, &addr))
+		{
+			desc="server status by socket activation";
+			fdtype=ASFD_FD_SERVER_LISTEN_STATUS;
+		}
+		else
+		{
+			logp("Strange socket activation fd: %d\n", fdnum);
+			return -1;
+		}
+
+		fd=fdnum;
+		if(!(newfd=setup_asfd(mainas, desc, &fd, addr)))
+			return -1;
+		newfd->fdtype=fdtype;
+
+		// We are definitely in socket activation mode now. Use
+		// gentleshutdown to make it exit when all child fds are gone.
+		gentleshutdown++;
+		gentleshutdown_logged++;
+	}
+
+	return 0;
 }
 #endif
 
@@ -766,8 +832,6 @@ static int run_server(struct conf **confs, const char *conffile)
 #endif
 	int ret=-1;
 	SSL_CTX *ctx=NULL;
-	int found_normal_child=0;
-	int n;
 	struct asfd *asfd=NULL;
 	struct async *mainas=NULL;
 	struct strlist *addresses=get_strlist(confs[OPT_LISTEN]);
@@ -789,45 +853,17 @@ static int run_server(struct conf **confs, const char *conffile)
 		goto end;
 
 #ifdef HAVE_SYSTEMD
-        n = sd_listen_fds(0);
-	if (n >= 1) {
-		socket_activated = 1;
-
-		for (int fdnum = SD_LISTEN_FDS_START; fdnum < SD_LISTEN_FDS_START + n; fdnum++)
-		{
-			// Use the sever config file to determine if the request is from listen or listen_status port
-			char const * desc;
-			char const * addr;
-			enum asfd_fdtype fdtype;
-
-			desc = "server by socket activation";
-			if (!check_addr_for_desc(addresses, fdnum, & fdtype, & addr))
-			{
-				desc = "server status by socket activation";
-				if (!check_addr_for_desc(addresses_status, fdnum, & fdtype, & addr))
-				{
-					logp("Strange address.\n");
-					desc = "unknown";
-					addr = "";
-				}
-			}
-
-			fd = fdnum;
-			if(!(asfd=setup_asfd(mainas, desc, &fd, addr)))
-			    goto end;
-			asfd->fdtype=fdtype;
-                }
-	}
-#else
-        n = 0;
+	if(socket_activated_init_listen_sockets(mainas,
+		addresses, addresses_status)==-1)
+			goto end;
 #endif
-	if (n == 0) {
+	if(!mainas->asfd)
+	{
 		if(init_listen_sockets(addresses, mainas,
 			ASFD_FD_SERVER_LISTEN_MAIN, "server")
-			|| init_listen_sockets(addresses_status, mainas,
-			ASFD_FD_SERVER_LISTEN_STATUS, "server status")) {
+		  || init_listen_sockets(addresses_status, mainas,
+			ASFD_FD_SERVER_LISTEN_STATUS, "server status"))
 				goto end;
-		}
 	}
 
 	while(!hupreload)
@@ -900,20 +936,26 @@ static int run_server(struct conf **confs, const char *conffile)
 
 		chld_check_for_exiting(mainas);
 
-		// Leave if we had a SIGUSR1 and there are no children running.
 		if(gentleshutdown)
 		{
+			int n=0;
 			if(!gentleshutdown_logged)
 			{
 				logp("got SIGUSR2 gentle reload signal\n");
 				logp("will shut down once children have exited\n");
 				gentleshutdown_logged++;
 			}
-// FIX THIS:
-// found_normal_child=chld_add_fd_to_normal_sets(confs, &fsr, &fse, &mfd);
-			else if(!found_normal_child)
+
+			for(asfd=mainas->asfd; asfd; asfd=asfd->next)
 			{
-				logp("all children have exited - shutting down\n");
+				if(asfd->pid<=0)
+					continue;
+				n++;
+				break;
+			}
+			if(!n)
+			{
+				logp("All children have exited\n");
 				break;
 			}
 		}

@@ -115,6 +115,7 @@ main_LDADD = \
 	$(NCURSES_LIBS) \
 	$(OPENSSL_LIBS) \
 	$(RSYNC_LIBS) \
+	$(SYSTEMD_LIBS) \
 	$(ZLIBS) \
 	$(CAP_LIBS)
 
@@ -398,6 +399,7 @@ runner_LDADD = \
 	$(CRYPT_LIBS) \
 	$(NCURSES_LIBS) \
 	$(RSYNC_LIBS) \
+	$(SYSTEMD_LIBS) \
 	$(OPENSSL_LIBS) \
 	$(ZLIBS) \
 	$(CAP_LIBS)

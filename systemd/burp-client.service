@@ -10,5 +10,3 @@ Type=oneshot
 # 3: timer conditions on the server were not met
 # 4: could not connect to serve
 SuccessExitStatus=3
-
-

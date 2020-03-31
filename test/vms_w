@@ -2,20 +2,23 @@
 #
 # Some useful wrapping to help the vms test script with automatic builds and
 # testing.
-set -e
-set -x
+set -eufx
 
-tarfile=$(ls burp-*.tar.bz2)
-dir=${tarfile%*.tar.bz2}
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+version="$(grep AC_INIT "$SCRIPT_DIR/../configure.ac" \
+	| cut -f 2 -d ',' | tr -d '[]')"
+tarfile='burp.tar.bz2'
+dir="burp-$version"
 
 if [ "$1" = "burp-main" ] ; then
-	$dir/test/vms $tarfile
+	test/vms_main $tarfile
 elif [ "$1" = "burp-i386" ] ; then
-	$dir/test/vms_i386 $tarfile $dir
+	test/vms_i386 $tarfile $dir
 elif [ "$1" = "burp-freebsd" ] ; then
-	$dir/test/vms_freebsd $tarfile $dir
+	test/vms_freebsd $tarfile $dir
 elif [ "$1" = "burp-netbsd" ] ; then
-	$dir/test/vms_netbsd $tarfile $dir
+	test/vms_netbsd $tarfile $dir
 else
 	echo "Do not know what sort of build to do"
 	exit 1

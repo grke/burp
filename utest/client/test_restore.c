@@ -25,7 +25,7 @@ static char *absolute(const char *fname)
 {
 	static char path[1024];
 	char cwd[512];
-	fail_unless(getcwd(cwd, sizeof(cwd)));
+	fail_unless(getcwd(cwd, sizeof(cwd))!=NULL);
 	snprintf(path, sizeof(path), "%s/%s/%s", cwd, BASE, fname);
 	return path;
 }

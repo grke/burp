@@ -46,7 +46,7 @@ static char *gen_fullpath(const char *prefix, char **comps)
 	char cwd[PATH_MAX];
 
 	number_of_components=prng_next()%6;
-	fail_unless(getcwd(cwd, sizeof(cwd)));
+	fail_unless(getcwd(cwd, sizeof(cwd))!=NULL);
 	fail_unless(!astrcat(&path, cwd, __func__));
 
 	if(prefix)

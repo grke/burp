@@ -11,9 +11,6 @@ EXTRA_DIST = \
 	configs/server/backup_tool_script.in \
 	configs/certs/CA/CA.cnf.in \
 	configs/certs/CA/burp_ca.in \
-	freebsd \
-	rhel \
-	opensuse \
 	src/win32 \
 	utest/json_output \
 	$(TESTS)

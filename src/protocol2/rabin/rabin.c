@@ -56,11 +56,14 @@ static int blk_read(void)
 
 		if(win->pos == rconf.win_size)
 			win->pos=0;
-
 		if( blk->length >= rconf.blk_min
 		 && (blk->length == rconf.blk_max
-		  || (win->checksum % rconf.blk_avg) == rconf.prime))
-		{
+		  || (
+			(win->checksum & 1)
+			&& (win->checksum & 2)
+			&& !(win->checksum & 4)
+			&& (win->checksum % rconf.blk_avg) == rconf.prime))
+		) {
 			gcp++;
 			return 1;
 		}

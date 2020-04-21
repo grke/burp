@@ -205,7 +205,23 @@ enum ofr_e open_for_restore(struct asfd *asfd,
 		mkdir(path, 0777);
 	}
 	else
+	{
 		flags|=O_CREAT|O_TRUNC;
+
+		// Unlink first, so that a new file is created instead of
+		// overwriting an existing file in place. Should be safer in
+		// cases where the old file was hardlinked everywhere.
+		if(unlink(path) && errno!=ENOENT)
+		{
+			char msg[256]="";
+			snprintf(msg, sizeof(msg),
+				"Cannot unlink before restore: '%s': %s",
+				path, strerror(errno));
+			if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+				return OFR_ERROR;
+			return OFR_CONTINUE;
+		}
+	}
 
 	if(bfd->open(bfd, asfd, path, flags, S_IRUSR | S_IWUSR))
 	{

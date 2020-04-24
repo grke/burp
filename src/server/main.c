@@ -827,7 +827,6 @@ static int socket_activated_init_listen_sockets(
 static int run_server(struct conf **confs, const char *conffile)
 {
 #ifdef HAVE_SYSTEMD
-	int fd;
 	int socket_activated = 0;
 #endif
 	int ret=-1;
@@ -963,7 +962,7 @@ static int run_server(struct conf **confs, const char *conffile)
 #ifdef HAVE_SYSTEMD
 		if (socket_activated) {
 			// count the number of running childs
-			n = 0;
+			int n = 0;
 			for(asfd=mainas->asfd; asfd; asfd=asfd->next) {
 				if (asfd->pid > 1)
 					n++;

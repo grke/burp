@@ -9,7 +9,7 @@ static const char *prog=NULL;
 
 static void dump_sid(struct bsid *sid)
 {
-	printf("VSS header: %d %d %li %d\n",
+	printf("VSS header: %d %d %" PRId64 " %d\n",
         	sid->dwStreamId,
         	sid->dwStreamAttributes,
         	sid->Size,

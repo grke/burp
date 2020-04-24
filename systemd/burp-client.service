@@ -2,7 +2,7 @@
 Description=Burp backup client
 
 [Service]
-ExecStart=/usr/bin/burp -c /etc/burp/burp.conf -a t
+ExecStart=/usr/sbin/burp -c /etc/burp/burp.conf -a t
 Type=oneshot
 # 0: success
 # 1: error

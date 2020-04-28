@@ -1,3 +1,10 @@
+2020-05-01 Changes in burp-2.3.26:
+  * From Dan Tihelka:
+    - Initial systemd socket activation support proof-of-concept.
+  * 467: Sherlock221B's suggestion for accelerating protocol2 rabin:
+         Skip min block size minus window size.
+  * Socket activation fixes and cleanup.
+
 2020-03-01 Changes in burp-2.3.24:
   * 848: Protocol 2 - warn and skip on verify/restore of unsupported
     file types.

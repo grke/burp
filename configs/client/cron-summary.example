@@ -1,0 +1,6 @@
+MAILTO=""
+# Put this file in /etc/cron.d and uncomment the following line to send a
+# summary at 6 every morning. It works via the client-side status monitor.
+# If your client is using a different config file to /etc/burp/burp.conf,
+# change the first argument to its path.
+#0 6 * * *       root    /usr/share/burp/scripts/summary_script /etc/burp/burp.conf youremail@example.com "Daily backup summary"

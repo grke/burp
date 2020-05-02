@@ -3,6 +3,8 @@ Description=Burp backup server socket listener
 
 [Socket]
 ListenStream=4971
+# Uncomment if you want to run a status server.
+#ListenStream=4972
 
 [Install]
 WantedBy=sockets.target

@@ -1,10 +1,4 @@
 MAILTO=""
-# Put this file in /etc/cron.d and uncomment the following line to send a
-# summary at 6 every morning.
-# If your server is using a different config file to /etc/burp/burp-server.conf,
-# change the first argument to its path.
-0 6 * * *       root    /etc/burp/send_summary /etc/burp/burp.conf youremail@example.com "Daily backup summary"
-
 # The following will run file deduplication over all client storages every
 # Saturday at 8 in the morning. Again, if your server is using a different
 # config file to /etc/burp/burp-server.conf, change that argument.

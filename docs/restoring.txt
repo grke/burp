@@ -6,7 +6,7 @@ extraneous output has been snipped, for clarity.
 
 On the client side, list your available backups:
 
-root@small:/home/graham# burp -a l
+$ burp -a l
 Backup: 0000001 2018-01-26 10:47:26 +0000 (deletable)
 Backup: 0000002 2018-01-26 10:48:13 +0000
 Backup: 0000003 2018-01-27 01:30:42 +0000
@@ -15,7 +15,7 @@ Backup: 0000004 2018-01-27 01:30:55 +0000
 
 There are four backups available. Let's look at the contents of backup 3:
 
-root@small:/home/graham# burp -a l -b 3
+$ burp -a l -b 3
 Backup: 0000003 2018-01-27 01:30:42 +0000
 /home/graham/testdir/mydir1
 /home/graham/testdir/mydir1/B17689730947800001.pdf
@@ -33,9 +33,10 @@ Backup: 0000003 2018-01-27 01:30:42 +0000
 
 To restore everything to their original location, simply change the 'l' in the
 previous command to an 'r'. For me, this produces a lot of warnings because
-the original files still exist in their original locations:
+the original files still exist in their original locations. '-d' is also
+required, because you need to tell burp the target directory for the restore:
 
-root@small:/home/graham# burp -a r -b 3
+$ burp -a r -b 3 -d /
 2018-01-27 01:33:25 +0000: burp[5917] WARNING: Path exists: /home/graham/testdir/mydir1/B17689730947800001.pdf
 2018-01-27 01:33:25 +0000: burp[5917] WARNING: Path exists: /home/graham/testdir/mydir1/Invoice INV-8453.pdf
 ...etc...
@@ -44,30 +45,31 @@ root@small:/home/graham# burp -a r -b 3
 Instead, I can add '-f' to force overwriting any existing files, and I no
 longer get any warnings:
 
-root@small:/home/graham# burp -a r -b 3 -f
+$ burp -a r -b 3 -d / -f
 ...
 
 
-OK, so maybe you want to restore the files to a different location. You can add
-'-d' and a path. Burp will create the directory if it doesn't exist:
+OK, so maybe you want to restore the files to a different location. Just add
+your path to the '-d' option. Burp will create the directory if it doesn't
+exist:
 
-root@small:/home/graham# burp -a r -b 3 -d /tmp/restore
+$ burp -a r -b 3 -d /tmp/restore
 ...
 
 
 After running the above, and looking in /tmp/restore, you will find that the
 whole original directory structure is preserved. For example:
 
-root@small:/home/graham# ls -l /tmp/restore/home/graham/testdir/mydir1/cswdcd07.mp3
+$ ls -l /tmp/restore/home/graham/testdir/mydir1/cswdcd07.mp3
 -rw-r--r-- 1 graham graham 36402567 Jan 18 11:05 /tmp/restore/home/graham/testdir/mydir1/cswdcd07.mp3
 
 
 So, maybe you want to strip off some of the original leading directories with
 the '-s' option. We will strip off '/home/graham/':
 
-root@small:/home/graham# burp -a r -b 3 -d /tmp/restore -s 3
+$ burp -a r -b 3 -d /tmp/restore -s 3
 ...
-root@small:/home/graham# ls -l /tmp/restore/testdir/mydir1/cswdcd07.mp3
+$ ls -l /tmp/restore/testdir/mydir1/cswdcd07.mp3
 -rw-r--r-- 1 graham graham 36402567 Jan 18 11:05 /tmp/restore/testdir/mydir1/cswdcd07.mp3
 
 
@@ -75,7 +77,7 @@ Now, perhaps you want to restore only the things in 'mydir2'. You can use a
 regular expression to match the paths that you want. I recommend doing a list
 first, to see that your expression works as expected:
 
-root@small:/home/graham# burp -a l -b 3 -r mydir2
+$ burp -a l -b 3 -r mydir2
 Backup: 0000003 2018-01-27 01:30:42 +0000
 With regex: mydir2
 /home/graham/testdir/mydir2
@@ -84,30 +86,31 @@ With regex: mydir2
 /home/graham/testdir/mydir2/1200.x
 
 
-That looks fine to me, so just change the 'l' to an 'r':
-root@small:/home/graham# burp -a r -b 3 -r mydir2
+That looks fine to me, so just change the 'l' to an 'r' and add the target
+directory.
+$ burp -a r -b 3 -r mydir2 -d /
 ...
 
 
-Of course, that will restore to the original location again, so you can add
-the '-d' and '-s' options again if you like:
-root@small:/home/graham# burp -a r -b 3 -r mydir2 -d /tmp/restore -s 3
+Of course, that will restore to the original location again, so you can adjust
+the '-d' option and add the '-s' option again if you like:
+$ burp -a r -b 3 -r mydir2 -d /tmp/restore -s 3
 ...
 
 
 What if you just wanted to restore a single file?
 Well, just use a regular expression that matches your single file.
 
-root@small:/home/graham# burp -a l -b 3 -r /home/graham/testdir/mydir2/1195.pdf
+$ burp -a l -b 3 -r /home/graham/testdir/mydir2/1195.pdf -d /
 ...
-root@small:/home/graham# burp -a r -b 3 -r /home/graham/testdir/mydir2/1195.pdf
+$ burp -a r -b 3 -r /home/graham/testdir/mydir2/1195.pdf -d /
 ...
 
 
 Since I only have one path that contains 1195.pdf, I could have used a much
 shorter regular expression. For example:
 
-root@small:/home/graham# burp -a l -b 3 -r 1195.pdf
+$ burp -a l -b 3 -r 1195.pdf -d /
 ...
-root@small:/home/graham# burp -a r -b 3 -r 1195.pdf
+$ burp -a r -b 3 -r 1195.pdf -d /
 ...

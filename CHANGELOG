@@ -4,6 +4,7 @@
   * 467: Sherlock221B's suggestion for accelerating protocol2 rabin:
          Skip min block size minus window size.
   * Socket activation fixes and cleanup.
+  * 860: Fix incorrect cron summary example.
 
 2020-03-01 Changes in burp-2.3.24:
   * 848: Protocol 2 - warn and skip on verify/restore of unsupported

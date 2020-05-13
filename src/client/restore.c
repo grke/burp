@@ -795,7 +795,8 @@ int do_restore_client(struct asfd *asfd,
 	}
 	logp("Doing %s confirmed\n", act_str(act));
 	if(act==ACTION_RESTORE)
-		logp("Directory: '%s'\n", restore_desired_dir);
+		logp("Directory: '%s'\n",
+		  restore_desired_dir ? restore_desired_dir : "/");
 
 #if defined(HAVE_WIN32)
 	if(act==ACTION_RESTORE) win32_enable_backup_privileges();

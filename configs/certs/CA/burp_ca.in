@@ -59,9 +59,9 @@ name=
 case "$(uname -s)" in
 	SunOS) name="$(check-hostname | cut -d' ' -f7)" ;;
 	AIX) name="$(host "$(hostname)" | awk '{ print $1}')" ;;
-	NetBSD) name="$(hostname)" ;;
-	OpenBSD) name="$(uname -n)" ;;
-	*) name="$(hostname -f)" ;;
+	NetBSD) name="$(hostname || true)" ;;
+	OpenBSD) name="$(uname -n || true)" ;;
+	*) name="$(hostname -f || true)" ;;
 esac
 # Try NetBSD style.
 [ -n "$name" ] || name="$(hostname)"

@@ -19,12 +19,13 @@ REM want to let the old way work.
 IF EXIST "C:\Program Files\@human_name@" (
 	set "OPENSSL_CONF=C:\Program Files\@human_name@\openssl.conf"
 	set "openssl=C:\Program Files\@human_name@\bin\openssl.exe"
-	set "tmpconf=C:\Program Files\@human_name@\CA\tmp.conf"
+	set "ca_dir=C:\Program Files\@human_name@\CA"
 ) ELSE (
 	set "OPENSSL_CONF=%PROGRAMFILES%\@human_name@\openssl.conf"
 	set "openssl=%PROGRAMFILES%\@human_name@\bin\openssl.exe"
-	set "tmpconf=%PROGRAMFILES%\@human_name@\CA\tmp.conf"
+	set "ca_dir=%PROGRAMFILES%\@human_name@\CA"
 )
+set "tmpconf=%ca_dir%\tmp.conf"
 
 if %3.==. goto notenoughparams
 if %6.==. goto notenoughparams
@@ -33,6 +34,8 @@ if %8.==. goto notenoughparams
 REM Need to change forward slashes to backslashes in the paths.
 set keypath=%keypath:/=\%
 set requestpath=%requestpath:/=\%
+
+IF NOT EXIST "%ca_dir%" mkdir "%ca_dir%"
 
 echo "generating key %name%: %keypath%"
 "%openssl%" genrsa -out "%keypath%" 2048

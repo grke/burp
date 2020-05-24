@@ -124,7 +124,7 @@ CLIENT_LIBS = \
 
 .PHONY: all clean
 
-all: $(BINDIR)/$(PACKAGE_TARNAME).exe $(BINDIR)/$(PACKAGE_TARNAME)_ca.bat
+all: $(BINDIR)/$(PACKAGE_TARNAME).exe $(BINDIR)/$(PACKAGE_TARNAME)_ca.bat $(BINDIR)/$(PACKAGE_TARNAME).conf $(BINDIR)/openssl.conf
 
 clean:
 	@echo "Cleaning `pwd`"
@@ -144,5 +144,17 @@ $(BINDIR)/$(PACKAGE_TARNAME)_ca.bat:
 		-e 's/@name@/$(PACKAGE_TARNAME)/g' \
 		-e 's/@human_name@/$(PACKAGE_NAME)/g' \
 			< $(MAINDIR)/configs/certs/CA/burp_ca.bat.in > $@
+
+$(BINDIR)/$(PACKAGE_TARNAME).conf:
+	sed \
+		-e 's/@name@/$(PACKAGE_TARNAME)/g' \
+		-e 's/@human_name@/$(PACKAGE_NAME)/g' \
+			< $(MAINDIR)/configs/client/burp.conf-win.in > $@
+
+$(BINDIR)/openssl.conf:
+	sed \
+		-e 's/@name@/$(PACKAGE_TARNAME)/g' \
+		-e 's/@human_name@/$(PACKAGE_NAME)/g' \
+			< $(MAINDIR)/configs/client/openssl.conf-win.in > $@
 
 include ../Makefile.rules

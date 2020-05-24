@@ -1,0 +1,30 @@
+# An example config file to use if you are not running the Windows installer.
+mode = client
+server = 10.0.0.1:4971
+status_port = 4972
+cname = clientname
+password = abcdefgh
+
+server_can_restore = 0
+stdout = 1
+progress_counter = 1
+nobackup = .nobackup
+lockfile = C:/Program Files/@human_name@/lockfile
+
+include = C:/Users
+exclude_regex = ^[A-Z]:/recycler$
+exclude_regex = ^[A-Z]:/\$recycle\.bin$
+exclude_regex = ^[A-Z]:/pagefile\.sys$
+exclude_regex = ^[A-Z]:/swapfile\.sys$
+exclude_regex = ^[A-Z]:/hiberfil\.sys$
+split_vss = 0
+strip_vss = 0
+encryption_password = password
+
+ca_@name@_ca = C:/Program Files/@human_name@/bin/@name@_ca.bat
+ca_csr_dir = C:/Program Files/@human_name@/CA
+ssl_cert_ca = C:/Program Files/@human_name@/ssl_cert_ca.pem
+ssl_cert = C:/Program Files/@human_name@/ssl_cert-client.pem
+ssl_key = C:/Program Files/@human_name@/ssl_cert-client.key
+ssl_key_password = password
+ssl_peer_cn = @name@server

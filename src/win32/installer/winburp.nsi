@@ -300,18 +300,22 @@ FunctionEnd
 
 Function InstallCommonFiles
 	${If} $CommonFilesDone = 0
+		SetOutPath "$INSTDIR"
+		File "${SRC_DIR}\openssl.conf"
 		SetOutPath "$INSTDIR\bin"
-		File "${SRC_DIR}\${SSL_DLL}"
-		File "${SRC_DIR}\${CRYPTO_DLL}"
-		File "${SRC_DIR}\libpcreposix-0.dll"
-		File "${SRC_DIR}\libpcre-1.dll"
-		File "${SRC_DIR}\libyajl.dll"
-		File "${SRC_DIR}\zlib1.dll"
-		File "${SRC_DIR}\${LIBGCC_DLL}"
-		File "${SRC_DIR}\compat.dll"
-		File "${SRC_DIR}\libcheck-0.dll"
-		File "${SRC_DIR}\openssl.exe"
-		File "${SRC_DIR}\${PACKAGE_TARNAME}_ca.bat"
+		File "${SRC_DIR}\bin\compat.dll"
+		File "${SRC_DIR}\bin\${CRYPTO_DLL}"
+		File "${SRC_DIR}\bin\libcheck-0.dll"
+		File "${SRC_DIR}\bin\${LIBGCC_DLL}"
+		File "${SRC_DIR}\bin\libpcre-1.dll"
+		File "${SRC_DIR}\bin\libpcreposix-0.dll"
+		File "${SRC_DIR}\bin\libyajl.dll"
+		File "${SRC_DIR}\bin\openssl.exe"
+		File "${SRC_DIR}\bin\${PACKAGE_TARNAME}_ca.bat"
+		File "${SRC_DIR}\bin\${PACKAGE_TARNAME}.exe"
+		File "${SRC_DIR}\bin\${SSL_DLL}"
+		File "${SRC_DIR}\bin\utest.exe"
+		File "${SRC_DIR}\bin\zlib1.dll"
 		StrCpy $CommonFilesDone 1
 	${EndIf}
 FunctionEnd
@@ -342,11 +346,6 @@ donotresetinstdir:
 	StrCmp $Overwrite 1 overwrite
 	IfFileExists "$INSTDIR\${PACKAGE_NAME}.conf" end
 overwrite:
-
-; Need to create an empty openssl.conf file in order to not have warnings from
-; the ${PACKAGE_TARNAME}_ca.bat script.
-	FileOpen $R1 "$INSTDIR\openssl.conf" w
-	FileClose $R1
 
 	FileOpen $R1 "$INSTDIR\${PACKAGE_TARNAME}.conf" w
 
@@ -441,8 +440,6 @@ Section "File Service" SecFileDaemon
 	SectionIn 1 2 3
 
 	Call InstallCommonFiles
-	File "${SRC_DIR}\${PACKAGE_TARNAME}.exe"
-	File "${SRC_DIR}\utest.exe"
 SectionEnd
 
 SectionGroupEnd

@@ -32,7 +32,9 @@ BURP_BINARIES := \
 	compat.dll \
 	$(PACKAGE_TARNAME).exe \
 	$(PACKAGE_TARNAME)_ca.bat \
-	utest.exe \
+	$(PACKAGE_TARNAME).conf \
+	openssl.conf \
+	utest.exe
 
 DEPKGS_BINARIES := \
 	$(SSL_DLL) \
@@ -46,8 +48,6 @@ DEPKGS_BINARIES := \
 
 MINGW_LIBS := \
 	$(LIBGCC_DLL)
-
-DOC_FILES :=
 
 ##########################################################################
 
@@ -77,8 +77,8 @@ clean:
 define Convert_Binary
 release$(BITS)/$$(notdir $(1)): $(1)
 	$$(call checkdir,$$@)
-	$(ECHO_CMD)cp -f $$^ $$@ ; \
-	$(STAB2CV) $$@
+	$(ECHO_CMD)cp -f $$^ $$@
+	$(ECHO_CMD)$(STAB2CV) $$@
 endef
 
 define Copy_Binary
@@ -103,7 +103,12 @@ winburp.nsi:
 	cp ../installer/ReplaceInFile.nsh .
 
 $(INSTALL_EXE): winburp.nsi $(addprefix release$(BITS)/,$(BURP_BINARIES) $(DEPKGS_BINARIES) $(MINGW_LIBS))
-	NSISDIR=$(NSIS_DIR) \
-	$(NSIS_DIR)/makensis -V3 $(DEFINES) winburp.nsi
+	# Some hackery to make the final structure nicer.
+	rm -f bin
+	mkdir bin
+	mv release$(BITS)/* bin
+	mv bin/*.conf release$(BITS)
+	mv bin release$(BITS)
+	NSISDIR=$(NSIS_DIR) $(NSIS_DIR)/makensis -V3 $(DEFINES) winburp.nsi
 
 include $(BUILDDIR)/Makefile.rules

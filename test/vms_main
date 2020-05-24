@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #
 # Run builds and tests on Amazon virtual machines.
-set -e
-set -x
+set -eux
 
 prog=$(basename $0)
 DIR=$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)
@@ -63,9 +62,16 @@ ssh $ssh_opts "$host" "ln -sfT /burp-cross-tools/depkgs burp/burp-depkgs"
 docker_run "make -C src/win32"
 docker_run "make -C src/win32 WIN64=yes"
 docker_run "./test/test_windows64 $debian $windows Administrator"
-
 scp -r $ssh_opts "$host:burp/src/win*/release*/burp-win*installer*.exe" .
-ssh $ssh_opts "$host" "sudo rm -rf $tarfile burp"
+
+# For the files-only release.
+ssh $ssh_opts "$host" "sudo rm -rf Burp"
+ssh $ssh_opts "$host" "sudo mv burp/src/win32/installer64/release64 Burp"
+ssh $ssh_opts "$host" "zip -r Burp.zip Burp"
+scp -r $ssh_opts "$host:Burp.zip" .
+
+ssh $ssh_opts "$host" "sudo rm -rf '$tarfile' burp"
+ssh $ssh_opts "$host" "sudo rm -rf Burp Burp.zip"
 
 stop_instanceids "$instanceids"
 

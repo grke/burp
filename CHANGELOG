@@ -1,3 +1,9 @@
+2020-05-01 Changes in burp-2.3.28:
+  * 864: Separate files-only release for windows.
+  * 861: Try to make hostname calls in burp_ca more robust.
+  * 854: Fix "Directory: '(null)'" log message.
+  * 855: Talk about the -d option in docs/restoring.txt.
+
 2020-05-01 Changes in burp-2.3.26:
   * From Dan Tihelka:
     - Initial systemd socket activation support proof-of-concept.

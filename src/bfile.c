@@ -386,7 +386,7 @@ static int bfile_close(struct BFILE *bfd, struct asfd *asfd)
 		goto end;
 	}
 
-	if(bfd->mode==BF_WRITE)
+	if(bfd->mode==BF_WRITE && bfd->set_attribs_on_close)
 		attribs_set(asfd,
 			bfd->path, &bfd->statp, bfd->winattr, bfd->cntr);
 	bfd->lpContext=NULL;

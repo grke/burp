@@ -106,6 +106,7 @@ $(INSTALL_EXE): winburp.nsi $(addprefix release$(BITS)/,$(BURP_BINARIES) $(DEPKG
 	# Some hackery to make the final structure nicer.
 	rm -f bin
 	mkdir bin
+	mkdir CA
 	mv release$(BITS)/* bin
 	mv bin/*.conf release$(BITS)
 	mv bin release$(BITS)

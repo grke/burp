@@ -1,3 +1,7 @@
+2020-05-03 Changes in burp-2.3.30:
+  * 847: bfile should always obey set_attribs_on_close.
+         Fixes running the Windows client from a fat32 partition.
+
 2020-05-01 Changes in burp-2.3.28:
   * 864: Separate files-only release for windows.
   * 861: Try to make hostname calls in burp_ca more robust.

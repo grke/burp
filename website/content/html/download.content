@@ -1,17 +1,21 @@
 <p>
 Latest versions:
 <ul>
-<li>2.3.30: Latest
-<li>2.2.18: Stable
+<li><a href="https://github.com/grke/burp/releases/tag/2.3.30">2.3.30</a>: Latest
+<li><a href="https://github.com/grke/burp/releases/tag/2.2.18">2.2.18</a>: Stable
 <li>2.1.32: Old Stable
 </ul>
 </p>
 
 
 <P>
-For the latest tarball releases and Windows client installers, please
+For the stable tarball releases and Windows client installers, please
 visit the
 <a href="http://sourceforge.net/projects/burp">burp sourceforge page</a>.
+<br>
+For the latest tarball releases and Windows client installers, please
+visit the
+<a href="https://github.com/grke/burp/releases">burp github release page</a>.
 <br>
 My gpg public key is <a href="downloads/grke.gpg">here</a>. You can use this
 to verify the releases.

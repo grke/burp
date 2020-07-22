@@ -89,6 +89,15 @@ int forward_past_entry(struct manio *manio, struct iobuf *target,
 			case 0:
 				break;
 			case 1:
+				if(!(*pos)->offset)
+				{
+					// This is OK. I've seen it happen
+					// when the current manifest is an
+					// empty backup.
+					logp("Empty file in %s()\n", __func__);
+					sbuf_free(&sb);
+					return 0;
+				}
 				logp("End of file in %s()\n", __func__);
 				goto error;
 			default:
@@ -534,14 +543,18 @@ static int do_resume_work(
 		// Now need to go to the appropriate places in p1manio, cmanio
 		// and unmanio.
 
-		// This sets pos_phase1.
+		logp("  setting pos_phase1\n");
 		if(forward_past_entry(p1manio, chb, protocol, pos_phase1))
 			goto error;
 
 		// This sets pos_current. This manifest may not exist.
-		if(cmanio->fzp && forward_past_entry(cmanio,
-			chb, protocol, pos_current))
-				goto error;
+		if(cmanio->fzp)
+		{
+			logp("  setting pos_current\n");
+			if (forward_past_entry(cmanio,
+				chb, protocol, pos_current))
+					goto error;
+		}
 
 		// The unchanged manio needs to be positioned just before the
 		// found entry, otherwise it ends up having a duplicated entry.
@@ -552,12 +565,14 @@ static int do_resume_work(
 			goto error;
 		man_off_t_free(&pos);
 
+		logp("  setting entry counter_d\n");
 		if(forward_past_entry_counter(counters_d, chb, cntr, &pos))
 				goto error;
 		if(manio_close_and_truncate(&counters_d, pos, 0))
 			goto error;
 		man_off_t_free(&pos);
 
+		logp("  setting entry counter_n\n");
 		if(forward_past_entry_counter(counters_n, chb, cntr, &pos))
 				goto error;
 		if(manio_close_and_truncate(&counters_n, pos, 0))

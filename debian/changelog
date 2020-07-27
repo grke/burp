@@ -1,0 +1,17 @@
+burp (2.3.28-3) unstable; urgency=low
+
+    * Added max_parallel_jobs
+
+ -- Demid Rudak <demid.r@didww.com>  Mon, 15 Jun 2020 18:37:48 +0300
+
+burp (2.3.28-2) unstable; urgency=low
+
+    * move dist configuration to /etc/burp/examples
+
+ -- Demid Rudak <demid.r@didww.com>  Mon, 15 Jun 2020 18:37:48 +0300
+
+burp (2.3.28-1) unstable; urgency=low
+
+    * deb packaging
+
+ -- Demid Rudak <demid.r@didww.com>  Mon, 15 Jun 2020 18:37:48 +0300

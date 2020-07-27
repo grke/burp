@@ -458,10 +458,53 @@ static int log_command(struct async *as,
 	return 0;
 }
 
+/** looking for <username>/working entries */
+static int backup_scan_running_jobs(const char *dir, int *jobs_counter)
+{
+    DIR *dp;
+    struct dirent *entry;
+
+    if((dp = opendir(dir)) == NULL)
+        return -1;
+
+    chdir(dir);
+
+    while((entry = readdir(dp)) != NULL) {
+        struct stat statbuf;
+
+        lstat(entry->d_name,&statbuf);
+
+        if(!S_ISDIR(statbuf.st_mode)
+            || strcmp(".",entry->d_name) == 0
+            || strcmp("..",entry->d_name) == 0)
+                continue;
+
+        struct stat statp;
+        char *path=NULL;
+
+        if(!(path=prepend_s(entry->d_name, "working")))
+            return -1;
+
+        if(lstat(path, &statp) == 0
+            && S_ISLNK(statp.st_mode))
+                ++*jobs_counter;
+
+        free_w(&path);
+    }
+
+    chdir("/");
+    closedir(dp);
+
+    return 0;
+}
+
+
 static int run_action_server_do(struct async *as, struct sdirs *sdirs,
-	const char *incexc, int srestore, int *timer_ret, struct conf **cconfs)
+    const char *incexc, int srestore, int *timer_ret, struct conf **confs, struct conf **cconfs)
 {
 	int ret;
+	int max_parallel_jobs;
+	int running_jobs = 0;
 	int resume=0;
 	char msg[256]="";
 	char tstmp[48]="";
@@ -555,6 +598,20 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 		return run_delete(as->asfd, sdirs, cconfs);
 
 	// Only backup action left to deal with.
+    backup_scan_running_jobs(get_string(confs[OPT_DIRECTORY]), &running_jobs);
+    max_parallel_jobs = get_int(confs[OPT_MAX_PARALLEL_JOBS]);
+
+    logp("%d/%d jobs running (cur/max), current %s\n", running_jobs, max_parallel_jobs,
+         sdirs->current);
+
+    if (max_parallel_jobs && running_jobs >= max_parallel_jobs)
+    {
+        struct asfd *asfd=as->asfd;
+
+        logp("Max parallel jobs limit\n");
+        return asfd->write_str(asfd, CMD_GEN, "backup is not allowed");
+    }
+
 	ret=run_backup(as, sdirs,
 		cconfs, incexc, timer_ret, resume);
 
@@ -577,14 +634,14 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 }
 
 int run_action_server(struct async *as,
-	const char *incexc, int srestore, int *timer_ret, struct conf **cconfs)
+    const char *incexc, int srestore, int *timer_ret, struct conf **confs, struct conf **cconfs)
 {
 	int ret=-1;
         struct sdirs *sdirs=NULL;
         if((sdirs=sdirs_alloc())
           && !sdirs_init_from_confs(sdirs, cconfs))
 		ret=run_action_server_do(as,
-			sdirs, incexc, srestore, timer_ret, cconfs);
+            sdirs, incexc, srestore, timer_ret, confs, cconfs);
         if(sdirs) lock_release(sdirs->lock_storage_for_write);
         sdirs_free(&sdirs);
 	return ret;

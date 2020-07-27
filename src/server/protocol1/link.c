@@ -18,7 +18,6 @@ int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 	char *fullpatha=NULL;
 	char *fullpathb=NULL;
 	struct dirent *entry=NULL;
-	struct cntr *cntr=get_cntr(confs);
 
 	if(!(tmp=prepend_s(dst, "dummy")))
 		goto end;
@@ -83,8 +82,8 @@ int recursive_hardlink(const char *src, const char *dst, struct conf **confs)
 		else
 		{
 			//logp("hardlinking %s to %s\n", fullpathb, fullpatha);
-			if(write_status(CNTR_STATUS_SHUFFLING,
-				fullpathb, cntr)
+			if(timed_operation_status_only(CNTR_STATUS_SHUFFLING,
+				fullpathb, confs)
 			  || do_link(fullpatha, fullpathb, &statp, confs,
 				0 /* do not overwrite target */))
 					goto end;

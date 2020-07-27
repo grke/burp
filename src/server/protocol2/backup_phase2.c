@@ -968,8 +968,9 @@ int do_backup_phase2_server_protocol2(struct async *as, struct asfd *chfd,
 		if(check_fail_on_warning(fail_on_warning, warn_ent))
 			goto end;
 
-		if(write_status(CNTR_STATUS_BACKUP,
-			csb && csb->path.buf?csb->path.buf:"", cntr))
+		if(timed_operation(CNTR_STATUS_BACKUP,
+			csb && csb->path.buf?csb->path.buf:"",
+			asfd, sdirs, confs))
 				goto end;
 
 		if(maybe_add_from_scan(manios, slist, chfd, &csb, cntr))

@@ -23,6 +23,7 @@ enum list_mode
 };
 
 static struct asfd *asfd;
+static struct conf **confs;
 static struct cntr *cntr;
 static enum protocol protocol;
 static const char *backup;
@@ -35,17 +36,20 @@ static unsigned long bno=0;
 int list_server_init(
 	struct asfd *a,
 	struct sdirs *s,
-	struct cntr *c,
+	struct conf **c,
 	enum protocol p,
 	const char *backup_str,
 	const char *regex_str,
 	const char *browsedir_str)
 {
 	asfd=a;
-	cntr=c;
+	confs=c;
 	protocol=p;
 	backup=backup_str;
 	browsedir=browsedir_str;
+	if (confs)
+		cntr=get_cntr(confs);
+
 	if(bu_get_list_with_working(s, &bu_list))
 		goto error;
 	if(regex_str
@@ -202,8 +206,8 @@ static int list_manifest(const char *fullpath)
 		if(sbuf_is_metadata(sb))
 			continue;
 
-		if(write_status(CNTR_STATUS_LISTING, sb->path.buf, cntr))
-			goto error;
+		if(timed_operation_status_only(CNTR_STATUS_LISTING,
+			sb->path.buf, confs)) goto error;
 
 		if(browsedir)
 		{
@@ -322,7 +326,7 @@ int do_list_server_work(
 
 	//logp("in do_list_server\n");
 
-	if(write_status(CNTR_STATUS_LISTING, NULL, cntr))
+	if(timed_operation_status_only(CNTR_STATUS_LISTING, NULL, confs))
 		goto end;
 
 	switch(list_mode)

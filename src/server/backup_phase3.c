@@ -44,7 +44,6 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 	struct manio *chmanio=NULL;
 	struct manio *unmanio=NULL;
 	enum protocol protocol=get_protocol(confs);
-	struct cntr *cntr=get_cntr(confs);
 	const char *rmanifest_relative=NULL;
 	char *seed_src=get_string(confs[OPT_SEED_SRC]);
 	char *seed_dst=get_string(confs[OPT_SEED_DST]);
@@ -94,8 +93,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 
 		if(usb->path.buf && !csb->path.buf)
 		{
-			if(write_status(CNTR_STATUS_MERGING,
-				usb->path.buf, cntr)) goto end;
+			if(timed_operation_status_only(CNTR_STATUS_MERGING,
+				usb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(usb, usb, unmanio, newmanio,
 				seed_src, seed_dst))
 			{
@@ -105,8 +104,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		}
 		else if(!usb->path.buf && csb->path.buf)
 		{
-			if(write_status(CNTR_STATUS_MERGING,
-				csb->path.buf, cntr)) goto end;
+			if(timed_operation_status_only(CNTR_STATUS_MERGING,
+				csb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(csb, csb, chmanio, newmanio,
 				seed_src, seed_dst))
 			{
@@ -121,8 +120,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		else if(!(pcmp=sbuf_pathcmp(usb, csb)))
 		{
 			// They were the same - write one.
-			if(write_status(CNTR_STATUS_MERGING,
-				csb->path.buf, cntr)) goto end;
+			if(timed_operation_status_only(CNTR_STATUS_MERGING,
+				csb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(csb, csb, chmanio, newmanio,
 				seed_src, seed_dst))
 			{
@@ -132,8 +131,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		}
 		else if(pcmp<0)
 		{
-			if(write_status(CNTR_STATUS_MERGING,
-				usb->path.buf, cntr)) goto end;
+			if(timed_operation_status_only(CNTR_STATUS_MERGING,
+				usb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(usb, usb, unmanio, newmanio,
 				seed_src, seed_dst))
 			{
@@ -143,8 +142,8 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 		}
 		else
 		{
-			if(write_status(CNTR_STATUS_MERGING,
-				csb->path.buf, cntr)) goto end;
+			if(timed_operation_status_only(CNTR_STATUS_MERGING,
+				csb->path.buf, confs)) goto end;
 			switch(manio_copy_entry(csb, csb, chmanio, newmanio,
 				seed_src, seed_dst))
 			{

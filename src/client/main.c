@@ -292,6 +292,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 		case ACTION_ESTIMATE:
 		case ACTION_STATUS:
 		case ACTION_STATUS_SNAPSHOT:
+		case ACTION_UNSET:
 			logp("Unexpected action in %s: %d\n",
 				__func__, action);
 			goto end;

@@ -15,24 +15,24 @@
 #include "monitor/status_server.h"
 #include "run_action.h"
 #include "child.h"
+#include "timer.h"
 
 static struct asfd *wasfd=NULL;
 
-int write_status(enum cntr_status cntr_status,
-	const char *path, struct cntr *cntr)
-{
-	time_t now=0;
-	time_t diff=0;
-	static time_t lasttime=0;
+static enum action act=ACTION_UNSET;
+
+static int write_status(
+	enum cntr_status cntr_status,
+	const char *path,
+	struct cntr *cntr,
+	time_t now
+) {
 	static size_t l=0;
 	static struct iobuf *wbuf=NULL;
-
-	if(!wasfd) return 0;
-	if(!cntr || !cntr->bno)
-		return 0;
+	static time_t lasttime=0;
+	time_t diff=0;
 
 	// Only update every 2 seconds.
-	now=time(NULL);
 	diff=now-lasttime;
 	if(diff<2)
 	{
@@ -42,6 +42,10 @@ int write_status(enum cntr_status cntr_status,
 		return 0;
 	}
 	lasttime=now;
+
+	if(!wasfd) return 0;
+	if(!cntr || !cntr->bno)
+		return 0;
 
 	// Only get a new string if we did not manage to write the previous
 	// one.
@@ -65,6 +69,79 @@ int write_status(enum cntr_status cntr_status,
 error:
 	iobuf_free(&wbuf);
 	return -1;
+}
+
+static int check_timer_script(
+	enum cntr_status cntr_status,
+	struct asfd *asfd,
+	struct sdirs *sdirs,
+	struct conf **confs,
+	time_t now
+) {
+	int interval;
+	time_t diff=0;
+	static time_t lasttime=0;
+
+	if(cntr_status!=CNTR_STATUS_SCANNING
+	&& cntr_status!=CNTR_STATUS_BACKUP)
+		return 0;
+
+	// The conf is in minutes, so multiply by 60 to get seconds.
+	interval=get_int(confs[OPT_TIMER_REPEAT_INTERVAL]) * 60;
+	if (!interval)
+		return 0;
+
+	diff=now-lasttime;
+	if(diff<interval)
+	{
+		// Might as well do this in case they fiddled their
+		// clock back in time.
+		if(diff<0) lasttime=now;
+		return 0;
+	}
+	lasttime=now;
+
+	return run_timer(
+		asfd,
+		sdirs,
+		confs
+	);
+}
+
+int timed_operation(
+	enum cntr_status cntr_status,
+	const char *path,
+	struct asfd *asfd,
+	struct sdirs *sdirs,
+	struct conf **confs
+) {
+	time_t now=0;
+
+	if(!confs) return 0;
+
+	now=time(NULL);
+
+	if(write_status(cntr_status, path, get_cntr(confs), now))
+		return -1;
+
+	if(act!=ACTION_BACKUP_TIMED)
+		return 0;
+	return check_timer_script(cntr_status,
+		asfd, sdirs, confs, now);
+}
+
+int timed_operation_status_only(
+	enum cntr_status cntr_status,
+	const char *path,
+	struct conf **confs
+) {
+	return timed_operation(
+		cntr_status,
+		path,
+		NULL, /*asfd*/
+		NULL, /*sdirs*/
+		confs
+	);
 }
 
 static int run_server_script(struct asfd *asfd,
@@ -135,9 +212,15 @@ static char *get_action_from_client(const char *buf)
 	if(buf)
 	{
 		if(!strcmp(buf, "backupphase1"))
+		{
+			act=ACTION_BACKUP;
 			return strdup_w("backup", __func__);
+		}
 		if(!strcmp(buf, "backupphase1timed"))
+		{
+			act=ACTION_BACKUP_TIMED;
 			return strdup_w("backup_timed", __func__);
+		}
 	}
 
 	if(!(ret=strdup_w(buf?buf:"", __func__)))

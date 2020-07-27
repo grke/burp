@@ -304,7 +304,7 @@ static int run_delete(struct asfd *asfd,
 	}
 	backupno=rbuf->buf+strlen("delete ");
 	return do_delete_server(asfd, sdirs,
-		get_cntr(cconfs), cname, backupno,
+		cconfs, cname, backupno,
 		get_string(cconfs[OPT_MANUAL_DELETE]));
 }
 
@@ -354,7 +354,7 @@ static int run_list(struct asfd *asfd,
 
 	iobuf_free_content(asfd->rbuf);
 
-	if(list_server_init(asfd, sdirs, get_cntr(cconfs),
+	if(list_server_init(asfd, sdirs, cconfs,
 		get_protocol(cconfs), backupno, listregex, browsedir))
 			goto end;
 	ret=do_list_server();
@@ -399,7 +399,7 @@ static int run_diff(struct asfd *asfd,
 	iobuf_free_content(asfd->rbuf);
 
 	ret=do_diff_server(asfd, sdirs,
-		get_cntr(cconfs), get_protocol(cconfs), backup1, backup2);
+		cconfs, get_protocol(cconfs), backup1, backup2);
 end:
 	free_w(&backup1);
 	free_w(&backup2);

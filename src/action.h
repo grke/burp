@@ -4,7 +4,8 @@
 // There is probably somewhere better to put these.
 enum action
 {
-	ACTION_BACKUP=0,
+	ACTION_UNSET=-1,
+	ACTION_BACKUP,
 	ACTION_RESTORE,
 	ACTION_VERIFY,
 	ACTION_LIST,

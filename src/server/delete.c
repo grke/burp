@@ -220,7 +220,7 @@ end:
 }
 
 int do_delete_server(struct asfd *asfd,
-	struct sdirs *sdirs, struct cntr *cntr,
+	struct sdirs *sdirs, struct conf **confs,
 	const char *cname, const char *backup, const char *manual_delete)
 {
 	int ret=-1;
@@ -228,6 +228,9 @@ int do_delete_server(struct asfd *asfd,
 	unsigned long bno=0;
 	struct bu *bu=NULL;
 	struct bu *bu_list=NULL;
+	struct cntr *cntr=NULL;
+	if(confs)
+		cntr=get_cntr(confs);
 
 	logp("in do_delete\n");
 
@@ -248,8 +251,8 @@ int do_delete_server(struct asfd *asfd,
 				found=1;
 				if(cntr)
 					cntr->bno=(int)bu->bno;
-				if(write_status(CNTR_STATUS_DELETING,
-					NULL, cntr))
+				if(timed_operation_status_only(
+					CNTR_STATUS_DELETING, NULL, confs))
 						goto end;
 				if(asfd->write_str(asfd, CMD_GEN, "ok")
 				  || delete_backup(sdirs, cname, bu,

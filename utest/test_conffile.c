@@ -740,6 +740,7 @@ START_TEST(test_clientconfdir_conf)
 		"dedup_group=dd_group\n"
 		"label=rty\n"
 		"label=xyz\n"
+		"timer_repeat_interval=5\n"
 	;
 
 	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
@@ -783,6 +784,7 @@ START_TEST(test_clientconfdir_conf)
 	assert_strlist(&s, "/timer/arg1", 0);
 	assert_strlist(&s, "/timer/arg2", 0);
 	assert_include(&s, NULL);
+	fail_unless(get_int(cconfs[OPT_TIMER_REPEAT_INTERVAL])==5);
 	ck_assert_str_eq(get_string(cconfs[OPT_DEDUP_GROUP]), "dd_group");
 	s=get_strlist(cconfs[OPT_LABEL]);
 	assert_strlist(&s, "rty", 0);

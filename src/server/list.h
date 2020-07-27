@@ -7,7 +7,7 @@ struct sdirs;
 extern int list_server_init(
 	struct asfd *a,
 	struct sdirs *s,
-	struct cntr *c,
+	struct conf **c,
 	enum protocol p,
 	const char *backup_str,
 	const char *regex_str,

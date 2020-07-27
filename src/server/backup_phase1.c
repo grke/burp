@@ -63,7 +63,8 @@ int backup_phase1_server_all(struct async *as,
 			case -1:
 			default: goto error;
 		}
-		if(write_status(CNTR_STATUS_SCANNING, sb->path.buf, cntr)
+		if(timed_operation(CNTR_STATUS_SCANNING, sb->path.buf,
+			asfd, sdirs, confs)
 		  || manio_write_sbuf(manio, sb))
 			goto error;
 		cntr_add_phase1(cntr, sb->path.cmd, 0);

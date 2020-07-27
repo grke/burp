@@ -119,6 +119,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_BACKUP_FAILOVERS_LEFT:
 		case OPT_N_FAILURE_BACKUP_WORKING_DELETION:
 		case OPT_MAX_PARALLEL_BACKUPS:
+		case OPT_TIMER_REPEAT_INTERVAL:
 			fail_unless(get_int(c[o])==0);
 			break;
 		case OPT_VSS_RESTORE:

@@ -691,6 +691,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_TIMER_ARG:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "timer_arg");
+	case OPT_TIMER_REPEAT_INTERVAL:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "timer_repeat_interval");
 	case OPT_LABEL:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "label");

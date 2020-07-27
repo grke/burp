@@ -151,7 +151,7 @@ static int send_backup_name_to_client(struct asfd *asfd, struct bu *bu)
 	return asfd->write_str(asfd, CMD_TIMESTAMP, msg);
 }
 
-int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
+int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 	enum protocol protocol, const char *backup1, const char *backup2)
 {
 	int ret=-1;
@@ -160,6 +160,10 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
 	struct bu *bu1=NULL;
 	struct bu *bu2=NULL;
 	struct bu *bu_list=NULL;
+	struct cntr *cntr=NULL;
+
+	if(confs)
+		cntr=get_cntr(confs);
 
 	//printf("in do_diff_server\n");
 
@@ -194,7 +198,7 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct cntr *cntr,
 		goto end;
 
 	cntr->bno=(int)bu2->bno;
-	if(write_status(CNTR_STATUS_DIFFING, NULL, cntr))
+	if(timed_operation_status_only(CNTR_STATUS_DIFFING, NULL, confs))
 		goto end;
 
 	if(diff_manifests(asfd, bu1->path, bu2->path, protocol))

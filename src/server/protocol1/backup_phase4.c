@@ -685,8 +685,8 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 		}
 		if(sb->protocol1->datapth.buf)
 		{
-			if(write_status(CNTR_STATUS_SHUFFLING,
-				sb->protocol1->datapth.buf, get_cntr(cconfs))
+			if(timed_operation_status_only(CNTR_STATUS_SHUFFLING,
+				sb->protocol1->datapth.buf, cconfs)
 			  || jiggle(sdirs, fdirs, sb, hardlinked_current,
 				deltabdir, deltafdir,
 				sigpath, &delfp, cconfs))
@@ -745,7 +745,7 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 
 	logp("Begin phase4 (shuffle files)\n");
 
-	if(write_status(CNTR_STATUS_SHUFFLING, NULL, get_cntr(cconfs)))
+	if(timed_operation_status_only(CNTR_STATUS_SHUFFLING, NULL, cconfs))
 		goto end;
 
 	if(!lstat(sdirs->current, &statp)) // Had a previous backup.
@@ -828,8 +828,8 @@ int backup_phase4_server_protocol1(struct sdirs *sdirs, struct conf **cconfs)
 		goto end;
 	}
 
-	if(write_status(CNTR_STATUS_SHUFFLING,
-		"deleting temporary files", get_cntr(cconfs)))
+	if(timed_operation_status_only(CNTR_STATUS_SHUFFLING,
+		"deleting temporary files", cconfs))
 			goto end;
 
 	// Remove the temporary data directory, we have now removed

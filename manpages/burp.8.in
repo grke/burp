@@ -431,6 +431,9 @@ Path to the script to run when a client connects with the timed backup option. I
 \fBtimer_arg=[string]\fR
 A user-definable argument to the timer script. You can have many of these. The timer_arg options can be overridden by the client configuration files in clientconfdir on the server.
 .TP
+\fBtimer_repeat_interval=[m]\fR
+During a timed backup, the timer script can be run at regular intervals. If the client is out of timeband, the backup will be interrupted. For example, setting 5 will cause burp to check every five minutes. The default is 0, which means that the script will only run once at the start of the backup.
+.TP
 \fBnotify_success_script=[path]\fR
 Path to the script to run when a backup succeeds. User arguments are appended after the first six reserved arguments. An example notify script is provided. The notify_success_script option can be overriddden by the client configuration files in clientconfdir on the server.
 .TP
@@ -847,6 +850,7 @@ Additionally, the following options can be overridden here for each client:
 \fBfail_on_warning\fR
 \fBtimer_script\fR
 \fBtimer_arg\fR
+\fBtimer_repeat_interval\fR
 \fBnotify_success_script\fR
 \fBnotify_success_arg\fR
 \fBnotify_success_warnings_only\fR

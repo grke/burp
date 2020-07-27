@@ -5,8 +5,18 @@
 
 struct async;
 
-extern int write_status(enum cntr_status cntr_status,
-	const char *path, struct cntr *cntr);
+extern int timed_operation(
+	enum cntr_status cntr_status,
+	const char *path,
+	struct asfd *asfd,
+	struct sdirs *sdirs,
+	struct conf **confs
+);
+extern int timed_operation_status_only(
+	enum cntr_status cntr_status,
+	const char *path,
+	struct conf **confs
+);
 
 extern int child(struct async *as,
 	int is_status_server,

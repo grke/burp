@@ -351,7 +351,7 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify",
 	//  iobuf_to_printable(&sb->path));
-	if(write_status(cntr_status, sb->path.buf, get_cntr(cconfs)))
+	if(timed_operation_status_only(cntr_status, sb->path.buf, cconfs))
 		return -1;
 
 	if(sb->path.cmd==CMD_HARD_LINK)

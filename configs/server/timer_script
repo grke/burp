@@ -112,16 +112,16 @@ if [ "$intimeband" = "0" ] ; then
 fi
 
 if get_intervals ; then
-	echo "Do a backup of $client now."
+	echo "Currently in timeband"
 	exit 0
 fi
 
 if [ "$min_timesecs" -lt "$nowsecs" ] ; then
 	echo "$min_time < $now."
-	echo "Do a backup of $client now."
+	echo "Currently in timeband"
 	exit 0
 fi
 
-echo "Not yet time for a backup of $client"
+echo "Currently out of timeband"
 
 exit 1

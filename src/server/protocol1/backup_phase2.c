@@ -1246,8 +1246,8 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 		if(breaking && breakcount--==0)
 			return breakpoint(breaking, __func__);
 
-		if(write_status(CNTR_STATUS_BACKUP,
-			rb->path.buf?rb->path.buf:"", cntr))
+		if(timed_operation(CNTR_STATUS_BACKUP,
+			rb->path.buf?rb->path.buf:"", asfd, sdirs, cconfs))
 				goto error;
 		if(last_requested
 		  || !manios->phase1

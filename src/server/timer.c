@@ -240,10 +240,10 @@ end:
 	switch(ret)
 	{
 		case 0:
-			logp("Do a backup of %s now\n", cname);
+			logp("Currently in timeband\n");
 			break;
 		case 1:
-			logp("Not yet time for a backup of %s\n", cname);
+			logp("Currently out of timeband\n");
 			break;
 	}
 	return ret;

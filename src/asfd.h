@@ -4,6 +4,7 @@
 #include "burp.h"
 #include "cmd.h"
 #include "ssl.h"
+#include "cntr.h"
 
 // Return values for simple_loop().
 enum asl_ret
@@ -89,6 +90,7 @@ struct asfd
 	// For the main server process.
 	pid_t pid;
 	enum asfd_fdtype fdtype;
+	enum cntr_status cntr_status;
 	char *client;
 
 	// Counters

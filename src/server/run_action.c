@@ -99,7 +99,7 @@ static int client_can_restore(struct conf **cconfs)
 	return client_can_generic(cconfs, OPT_CLIENT_CAN_RESTORE);
 }
 
-void maybe_do_notification(struct asfd *asfd,
+static void maybe_do_notification(struct asfd *asfd,
 	int status, const char *clientdir,
 	const char *storagedir, const char *filename,
 	const char *brv, struct conf **cconfs)
@@ -460,11 +460,11 @@ static int log_command(struct async *as,
 }
 
 static int run_action_server_do(struct async *as, struct sdirs *sdirs,
-    const char *incexc, int srestore, int *timer_ret, struct conf **confs, struct conf **cconfs)
+	const char *incexc, int srestore, int *timer_ret, struct conf **cconfs)
 {
-	int ret;
 	int max_parallel_backups;
 	int working=0;
+	int ret;
 	int resume=0;
 	char msg[256]="";
 	char tstmp[48]="";
@@ -592,14 +592,14 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 }
 
 int run_action_server(struct async *as,
-    const char *incexc, int srestore, int *timer_ret, struct conf **confs, struct conf **cconfs)
+	const char *incexc, int srestore, int *timer_ret, struct conf **cconfs)
 {
 	int ret=-1;
         struct sdirs *sdirs=NULL;
         if((sdirs=sdirs_alloc())
           && !sdirs_init_from_confs(sdirs, cconfs))
 		ret=run_action_server_do(as,
-            sdirs, incexc, srestore, timer_ret, confs, cconfs);
+			sdirs, incexc, srestore, timer_ret, cconfs);
         if(sdirs) lock_release(sdirs->lock_storage_for_write);
         sdirs_free(&sdirs);
 	return ret;

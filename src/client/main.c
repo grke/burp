@@ -212,7 +212,7 @@ error:
 timer_not_met:
 	return CLIENT_SERVER_TIMER_NOT_MET;
 max_parallel_backups:
-    return CLIENT_SERVER_MAX_PARALLEL_BACKUPS;
+	return CLIENT_SERVER_MAX_PARALLEL_BACKUPS;
 }
 
 static int s_server_session_id_context=1;

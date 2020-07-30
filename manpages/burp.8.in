@@ -449,6 +449,9 @@ The same as notify_success_arg, but for backups that failed.
 \fBnotify_failure_on_backup_with_failovers_left=[0|1]\fR
 In the case where there are server_failover entries left to try, you may not wish to notify on backup failure. The default is on.
 .TP
+\fBnotify_failure_on_backup_working_dir_deletion=[0|1]\fR
+On the next backup attempt after a backup was interrupted, it may not be possible to resume the previous backup. In this case (or if working_dir_recovery_method is 'delete'), the previous backup will be deleted. You may wish to be notified about this. The default is off.
+.TP
 \fBdedup_group=[string]\fR
 Enables you to group clients together for file deduplication purposes. For example, you might want to set 'dedup_group=xp' for each Windows XP client, and then run the bedup program on a cron job every other day with the option '\-g xp'.
 .TP
@@ -847,6 +850,7 @@ Additionally, the following options can be overridden here for each client:
 \fBnotify_failure_script\fR
 \fBnotify_failure_arg\fR
 \fBnotify_failure_on_backup_with_failovers_left\fR
+\fBnotify_failure_on_backup_working_dir_deletion\fR
 \fBdedup_group\fR
 \fBserver_script_pre\fR
 \fBserver_script_pre_arg\fR

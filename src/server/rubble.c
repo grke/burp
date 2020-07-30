@@ -13,6 +13,7 @@
 #include "protocol1/zlibio.h"
 #include "protocol2/backup_phase4.h"
 #include "rubble.h"
+#include "run_action.h"
 #include "sdirs.h"
 #include "timestamp.h"
 
@@ -92,10 +93,29 @@ end:
 	return ret;
 }
 
-static int working_delete(struct async *as, struct sdirs *sdirs)
-{
+static int working_delete(
+	struct async *as,
+	struct sdirs *sdirs,
+	struct conf **cconfs
+) {
 	// Try to remove it and start again.
 	logp("deleting old working directory\n");
+
+	if(get_int(cconfs[OPT_N_FAILURE_BACKUP_WORKING_DELETION]))
+	{
+		// The status needs to be non-zero in order to send a failure
+		// notification.
+		int status=1;
+
+		// Need to do notify before actually deleting, so that it grabs
+		// the not-yet deleted log. Close the log file pointer first.
+		log_fzp_set(NULL, cconfs);
+
+		maybe_do_notification(as->asfd, status,
+			sdirs->client, sdirs->current,
+			"log", "backup", cconfs);
+	}
+
 	if(recursive_delete(sdirs->rworking))
 	{
 		log_and_send(as->asfd,
@@ -132,7 +152,7 @@ static int working_resume(struct async *as, struct sdirs *sdirs,
 		case 0:
 			logp("Includes/excludes changed since last backup.\n");
 			logp("Will delete instead of resuming.\n");
-			return working_delete(as, sdirs);
+			return working_delete(as, sdirs, cconfs);
 		case -1:
 		default:
 			return -1;
@@ -359,7 +379,7 @@ static int recover_working(struct async *as,
 
 	if(recovery_method==RECOVERY_METHOD_DELETE)
 	{
-		ret=working_delete(as, sdirs);
+		ret=working_delete(as, sdirs, cconfs);
 		goto end;
 	}
 

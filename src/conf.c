@@ -713,6 +713,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_N_FAILURE_BACKUP_FAILOVERS_LEFT:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "notify_failure_on_backup_with_failovers_left");
+	case OPT_N_FAILURE_BACKUP_WORKING_DELETION:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE, "notify_failure_on_backup_working_dir_deletion");
 	case OPT_RESTORE_CLIENTS:
 	  return sc_lst(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_SORTED, "restore_client");

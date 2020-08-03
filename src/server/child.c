@@ -230,7 +230,7 @@ int child(struct async *as, int is_status_server,
 			cconfs, ret, timer_ret);
 
 	if(!ret)
-		ret=run_action_server(as, incexc, srestore, &timer_ret, confs, cconfs);
+		ret=run_action_server(as, incexc, srestore, &timer_ret, cconfs);
 
 	if(!s_script_post)
 		goto end;

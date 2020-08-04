@@ -98,7 +98,7 @@ static int client_can_restore(struct conf **cconfs)
 	return client_can_generic(cconfs, OPT_CLIENT_CAN_RESTORE);
 }
 
-static void maybe_do_notification(struct asfd *asfd,
+void maybe_do_notification(struct asfd *asfd,
 	int status, const char *clientdir,
 	const char *storagedir, const char *filename,
 	const char *brv, struct conf **cconfs)

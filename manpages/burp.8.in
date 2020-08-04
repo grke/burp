@@ -938,6 +938,8 @@ Sending signal 1 (HUP) to the main server process will cause it to reload. For t
 3: timer conditions on the server were not met
 .br
 4: could not connect to server
+.br
+5: max parallel backups reached
 
 .SH BUGS
 If you find bugs, please report them to the email list. See the website

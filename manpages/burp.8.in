@@ -413,6 +413,9 @@ Verify and authenticate client certificates at SSL layer before receiving or sen
 \fBssl_dhfile=[path]\fR
 Path to Diffie-Hellman parameter file. To generate one with openssl, use a command like this: openssl dhparam \-dsaparam \-out dhfile.pem 2048
 .TP
+\fBmax_parallel_backups=[number]\fR
+Defines the number of max parallel backups (the number of clients that are in a "working" state). The default is 0 - unlimited.
+.TP
 \fBmax_children=[number]\fR
 Defines the number of child processes to fork (the number of clients that can simultaneously connect. The default is 5. Specify multiple 'max_children' entries on separate lines if you have configured multiple 'listen' entries.
 .TP
@@ -935,6 +938,8 @@ Sending signal 1 (HUP) to the main server process will cause it to reload. For t
 3: timer conditions on the server were not met
 .br
 4: could not connect to server
+.br
+5: max parallel backups reached
 
 .SH BUGS
 If you find bugs, please report them to the email list. See the website

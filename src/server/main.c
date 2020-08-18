@@ -643,6 +643,43 @@ static int extract_client_name(struct asfd *asfd)
 	return 0;
 }
 
+int server_get_working(struct async *mainas)
+{
+	static int working=0;
+	struct asfd *a=NULL;
+
+	if(!mainas)
+		return working;
+
+	working=0;
+	for(a=mainas->asfd; a; a=a->next)
+	{
+		switch(a->cntr_status)
+		{
+		case CNTR_STATUS_SCANNING:
+		case CNTR_STATUS_BACKUP:
+			++working;
+			break;
+		default:;
+		}
+	}
+	return working;
+}
+
+static void extract_client_cntr_status(struct asfd *asfd)
+{
+	if(strncmp(asfd->rbuf->buf, "cntr", strlen("cntr")))
+		return;
+
+	struct cntr cntr={};
+	char *path=NULL;
+
+	asfd->cntr_status=!str_to_cntr(asfd->rbuf->buf, &cntr, &path)
+					? cntr.cntr_status
+					: CNTR_STATUS_UNSET;
+	free_w(&path);
+}
+
 static int write_to_status_children(struct async *mainas, struct iobuf *iobuf)
 {
 	size_t wlen;
@@ -835,6 +872,7 @@ static int run_server(struct conf **confs, const char *conffile)
 	struct async *mainas=NULL;
 	struct strlist *addresses=get_strlist(confs[OPT_LISTEN]);
 	struct strlist *addresses_status=get_strlist(confs[OPT_LISTEN_STATUS]);
+	int max_parallel_backups=get_int(confs[OPT_MAX_PARALLEL_BACKUPS]);
 
 	if(!(ctx=ssl_initialise_ctx(confs)))
 	{
@@ -877,6 +915,11 @@ static int run_server(struct conf **confs, const char *conffile)
 					{
 						// Incoming client.
 						asfd->new_client=0;
+
+						// Update 'working' counter.
+						if(max_parallel_backups)
+							server_get_working(mainas);
+
 						if(process_incoming_client(asfd,
 							ctx, conffile, confs))
 								goto end;
@@ -925,6 +968,9 @@ static int run_server(struct conf **confs, const char *conffile)
 //printf("got info from child: %s\n", asfd->rbuf->buf);
 			if(extract_client_name(asfd))
 				goto end;
+
+			if(max_parallel_backups)
+				extract_client_cntr_status(asfd);
 
 			if(write_to_status_children(mainas, asfd->rbuf))
 				goto end;

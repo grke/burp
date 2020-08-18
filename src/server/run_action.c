@@ -11,6 +11,7 @@
 #include "../log.h"
 #include "../regexp.h"
 #include "../run_script.h"
+#include "main.h"
 #include "backup.h"
 #include "delete.h"
 #include "diff.h"
@@ -461,6 +462,8 @@ static int log_command(struct async *as,
 static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 	const char *incexc, int srestore, int *timer_ret, struct conf **cconfs)
 {
+	int max_parallel_backups;
+	int working=0;
 	int ret;
 	int resume=0;
 	char msg[256]="";
@@ -555,6 +558,18 @@ static int run_action_server_do(struct async *as, struct sdirs *sdirs,
 		return run_delete(as->asfd, sdirs, cconfs);
 
 	// Only backup action left to deal with.
+	working = server_get_working(NULL);
+	max_parallel_backups = get_int(cconfs[OPT_MAX_PARALLEL_BACKUPS]);
+
+	logp("%d/%d working (cur/max)\n", working, max_parallel_backups);
+
+	if(max_parallel_backups && working >= max_parallel_backups)
+	{
+		struct asfd *asfd=as->asfd;
+		logp("max parallel backups reached\n");
+		return asfd->write_str(asfd, CMD_GEN, "max parallel backups");
+	}
+
 	ret=run_backup(as, sdirs,
 		cconfs, incexc, timer_ret, resume);
 

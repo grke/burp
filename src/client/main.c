@@ -37,6 +37,7 @@ enum cliret
 	CLIENT_RESTORE_WARNINGS=2,
 	CLIENT_SERVER_TIMER_NOT_MET=3,
 	CLIENT_COULD_NOT_CONNECT=4,
+	CLIENT_SERVER_MAX_PARALLEL_BACKUPS=5,
 	// This one happens after a successful certificate signing request so
 	// that it connects again straight away with the new key/certificate.
 	CLIENT_RECONNECT=100
@@ -54,7 +55,12 @@ static enum asl_ret maybe_check_timer_func(struct asfd *asfd,
 	int complen=0;
 	struct tchk *tchk=(struct tchk *)param;
 
-	if(!strcmp(asfd->rbuf->buf, "timer conditions not met"))
+	if(!strcmp(asfd->rbuf->buf, "max parallel backups"))
+	{
+		logp("Max parallel backups reached\n");
+		tchk->ret=CLIENT_SERVER_MAX_PARALLEL_BACKUPS;
+		return ASL_END_OK;
+	} else if(!strcmp(asfd->rbuf->buf, "timer conditions not met"))
 	{
 		logp("Timer conditions on the server were not met\n");
 		tchk->ret=CLIENT_SERVER_TIMER_NOT_MET;
@@ -134,6 +140,8 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 			break;
 		case CLIENT_SERVER_TIMER_NOT_MET:
 			goto timer_not_met;
+		case CLIENT_SERVER_MAX_PARALLEL_BACKUPS:
+			goto max_parallel_backups;
 		default:
 			goto error;
 	}
@@ -203,6 +211,8 @@ error:
 	return CLIENT_ERROR;
 timer_not_met:
 	return CLIENT_SERVER_TIMER_NOT_MET;
+max_parallel_backups:
+	return CLIENT_SERVER_MAX_PARALLEL_BACKUPS;
 }
 
 static int s_server_session_id_context=1;
@@ -598,6 +608,7 @@ int client(struct conf **confs,
 		{
 			case CLIENT_OK:
 			case CLIENT_SERVER_TIMER_NOT_MET:
+			case CLIENT_SERVER_MAX_PARALLEL_BACKUPS:
 			case CLIENT_RESTORE_WARNINGS:
 				finished=1;
 				break;

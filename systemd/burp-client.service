@@ -9,4 +9,5 @@ Type=oneshot
 # 2: restore gave warnings
 # 3: timer conditions on the server were not met
 # 4: could not connect to serve
+# 5: max parallel backups reached
 SuccessExitStatus=3

@@ -1,3 +1,8 @@
+2020-08-02 Changes in burp-2.3.34:
+  * 18: Option to look at the timer script regularly.
+  * From Demid R.:
+    - Add max_parallel_backups feature.
+
 2020-07-01 Changes in burp-2.3.32:
   * 686: Better email message when resuming is not possible.
     -  Add a configuration item to allow you to notify failure when a

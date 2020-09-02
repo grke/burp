@@ -1,20 +1,20 @@
-2020-08-02 Changes in burp-2.3.34:
+2020-09-02 Changes in burp-2.3.34:
   * 18: Option to look at the timer script regularly.
   * From Demid R.:
     - Add max_parallel_backups feature.
 
-2020-07-01 Changes in burp-2.3.32:
+2020-08-01 Changes in burp-2.3.32:
   * 686: Better email message when resuming is not possible.
     -  Add a configuration item to allow you to notify failure when a
        working directory is deleted.
   * Protect against hard-link attacks on restore by unlinking first.
   * Bug fix for resuming when the previous backup is empty.
 
-2020-06-03 Changes in burp-2.3.30:
+2020-07-03 Changes in burp-2.3.30:
   * 847: bfile should always obey set_attribs_on_close.
          Fixes running the Windows client from a fat32 partition.
 
-2020-05-01 Changes in burp-2.3.28:
+2020-06-01 Changes in burp-2.3.28:
   * 864: Separate files-only release for windows.
   * 861: Try to make hostname calls in burp_ca more robust.
   * 854: Fix "Directory: '(null)'" log message.

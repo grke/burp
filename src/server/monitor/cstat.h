@@ -8,11 +8,12 @@ extern void cstat_set_run_status(struct cstat *cstat,
 	enum run_status run_status);
 extern int cstat_set_backup_list(struct cstat *cstat);
 
+extern int cstat_get_client_names(struct cstat **clist,
+	const char *clientconfdir);
+
 #ifdef UTEST
 extern int cstat_permitted(struct cstat *cstat,
 	struct conf **parentconfs, struct conf **cconfs);
-extern int cstat_get_client_names(struct cstat **clist,
-	const char *clientconfdir);
 extern int cstat_reload_from_client_confs(struct cstat **clist,
 	struct conf **monitor_confs,
 	struct conf **globalcs, struct conf **cconfs);

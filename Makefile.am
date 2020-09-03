@@ -229,6 +229,7 @@ main_SOURCES = \
 	src/server/sdirs.c src/server/sdirs.h \
 	src/server/timer.c src/server/timer.h \
 	src/server/timestamp.c src/server/timestamp.h \
+	src/server/prometheus_exporter.c src/server/prometheus_exporter.h \
 	src/server/monitor/browse.c src/server/monitor/browse.h \
 	src/server/monitor/cache.c src/server/monitor/cache.h \
 	src/server/monitor/cstat.c src/server/monitor/cstat.h \

@@ -20,6 +20,7 @@ void iobuf_set(struct iobuf *iobuf, enum cmd cmd, char *buf, size_t len)
 	iobuf->cmd=cmd;
 	iobuf->buf=buf;
 	iobuf->len=len;
+	iobuf->capacity=len;
 }
 
 void iobuf_init(struct iobuf *iobuf)
@@ -56,6 +57,25 @@ void iobuf_move(struct iobuf *dst, struct iobuf *src)
 {
 	iobuf_copy(dst, src);
 	src->buf=NULL;
+}
+
+int iobuf_append(struct iobuf *dst, struct iobuf *src)
+{
+	if(dst->len+src->len>dst->capacity)
+	{
+		size_t new_capacity=dst->len+src->len;
+		void *p;
+		if(!(p=realloc_w(dst->buf, new_capacity, __func__)))
+			return -1;
+
+		dst->buf=(char *)p;
+		dst->capacity=new_capacity;
+	}
+
+	memcpy(dst->buf+dst->len, src->buf, src->len);
+	dst->len=dst->len+src->len;
+
+	return 0;
 }
 
 void iobuf_from_str(struct iobuf *iobuf, enum cmd cmd, char *str)
@@ -208,3 +228,45 @@ int iobuf_relative_path_attack(struct iobuf *iobuf)
 	return 1;
 }
 
+int iobuf_add_printf(struct iobuf *iobuf, char const * fmt, ...)
+{
+	va_list args;
+	int n;
+
+	if(!iobuf->buf
+	  &&!(iobuf->capacity=IOBUF_BUF_LEN,
+		iobuf->buf=(char*)malloc_w(IOBUF_BUF_LEN, __func__)))
+			return -1;
+
+	va_start(args, fmt);
+	n=vsnprintf(iobuf->buf+iobuf->len, iobuf->capacity-iobuf->len, fmt, args);
+	va_end(args);
+
+	if(n<0)
+		return -1;
+
+	if(n+iobuf->len>iobuf->capacity)
+	{
+		size_t new_capacity=iobuf->capacity;
+		void *p;
+
+		while(n+iobuf->len>new_capacity)
+			new_capacity*=2;
+
+		if(!(p=realloc_w(iobuf->buf, new_capacity, __func__)))
+			return -1;
+
+		iobuf->buf=(char *)p;
+		iobuf->capacity=new_capacity;
+
+		va_start(args, fmt);
+		n=vsnprintf(iobuf->buf+iobuf->len, iobuf->capacity-iobuf->len, fmt, args);
+		va_end(args);
+
+		if(n<0)
+			return -1;
+	}
+
+	iobuf->len+=n;
+	return n;
+}

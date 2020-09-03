@@ -435,6 +435,10 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_lst(c[o], 0, 0, "listen");
 	case OPT_LISTEN_STATUS:
 	  return sc_lst(c[o], 0, 0, "listen_status");
+	case OPT_LISTEN_PROMETHEUS_EXPORTER:
+	  return sc_lst(c[o], 0, 0, "listen_prometheus_exporter");
+	case OPT_PROMETHEUS_EXPORTER_REQUEST_TARGET:
+	  return sc_str(c[o], 0, 0, "prometheus_exporter_target");
 	case OPT_PORT_BACKUP:
 	  return sc_int(c[o], 0, 0, "port_backup");
 	case OPT_PORT_RESTORE:

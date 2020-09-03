@@ -19,7 +19,8 @@ enum asfd_streamtype
 {
 	ASFD_STREAM_STANDARD=0,
 	ASFD_STREAM_LINEBUF,
-	ASFD_STREAM_NCURSES_STDIN
+	ASFD_STREAM_NCURSES_STDIN,
+	ASFD_STREAM_HTTP
 };
 
 enum asfd_fdtype
@@ -27,6 +28,7 @@ enum asfd_fdtype
 	ASFD_FD_UNSET=0,
 	ASFD_FD_SERVER_LISTEN_MAIN,
 	ASFD_FD_SERVER_LISTEN_STATUS,
+	ASFD_FD_SERVER_LISTEN_PROMETHEUS_EXPORTER,
 	ASFD_FD_SERVER_PIPE_READ,
 	ASFD_FD_SERVER_PIPE_WRITE,
 };
@@ -135,6 +137,10 @@ extern struct asfd *setup_asfd_linebuf_write(struct async *as,
 extern struct asfd *setup_asfd_stdin(struct async *as);
 extern struct asfd *setup_asfd_stdout(struct async *as);
 extern struct asfd *setup_asfd_ncurses_stdin(struct async *as);
+extern struct asfd *setup_asfd_http(struct async *as,
+	const char *desc, int *fd, const char *listen);
+extern struct asfd *setup_asfd_http_client(struct async *as,
+	const char *desc, int *fd);
 
 extern int asfd_flush_asio(struct asfd *asfd);
 extern int asfd_write_wrapper(struct asfd *asfd, struct iobuf *wbuf);

@@ -30,11 +30,12 @@ static int write_status(
 	static size_t l=0;
 	static struct iobuf *wbuf=NULL;
 	static time_t lasttime=0;
+	static enum cntr_status last_cntr_status=CNTR_STATUS_UNSET;
 	time_t diff=0;
 
-	// Only update every 2 seconds.
+	// Only update every 2 seconds or if cntr_status was changed.
 	diff=now-lasttime;
-	if(diff<2)
+	if(diff<2 && cntr_status==last_cntr_status)
 	{
 		// Might as well do this in case they fiddled their
 		// clock back in time.
@@ -42,6 +43,7 @@ static int write_status(
 		return 0;
 	}
 	lasttime=now;
+	last_cntr_status=cntr_status;
 
 	if(!wasfd) return 0;
 	if(!cntr || !cntr->bno)

@@ -4,11 +4,15 @@
 #include "cmd.h"
 #include "fzp.h"
 
+
+#define IOBUF_BUF_LEN	65536
+
 struct iobuf
 {
 	enum cmd cmd;
 	char *buf;
 	size_t len;
+	size_t capacity;
 };
 
 extern struct iobuf *iobuf_alloc(void);
@@ -41,4 +45,12 @@ extern const char *iobuf_to_printable(struct iobuf *iobuf);
 
 extern int iobuf_relative_path_attack(struct iobuf *iobuf);
 
+#ifdef __GNUC__
+#define PRINTFLIKE(a,b) __attribute__((format(printf,a,b)))
+#else
+#define PRINTFLIKE(a,b)
+#endif
+extern int iobuf_add_printf(struct iobuf *iobuf, char const * fmt, ...) PRINTFLIKE(2,3);
+
+extern int iobuf_append(struct iobuf *dst, struct iobuf *src);
 #endif

@@ -30,6 +30,7 @@ extern char *get_tmp_filename(const char *basis);
 extern void add_fd_to_sets(int fd,
 	fd_set *read_set, fd_set *write_set, fd_set *err_set, int *max_fd);
 extern int set_peer_env_vars(struct sockaddr_storage *addr);
+extern int set_tcp_defer_accept(int fd, int value);
 extern int set_keepalive(int fd, int value);
 extern int init_client_socket(const char *host, const char *port);
 extern void reuseaddr(int fd);

@@ -253,6 +253,20 @@ int set_peer_env_vars(struct sockaddr_storage *addr)
 	return 0;
 }
 
+
+int set_tcp_defer_accept(int fd, int value)
+{
+	int tcp_defer_accept=value;
+	if(setsockopt(fd, SOL_SOCKET, TCP_DEFER_ACCEPT,
+		(char *)&tcp_defer_accept, sizeof(tcp_defer_accept)))
+	{
+		logp("setsockopt tcp_defer_accept=%d failed: %s\n",
+			value, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
 int set_keepalive(int fd, int value)
 {
 	int keepalive=value;

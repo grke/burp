@@ -123,6 +123,12 @@ static int async_io(struct async *as, int doread)
 		if(asfd->writebuflen && !asfd->write_blocked_on_read)
 			asfd->dowrite++; // The write buffer is not yet empty.
 
+		/* if we have flushed metrics to client,
+		   we can close the connection */
+		if(asfd->streamtype==ASFD_STREAM_HTTP
+		  && asfd->rbuf->len && !asfd->dowrite)
+			return asfd_problem(asfd);
+
 		if(!asfd->doread && !asfd->dowrite) continue;
 
 #ifdef HAVE_WIN32
@@ -176,6 +182,7 @@ static int async_io(struct async *as, int doread)
 			{
 				case ASFD_FD_SERVER_LISTEN_MAIN:
 				case ASFD_FD_SERVER_LISTEN_STATUS:
+				case ASFD_FD_SERVER_LISTEN_PROMETHEUS_EXPORTER:
 					as->last_time=as->now;
 					return -1;
 				default:
@@ -192,6 +199,7 @@ static int async_io(struct async *as, int doread)
 			{
 				case ASFD_FD_SERVER_LISTEN_MAIN:
 				case ASFD_FD_SERVER_LISTEN_STATUS:
+				case ASFD_FD_SERVER_LISTEN_PROMETHEUS_EXPORTER:
 					// Indicate to the caller that we have
 					// a new incoming client.
 					asfd->new_client++;

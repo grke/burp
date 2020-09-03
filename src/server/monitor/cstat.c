@@ -140,9 +140,6 @@ static int set_cstat_from_conf(struct cstat *cstat,
 	return 0;
 }
 
-#ifndef UTEST
-static
-#endif
 int cstat_get_client_names(struct cstat **clist, const char *clientconfdir)
 {
 	int i=0;

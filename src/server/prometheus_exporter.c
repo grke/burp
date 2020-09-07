@@ -210,7 +210,7 @@ static struct cstat *cstat_find_by_client(struct cstat *clist, struct asfd *asfd
 		: NULL;
 }
 
-static int count_bu_list(struct cstat *c)
+static int count_bu_list(struct cstat *c, int *bno)
 {
 	int counter = 0;
 	struct bu *bu;
@@ -219,7 +219,7 @@ static int count_bu_list(struct cstat *c)
 		return 0;
 
 	// Do it in both directions.
-	for(bu=c->bu; bu; ++counter, bu=bu->next);
+	for(bu=c->bu, *bno=bu->bno; bu; ++counter, bu=bu->next);
 	for(bu=c->bu->prev; bu; ++counter, bu=bu->prev);
 
 	return counter;
@@ -371,13 +371,15 @@ static int prometheus_exporter_prepare(struct asfd *asfd, struct iobuf *content)
 		"#TYPE burp_version gauge\n"
 		"#TYPE burp_clients gauge\n"
 		"#TYPE burp_active_backups gauge\n"
-		"#TYPE burp_client_backup_num gauge\n"
+		"#TYPE burp_client_stored_backups gauge\n"
 		"#TYPE burp_client_backup_has_in_progress gauge\n"
-		"#TYPE burp_client_backup_timestamp gauge\n"
-		"#TYPE burp_client_backup_size gauge\n"
-		"#TYPE burp_client_last_backup_size gauge\n"
-		"#TYPE burp_client_backup_duration gauge\n\n"
-		"burp_version {version=\"" PACKAGE_VERSION "\"} 1\n"
+		"#TYPE burp_client_last_backup_number gauge\n"
+		"#TYPE burp_client_last_backup_timestamp gauge\n"
+		"#TYPE burp_client_last_backup_bytes_estimated gauge\n"
+		"#TYPE burp_client_last_backup_bytes gauge\n"
+		"#TYPE burp_client_last_backup_bytes_received gauge\n"
+		"#TYPE burp_client_last_backup_duration gauge\n\n"
+		"burp_version{version=\"" PACKAGE_VERSION "\"} 1\n"
 		"burp_clients %" PRIu32 "\n"
 		"burp_active_backups %" PRId32 "\n",
 		count, server_get_working(NULL));
@@ -389,24 +391,29 @@ static int prometheus_exporter_prepare(struct asfd *asfd, struct iobuf *content)
 			continue;
 
 		prom_metrics_t *m=(prom_metrics_t *)c->cntrs;
-		int bu_counter=count_bu_list(c);
+		int bno=0;
+		int bu_counter=count_bu_list(c, &bno);
 
 		rc=iobuf_add_printf(content,
-			"\nburp_client_backup_num {name=\"%s\"} %" PRId32 "\n"
-			"burp_client_backup_has_in_progress {name=\"%s\"} %" PRId32 "\n",
-			 c->name, bu_counter, c->name, m->has_in_progress);
+			"\nburp_client_stored_backups{name=\"%s\"} %" PRId32 "\n"
+			"burp_client_backup_has_in_progress{name=\"%s\"} %" PRId32 "\n",
+			c->name, bu_counter, c->name, m->has_in_progress);
 		if(rc<0) return rc;
 
 		if(!m->timestamp)
 			continue;
 
 		rc=iobuf_add_printf(content,
-			"burp_client_backup_timestamp {name=\"%s\"} %" PRIu64 "\n"
-			"burp_client_backup_size {name=\"%s\"} %" PRIu64 "\n"
-			"burp_client_last_backup_size {name=\"%s\"} %" PRIu64 "\n"
-			"burp_client_backup_duration {name=\"%s\"} %" PRIu64 "\n",
+			"burp_client_last_backup_number{name=\"%s\"} %" PRId32 "\n"
+			"burp_client_last_backup_timestamp{name=\"%s\"} %" PRIu64 "\n"
+			"burp_client_last_backup_bytes_estimated{name=\"%s\"} %" PRIu64 "\n"
+			"burp_client_last_backup_bytes{name=\"%s\"} %" PRIu64 "\n"
+			"burp_client_last_backup_bytes_received{name=\"%s\"} %" PRIu64 "\n"
+			"burp_client_last_backup_duration{name=\"%s\"} %" PRIu64 "\n",
+			c->name, bno,
 			c->name, m->timestamp,
 			c->name, m->bytes_estimates,
+			c->name, m->bytes,
 			c->name, m->bytes_recv,
 			c->name, m->timestamp_end-m->timestamp);
 		if(rc<0) return rc;

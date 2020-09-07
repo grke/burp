@@ -248,6 +248,12 @@ Defines the main TCP address and port that the server listens on. Specify multip
 \fBlisten_status=[address]:[port]\fR
 Defines the main TCP address and port that the server listens on for status requests. Specify multiple 'listen_status' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_status_children' value. Comment out to have no status server.
 .TP
+\fBlisten_prometheus_exporter=[address]:[port]\fR
+Defines the main TCP address and port that the server listens on for Prometheus metrics requests. Specify multiple 'listen_prometheus_exporter' entries on separate lines in order to listen on multiple addresses and ports. Comment out to have no prometheus exporter server.
+.TP
+\fBprometheus_exporter_target=[target]\fR
+Defines the explicit prometheus_exporter_target. Comment out if you want to get a reply from any target.
+.TP
 \fBcname_lowercase=[0|1]\fR
 Whether to force lowercase cname when looking-up in clientconfdir. This also affects the fqdn lookup on the client (see client configuration options for details). The default is 0. When set to 1 the name provided by the client while authenticating will be lowercased.
 .TP

@@ -73,7 +73,7 @@ int iobuf_append(struct iobuf *dst, struct iobuf *src)
 	}
 
 	memcpy(dst->buf+dst->len, src->buf, src->len);
-	dst->len=dst->len+src->len;
+	dst->len+=src->len;
 
 	return 0;
 }
@@ -245,12 +245,12 @@ int iobuf_add_printf(struct iobuf *iobuf, char const * fmt, ...)
 	if(n<0)
 		return -1;
 
-	if(n+iobuf->len>iobuf->capacity)
+	if(n+iobuf->len>=iobuf->capacity)
 	{
 		size_t new_capacity=iobuf->capacity;
 		void *p;
 
-		while(n+iobuf->len>new_capacity)
+		while(n+iobuf->len>=new_capacity)
 			new_capacity*=2;
 
 		if(!(p=realloc_w(iobuf->buf, new_capacity, __func__)))

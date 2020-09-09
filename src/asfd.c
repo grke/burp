@@ -422,7 +422,7 @@ static enum append_ret asfd_append_all_to_write_buffer(struct asfd *asfd,
 			break;
 		case ASFD_STREAM_HTTP:
 			move_to_write_buffer(asfd,wbuf);
-			break;
+			return APPEND_OK;
 		case ASFD_STREAM_NCURSES_STDIN:
 		default:
 			logp("%s: unknown asfd stream type in %s: %d\n",

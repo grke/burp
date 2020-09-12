@@ -49,6 +49,7 @@ burp_client_backup_duration {name="testclient"} 5
 typedef struct prom_metrics prom_metrics_t;
 struct prom_metrics {
 	int	 has_in_progress;
+	enum cntr_status last_status;
 	uint64_t timestamp;
 	uint64_t timestamp_end;
 	uint64_t bytes_estimates;
@@ -318,6 +319,8 @@ void prometheus_exporter_notify(struct asfd *asfd)
 
 	prom_metrics_t *m=(prom_metrics_t*)c->cntrs;
 
+	m->last_status=cntr_status;
+
 	switch (cntr_status) {
 		// RW operations, have to update after finished
 		case CNTR_STATUS_MERGING:
@@ -372,7 +375,7 @@ static int prometheus_exporter_prepare(struct asfd *asfd, struct iobuf *content)
 		"#TYPE burp_clients gauge\n"
 		"#TYPE burp_active_backups gauge\n"
 		"#TYPE burp_client_stored_backups gauge\n"
-		"#TYPE burp_client_backup_has_in_progress gauge\n"
+		"#TYPE burp_client_status gauge\n"
 		"#TYPE burp_client_last_backup_number gauge\n"
 		"#TYPE burp_client_last_backup_timestamp gauge\n"
 		"#TYPE burp_client_last_backup_bytes_estimated gauge\n"
@@ -396,8 +399,8 @@ static int prometheus_exporter_prepare(struct asfd *asfd, struct iobuf *content)
 
 		rc=iobuf_add_printf(content,
 			"\nburp_client_stored_backups{name=\"%s\"} %" PRId32 "\n"
-			"burp_client_backup_has_in_progress{name=\"%s\"} %" PRId32 "\n",
-			c->name, bu_counter, c->name, m->has_in_progress);
+			"burp_client_status{name=\"%s\"} %" PRId32 "\n",
+			c->name, bu_counter, c->name, m->last_status);
 		if(rc<0) return rc;
 
 		if(!m->timestamp)

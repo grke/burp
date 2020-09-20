@@ -3,20 +3,44 @@
 #include "log.h"
 #include "regexp.h"
 
-regex_t *regex_compile(const char *str)
+static regex_t *do_regex_compile(const char *str, int flags)
 {
 	regex_t *regex=NULL;
 	if((regex=(regex_t *)malloc_w(sizeof(regex_t), __func__))
-	  && !regcomp(regex, str, REG_EXTENDED
-#ifdef HAVE_WIN32
-// Give Windows another helping hand and make the regular expressions
-// case insensitive.
-		| REG_ICASE
-#endif
-	)) return regex;
+	  && !regcomp(regex, str, flags))
+		return regex;
 
 	regex_free(&regex);
 	return NULL;
+}
+
+static regex_t *regex_compile_insensitive(const char *str)
+{
+	return do_regex_compile(str, REG_EXTENDED|REG_ICASE);
+}
+
+static regex_t *regex_compile_sensitive(const char *str)
+{
+	return do_regex_compile(str, REG_EXTENDED);
+}
+
+regex_t *regex_compile_backup(const char *str)
+{
+#ifdef HAVE_WIN32
+	// Give Windows another helping hand and make the regular expressions
+	// always case insensitive.
+	return regex_compile_insensitive(str);
+#else
+	return regex_compile_sensitive(str);
+#endif
+}
+
+regex_t *regex_compile_restore(const char *str, int insensitive)
+{
+	if(insensitive)
+		return regex_compile_insensitive(str);
+
+	return regex_compile_sensitive(str);
 }
 
 int regex_check(regex_t *regex, const char *buf)

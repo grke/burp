@@ -107,7 +107,7 @@ int strlist_compile_regexes(struct strlist *strlist)
 	// FIX THIS: when the regex does not compile, should remove the
 	// strlist entry completely.
         for(l=strlist; l; l=l->next)
-		if(!(l->re=regex_compile(l->path)))
+		if(!(l->re=regex_compile_backup(l->path)))
 			logp("unable to compile regex: %s\n", l->path);
 	return 0;
 }

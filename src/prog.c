@@ -75,7 +75,7 @@ static void usage_client(void)
 	printf("  -i             Print index of symbols and exit.\n");
 	printf("  -q <max secs>  Randomised delay of starting a timed backup.\n");
 	printf("  -Q             Do not log to stdout\n");
-	printf("  -r <regex>     Specify a regular expression.\n");
+	printf("  -r|-R <regex> Specify a regular expression (case sensitive or insensitive.\n");
 	printf("  -s <number>    Number of leading path components to strip during restore.\n");
 	printf("  -t             Dry-run to test config file syntax.\n");
 	printf("  -V             Print version and exit.\n");
@@ -325,6 +325,7 @@ int real_main(int argc, char *argv[])
 	enum burp_mode mode;
 	struct strlist *cli_overrides=NULL;
 	int keep_readall_caps=0;
+	int regex_case_insensitive=0;
 
 	log_init(argv[0]);
 #ifndef HAVE_WIN32
@@ -336,7 +337,7 @@ int real_main(int argc, char *argv[])
 		return run_bsparse(argc, argv);
 #endif
 
-	while((option=getopt(argc, argv, "a:b:C:c:d:o:Ffghijl:nQq:r:s:tVvXxz:?"))!=-1)
+	while((option=getopt(argc, argv, "a:b:C:c:d:o:Ffghijl:nQq:R:r:s:tVvXxz:?"))!=-1)
 	{
 		switch(option)
 		{
@@ -391,7 +392,12 @@ int real_main(int argc, char *argv[])
 			case 'q':
 				randomise=atoi(optarg);
 				break;
+			case 'R':
+				regex_case_insensitive=1;
+				regex=optarg;
+				break;
 			case 'r':
+				regex_case_insensitive=0;
 				regex=optarg;
 				break;
 			case 's':
@@ -544,6 +550,7 @@ int real_main(int argc, char *argv[])
 	set_int(confs[OPT_STRIP], strip);
 	set_int(confs[OPT_FORK], forking);
 	set_int(confs[OPT_DAEMON], daemon);
+	set_int(confs[OPT_REGEX_CASE_INSENSITIVE], regex_case_insensitive);
 
 	strip_trailing_slashes(&restoreprefix);
 	strip_trailing_slashes(&browsedir);

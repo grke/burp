@@ -163,7 +163,7 @@ static const char *get_features(enum protocol protocol, int srestore,
 	if(version && !strcmp(version, "1.4.40"))
 		old_version=1;
 
-	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:failover:vss_restore:%s%smsg:%s%sseed:", srestore?"srestore:":"", old_version?"":"counters_json:", proto, rshash);
+	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:failover:vss_restore:regex_icase:%s%smsg:%s%sseed:", srestore?"srestore:":"", old_version?"":"counters_json:", proto, rshash);
 	return features;
 }
 
@@ -565,6 +565,7 @@ static void setup_srestore(struct asfd *asfd,
 	asfd_mock_read(asfd, r, 0, CMD_GEN, "srestore ok");
 	asfd_assert_write(asfd, w, 0, CMD_GEN, "overwrite = 0");
 	asfd_assert_write(asfd, w, 0, CMD_GEN, "strip = 0");
+	asfd_assert_write(asfd, w, 0, CMD_GEN, "regex_case_insensitive = 0");
 	asfd_assert_write(asfd, w, 0, CMD_GEN, "srestore end");
 }
 
@@ -618,6 +619,7 @@ static void setup_sincexc_ok(struct asfd *asfd,
 		CMD_GEN, "scan_problem_raises_error = 0");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "overwrite = 0");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "strip = 0");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "regex_case_insensitive = 0");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "sincexc end");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "sincexc end ok");
 	setup_send_features_proto_end(asfd, &r, &w);
@@ -698,6 +700,7 @@ static void setup_orig_client_srestore(struct asfd *asfd,
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "srestore ok");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "overwrite = 1");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "strip = 0");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "regex_case_insensitive = 0");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore end");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "srestore end ok");
 
@@ -709,6 +712,7 @@ static void setup_orig_client_srestore(struct asfd *asfd,
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "srestore ok");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "overwrite = 1");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "strip = 0");
+	asfd_assert_write(asfd, &w, 0, CMD_GEN, "regex_case_insensitive = 0");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "orig_client = cli2");
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "srestore end");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "srestore end ok");

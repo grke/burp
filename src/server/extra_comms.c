@@ -129,7 +129,8 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 		/* clients can tell the server what kind of system they are. */
           || append_to_feat(&feat, "uname:")
           || append_to_feat(&feat, "failover:")
-          || append_to_feat(&feat, "vss_restore:"))
+          || append_to_feat(&feat, "vss_restore:")
+          || append_to_feat(&feat, "regex_icase:"))
 		goto end;
 
 	/* Clients can receive restore initiated from the server. */
@@ -485,6 +486,11 @@ static int extra_comms_read(struct async *as,
 		{
 			set_int(cconfs[OPT_VSS_RESTORE], VSS_RESTORE_OFF_STRIP);
 			set_int(globalcs[OPT_VSS_RESTORE], VSS_RESTORE_OFF_STRIP);
+		}
+		else if(!strncmp_w(rbuf->buf, "regex_icase=1"))
+		{
+			set_int(cconfs[OPT_REGEX_CASE_INSENSITIVE], 1);
+			set_int(globalcs[OPT_REGEX_CASE_INSENSITIVE], 1);
 		}
 		else
 		{

@@ -882,12 +882,13 @@ int do_restore_server(struct asfd *asfd, struct sdirs *sdirs,
 	regex_t *regex=NULL;
 	const char *regexstr=get_string(confs[OPT_REGEX]);
 	const char *backup=get_string(confs[OPT_BACKUP]);
+	int regex_case_insensitive=get_int(confs[OPT_REGEX_CASE_INSENSITIVE]);
 
 	logp("in do_restore\n");
 
 	if(regexstr
 	  && *regexstr
-	  && !(regex=regex_compile(regexstr)))
+	  && !(regex=regex_compile_restore(regexstr, regex_case_insensitive)))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "unable to compile regex: %s\n",

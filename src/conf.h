@@ -204,6 +204,7 @@ enum conf_opt
 	OPT_BACKUP2, // For diffs.
 	OPT_RESTOREPREFIX,
 	OPT_REGEX,
+	OPT_REGEX_CASE_INSENSITIVE,
 	// To do with listing.
 	OPT_BROWSEFILE,
 	OPT_BROWSEDIR,

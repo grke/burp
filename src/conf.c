@@ -864,6 +864,9 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_REGEX:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_INCEXC|CONF_FLAG_INCEXC_RESTORE, "regex");
+	case OPT_REGEX_CASE_INSENSITIVE:
+	  return sc_int(c[o], 0,
+		CONF_FLAG_INCEXC|CONF_FLAG_INCEXC_RESTORE, "regex_case_insensitive");
 	case OPT_MAX:
 	  return 0;
 	// No default, so we get compiler warnings if something was missed.

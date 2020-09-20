@@ -332,9 +332,9 @@ static int eval_path_match(char *tok, const char *fname)
 	{
 		regex_t *tmp;
 		if((strip=strip_quotes(tok)))
-			tmp=regex_compile(strip);
+			tmp=regex_compile_backup(strip);
 		else
-			tmp=regex_compile(tok);
+			tmp=regex_compile_backup(tok);
 		if(!(reg=(struct cregex *)malloc_w(sizeof(*reg), __func__)))
 		{
 			regex_free(&tmp);

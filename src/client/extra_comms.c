@@ -320,6 +320,16 @@ int extra_comms_client(struct async *as, struct conf **confs,
 			goto end;
 	}
 
+	if(server_supports(feat, ":regex_icase:"))
+	{
+		if(get_int(confs[OPT_REGEX_CASE_INSENSITIVE]))
+		{
+			  if(asfd->write_str(asfd, CMD_GEN,
+				"regex_icase=1"))
+					goto end;
+		}
+	}
+
 	if(asfd->write_str(asfd, CMD_GEN, "extra_comms_end")
 	  || asfd_read_expect(asfd, CMD_GEN, "extra_comms_end ok"))
 	{

@@ -42,19 +42,25 @@ int list_server_init(
 	const char *regex_str,
 	const char *browsedir_str)
 {
+	int regex_case_insensitive=0;
 	asfd=a;
 	confs=c;
 	protocol=p;
 	backup=backup_str;
 	browsedir=browsedir_str;
-	if (confs)
+	if(confs)
+	{
 		cntr=get_cntr(confs);
+		regex_case_insensitive=get_int(
+			confs[OPT_REGEX_CASE_INSENSITIVE]
+		);
+	}
 
 	if(bu_get_list_with_working(s, &bu_list))
 		goto error;
 	if(regex_str
 	  && *regex_str
-	  && !(regex=regex_compile(regex_str)))
+	  && !(regex=regex_compile_restore( regex_str, regex_case_insensitive)))
 	{
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "unable to compile regex: %s\n",

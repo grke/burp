@@ -105,8 +105,10 @@ When running a timed backup, sleep for a random number of seconds (between 0 and
 Do not log to stdout (overrides config file 'stdout' setting).
 .TP
 \fB\-r\fR \fB[regex]\fR
-Short for 'regular expression'. The argument is a regular expression with
-which to match backup files. Use it for lists and restores.
+Short for 'regular expression'. The argument is a case sensitive regular expression with which to match backup files. Use it for lists, restores and verifies.
+.TP
+\fB\-R\fR \fB[regex]\fR
+Case insensitive alternative to '-r'.
 .TP
 \fB\-s\fR \fB[number]\fR
 For use with restores \- strip a number of leading path components.

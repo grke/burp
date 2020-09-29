@@ -1,3 +1,6 @@
+2020-10-01 Changes in burp-2.3.36:
+  * 211: Choose case sensitivity on list/verify/restore, with '-r/-R'.
+
 2020-09-02 Changes in burp-2.3.34:
   * 18: Option to look at the timer script regularly.
   * From Demid R.:

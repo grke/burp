@@ -38,6 +38,8 @@ enum cliret
 	CLIENT_SERVER_TIMER_NOT_MET=3,
 	CLIENT_COULD_NOT_CONNECT=4,
 	CLIENT_SERVER_MAX_PARALLEL_BACKUPS=5,
+	CLIENT_SERVER_ANOTHER_INSTANCE_IS_ALREADY_RUNNING=6,
+	CLIENT_SERVER_FINALISING_PREVIOUS_BACKUP=7,
 	// This one happens after a successful certificate signing request so
 	// that it connects again straight away with the new key/certificate.
 	CLIENT_RECONNECT=100
@@ -54,6 +56,25 @@ static enum asl_ret maybe_check_timer_func(struct asfd *asfd,
 {
 	int complen=0;
 	struct tchk *tchk=(struct tchk *)param;
+
+	if (asfd->rbuf->cmd==CMD_ERROR)
+	{
+		static const char *finalising_str="Finalising previous backup of client.";
+
+		if(!strncmp(asfd->rbuf->buf, finalising_str, strlen(finalising_str)))
+		{
+			logp("Finalising previous backup of client. "
+			"Please try again later.\n");
+			tchk->ret=CLIENT_SERVER_FINALISING_PREVIOUS_BACKUP;
+			return ASL_END_OK;
+		} else if(!strcmp(asfd->rbuf->buf, "another instance is already running"))
+		{
+			logp("Another instance is already running\n");
+			tchk->ret=CLIENT_SERVER_ANOTHER_INSTANCE_IS_ALREADY_RUNNING;
+			return ASL_END_OK;
+		}
+		return ASL_END_ERROR;
+	}
 
 	if(!strcmp(asfd->rbuf->buf, "max parallel backups"))
 	{
@@ -142,6 +163,10 @@ static enum cliret backup_wrapper(struct asfd *asfd,
 			goto timer_not_met;
 		case CLIENT_SERVER_MAX_PARALLEL_BACKUPS:
 			goto max_parallel_backups;
+		case CLIENT_SERVER_ANOTHER_INSTANCE_IS_ALREADY_RUNNING:
+			goto another_instance_is_already_running;
+		case CLIENT_SERVER_FINALISING_PREVIOUS_BACKUP:
+			goto server_finalising_previous_backup;
 		default:
 			goto error;
 	}
@@ -213,6 +238,10 @@ timer_not_met:
 	return CLIENT_SERVER_TIMER_NOT_MET;
 max_parallel_backups:
 	return CLIENT_SERVER_MAX_PARALLEL_BACKUPS;
+another_instance_is_already_running:
+	return CLIENT_SERVER_ANOTHER_INSTANCE_IS_ALREADY_RUNNING;
+server_finalising_previous_backup:
+	return CLIENT_SERVER_FINALISING_PREVIOUS_BACKUP;
 }
 
 static int s_server_session_id_context=1;
@@ -610,6 +639,8 @@ int client(struct conf **confs,
 			case CLIENT_OK:
 			case CLIENT_SERVER_TIMER_NOT_MET:
 			case CLIENT_SERVER_MAX_PARALLEL_BACKUPS:
+			case CLIENT_SERVER_ANOTHER_INSTANCE_IS_ALREADY_RUNNING:
+			case CLIENT_SERVER_FINALISING_PREVIOUS_BACKUP:
 			case CLIENT_RESTORE_WARNINGS:
 				finished=1;
 				break;

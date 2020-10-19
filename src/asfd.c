@@ -688,6 +688,7 @@ static void asfd_free_content(struct asfd *asfd)
 	free_w(&asfd->listen);
 	incoming_free(&asfd->in);
 	blist_free(&asfd->blist);
+	ipacl_free(&asfd->ipacl);
 }
 
 void asfd_free(struct asfd **asfd)

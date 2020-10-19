@@ -49,7 +49,9 @@ struct asfd
 	enum asfd_streamtype streamtype;
 	char *listen;
 	const char *peer_addr;
+#ifdef HAVE_LINUX_OS
 	struct hipacl ipacl;
+#endif
 
 	int network_timeout;
 	int max_network_timeout;

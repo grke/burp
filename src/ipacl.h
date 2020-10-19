@@ -3,7 +3,13 @@
 
 #include "burp.h"
 
-#ifdef HAVE_LINUX_OS
+#if defined(HAVE_LINUX_OS) || \
+    defined(HAVE_FREEBSD_OS) || \
+    defined(HAVE_NETBSD_OS)
+	#define USE_IPACL
+#endif
+
+#ifdef USE_IPACL
 #include "alloc.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -81,5 +87,5 @@ extern void ipacl_free(hipacl_t *hacl);
 }
 #endif
 
-#endif /* HAVE_LINUX_OS */
+#endif /* USE_IPACL */
 #endif /* _IPACL_H */

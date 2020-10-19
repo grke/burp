@@ -49,7 +49,7 @@ struct asfd
 	enum asfd_streamtype streamtype;
 	char *listen;
 	const char *peer_addr;
-#ifdef HAVE_LINUX_OS
+#ifdef USE_IPACL
 	struct hipacl ipacl;
 #endif
 

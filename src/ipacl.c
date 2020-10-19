@@ -1,6 +1,6 @@
 #include "ipacl.h"
 
-#ifdef HAVE_LINUX_OS
+#ifdef USE_IPACL
 #include <limits.h>
 #include <errno.h>
 #include <string.h>
@@ -459,4 +459,4 @@ bool ipacl_is_empty(const hipacl_t *hacl)
 	return SLIST_EMPTY(hacl);
 }
 
-#endif /* HAVE_LINUX_OS */
+#endif /* USE_IPACL */

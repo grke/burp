@@ -116,7 +116,9 @@ static int init_listen_socket(struct strlist *address,
 	struct addrinfo hints;
 	struct addrinfo *info=NULL;
 	struct asfd *newfd=NULL;
+#ifdef USE_IPACL
 	ipacl_res_t rc;
+#endif
 	char *a=NULL;
 	char *port=NULL;
 
@@ -177,13 +179,14 @@ static int init_listen_socket(struct strlist *address,
 	log_listen_socket(desc, info, port, address->flag);
 	if(!(newfd=setup_asfd(mainas, desc, &fd, address->path)))
 		goto end;
-
+#ifdef USE_IPACL
 	if((rc=ipacl_append(&newfd->ipacl, ipacl, NULL))!=IPACL_OK)
 	{
 		logp("could not parse %s: %s\n",
 			ipacl, ipacl_strerror(rc));
 		goto error;
 	}
+#endif
 	newfd->fdtype=fdtype;
 	goto end;
 error:
@@ -230,10 +233,12 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	struct cntr *cntr=NULL;
 	struct async *as=NULL;
 	const char *cname=NULL;
-	const char *client_allow=NULL;
 	struct asfd *asfd=NULL;
+#ifdef USE_IPACL
+	const char *client_allow=NULL;
 	struct hipacl ipacl=IPACL_HEAD_INITIALIZER(ipacl);
 	ipacl_res_t rc;
+#endif
 	int is_status_server=0;
 
 	if(!(confs=confs_alloc())
@@ -287,6 +292,7 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		goto end;
 	}
 
+#ifdef USE_IPACL
 	client_allow=get_string(cconfs[OPT_CLIENT_ALLOW]);
 
 	if((rc=ipacl_append(&ipacl, client_allow, NULL)!=IPACL_OK))
@@ -302,7 +308,7 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		log_and_send(as->asfd, "client denied by client_allow");
 		goto end;
 	}
-
+#endif
 	if(!get_int(cconfs[OPT_ENABLED]))
 	{
 		sleep(1);
@@ -377,7 +383,9 @@ end:
 		set_cntr(cconfs[OPT_CNTR], NULL);
 		confs_free(&cconfs);
 	}
+#ifdef USE_IPACL
 	ipacl_free(&ipacl);
+#endif
 	return ret;
 }
 
@@ -517,7 +525,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
         if(get_address_and_port(&client_name,
 		peer_addr, INET6_ADDRSTRLEN, &peer_port))
                 	return -1;
-
+#ifdef USE_IPACL
 	if(!ipacl_is_empty(&asfd->ipacl)
 	  && !ipacl_test_saddr_storage(&asfd->ipacl, &client_name))
 	{
@@ -525,7 +533,7 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
 		close_fd(&cfd);
 		return 0;
 	}
-
+#endif
         logp("Connect from peer: %s:%d\n", peer_addr, peer_port);
 
 	if(!forking)

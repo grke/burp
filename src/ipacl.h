@@ -17,8 +17,22 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/queue.h>
-#include <linux/types.h>
 #include <endian.h>
+
+#ifdef HAVE_LINUX_OS
+#include <linux/types.h>
+#else
+typedef unsigned char __u8;
+typedef unsigned int __u32;
+#ifdef __GNUC__
+__extension__ typedef unsigned long long __u64;
+#else
+typedef unsigned long long __u64;
+#endif
+typedef	__u32 __be32;
+typedef	__u64 __be64;
+#endif
+
 
 #if __BYTE_ORDER == __BIG_ENDIAN
 #define cpu_to_be32(hl)  (hl)
@@ -60,17 +74,17 @@ typedef  struct ipacl_net6_elem {
 	__u8 cidr;
 } ipacl_net6_elem_t;
 
-struct __ipacl_entity {
-	SLIST_ENTRY(__ipacl_entity ) node;
+struct ipacl_entity {
+	SLIST_ENTRY(ipacl_entity ) node;
 	sa_family_t ss_family;
 	union {
 		ipacl_net4_elem_t in;
 		ipacl_net6_elem_t in6;
 	};
 };
-typedef struct __ipacl_entity ipacl_entity_t;
+typedef struct ipacl_entity ipacl_entity_t;
 
-SLIST_HEAD(hipacl, __ipacl_entity);
+SLIST_HEAD(hipacl, ipacl_entity);
 typedef struct hipacl hipacl_t;
 #define IPACL_HEAD_INITIALIZER(head)  SLIST_HEAD_INITIALIZER(head)
 

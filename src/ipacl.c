@@ -238,7 +238,7 @@ static ipacl_entity_t *ipacl_create(hipacl_t *acl, struct sockaddr_storage *ss, 
 
 	elem->ss_family=ss->ss_family;
 
-	switch (ss->ss_family)
+	switch(ss->ss_family)
 	{
 		case AF_INET:
 			memcpy(&elem->in, &((struct sockaddr_in *)ss)->sin_addr, sizeof(struct in_addr));
@@ -275,7 +275,7 @@ static bool parse_prefix(const char *str, long *prefix)
 
 static bool check_prefix(long *prefix, sa_family_t ss_family)
 {
-	switch (ss_family)
+	switch(ss_family)
 	{
 		case AF_INET:
 			*prefix=(*prefix == -1) ? 32 : *prefix;
@@ -290,7 +290,7 @@ static bool check_prefix(long *prefix, sa_family_t ss_family)
 
 const char *ipacl_strerror(ipacl_res_t res)
 {
-	switch (res)
+	switch(res)
 	{
 		case IPACL_OK:			return "success";
 		case IPACL_INVALID_PREFIX:	return "invalid prefix";
@@ -325,7 +325,7 @@ ipacl_res_t ipacl_emplace(hipacl_t *hacl, const char *ipacl_str)
 	struct sockaddr_storage ss={};
 	size_t acl_str_length;
 
-	if (!hacl || !ipacl_str
+	if(!hacl || !ipacl_str
 	  || !(acl_str_length=strlen(ipacl_str)))
 		return IPACL_OK;
 
@@ -386,11 +386,9 @@ ipacl_res_t ipacl_append(hipacl_t *hacl, const char *ipacl_str, int *size)
 
 	for(token=strtok_r(__ipacl_str," ,;", &context);
 		token;
-		token=strtok_r(NULL," ,;", &context))
+		token=strtok_r(NULL," ,;", &context), ++_size)
 	{
-		if((rc=ipacl_emplace(hacl, trim(token)))==IPACL_OK)
-			++_size;
-		else
+		if((rc=ipacl_emplace(hacl, trim(token)))!=IPACL_OK)
 			break;
 	}
 

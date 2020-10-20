@@ -17,7 +17,6 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/queue.h>
-#include <endian.h>
 
 #ifdef HAVE_LINUX_OS
 #include <linux/types.h>
@@ -33,13 +32,12 @@ typedef	__u32 __be32;
 typedef	__u64 __be64;
 #endif
 
-
 #if __BYTE_ORDER == __BIG_ENDIAN
-#define cpu_to_be32(hl)  (hl)
-#define cpu_to_be64(hll) (hll)
+#define cpu_to_be32(x)  (x)
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+#define cpu_to_be32(x)  ( __builtin_bswap32(x))
 #else
-#define cpu_to_be32(hl)  ( __builtin_bswap32(hl))
-#define cpu_to_be64(hll) ( __builtin_bswap64(hll))
+#error byte order not supported
 #endif
 
 #ifdef __cplusplus

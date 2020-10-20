@@ -32,9 +32,9 @@ typedef	__u32 __be32;
 typedef	__u64 __be64;
 #endif
 
-#if __BYTE_ORDER == __BIG_ENDIAN
+#if BYTE_ORDER == BIG_ENDIAN
 #define cpu_to_be32(x)  (x)
-#elif __BYTE_ORDER == __LITTLE_ENDIAN
+#elif BYTE_ORDER == LITTLE_ENDIAN
 #define cpu_to_be32(x)  ( __builtin_bswap32(x))
 #else
 #error byte order not supported

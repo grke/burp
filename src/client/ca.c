@@ -167,6 +167,10 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 	const char *ssl_cert_ca=get_string(confs[OPT_SSL_CERT_CA]);
 	struct cntr *cntr=get_cntr(confs);
 
+	/* Store setting, compared later to decide whether to rewrite the config */
+	char *ssl_peer_cn_old=strdup_w(get_string(confs[OPT_SSL_PEER_CN]), __func__);
+	if(!ssl_peer_cn_old) goto end;
+
 	// Do not continue if we have one of the following things not set.
 	if(  !ca_burp_ca
 	  || !ca_csr_dir
@@ -187,7 +191,7 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 		goto end;
 	}
 
-	// Tell the server we want to do a signing request.
+	// Tell the server we want to do a signing request and store the servers name in ssl_peer_cn.
 	if(asfd->write_str(asfd, CMD_GEN, "csr")
 	  || asfd->simple_loop(asfd, confs, NULL, __func__, csr_client_func))
 		goto end;
@@ -220,8 +224,11 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 		goto end_cleanup;
 
 	// Need to rewrite our configuration file to contain the server
-	// name (ssl_peer_cn)
-	if(rewrite_client_conf(confs)) goto end_cleanup;
+	// name (ssl_peer_cn) if the name differs from the config file.
+	if(strncmp_w(ssl_peer_cn_old, get_string(confs[OPT_SSL_PEER_CN])))
+	{
+	    if(rewrite_client_conf(confs)) goto end_cleanup;
+	}
 
 	// My goodness, everything seems to have gone OK. Stand back!
 	ret=1;
@@ -238,5 +245,6 @@ end_cleanup:
 		unlink(ssl_cert_ca_tmp);
 	}
 end:
+	if(ssl_peer_cn_old) free_w(&ssl_peer_cn_old);
 	return ret;
 }

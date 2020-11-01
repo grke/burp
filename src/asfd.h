@@ -5,6 +5,7 @@
 #include "cmd.h"
 #include "ssl.h"
 #include "cntr.h"
+#include "ipacl.h"
 
 // Return values for simple_loop().
 enum asl_ret
@@ -48,6 +49,9 @@ struct asfd
 	enum asfd_streamtype streamtype;
 	char *listen;
 	const char *peer_addr;
+#ifdef USE_IPACL
+	struct hipacl ipacl;
+#endif
 
 	int network_timeout;
 	int max_network_timeout;

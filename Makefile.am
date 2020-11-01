@@ -152,6 +152,7 @@ main_SOURCES = \
 	src/iobuf.c src/iobuf.h \
 	src/incexc_recv.h \
 	src/incexc_send.h \
+	src/ipacl.c src/ipacl.h \
 	src/linkhash.c src/linkhash.h \
 	src/lock.c src/lock.h \
 	src/log.c src/log.h \

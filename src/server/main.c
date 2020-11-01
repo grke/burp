@@ -1,5 +1,6 @@
 #include "../burp.h"
 #include "../asfd.h"
+#include "../ipacl.h"
 #include "../async.h"
 #include "../cntr.h"
 #include "../conf.h"
@@ -108,13 +109,16 @@ static int split_addr(char **address, char **port)
 }
 
 static int init_listen_socket(struct strlist *address,
-	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
+	struct async *mainas, enum asfd_fdtype fdtype, const char *ipacl, const char *desc)
 {
 	int fd=-1;
 	int gai_ret;
 	struct addrinfo hints;
 	struct addrinfo *info=NULL;
 	struct asfd *newfd=NULL;
+#ifdef USE_IPACL
+	ipacl_res_t rc;
+#endif
 	char *a=NULL;
 	char *port=NULL;
 
@@ -175,8 +179,15 @@ static int init_listen_socket(struct strlist *address,
 	log_listen_socket(desc, info, port, address->flag);
 	if(!(newfd=setup_asfd(mainas, desc, &fd, address->path)))
 		goto end;
+#ifdef USE_IPACL
+	if((rc=ipacl_append(&newfd->ipacl, ipacl, NULL))!=IPACL_OK)
+	{
+		logp("could not parse %s: %s\n",
+			ipacl, ipacl_strerror(rc));
+		goto error;
+	}
+#endif
 	newfd->fdtype=fdtype;
-
 	goto end;
 error:
 	free_w(&a);
@@ -191,11 +202,11 @@ end:
 }
 
 static int init_listen_sockets(struct strlist *addresses,
-	struct async *mainas, enum asfd_fdtype fdtype, const char *desc)
+	struct async *mainas, enum asfd_fdtype fdtype, const char *ipacl, const char *desc)
 {
 	struct strlist *a;
 	for(a=addresses; a; a=a->next)
-		if(init_listen_socket(a, mainas, fdtype, desc))
+		if(init_listen_socket(a, mainas, fdtype, ipacl, desc))
 			return -1;
 	return 0;
 }
@@ -223,6 +234,11 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 	struct async *as=NULL;
 	const char *cname=NULL;
 	struct asfd *asfd=NULL;
+#ifdef USE_IPACL
+	const char *client_allow=NULL;
+	struct hipacl ipacl=IPACL_HEAD_INITIALIZER(ipacl);
+	ipacl_res_t rc;
+#endif
 	int is_status_server=0;
 
 	if(!(confs=confs_alloc())
@@ -276,6 +292,23 @@ static int run_child(int *cfd, SSL_CTX *ctx, struct sockaddr_storage *addr,
 		goto end;
 	}
 
+#ifdef USE_IPACL
+	client_allow=get_string(cconfs[OPT_CLIENT_ALLOW]);
+
+	if((rc=ipacl_append(&ipacl, client_allow, NULL)!=IPACL_OK))
+	{
+		logp("could not parse client_allow: %s: %s\n", client_allow, ipacl_strerror(rc));
+		goto end;
+	}
+
+	if(!ipacl_is_empty(&ipacl)
+	  && !ipacl_test_saddr_storage(&ipacl, addr))
+	{
+		sleep(1);
+		log_and_send(as->asfd, "client denied by client_allow");
+		goto end;
+	}
+#endif
 	if(!get_int(cconfs[OPT_ENABLED]))
 	{
 		sleep(1);
@@ -350,6 +383,9 @@ end:
 		set_cntr(cconfs[OPT_CNTR], NULL);
 		confs_free(&cconfs);
 	}
+#ifdef USE_IPACL
+	ipacl_free(&ipacl);
+#endif
 	return ret;
 }
 
@@ -489,6 +525,15 @@ static int process_incoming_client(struct asfd *asfd, SSL_CTX *ctx,
         if(get_address_and_port(&client_name,
 		peer_addr, INET6_ADDRSTRLEN, &peer_port))
                 	return -1;
+#ifdef USE_IPACL
+	if(!ipacl_is_empty(&asfd->ipacl)
+	  && !ipacl_test_saddr_storage(&asfd->ipacl, &client_name))
+	{
+		logp("Connection not allowed from: %s:%d\n", peer_addr, peer_port);
+		close_fd(&cfd);
+		return 0;
+	}
+#endif
         logp("Connect from peer: %s:%d\n", peer_addr, peer_port);
 
 	if(!forking)
@@ -873,6 +918,8 @@ static int run_server(struct conf **confs, const char *conffile)
 	struct strlist *addresses=get_strlist(confs[OPT_LISTEN]);
 	struct strlist *addresses_status=get_strlist(confs[OPT_LISTEN_STATUS]);
 	int max_parallel_backups=get_int(confs[OPT_MAX_PARALLEL_BACKUPS]);
+	const char *allow=get_string(confs[OPT_ALLOW]);
+	const char *allow_status=get_string(confs[OPT_ALLOW_STATUS]);
 
 	if(!(ctx=ssl_initialise_ctx(confs)))
 	{
@@ -897,9 +944,9 @@ static int run_server(struct conf **confs, const char *conffile)
 	if(!mainas->asfd)
 	{
 		if(init_listen_sockets(addresses, mainas,
-			ASFD_FD_SERVER_LISTEN_MAIN, "server")
+			ASFD_FD_SERVER_LISTEN_MAIN, allow, "server")
 		  || init_listen_sockets(addresses_status, mainas,
-			ASFD_FD_SERVER_LISTEN_STATUS, "server status"))
+			ASFD_FD_SERVER_LISTEN_STATUS, allow_status, "server status"))
 				goto end;
 	}
 

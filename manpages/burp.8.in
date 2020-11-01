@@ -247,8 +247,14 @@ Required to run in server mode.
 \fBlisten=[address]:[port]\fR
 Defines the main TCP address and port that the server listens on. Specify multiple 'listen' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_children' value.
 .TP
+\fBallow=[string]\fR
+Allows access to server for the specified network or address. (example: 'allow = ::1 127.0.0.1/8')
+.TP
 \fBlisten_status=[address]:[port]\fR
 Defines the main TCP address and port that the server listens on for status requests. Specify multiple 'listen_status' entries on separate lines in order to listen on multiple addresses and ports. Each pair can be configured with its own 'max_status_children' value. Comment out to have no status server.
+.TP
+\fBallow_status=[string]\fR
+Allows access to monitor for the specified network or address.
 .TP
 \fBcname_lowercase=[0|1]\fR
 Whether to force lowercase cname when looking-up in clientconfdir. This also affects the fqdn lookup on the client (see client configuration options for details). The default is 0. When set to 1 the name provided by the client while authenticating will be lowercased.
@@ -815,6 +821,8 @@ When enabled, this causes problems in the phase1 scan (such as an 'include' bein
 For the server to know about clients that can contact it, you need to place a file named after the client in clientconfdir. Files beginning with '.' or ending with '~' are ignored. Directories are also ignored.
 .TP
 The file name must match the name in the 'cname' field on the client.
+.TP
+\fBclient_allow=[string]\fR allows client access for the specified network or address.
 .TP
 \fBssl_peer_cn=[string]\fR must match the common name in the SSL certificate that the client gives when it connects. If ssl_peer_cn is not set, the client name will be used instead (the clientconfdir file name).
 .TP

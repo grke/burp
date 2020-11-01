@@ -73,9 +73,6 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_SEED_SRC:
 		case OPT_SEED_DST:
 		case OPT_RESTORE_LIST:
-		case OPT_ALLOW:
-		case OPT_ALLOW_STATUS:
-		case OPT_CLIENT_ALLOW:
 			fail_unless(get_string(c[o])==NULL);
 			break;
 		case OPT_RATELIMIT:
@@ -215,6 +212,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_MAX_CHILDREN:
 		case OPT_MAX_STATUS_CHILDREN:
 		case OPT_SERVER_FAILOVER:
+		case OPT_NETWORK_ALLOW:
+		case OPT_NETWORK_ALLOW_STATUS:
 			fail_unless(get_strlist(c[o])==NULL);
 			break;
 		case OPT_PROTOCOL:

@@ -435,12 +435,12 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_lst(c[o], 0, 0, "listen");
 	case OPT_LISTEN_STATUS:
 	  return sc_lst(c[o], 0, 0, "listen_status");
-	case OPT_ALLOW:
-	  return sc_str(c[o], 0, 0, "allow");
-	case OPT_ALLOW_STATUS:
-	  return sc_str(c[o], 0, 0, "allow_status");
-	case OPT_CLIENT_ALLOW:
-	  return sc_str(c[o], 0, 0, "client_allow");
+	case OPT_NETWORK_ALLOW:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "network_allow");
+	case OPT_NETWORK_ALLOW_STATUS:
+	  return sc_lst(c[o], 0,
+		CONF_FLAG_CC_OVERRIDE|CONF_FLAG_STRLIST_REPLACE, "network_allow_status");
 	case OPT_PORT_BACKUP:
 	  return sc_int(c[o], 0, 0, "port_backup");
 	case OPT_PORT_RESTORE:

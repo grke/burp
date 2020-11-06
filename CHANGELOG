@@ -1,3 +1,10 @@
+2020-10-07 Changes in burp-2.3.38:
+  * From Demid R:
+    - Added network access control at the burp level.
+  * From svalouch:
+    - Don't rewrite config if not neccessary in certificate exchange.
+  * Cleaned up network access control config items, fixed monitor access.
+
 2020-10-01 Changes in burp-2.3.36:
   * 211: Choose case sensitivity on list/verify/restore, with '-r/-R'.
 

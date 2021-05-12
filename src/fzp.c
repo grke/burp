@@ -328,7 +328,7 @@ int fzp_printf(struct fzp *fzp, const char *format, ...)
 				__func__, strerror(errno));
 			return ret;
 		}
-		if(fzp->s<(size_t)n)
+		if(fzp->s<(size_t)n+1)
 		{
 			fzp->s*=2;
 			if(!(fzp->buf=(char *)

@@ -11,28 +11,27 @@ int ssl_do_accept(SSL *ssl)
 {
 	while(1)
 	{
-		int r;
+		int r=0;
+		int ssl_err;
 		ERR_clear_error();
 		switch((r=SSL_accept(ssl)))
 		{
 			case 1:
 				return 0;
 			case 0:
-				goto error;
 			default:
-				switch(SSL_get_error(ssl, r))
+				ssl_err=SSL_get_error(ssl, r);
+				switch(ssl_err)
 				{
 					case SSL_ERROR_WANT_READ:
 						continue;
 					default:
-						goto error;
+						logp_ssl_err("SSL_accept error: %d\n", ssl_err);
+						return -1;
 				}
 				break;
 		}
 	}
-error:
-	logp_ssl_err("SSL_accept error\n");
-	return -1;
 }
 
 int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)

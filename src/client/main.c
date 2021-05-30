@@ -228,6 +228,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 	ssl_load_globals();
 	char *cp=NULL;
 	char *server_copy=NULL;
+	int ssl_ret;
 
 	if(!(server_copy=strdup_w(server, __func__)))
 		goto end;
@@ -309,9 +310,10 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 		goto end;
 	}
 	SSL_set_bio(*ssl, sbio, sbio);
-	if(SSL_connect(*ssl)<=0)
+	if((ssl_ret=SSL_connect(*ssl))<=0)
 	{
-		logp_ssl_err("SSL connect error\n");
+		logp_ssl_err("SSL connect error: %d\n",
+			SSL_get_error(*ssl, ssl_ret));
 		goto end;
 	}
 

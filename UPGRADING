@@ -1,5 +1,20 @@
 Things to watch out for when upgrading.
 
+2.5.0
+-----
+The Windows installer sets Administrator and SYSTEM full access permissions
+only on:
+C:/Program Files/Burp/bin/burp.conf
+C:/Program Files/Burp/bin/ssl_cert_ca.pem
+C:/Program Files/Burp/bin/ssl_cert-client.key
+C:/Program Files/Burp/bin/ssl_cert-client.pem
+That is, it runs:
+  icacls.exe "<path>" /inheritance:r /grant:r Administrators:F SYSTEM:F
+If you have these files on non-default locations, and you are concerned about
+restricting permissions, you may want to run the command by hand on them.
+The Windows client will automatically apply the same permissions to new ssl
+cert files on certificate exchange.
+
 2.3.12
 ------
 On Windows, the '-x' option has been split into two different options - '-x'

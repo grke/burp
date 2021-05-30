@@ -12,6 +12,18 @@
 #include "cvss.h"
 #include "ca.h"
 
+#ifdef HAVE_WIN32
+// Want to avoid giving standard users access to the conf files, otherwise
+// they can get access to all the backed up files, which may include files
+// they shouldn't be able to get.
+static void hack_windows_perms(const char *path)
+{
+	char cmd[512]="";
+	snprintf(cmd, sizeof(cmd), "icacls.exe \"%s\" /inheritance:r /grant:r Administrators:F SYSTEM:F", path);
+	system(cmd);
+}
+#endif
+
 static int generate_key_and_csr(struct asfd *asfd,
 	struct conf **confs, const char *csr_path)
 {
@@ -47,6 +59,11 @@ static int generate_key_and_csr(struct asfd *asfd,
 			ca_burp_ca, ssl_key, csr_path, cname);
 		return -1;
 	}
+
+#ifdef HAVE_WIN32
+	hack_windows_perms(ssl_key);
+	hack_windows_perms(csr_path);
+#endif
 
 	return 0;
 }
@@ -213,7 +230,6 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 
 	// The server will then sign it, and give it back.
 	if(receive_a_file(asfd, ssl_cert_tmp, cntr)) goto end_cleanup;
-
 	// The server will also send the CA certificate.
 	if(receive_a_file(asfd, ssl_cert_ca_tmp, cntr)) goto end_cleanup;
 
@@ -222,6 +238,11 @@ int ca_client_setup(struct asfd *asfd, struct conf **confs)
 	if(do_rename(ssl_cert_tmp, ssl_cert)
 	  || do_rename(ssl_cert_ca_tmp, ssl_cert_ca))
 		goto end_cleanup;
+
+#ifdef HAVE_WIN32
+	hack_windows_perms(ssl_cert);
+	hack_windows_perms(ssl_cert_ca);
+#endif
 
 	// Need to rewrite our configuration file to contain the server
 	// name (ssl_peer_cn) if the name differs from the config file.

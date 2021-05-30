@@ -447,6 +447,18 @@ SectionGroupEnd
 Section "-Finish"
 	Push $R0
 
+	; Permissions
+	nsExec::ExecToLog '$SYSDIR\icacls.exe "$INSTDIR\burp.conf" /inheritance:r /grant:r Administrators:F SYSTEM:F'
+	; More permissions.
+	; These files are created at runtime by the burp client, which also
+	; sets their permissions. See src/client/ca.c.
+	; Clients older than 2.5.0 did not do that, so the following fixes up
+	; the files in their default locations on upgrade instead.
+	nsExec::ExecToLog '$SYSDIR\icacls.exe "$INSTDIR\CA\*" /inheritance:r /grant:r Administrators:F SYSTEM:F'
+	nsExec::ExecToLog '$SYSDIR\icacls.exe "$INSTDIR\ssl_cert_ca.pem" /inheritance:r /grant:r Administrators:F SYSTEM:F'
+	nsExec::ExecToLog '$SYSDIR\icacls.exe "$INSTDIR\ssl_cert-client.key" /inheritance:r /grant:r Administrators:F SYSTEM:F'
+	nsExec::ExecToLog '$SYSDIR\icacls.exe "$INSTDIR\ssl_cert-client.pem" /inheritance:r /grant:r Administrators:F SYSTEM:F'
+
 	; Write the uninstall keys for Windows.
 	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "DisplayName" "${PACKAGE_NAME}"
 	WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PACKAGE_NAME}" "InstallLocation" "$INSTDIR"

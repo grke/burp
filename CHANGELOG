@@ -1,3 +1,9 @@
+2021-06-02 burp-2.5.0:
+  * New latest version.
+  * 826: Restrict permissions to Windows conf files.
+  * 878: Fix missing newline when logged line is exactly 128 chars long.
+  * Add SSL_get_error() detail in SSL accept and connect errors.
+
 2021-05-02 burp-2.4.0:
   * New stable version, based on 2.3.38.
 

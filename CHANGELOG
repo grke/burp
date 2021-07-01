@@ -1,3 +1,7 @@
+2021-07-02 burp-2.5.2:
+  * Upgrade Windows depkgs to:
+     - openssl-1.1.1k.
+
 2021-06-02 burp-2.5.0:
   * New latest version.
   * 826: Restrict permissions to Windows conf files.

@@ -50,7 +50,7 @@ wait_for_state()
 {
 	local instanceid="$1"
 	local wanted_state="$2"
-	i=100
+	i=200
 	while [ $i -gt 0 ] ; do
 		state=$(get_state "$instanceid")
 		echo "$instanceid is $state"

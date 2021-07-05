@@ -59,7 +59,7 @@ docker_run "make -C test test"
 docker_run "./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var"
 ssh $ssh_opts "$host" "ln -sfT /burp-cross-tools/cross-tools burp/burp-cross-tools"
 ssh $ssh_opts "$host" "ln -sfT /burp-cross-tools/depkgs burp/burp-depkgs"
-docker_run "make -C src/win32"
+#docker_run "make -C src/win32"
 docker_run "make -C src/win32 WIN64=yes"
 docker_run "./test/test_windows64 $debian $windows Administrator"
 scp -r $ssh_opts "$host:burp/src/win*/release*/burp-win*installer*.exe" .

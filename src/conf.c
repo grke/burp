@@ -237,9 +237,9 @@ int add_to_strlist(struct conf *conf, const char *value, int include)
 		return strlist_add(&(conf->data.sl), value, include);
 }
 
-int add_to_strlist_include_uniq(struct conf *conf, const char *value)
+int add_to_strlist_sorted_uniq(struct conf *conf, const char *value, int flag)
 {
-	return strlist_add_sorted_uniq(&(conf->data.sl), value, 1);
+	return strlist_add_sorted_uniq(&(conf->data.sl), value, flag);
 }
 
 void conf_free_content(struct conf *c)

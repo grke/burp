@@ -798,16 +798,39 @@ static int incexc_munge(struct conf **c, struct strlist *s)
 #endif
 	if(!is_absolute(s->path))
 	{
-		logp("ERROR: Please use absolute include/exclude paths.\n");
+		logp("ERROR: Please use absolute include/exclude paths: %s\n",
+			s->path);
 		return -1;
 	}
-	if(add_to_strlist(c[OPT_INCEXCDIR], s->path, s->flag))
+	if(add_to_strlist_sorted_uniq(c[OPT_INCEXCDIR], s->path, s->flag))
 		return -1;
 	return 0;
 }
 
+static const char *sanity_check_no_dupes(struct strlist *sl)
+{
+	struct strlist *s=NULL;
+	struct strlist *prev=NULL;
+
+	for(s=sl; s; s=s->next)
+	{
+		if(!prev)
+		{
+			prev=s;
+			continue;
+		}
+		if(!strcmp(s->path, prev->path))
+		{
+			return s->path;
+		}
+		prev=s;
+	}
+	return NULL;
+}
+
 static int finalise_incexc_dirs(struct conf **c)
 {
+	const char *dupe=NULL;
 	struct strlist *s=NULL;
 
 	for(s=get_strlist(c[OPT_INCLUDE]); s; s=s->next)
@@ -820,6 +843,13 @@ static int finalise_incexc_dirs(struct conf **c)
 		logp("Need at least one 'include' or 'include_glob' for the 'include_regex' to work.\n");
 		return -1;
 	}
+
+	if((dupe=sanity_check_no_dupes(get_strlist(c[OPT_INCEXCDIR])))) {
+printf("xxx\n");
+		logp("ERROR: Duplicate include/exclude path: %s\n", dupe);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -856,8 +886,8 @@ static int check_start_dirs_and_seed(struct conf **c)
 static int finalise_start_dirs(struct conf **c)
 {
 	struct strlist *s=NULL;
-	struct strlist *last_ie=NULL;
 	struct strlist *last_sd=NULL;
+	const char *dupe=NULL;
 
 	// Make sure that the startdir list starts empty, or chaos will ensue.
 	conf_free_content(c[OPT_STARTDIR]);
@@ -873,13 +903,6 @@ static int finalise_start_dirs(struct conf **c)
 			return -1;
 		}
 
-		// Ensure that we do not backup the same directory twice.
-		if(last_ie && !strcmp(s->path, last_ie->path))
-		{
-			logp("Directory appears twice in conf: %s\n",
-				s->path);
-			return -1;
-		}
 		// If it is not a subdirectory of the most recent start point,
 		// we have found another start point.
 		if(!get_strlist(c[OPT_STARTDIR])
@@ -898,7 +921,11 @@ static int finalise_start_dirs(struct conf **c)
 			if(add_to_cross_filesystem(c, s->path))
 				return -1;
 		}
-		last_ie=s;
+	}
+
+	if((dupe=sanity_check_no_dupes(get_strlist(c[OPT_STARTDIR])))) {
+		logp("ERROR: Directory appears twice in conf: %s\n", dupe);
+		return -1;
 	}
 
 	if(check_start_dirs_and_seed(c))
@@ -934,7 +961,7 @@ static int finalise_glob(struct conf **c)
 	}
 
 	for(i=0; (unsigned int)i<globbuf.gl_pathc; i++)
-		if(add_to_strlist_include_uniq(c[OPT_INCLUDE], globbuf.gl_pathv[i]))
+		if(add_to_strlist_sorted_uniq(c[OPT_INCLUDE], globbuf.gl_pathv[i], 1/*flag*/))
 			goto end;
 
 	globfree(&globbuf);

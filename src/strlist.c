@@ -49,6 +49,7 @@ static struct strlist *strlist_alloc(const char *path, long flag)
 static int do_strlist_add(struct strlist **strlist,
 	const char *path, long flag, int sorted, int uniq)
 {
+	int p=0;
 	struct strlist *s=NULL;
 	struct strlist *slast=NULL;
 	struct strlist *slnew=NULL;
@@ -61,12 +62,17 @@ static int do_strlist_add(struct strlist **strlist,
 	// find the last entry. Can this be made better?
 	for(s=*strlist; s; s=s->next)
 	{
-		if(uniq && !pathcmp(path, s->path))
+		if(uniq && !pathcmp(path, s->path) && flag==s->flag)
 		{
 			strlist_free(slnew);
 			return 0;
 		}
-		if(sorted && pathcmp(path, s->path)<0) break;
+		if(sorted) {
+			if((p=pathcmp(path, s->path))<0)
+				break;
+			if(!p && flag<s->flag)
+				break;
+		}
 		slast=s;
 	}
 	if(slast)

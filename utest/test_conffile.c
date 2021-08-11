@@ -304,7 +304,10 @@ END_TEST
 
 static const char *include_failures[] = {
 	MIN_CLIENT_CONF "include=not_absolute\n",
-	MIN_CLIENT_CONF "include=/\ninclude=/\n"
+	MIN_CLIENT_CONF "include=/\n"
+			"include=/boot\n"
+			"include=/boot/test\n"
+			"exclude=/boot\n",
 };
 
 START_TEST(test_client_include_failures)
@@ -330,7 +333,9 @@ START_TEST(test_client_include_glob)
 	struct conf **confs=NULL;
 	fail_unless(getcwd(cwd, sizeof(cwd))!=NULL);
 	snprintf(buf, sizeof(buf),
-		"%sinclude_glob=%s/%s/*.glob\ninclude=/1\n",
+		"%s"
+		"include_glob=%s/%s/*.glob\n"
+		"include=/1\n",
 		MIN_CLIENT_CONF, cwd, BASE);
 	snprintf(path1, sizeof(path1), "%s/%s/a.glob", cwd, BASE);
 	snprintf(path2, sizeof(path2), "%s/%s/b.glob", cwd, BASE);

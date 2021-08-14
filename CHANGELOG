@@ -1,3 +1,12 @@
+2021-08-31 burp-2.5.4
+  * Windows cross-tools/depkgs:
+     - Update to mingw-w64-v5.0.4
+     - Update to prce-8.45
+     - Stop building 32bit tools
+  * 888:
+     - Error out on duplicate include/exclude confs
+     - Fix similar problem with duplicate glob reevaluation
+
 2021-07-02 burp-2.5.2:
   * Upgrade Windows depkgs to:
      - openssl-1.1.1k.

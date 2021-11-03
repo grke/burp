@@ -524,7 +524,7 @@ Whether to check for revoked certificates in the certificate revocation list.
 Whether or not the server should cache the directory tree when a monitor client is browsing. Advantage: browsing is faster. Disadvantage: more memory is used.
 .TP
 \fBlabel=[string]\fR
-You can have multiple labels, and they can be overridden in the client configuration files in clientconfdir on the server. They will appear as an array of strings in the server status monitor JSON output. The idea is to provide a mechanism for arbirtrary values to be passed to clients of the server status monitor.
+You can have multiple labels, and they can be overridden in the client configuration files in clientconfdir on the server. They will appear as an array of strings in the server status monitor JSON output. The idea is to provide a mechanism for arbitrary values to be passed to clients of the server status monitor.
 .TP
 \fBenabled=[0|1]\fR
 Set this to 0 if you want to disable all clients. The default is 1. This option can be overridden per-client in the client configuration files in clientconfdir on the server.

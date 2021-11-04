@@ -347,7 +347,7 @@ static void screen_header_ncurses(const char *date, int l, int col)
 	char v[32]="";
 	snprintf(v, sizeof(v), " %s monitor %s", PACKAGE_TARNAME, VERSION);
 	print_line(v, 0-TOP_SPACE, col);
-	mvprintw(0, col-l-1, date);
+	mvprintw(0, col-l-1, "%s", date);
 }
 #endif
 
@@ -749,7 +749,10 @@ static void update_screen_view_log(struct sel *sel, int *x, int col,
 	if(sel->client
 	  && sel->backup
 	  && (sel->logop & BU_LIVE_COUNTERS))
-		return update_screen_live_counters_w(sel, x, col);
+	{
+		update_screen_live_counters_w(sel, x, col);
+		return;
+	}
 
 	for(l=sel->llines; l; l=l->next)
 	{

@@ -80,7 +80,7 @@ BURP - BackUp and Restore Program
           <img alt="" border="0" src="https://www.paypal.com/en_GB/i/scr/pixel.gif" width="1" height="1">
          </form>
          <script id='fbrv8cz'>(function(i){var f,s=document.getElementById(i);f=document.createElement('iframe');f.src='//api.flattr.com/button/view/?uid=grke.net&button=compact&url='+encodeURIComponent(document.URL);f.title='Flattr';f.height=20;f.width=110;f.style.borderWidth=0;s.parentNode.insertBefore(f,s);})('fbrv8cz');</script>
-         <a href="bitcoin:1PFtePS2YE5i5dTX17ozJPHrjKu2UqBLmi?label=burp%20donation"><img src="/images/bitcoin-button.png" alt="Donate with Bitcoin" title="Donate with Bitcoin" border="0" /></a>
+         <a href="bitcoin:bc1qzgpf8z42klfh62gj3lfyyga6dgx8pfarn2a2vq?label=burp%20donation"><img src="/images/bitcoin-button.png" alt="Donate with Bitcoin" title="Donate with Bitcoin" border="0" /></a>
         </td>
         <td align="centre" width="50%">
          <p>
@@ -110,7 +110,7 @@ donation.
    </td>
    <td align="right">
     <font color="#000000">
-     Last updated: August 2021
+     Last updated: January 2022
      <BR>
      By Graham Keeling
     </font>

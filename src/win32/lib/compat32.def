@@ -15,7 +15,6 @@ _Z12win32_unlinkPKc
 _Z15init_stack_dumpv
 _Z15win32_ftruncateix
 _Z17SetVSSPathConvertPFiPKcPciEPFiPKwPwiE
-_Z18GetApplicationNamePKcPPcPS0_
 _Z18cvt_ftime_to_utimeRK9_FILETIME
 _Z18cvt_utime_to_ftimeRKlR9_FILETIME
 _Z21Win32ConvCleanupCachev
@@ -34,11 +33,8 @@ _Z5lstatPKcP4stat
 _Z5sleepi
 _Z6execvpPKcPPc
 _Z6lchownPKcjj
-_Z6randomv
-_Z7geteuidv
 _Z7opendirPKc
 _Z7openlogPKcii
-_Z7srandomj
 _Z7waitpidiPii
 _Z8WSA_Initv
 _Z8closedirPv
@@ -48,9 +44,6 @@ _Z8getpwuidj
 _Z8pathconfPKci
 _Z8readlinkPKcPci
 _Z7readdirPv
-_Z9ErrorExitPKc
-_ZN6winverC1Ev
-_ZN6winverC2Ev
 syslog
 umask
 utime

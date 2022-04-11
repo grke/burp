@@ -286,8 +286,6 @@ int waitpid(int, int *, int);
 
 struct timespec;
 struct dirent *readdir(DIR *dirp);
-long int random(void);
-void srandom(unsigned int seed);
 int lstat(const char *, struct stat *);
 int win32_lstat(const char *, struct stat *, uint64_t *);
 int stat(const char *file, struct stat *sb);
@@ -295,8 +293,6 @@ long pathconf(const char *, int);
 int readlink(const char *, char *, int);
 #define _PC_PATH_MAX 1
 #define _PC_NAME_MAX 2
-
-int geteuid();
 
 DIR *opendir(const char *name);
 int closedir(DIR *dir);

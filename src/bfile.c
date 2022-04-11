@@ -89,7 +89,6 @@ static ssize_t bfile_write_vss_strip(struct BFILE *bfd, void *buf, size_t count)
 
 #ifdef HAVE_WIN32
 
-char *unix_name_to_win32(char *name);
 extern "C" HANDLE get_osfhandle(int fd);
 
 static void bfile_set_win32_api(struct BFILE *bfd, int on)
@@ -117,18 +116,12 @@ static int bfile_open_encrypted(struct BFILE *bfd,
 	const char *fname, int flags, mode_t mode)
 {
 	ULONG ulFlags=0;
-	char *win32_fname=NULL;
 	char *win32_fname_wchar=NULL;
 
 	bfd->mode=BF_CLOSED;
 	if(!(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
 	{
 		logp("could not get widename!");
-		goto end;
-	}
-	if(!(win32_fname=unix_name_to_win32((char *)fname)))
-	{
-		logp("could not get win32_fname of %s!", fname);
 		goto end;
 	}
 
@@ -157,7 +150,6 @@ static int bfile_open_encrypted(struct BFILE *bfd,
 
 end:
 	free_w(&win32_fname_wchar);
-	free_w(&win32_fname);
 	return bfd->mode==BF_CLOSED;
 }
 
@@ -179,7 +171,6 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 	DWORD dwaccess;
 	DWORD dwflags;
 	DWORD dwshare;
-	char *win32_fname=NULL;
 	char *win32_fname_wchar=NULL;
 
 	bfd->mode=BF_CLOSED;
@@ -187,11 +178,6 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 	if(bfd->winattr & FILE_ATTRIBUTE_ENCRYPTED)
 		return bfile_open_encrypted(bfd, fname, flags, mode);
 
-	if(!(win32_fname=unix_name_to_win32((char *)fname)))
-	{
-		logp("could not get win32_fname of %s!\n", fname);
-		goto end;
-	}
 	if(!(win32_fname_wchar=make_win32_path_UTF8_2_wchar_w(fname)))
 	{
 		logp("could not get widename!");
@@ -307,7 +293,6 @@ static int bfile_open(struct BFILE *bfd, struct asfd *asfd,
 end:
 	bfd->lpContext=NULL;
 	free_w(&win32_fname_wchar);
-	free_w(&win32_fname);
 
 	if(bfd->vss_strip)
 		setup_vss_strip(bfd);

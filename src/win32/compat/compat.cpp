@@ -163,23 +163,6 @@ void conv_unix_to_win32_path(const char *name, char *win32_name, DWORD dwSize)
 	}
 }
 
-// Conversion of a Unix filename to a Win32 filename.
-char *unix_name_to_win32(char *name)
-{
-	char *ret=NULL;
-	char *tmp=NULL;
-
-	// One extra byte should suffice, but we double it.
-	// Add MAX_PATH bytes for VSS shadow copy name.
-	DWORD dwSize=2*strlen(name)+MAX_PATH;
-	tmp=sm_get_pool_memory();
-	tmp=sm_check_pool_memory_size(tmp, dwSize);
-	conv_unix_to_win32_path(name, tmp, dwSize);
-	if(tmp) ret=strdup(tmp);
-	sm_free_pool_memory(tmp);
-	return ret;
-}
-
 /* Created 02/27/2006 Thorsten Engel.
    This function expects an UCS-encoded standard wchar_t in pszUCSPath and
    will complete the input path to an absolue path of the form \\?\c:\path\file
@@ -399,30 +382,6 @@ int UTF8_2_wchar(char **ppszUCS, const char *pszUTF)
 
 	ASSERT(ret>0);
 	return ret;
-}
-
-void wchar_win32_path(const char *name, wchar_t *win32_name)
-{
-	const char *fname=name;
-	while(*name)
-	{
-		// Check for Unix separator and convert to Win32.
-		if(*name=='/')
-			*win32_name++='\\';
-		else if(*name=='\\' && name[1]=='\\')
-		{
-			*win32_name++='\\';
-			name++;
-		}
-		else
-			*win32_name++=*name;
-		name++;
-	}
-	// Strip any trailing slash, if we stored something.
-	if(*fname && win32_name[-1]=='\\')
-		win32_name[-1]=0;
-	else
-		*win32_name=0;
 }
 
 // Allows one or both pointers to be NULL
@@ -1256,7 +1215,6 @@ err:
 void init_stack_dump(void)
 {
 }
-
 
 long pathconf(const char *path, int name)
 {

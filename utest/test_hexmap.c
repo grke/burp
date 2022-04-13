@@ -5,7 +5,6 @@
 #include <openssl/md5.h>
 #include "test.h"
 #include "../src/hexmap.h"
-#include "../src/protocol2/blk.h"
 
 START_TEST(test_md5sum_of_empty_string)
 {

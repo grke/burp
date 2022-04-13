@@ -3,13 +3,11 @@
 #include "log.h"
 #include "sbuf.h"
 #include "slist.h"
-#include "protocol2/blist.h"
 
 struct slist *slist_alloc(void)
 {
 	struct slist *slist=NULL;
-	if(!(slist=(struct slist *)calloc_w(1, sizeof(struct slist), __func__))
-	  || !(slist->blist=blist_alloc()))
+	if(!(slist=(struct slist *)calloc_w(1, sizeof(struct slist), __func__)))
 		slist_free(&slist);
 	return slist;
 }
@@ -20,7 +18,6 @@ void slist_free(struct slist **slist)
 	struct sbuf *shead;
 	if(!slist || !*slist)
 		return;
-	blist_free(&(*slist)->blist);
 	shead=(*slist)->head;
 	while(shead)
 	{
@@ -83,14 +80,6 @@ int slist_del_sbuf(struct slist *slist, struct sbuf *sb)
 	struct sbuf *s;
 	if(!slist)
 		return 0;
-	if(sb->protocol2->bstart
-	  || sb->protocol2->bend
-	  || sb->protocol2->bsighead)
-	{
-		logp("Cannot delete sbuf with blk markers: %s\n",
-			iobuf_to_printable(&sb->path));
-		return -1;
-	}
 
 	if(slist->head==sb)
 	{
@@ -114,22 +103,6 @@ int slist_del_sbuf(struct slist *slist, struct sbuf *sb)
         // It is possible for the markers to drop behind.
 	adjust_dropped_markers(slist, sb);
 
-	return 0;
-}
-
-int slist_del_sbuf_by_index(struct slist *slist, uint64_t index)
-{
-	struct sbuf *sb;
-	for(sb=slist->head; sb; sb=sb->next)
-	{
-		if(sb->protocol2->index==index)
-		{
-			if(slist_del_sbuf(slist, sb))
-				return -1;
-			sbuf_free(&sb);
-			break;
-		}
-	}
 	return 0;
 }
 

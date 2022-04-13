@@ -15,9 +15,9 @@
 #include "manio.h"
 #include "diff.h"
 
-static char *get_manifest_path(const char *fullpath, enum protocol protocol)
+static char *get_manifest_path(const char *fullpath)
 {
-	return prepend_s(fullpath, protocol==PROTO_1?"manifest.gz":"manifest");
+	return prepend_s(fullpath, "manifest.gz");
 }
 
 static int send_diff(struct asfd *asfd, const char *symbol, struct sbuf *sb)
@@ -48,7 +48,7 @@ static int send_addition(struct asfd *asfd, struct sbuf *sb)
 }
 
 static int diff_manifests(struct asfd *asfd, const char *fullpath1,
-	const char *fullpath2, enum protocol protocol)
+	const char *fullpath2)
 {
 	int ret=-1;
 	int pcmp;
@@ -59,12 +59,12 @@ static int diff_manifests(struct asfd *asfd, const char *fullpath1,
 	char *manifest_dir1=NULL;
 	char *manifest_dir2=NULL;
 
-	if(!(manifest_dir1=get_manifest_path(fullpath1, protocol))
-	  || !(manifest_dir2=get_manifest_path(fullpath2, protocol))
-	  || !(manio1=manio_open(manifest_dir1, "rb", protocol))
-	  || !(manio2=manio_open(manifest_dir2, "rb", protocol))
-	  || !(sb1=sbuf_alloc(protocol))
-	  || !(sb2=sbuf_alloc(protocol)))
+	if(!(manifest_dir1=get_manifest_path(fullpath1))
+	  || !(manifest_dir2=get_manifest_path(fullpath2))
+	  || !(manio1=manio_open(manifest_dir1, "rb"))
+	  || !(manio2=manio_open(manifest_dir2, "rb"))
+	  || !(sb1=sbuf_alloc())
+	  || !(sb2=sbuf_alloc()))
 	{
 		log_and_send_oom(asfd);
 		goto end;
@@ -152,7 +152,7 @@ static int send_backup_name_to_client(struct asfd *asfd, struct bu *bu)
 }
 
 int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
-	enum protocol protocol, const char *backup1, const char *backup2)
+	const char *backup1, const char *backup2)
 {
 	int ret=-1;
 	unsigned long bno1=0;
@@ -201,7 +201,7 @@ int do_diff_server(struct asfd *asfd, struct sdirs *sdirs, struct conf **confs,
 	if(timed_operation_status_only(CNTR_STATUS_DIFFING, NULL, confs))
 		goto end;
 
-	if(diff_manifests(asfd, bu1->path, bu2->path, protocol))
+	if(diff_manifests(asfd, bu1->path, bu2->path))
 		goto end;
 
 	ret=0;

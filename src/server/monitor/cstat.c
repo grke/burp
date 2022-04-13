@@ -45,57 +45,6 @@ int cstat_permitted(struct cstat *cstat,
 	return 0;
 }
 
-static int cstat_set_sdirs_protocol_unknown(struct cstat *cstat,
-	struct conf **cconfs)
-{
-	struct stat buf1;
-	struct stat buf2;
-	struct sdirs *sdirs1=NULL;
-	struct sdirs *sdirs2=NULL;
-
-	if(!(sdirs1=sdirs_alloc())
-	  || !(sdirs2=sdirs_alloc()))
-		goto error;
-
-	set_protocol(cconfs, PROTO_1);
-	if(sdirs_init_from_confs(sdirs1, cconfs))
-		goto error;
-	set_protocol(cconfs, PROTO_2);
-	if(sdirs_init_from_confs(sdirs2, cconfs))
-		goto error;
-
-	if(lstat(sdirs2->client, &buf2))
-		goto protocol1; // No protocol2 client directory.
-
-	if(lstat(sdirs1->client, &buf1))
-		goto protocol2; // No protocol1 client directory.
-
-	// Both directories exist.
-
-	if(buf2.st_mtime>buf1.st_mtime)
-		goto protocol2; // 2 was modified most recently.
-
-	// Fall through to protocol1.
-
-protocol1:
-	cstat->sdirs=sdirs1;
-	cstat->protocol=PROTO_1;
-	sdirs_free(&sdirs2);
-	set_protocol(cconfs, PROTO_AUTO);
-	return 0;
-protocol2:
-	cstat->sdirs=sdirs2;
-	cstat->protocol=PROTO_2;
-	sdirs_free(&sdirs1);
-	set_protocol(cconfs, PROTO_AUTO);
-	return 0;
-error:
-	sdirs_free(&sdirs1);
-	sdirs_free(&sdirs2);
-	set_protocol(cconfs, PROTO_AUTO);
-	return -1;
-}
-
 static int cstat_set_sdirs_protocol_known(struct cstat *cstat,
 	struct conf **cconfs)
 {
@@ -114,13 +63,8 @@ static int cstat_set_sdirs_protocol_known(struct cstat *cstat,
 
 static int cstat_set_sdirs(struct cstat *cstat, struct conf **cconfs)
 {
-	enum protocol protocol=get_protocol(cconfs);
 	sdirs_free((struct sdirs **)&cstat->sdirs);
 
-	if(protocol==PROTO_AUTO)
-		return cstat_set_sdirs_protocol_unknown(cstat, cconfs);
-
-	cstat->protocol=protocol;
 	return cstat_set_sdirs_protocol_known(cstat, cconfs);
 }
 

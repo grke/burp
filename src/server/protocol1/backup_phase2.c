@@ -298,7 +298,7 @@ static int open_previous_manifest(struct manio **manio, struct sdirs *sdirs)
 {
 	struct stat statp;
 	if(!lstat(sdirs->cmanifest, &statp)
-	  && !(*manio=manio_open(sdirs->cmanifest, "rb", PROTO_1)))
+	  && !(*manio=manio_open(sdirs->cmanifest, "rb")))
 	{
 		logp("could not open old manifest %s\n", sdirs->cmanifest);
 		return -1;
@@ -363,7 +363,7 @@ static int relink_deleted_hardlink_master(
 	struct sbuf *hb=NULL;
 	int istreedata=0;
 
-	if(!(hb=sbuf_alloc(PROTO_1)))
+	if(!(hb=sbuf_alloc()))
 		goto end;
 
 	switch(get_hardlink_master_from_hmanio(hmanio, sdirs, cb, hb))
@@ -987,7 +987,7 @@ static int process_next_file_from_manios(struct asfd *asfd,
 	struct sbuf *cb,
 	struct conf **cconfs)
 {
-	if(!(*p1b=sbuf_alloc(PROTO_1)))
+	if(!(*p1b=sbuf_alloc()))
 		goto error;
 	switch(manio_read(manios->phase1, *p1b))
 	{
@@ -1222,8 +1222,7 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 			goto error;
 	}
 
-	if(!(manios=manios_open_phase2(sdirs,
-		pos_phase1, pos_current, PROTO_1)))
+	if(!(manios=manios_open_phase2(sdirs, pos_phase1, pos_current)))
 			goto error;
 	// If the split_vss setting changed between the previous backup and the
 	// new backup, close the previous manifest. This will have the effect
@@ -1233,9 +1232,9 @@ int backup_phase2_server_protocol1(struct async *as, struct sdirs *sdirs,
 	if(vss_opts_changed(sdirs, cconfs, incexc))
 		manio_close(&manios->current);
 
-	if(!(cb=sbuf_alloc(PROTO_1))
-	  || !(p1b=sbuf_alloc(PROTO_1))
-	  || !(rb=sbuf_alloc(PROTO_1)))
+	if(!(cb=sbuf_alloc())
+	  || !(p1b=sbuf_alloc())
+	  || !(rb=sbuf_alloc()))
 		goto error;
 
 	while(1)

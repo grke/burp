@@ -10,7 +10,6 @@
 #define MANIO_MODE_WRITE	"wb"
 #define MANIO_MODE_APPEND	"ab"
 
-struct blk;
 struct sbuf;
 
 struct man_off
@@ -44,29 +43,20 @@ struct manio
 	char *dindex_dir;
 	uint64_t *dindex_sort;	// Array for sorting and writing dindex.
 	int dindex_count;
-	enum protocol protocol;	// Whether running in protocol1/2 mode.
 	int phase;
 
 	man_off_t *offset;
 };
 
-extern struct manio *manio_open(const char *manifest, const char *mode,
-	enum protocol protocol);
-extern struct manio *manio_open_phase1(const char *manifest, const char *mode,
-	enum protocol protocol);
-extern struct manio *manio_open_phase2(const char *manifest, const char *mode,
-	enum protocol protocol);
+extern struct manio *manio_open(const char *manifest, const char *mode);
+extern struct manio *manio_open_phase1(const char *manifest, const char *mode);
+extern struct manio *manio_open_phase2(const char *manifest, const char *mode);
 extern struct manio *manio_open_phase3(const char *manifest, const char *mode,
-	enum protocol protocol, const char *rmanifest);
+	const char *rmanifest);
 extern int manio_close(struct manio **manio);
 
-extern int manio_read_fcount(struct manio *manio);
-
-extern int manio_read_with_blk(struct manio *manio,
-	struct sbuf *sb, struct blk *blk);
 extern int manio_read(struct manio *manio, struct sbuf *sb);
 
-extern int manio_write_sig_and_path(struct manio *manio, struct blk *blk);
 extern int manio_write_sbuf(struct manio *manio, struct sbuf *sb);
 extern int manio_write_cntr(struct manio *manio, struct sbuf *sb,
 	enum cntr_manio what);

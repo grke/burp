@@ -39,9 +39,6 @@ CLIENT_OBJS = \
 	$(OBJDIR)/src/client/backup_phase1.o \
 	$(OBJDIR)/src/client/protocol1/backup_phase2.o \
 	$(OBJDIR)/src/client/protocol1/restore.o \
-	$(OBJDIR)/src/client/protocol2/backup_phase2.o \
-	$(OBJDIR)/src/client/protocol2/rabin_read.o \
-	$(OBJDIR)/src/client/protocol2/restore.o \
 	$(OBJDIR)/src/client/ca.o \
 	$(OBJDIR)/src/client/cvss.o \
 	$(OBJDIR)/src/client/delete.o \
@@ -83,16 +80,9 @@ CLIENT_OBJS = \
 	$(OBJDIR)/src/protocol1/msg.o \
 	$(OBJDIR)/src/protocol1/rs_buf.o \
 	$(OBJDIR)/src/protocol1/sbuf_protocol1.o \
-	$(OBJDIR)/src/protocol2/blist.o \
-	$(OBJDIR)/src/protocol2/blk.o \
-	$(OBJDIR)/src/protocol2/rabin/rabin.o \
-	$(OBJDIR)/src/protocol2/rabin/rconf.o \
-	$(OBJDIR)/src/protocol2/rabin/win.o \
-	$(OBJDIR)/src/protocol2/sbuf_protocol2.o \
 	$(OBJDIR)/src/regexp.o \
 	$(OBJDIR)/src/run_script.o \
 	$(OBJDIR)/src/sbuf.o \
-	$(OBJDIR)/src/server/protocol2/champ_chooser/incoming.o \
 	$(OBJDIR)/src/slist.o \
 	$(OBJDIR)/src/ssl.o \
 	$(OBJDIR)/src/strlist.o \
@@ -109,23 +99,14 @@ CLIENT_OBJS = \
 	$(OBJDIR)/utest/builders/build_file.o \
 	$(OBJDIR)/utest/builders/build_paths.o \
 	$(OBJDIR)/utest/builders/build_slist.o \
-	$(OBJDIR)/utest/builders/protocol2/build_blist.o \
 	$(OBJDIR)/utest/client/monitor/test_lline.o \
 	$(OBJDIR)/utest/client/protocol1/test_backup_phase2.o \
-	$(OBJDIR)/utest/client/protocol2/test_backup_phase2.o \
-	$(OBJDIR)/utest/client/protocol2/test_rabin_read.o \
 	$(OBJDIR)/utest/client/test_restore.o \
 	$(OBJDIR)/utest/client/test_auth.o \
 	$(OBJDIR)/utest/client/test_monitor.o \
 	$(OBJDIR)/utest/prng.o \
 	$(OBJDIR)/utest/protocol1/test_handy.o \
 	$(OBJDIR)/utest/protocol1/test_rs_buf.o \
-	$(OBJDIR)/utest/protocol2/test_blist.o \
-	$(OBJDIR)/utest/protocol2/test_blk.o \
-	$(OBJDIR)/utest/protocol2/rabin/test_rabin.o \
-	$(OBJDIR)/utest/protocol2/rabin/test_rconf.o \
-	$(OBJDIR)/utest/protocol2/rabin/test_win.o \
-	$(OBJDIR)/utest/protocol2/test_sbuf_protocol2.o \
 	$(OBJDIR)/utest/test_alloc.o \
 	$(OBJDIR)/utest/test_asfd.o \
 	$(OBJDIR)/utest/test_attribs.o \

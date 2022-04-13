@@ -20,11 +20,11 @@ static void cleanup(void)
 	fail_unless(!recursive_delete(SDIRS));
 }
 
-static struct sdirs *setup_sdirs(enum protocol protocol, const char *cname)
+static struct sdirs *setup_sdirs(const char *cname)
 {
 	struct sdirs *sdirs;
 	fail_unless((sdirs=sdirs_alloc())!=NULL);
-	fail_unless(!sdirs_init(sdirs, protocol,
+	fail_unless(!sdirs_init(sdirs,
 		SDIRS, // directory
 		cname, // cname
 		NULL, // client_lockdir
@@ -252,7 +252,6 @@ static void run_test(struct data *d)
 {
 	int timer_ret;
 	struct sdirs *sdirs=NULL;
-	enum protocol protocol=PROTO_1;
 	const char *cname="testclient";
 	struct strlist *timer_args=NULL;
 	time_t time_now;
@@ -279,7 +278,7 @@ static void run_test(struct data *d)
 	if(d->timeband2)
 		fail_unless(!strlist_add(&timer_args, d->timeband2, 0));
 
-	fail_unless((sdirs=setup_sdirs(protocol, cname))!=NULL);
+	fail_unless((sdirs=setup_sdirs(cname))!=NULL);
 	if(d->time_last_backup)
 	{
 		struct sd sd;
@@ -348,7 +347,7 @@ START_TEST(test_timer)
 	struct sdirs *sdirs=NULL;
 	alloc_check_init();
 	confs=setup_conf();
-	sdirs=setup_sdirs(PROTO_1, "testclient");
+	sdirs=setup_sdirs("testclient");
 	fail_unless(run_timer(/*asfd*/NULL, sdirs, confs)==1);
 	confs_free(&confs);
 	sdirs_free(&sdirs);
@@ -363,7 +362,7 @@ START_TEST(test_timer_script)
 	struct sdirs *sdirs=NULL;
 	alloc_check_init();
 	confs=setup_conf();
-	sdirs=setup_sdirs(PROTO_1, "testclient");
+	sdirs=setup_sdirs("testclient");
 	set_string(confs[OPT_TIMER_SCRIPT], "somepath");
 	fail_unless(run_timer(/*asfd*/NULL, sdirs, confs)==1);
 	confs_free(&confs);

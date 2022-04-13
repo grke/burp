@@ -16,7 +16,6 @@
 #include "delete.h"
 #include "diff.h"
 #include "list.h"
-#include "protocol2/restore.h"
 #include "restore.h"
 #include "rubble.h"
 #include "sdirs.h"
@@ -355,7 +354,7 @@ static int run_list(struct asfd *asfd,
 	iobuf_free_content(asfd->rbuf);
 
 	if(list_server_init(asfd, sdirs, cconfs,
-		get_protocol(cconfs), backupno, listregex, browsedir))
+		backupno, listregex, browsedir))
 			goto end;
 	ret=do_list_server();
 end:
@@ -398,8 +397,7 @@ static int run_diff(struct asfd *asfd,
 
 	iobuf_free_content(asfd->rbuf);
 
-	ret=do_diff_server(asfd, sdirs,
-		cconfs, get_protocol(cconfs), backup1, backup2);
+	ret=do_diff_server(asfd, sdirs, cconfs, backup1, backup2);
 end:
 	free_w(&backup1);
 	free_w(&backup2);

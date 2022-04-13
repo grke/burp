@@ -44,8 +44,6 @@ dist_doc_DATA = \
 
 dist_man8_MANS = \
 	manpages/bedup.8 \
-	manpages/bsigs.8 \
-	manpages/bsparse.8 \
 	manpages/$(PACKAGE_TARNAME).8 \
 	manpages/$(PACKAGE_TARNAME)_ca.8 \
 	manpages/vss_strip.8
@@ -192,19 +190,10 @@ main_SOURCES = \
 	src/client/monitor/status_client_ncurses.c src/client/monitor/status_client_ncurses.h \
 	src/client/protocol1/backup_phase2.c src/client/protocol1/backup_phase2.h \
 	src/client/protocol1/restore.c src/client/protocol1/restore.h \
-	src/client/protocol2/backup_phase2.c src/client/protocol2/backup_phase2.h \
-	src/client/protocol2/rabin_read.c src/client/protocol2/rabin_read.h \
-	src/client/protocol2/restore.c src/client/protocol2/restore.h \
 	src/protocol1/handy.c src/protocol1/handy.h \
 	src/protocol1/msg.c src/protocol1/msg.h \
 	src/protocol1/rs_buf.c src/protocol1/rs_buf.h \
 	src/protocol1/sbuf_protocol1.c src/protocol1/sbuf_protocol1.h \
-	src/protocol2/blist.c src/protocol2/blist.h \
-	src/protocol2/blk.c src/protocol2/blk.h \
-	src/protocol2/rabin/rabin.c src/protocol2/rabin/rabin.h \
-	src/protocol2/rabin/rconf.c src/protocol2/rabin/rconf.h \
-	src/protocol2/rabin/win.c src/protocol2/rabin/win.h \
-	src/protocol2/sbuf_protocol2.c src/protocol2/sbuf_protocol2.h \
 	src/server/auth.c src/server/auth.h \
 	src/server/autoupgrade.c src/server/autoupgrade.h \
 	src/server/backup.c src/server/backup.h \
@@ -245,24 +234,6 @@ main_SOURCES = \
 	src/server/protocol1/link.c src/server/protocol1/link.h \
 	src/server/protocol1/restore.c src/server/protocol1/restore.h \
 	src/server/protocol1/zlibio.c src/server/protocol1/zlibio.h \
-	src/server/protocol2/backup_phase2.c src/server/protocol2/backup_phase2.h \
-	src/server/protocol2/backup_phase4.c src/server/protocol2/backup_phase4.h \
-	src/server/protocol2/bsigs.c src/server/protocol2/bsigs.h \
-	src/server/protocol2/bsparse.c src/server/protocol2/bsparse.h \
-	src/server/protocol2/champ_chooser/candidate.c src/server/protocol2/champ_chooser/candidate.h \
-	src/server/protocol2/champ_chooser/champ_chooser.c src/server/protocol2/champ_chooser/champ_chooser.h \
-	src/server/protocol2/champ_chooser/champ_client.c src/server/protocol2/champ_chooser/champ_client.h \
-	src/server/protocol2/champ_chooser/champ_server.c src/server/protocol2/champ_chooser/champ_server.h \
-	src/server/protocol2/champ_chooser/dindex.c src/server/protocol2/champ_chooser/dindex.h \
-	src/server/protocol2/champ_chooser/hash.c src/server/protocol2/champ_chooser/hash.h \
-	src/server/protocol2/champ_chooser/incoming.c src/server/protocol2/champ_chooser/incoming.h \
-	src/server/protocol2/champ_chooser/scores.c src/server/protocol2/champ_chooser/scores.h \
-	src/server/protocol2/champ_chooser/sparse.c src/server/protocol2/champ_chooser/sparse.h \
-	src/server/protocol2/clist.c src/server/protocol2/clist.h \
-	src/server/protocol2/dpth.c src/server/protocol2/dpth.h \
-	src/server/protocol2/rblk.c src/server/protocol2/rblk.h \
-	src/server/protocol2/restore.c src/server/protocol2/restore.h \
-	src/server/protocol2/sparse_min.c src/server/protocol2/sparse_min.h \
 	src/yajl/yajl.c \
 	src/yajl/yajl_alloc.c src/yajl/yajl_alloc.h \
 	src/yajl/yajl_buf.c src/yajl/yajl_buf.h \
@@ -291,28 +262,16 @@ runner_SOURCES = \
 	utest/builders/build_slist.c \
 	utest/builders/build_paths.c \
 	utest/builders/build.h \
-	utest/builders/protocol2/build_blist.c \
 	utest/builders/server/build_manifest.c \
 	utest/builders/server/build_storage_dirs.c utest/builders/server/build_storage_dirs.h \
-	utest/builders/server/protocol2/build_sparse_index.c \
-	utest/builders/server/protocol2/build_sparse_index.h \
-	utest/builders/server/protocol2/champ_chooser/build_dindex.c utest/builders/server/protocol2/champ_chooser/build_dindex.h \
 	utest/main.c \
 	utest/prng.c utest/prng.h \
 	utest/protocol1/test_handy.c \
 	utest/protocol1/test_rs_buf.c \
-	utest/protocol2/test_blist.c \
-	utest/protocol2/test_blk.c \
-	utest/protocol2/test_sbuf_protocol2.c \
-	utest/protocol2/rabin/test_rabin.c \
-	utest/protocol2/rabin/test_rconf.c \
-	utest/protocol2/rabin/test_win.c \
 	utest/client/monitor/test_json_input.c \
 	utest/client/monitor/test_lline.c \
 	utest/client/monitor/test_status_client_ncurses.c \
 	utest/client/protocol1/test_backup_phase2.c \
-	utest/client/protocol2/test_backup_phase2.c \
-	utest/client/protocol2/test_rabin_read.c \
 	utest/client/test_acl.c \
 	utest/client/test_auth.c \
 	utest/client/test_delete.c \
@@ -334,16 +293,6 @@ runner_SOURCES = \
 	utest/server/protocol1/test_dpth.c \
 	utest/server/protocol1/test_fdirs.c \
 	utest/server/protocol1/test_restore.c \
-	utest/server/protocol2/champ_chooser/test_champ_chooser.c \
-	utest/server/protocol2/champ_chooser/test_champ_server.c \
-	utest/server/protocol2/champ_chooser/test_dindex.c \
-	utest/server/protocol2/champ_chooser/test_hash.c \
-	utest/server/protocol2/champ_chooser/test_scores.c \
-	utest/server/protocol2/champ_chooser/test_sparse.c \
-	utest/server/protocol2/test_backup_phase2.c \
-	utest/server/protocol2/test_backup_phase4.c \
-	utest/server/protocol2/test_bsparse.c \
-	utest/server/protocol2/test_dpth.c \
 	utest/server/test_auth.c \
 	utest/server/test_autoupgrade.c \
 	utest/server/test_ca.c \
@@ -470,14 +419,6 @@ backup_tool_script:
 manpages/bedup.8:
 	$(AM_V_at)rm -f $@
 	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bedup.8.in >$@
-
-manpages/bsigs.8:
-	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bsigs.8.in >$@
-
-manpages/bsparse.8:
-	$(AM_V_at)rm -f $@
-	$(AM_V_GEN)$(do_subst) <$(srcdir)/manpages/bsparse.8.in >$@
 
 manpages/$(PACKAGE_TARNAME).8:
 	$(AM_V_at)rm -f $@

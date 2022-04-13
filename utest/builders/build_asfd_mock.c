@@ -42,7 +42,6 @@ static int mock_asfd_read(struct asfd *asfd)
 	return r->ret;
 }
 
-//#include "../../src/protocol2/blk.h"
 //#include "../../src/hexmap.h"
 
 static int do_asfd_assert_write(struct asfd *asfd, struct iobuf *wbuf)

@@ -216,9 +216,6 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_NETWORK_ALLOW_STATUS:
 			fail_unless(get_strlist(c[o])==NULL);
 			break;
-		case OPT_PROTOCOL:
-			fail_unless(get_e_protocol(c[o])==PROTO_AUTO);
-			break;
 		case OPT_HARD_QUOTA:
 		case OPT_SOFT_QUOTA:
 		case OPT_MIN_FILE_SIZE:

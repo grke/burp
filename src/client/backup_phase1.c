@@ -109,11 +109,8 @@ static int do_to_server(struct asfd *asfd,
 #ifdef HAVE_WIN32
 	int split_vss=0;
 	int strip_vss=0;
-	if(get_protocol(confs)==PROTO_1)
-	{
-		split_vss=get_int(confs[OPT_SPLIT_VSS]);
-		strip_vss=get_int(confs[OPT_STRIP_VSS]);
-	}
+	split_vss=get_int(confs[OPT_SPLIT_VSS]);
+	strip_vss=get_int(confs[OPT_STRIP_VSS]);
 #endif
 	struct cntr *cntr=get_cntr(confs);
 	sb->compression=compression;
@@ -164,7 +161,7 @@ static int my_send_file(struct asfd *asfd, struct FF_PKT *ff, struct conf **conf
 	static struct sbuf *sb=NULL;
 	struct cntr *cntr=get_cntr(confs);
 
-	if(!sb && !(sb=sbuf_alloc(get_protocol(confs)))) return -1;
+	if(!sb && !(sb=sbuf_alloc())) return -1;
 
 #ifdef HAVE_WIN32
 	if(ff->winattr & FILE_ATTRIBUTE_ENCRYPTED)
@@ -224,9 +221,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs)
 
 	logp("Phase 1 begin (file system scan)\n");
 
-	// Encryption not yet supported in protocol2.
-	if(get_protocol(confs)==PROTO_1
-	  && get_string(confs[OPT_ENCRYPTION_PASSWORD]))
+	if(get_string(confs[OPT_ENCRYPTION_PASSWORD]))
 	{
 		encryption=ENCRYPTION_KEY_DERIVED;
 		filesymbol=CMD_ENC_FILE;
@@ -238,8 +233,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs)
 	}
 #ifdef HAVE_WIN32
 	dirsymbol=filesymbol;
-	if(get_protocol(confs)==PROTO_1
-	  && get_int(confs[OPT_STRIP_VSS]))
+	if(get_int(confs[OPT_STRIP_VSS]))
 		dirsymbol=CMD_DIRECTORY;
 #endif
 

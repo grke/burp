@@ -61,18 +61,6 @@ const char *rshash_to_str(enum rshash r)
 	}
 }
 
-enum protocol str_to_protocol(const char *str)
-{
-	if(!strcmp(str, "0"))
-		return PROTO_AUTO;
-	else if(!strcmp(str, "1"))
-		return PROTO_1;
-	else if(!strcmp(str, "2"))
-		return PROTO_2;
-	logp("Unknown protocol setting: %s\n", str);
-	return PROTO_AUTO;
-}
-
 struct strlist *get_strlist(struct conf *conf)
 {
 	assert(conf->conf_type==CT_STRLIST);
@@ -113,17 +101,6 @@ enum burp_mode get_e_burp_mode(struct conf *conf)
 {
 	assert(conf->conf_type==CT_E_BURP_MODE);
 	return conf->data.burp_mode;
-}
-
-enum protocol get_e_protocol(struct conf *conf)
-{
-	assert(conf->conf_type==CT_E_PROTOCOL);
-	return conf->data.protocol;
-}
-
-enum protocol get_protocol(struct conf **confs)
-{
-	return get_e_protocol(confs[OPT_PROTOCOL]);
 }
 
 enum recovery_method get_e_recovery_method(struct conf *conf)
@@ -179,18 +156,6 @@ int set_e_burp_mode(struct conf *conf, enum burp_mode bm)
 	assert(conf->conf_type==CT_E_BURP_MODE);
 	conf->data.burp_mode=bm;
 	return 0;
-}
-
-int set_e_protocol(struct conf *conf, enum protocol p)
-{
-	assert(conf->conf_type==CT_E_PROTOCOL);
-	conf->data.protocol=p;
-	return 0;
-}
-
-int set_protocol(struct conf **confs, enum protocol p)
-{
-	return set_e_protocol(confs[OPT_PROTOCOL], p);
 }
 
 int set_e_recovery_method(struct conf *conf, enum recovery_method r)
@@ -258,7 +223,6 @@ void conf_free_content(struct conf *c)
 			break;
 		case CT_FLOAT:
 		case CT_E_BURP_MODE:
-		case CT_E_PROTOCOL:
 		case CT_E_RECOVERY_METHOD:
 		case CT_E_RSHASH:
 		case CT_UINT:
@@ -346,13 +310,6 @@ static int sc_ebm(struct conf *conf, enum burp_mode def,
 {
 	sc(conf, flags, CT_E_BURP_MODE, field);
 	return set_e_burp_mode(conf, def);
-}
-
-static int sc_epr(struct conf *conf, enum protocol def,
-	uint8_t flags, const char *field)
-{
-	sc(conf, flags, CT_E_PROTOCOL, field);
-	return set_e_protocol(conf, def);
 }
 
 static int sc_rec(struct conf *conf, enum recovery_method def,
@@ -608,9 +565,6 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_GROUP:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "group");
-	case OPT_PROTOCOL:
-	  return sc_epr(c[o], PROTO_AUTO,
-		CONF_FLAG_CC_OVERRIDE, "protocol");
 	case OPT_DIRECTORY:
 	  return sc_str(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "directory");
@@ -913,7 +867,6 @@ static int set_conf(struct conf *c, const char *value)
 		case CT_UINT:
 		case CT_MODE_T:
 		case CT_SSIZE_T:
-		case CT_E_PROTOCOL:
 		case CT_STRLIST:
 		case CT_CNTR:
 			break;
@@ -954,10 +907,6 @@ static char *conf_data_to_str(struct conf *conf)
 		case CT_E_BURP_MODE:
 			snprintf(ret, l, "%32s: %s\n", conf->field,
 				burp_mode_to_str(get_e_burp_mode(conf)));
-			break;
-		case CT_E_PROTOCOL:
-			snprintf(ret, l, "%32s: %d\n", conf->field,
-				get_e_protocol(conf));
 			break;
 		case CT_E_RECOVERY_METHOD:
 			snprintf(ret, l, "%32s: %s\n", conf->field,

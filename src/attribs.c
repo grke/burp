@@ -61,17 +61,6 @@ int attribs_encode(struct sbuf *sb)
 	p=sb->attr.buf;
 	statp=&sb->statp;
 
-	if(sb->protocol2)
-	{
-		// Protocol1 does not have this field.
-		p += to_base64(sb->protocol2->index, p);
-		*p++ = ' ';
-		// Protocol2 puts compression/encryption near the beginning.
-		p += to_base64(sb->compression, p);
-		*p++ = ' ';
-		p += to_base64(sb->encryption, p);
-		*p++ = ' ';
-	}
 	p += to_base64(statp->st_dev, p);
 	*p++ = ' ';
 	p += to_base64(statp->st_ino, p);
@@ -146,32 +135,6 @@ void attribs_decode(struct sbuf *sb)
 
 	if(!(p=sb->attr.buf)) return;
 	statp=&sb->statp;
-
-	if(sb->protocol2)
-	{
-		// In protocol2, the first component (index) sometimes gets
-		// stripped off of the attributes, so look out for that.
-		if(*p!=' ')
-		{
-			// Protocol1 does not have this field.
-			if(!(eaten=from_base64(&val, p)))
-				return;
-			p+=eaten;
-			sb->protocol2->index=val;
-		}
-
-		// Compression for protocol2.
-		if(!(eaten=from_base64(&val, p)))
-			return;
-		p+=eaten;
-		sb->compression=val;
-
-		// Encryption for protocol2.
-		if(!(eaten=from_base64(&val, p)))
-			return;
-		p+=eaten;
-		sb->encryption=val;
-	}
 
 	if(!(eaten=from_base64(&val, p)))
 		return;

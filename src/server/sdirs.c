@@ -49,10 +49,10 @@ static int free_prepend_s(char **dst, const char *a, const char *b)
 	return !(*dst=prepend_s(a, b));
 }
 
-int sdirs_get_real_manifest(struct sdirs *sdirs, enum protocol protocol)
+int sdirs_get_real_manifest(struct sdirs *sdirs)
 {
 	return free_prepend_s(&sdirs->rmanifest,
-		sdirs->rworking, protocol==PROTO_1?"manifest.gz":"manifest");
+		sdirs->rworking, "manifest.gz");
 }
 
 int sdirs_get_real_working_from_symlink(struct sdirs *sdirs)
@@ -167,35 +167,6 @@ static int do_protocol1_dirs(struct sdirs *sdirs, const char *cname,
 	return 0;
 }
 
-static int do_protocol2_dirs(struct sdirs *sdirs,
-	const char *cname, const char *dedup_group, const char *manual_delete)
-{
-	if(!dedup_group)
-	{
-		logp("dedup_group unset in %s\n", __func__);
-		return -1;
-	}
-	if(!(sdirs->dedup=prepend_s(sdirs->base, dedup_group))
-	  || !(sdirs->clients=prepend_s(sdirs->dedup, "clients"))
-	  || !(sdirs->client=prepend_s(sdirs->clients, cname))
-	  || !(sdirs->dindex=prepend_s(sdirs->client, "dindex"))
-	  || !(sdirs->dfiles=prepend_s(sdirs->client, "dfiles"))
-	  || do_common_dirs(sdirs, manual_delete)
-	  || !(sdirs->data=prepend_s(sdirs->dedup, DATA_DIR))
-	  || !(sdirs->cfiles=prepend_s(sdirs->data, "cfiles"))
-	  || !(sdirs->global_sparse=prepend_s(sdirs->data, "sparse"))
-	  || !(sdirs->champlock=prepend_s(sdirs->data, "cc.lock"))
-	  || !(sdirs->champsock=prepend_s(sdirs->data, "cc.sock"))
-	  || !(sdirs->champlog=prepend_s(sdirs->data, "cc.log"))
-	  || !(sdirs->champ_dindex_lock=prepend_s(sdirs->data, "dindex.lock"))
-	  || !(sdirs->manifest=prepend_s(sdirs->working, "manifest"))
-	  || !(sdirs->cmanifest=prepend_s(sdirs->current, "manifest")))
-		return -1;
-	// sdirs->rworking gets set later.
-	// sdirs->rmanifest gets set later.
-	return 0;
-}
-
 int sdirs_init_from_confs_plus_cname(
 	struct sdirs *sdirs,
 	struct conf **confs,
@@ -203,7 +174,6 @@ int sdirs_init_from_confs_plus_cname(
 ) {
 	return sdirs_init(
 		sdirs,
-		get_protocol(confs),
 		get_string(confs[OPT_DIRECTORY]),
 		cname,
 		get_string(confs[OPT_CLIENT_LOCKDIR]),
@@ -223,7 +193,7 @@ int sdirs_init_from_confs(
 	);
 }
 
-int sdirs_init(struct sdirs *sdirs, enum protocol protocol,
+int sdirs_init(struct sdirs *sdirs,
 	const char *directory, const char *cname, const char *conf_lockdir,
 	const char *dedup_group, const char *manual_delete)
 {
@@ -236,18 +206,8 @@ int sdirs_init(struct sdirs *sdirs, enum protocol protocol,
 	if(!(sdirs->base=strdup_w(directory, __func__)))
 		goto error;
 
-	sdirs->protocol=protocol;
-
-	if(protocol==PROTO_1)
-	{
-		if(do_protocol1_dirs(sdirs, cname, manual_delete))
-			goto error;
-	}
-	else
-	{
-		if(do_protocol2_dirs(sdirs, cname, dedup_group, manual_delete))
-			goto error;
-	}
+	if(do_protocol1_dirs(sdirs, cname, manual_delete))
+		goto error;
 
 	if(do_lock_dirs(sdirs, cname, conf_lockdir)) goto error;
 
@@ -279,7 +239,6 @@ void sdirs_free_content(struct sdirs *sdirs)
 	free_w(&sdirs->dindex);
 	free_w(&sdirs->dfiles);
 	free_w(&sdirs->cfiles);
-	free_w(&sdirs->global_sparse);
 
 	free_w(&sdirs->timestamp);
 	free_w(&sdirs->changed);

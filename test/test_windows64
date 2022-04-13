@@ -164,29 +164,11 @@ do_run()
 		"$user@$client" || exit 1
 }
 
-echo "Running with protocol=1, split_vss=0, strip_vss=0"
-PROTOCOL=1 do_run
+echo "Running with split_vss=0, strip_vss=0"
+do_run
 
-echo "Running with protocol=1, split_vss=1, strip_vss=0"
-PROTOCOL=1 NO_CA_GEN=1 SPLIT_VSS=1 do_run
+echo "Running with split_vss=1, strip_vss=0"
+NO_CA_GEN=1 SPLIT_VSS=1 do_run
 
-echo "Running with protocol=1, split_vss=0, strip_vss=1"
-PROTOCOL=1 NO_CA_GEN=1 STRIP_VSS=1 do_run
-
-# Protocol 2 does not yet support EFS, so redo the test files without EFS.
-# Can delete this once protocol 2 does support EFS.
-rm -f windowsscript
-cat >> windowsscript << EOF
-#!/usr/bin/env bash
-rm -rf "$clientburpdir/build" || exit 1
-tar -xjf build.tar.bz2 -C "$clientburpdir" || exit 1
-EOF
-
-scp $ssh_opts windowsscript "$user@$client:" || fail
-ssh $ssh_opts "$user@$client" chmod 755 windowsscript || fail
-ssh $ssh_opts "$user@$client" ./windowsscript || fail
-
-echo "Running with protocol=2, split_vss=0, strip_vss=0"
-PROTOCOL=2 NO_CA_GEN=1 do_run
-
-exit 0
+echo "Running with split_vss=0, strip_vss=1"
+NO_CA_GEN=1 STRIP_VSS=1 do_run

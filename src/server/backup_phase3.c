@@ -13,25 +13,6 @@
 #include "child.h"
 #include "backup_phase3.h"
 
-static const char *get_rmanifest_relative(struct sdirs *sdirs,
-	struct conf **confs)
-{
-	size_t s;
-	const char *directory;
-
-	directory=get_string(confs[OPT_DIRECTORY]);
-	s=strlen(directory);
-
-	if(!strncmp(sdirs->rmanifest, directory, s))
-	{
-		const char *cp;
-		cp=sdirs->rmanifest+strlen(directory);
-		while(cp && *cp=='/') cp++;
-		return cp;
-	}
-	return sdirs->rmanifest;
-}
-
 // Combine the phase1 and phase2 files into a new manifest.
 int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 {
@@ -43,24 +24,20 @@ int backup_phase3_server_all(struct sdirs *sdirs, struct conf **confs)
 	struct manio *newmanio=NULL;
 	struct manio *chmanio=NULL;
 	struct manio *unmanio=NULL;
-	enum protocol protocol=get_protocol(confs);
 	const char *rmanifest_relative=NULL;
 	char *seed_src=get_string(confs[OPT_SEED_SRC]);
 	char *seed_dst=get_string(confs[OPT_SEED_DST]);
 
 	logp("Begin phase3 (merge manifests)\n");
 
-	if(protocol==PROTO_2)
-		rmanifest_relative=get_rmanifest_relative(sdirs, confs);
-
 	if(!(manifesttmp=get_tmp_filename(sdirs->manifest))
 	  || !(newmanio=manio_open_phase3(manifesttmp,
 		comp_level(get_int(confs[OPT_COMPRESSION])),
-		protocol, rmanifest_relative))
-	  || !(chmanio=manio_open_phase2(sdirs->changed, "rb", protocol))
-	  || !(unmanio=manio_open_phase2(sdirs->unchanged, "rb", protocol))
-	  || !(usb=sbuf_alloc(protocol))
-	  || !(csb=sbuf_alloc(protocol)))
+		rmanifest_relative))
+	  || !(chmanio=manio_open_phase2(sdirs->changed, "rb"))
+	  || !(unmanio=manio_open_phase2(sdirs->unchanged, "rb"))
+	  || !(usb=sbuf_alloc())
+	  || !(csb=sbuf_alloc()))
 		goto end;
 
 	while(chmanio || unmanio)

@@ -19,7 +19,6 @@ static struct conf **setup_confs(void)
 	build_file(conffile, MIN_SERVER_CONF);
 	fail_unless(!conf_load_global_only(conffile, confs));
 	set_string(confs[OPT_CNAME], "utestclient");
-	set_protocol(confs, PROTO_1);
 	return confs;
 }
 

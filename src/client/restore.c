@@ -11,15 +11,12 @@
 #include "../pathcmp.h"
 #include "../log.h"
 #include "../prepend.h"
-#include "../protocol2/blk.h"
 #include "cvss.h"
 #include "protocol1/restore.h"
-#include "protocol2/restore.h"
 #include "restore.h"
 
 int restore_interrupt(struct asfd *asfd,
-	struct sbuf *sb, const char *msg, struct cntr *cntr,
-	enum protocol protocol)
+	struct sbuf *sb, const char *msg, struct cntr *cntr)
 {
 	int ret=-1;
 	char *path=NULL;
@@ -44,10 +41,7 @@ int restore_interrupt(struct asfd *asfd,
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
 
-	if(protocol==PROTO_1)
-		path=sb->protocol1->datapth.buf;
-	else if(protocol==PROTO_2)
-		path=sb->path.buf;
+	path=sb->protocol1->datapth.buf;
 
 	if(!path)
 	{
@@ -70,7 +64,6 @@ int restore_interrupt(struct asfd *asfd,
 		switch(rbuf->cmd)
 		{
 			case CMD_APPEND:
-			case CMD_DATA:
 				continue;
 			case CMD_END_FILE:
 				ret=0;
@@ -133,8 +126,7 @@ static int make_link(
 // FIX THIS: Maybe should be in bfile.c.
 enum ofr_e open_for_restore(struct asfd *asfd,
 	struct BFILE *bfd, const char *path,
-	struct sbuf *sb, enum vss_restore vss_restore, struct cntr *cntr,
-	enum protocol protocol)
+	struct sbuf *sb, enum vss_restore vss_restore, struct cntr *cntr)
 {
 	static int flags;
         if(bfd->mode!=BF_CLOSED)
@@ -217,7 +209,7 @@ enum ofr_e open_for_restore(struct asfd *asfd,
 			snprintf(msg, sizeof(msg),
 				"Cannot unlink before restore: '%s': %s",
 				path, strerror(errno));
-			if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+			if(restore_interrupt(asfd, sb, msg, cntr))
 				return OFR_ERROR;
 			return OFR_CONTINUE;
 		}
@@ -230,7 +222,7 @@ enum ofr_e open_for_restore(struct asfd *asfd,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg), "Could not open for writing %s: %s",
 			path, berrno_bstrerror(&be, errno));
-		if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+		if(restore_interrupt(asfd, sb, msg, cntr))
 			return OFR_ERROR;
 		return OFR_CONTINUE;
 	}
@@ -256,16 +248,13 @@ static void do_logw(struct asfd *asfd, struct cntr *cntr,
 #endif
 
 static int warn_and_interrupt(struct asfd *asfd, struct sbuf *sb,
-	struct cntr *cntr, enum protocol protocol,
-	const char *text, const char *param)
+	struct cntr *cntr, const char *text, const char *param)
 {
-	return restore_interrupt(asfd, sb, build_msg(text, param), cntr,
-		protocol);
+	return restore_interrupt(asfd, sb, build_msg(text, param), cntr);
 }
 
 static int restore_special(struct asfd *asfd, struct sbuf *sb,
-	const char *fname, enum action act, struct cntr *cntr,
-	enum protocol protocol)
+	const char *fname, enum action act, struct cntr *cntr)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -286,7 +275,7 @@ static int restore_special(struct asfd *asfd, struct sbuf *sb,
 		// failed - do a warning
 		if(restore_interrupt(asfd, sb,
 			build_msg("build path failed: %s", fname),
-			cntr, protocol))
+			cntr))
 				ret=-1;
 		goto end;
 	}
@@ -336,8 +325,7 @@ end:
 }
 
 int restore_dir(struct asfd *asfd, struct sbuf *sb,
-	const char *dname, enum action act, struct cntr *cntr,
-	enum protocol protocol)
+	const char *dname, enum action act, struct cntr *cntr)
 {
 	int ret=0;
 	char *rpath=NULL;
@@ -345,7 +333,7 @@ int restore_dir(struct asfd *asfd, struct sbuf *sb,
 	{
 		if(build_path(dname, "", &rpath, NULL))
 		{
-			ret=warn_and_interrupt(asfd, sb, cntr, protocol,
+			ret=warn_and_interrupt(asfd, sb, cntr,
 				"build path failed: %s", dname);
 			goto end;
 		}
@@ -353,7 +341,7 @@ int restore_dir(struct asfd *asfd, struct sbuf *sb,
 		{
 			if(mkdir(rpath, 0777))
 			{
-				ret=warn_and_interrupt(asfd, sb, cntr, protocol,
+				ret=warn_and_interrupt(asfd, sb, cntr,
 					"mkdir error: %s", strerror(errno));
 				goto end;
 			}
@@ -369,7 +357,7 @@ end:
 
 static int restore_link(struct asfd *asfd, struct sbuf *sb,
 	const char *fname, enum action act, struct cntr *cntr,
-	enum protocol protocol, const char *restore_desired_dir)
+	const char *restore_desired_dir)
 {
 	int ret=0;
 
@@ -378,7 +366,7 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 		char *rpath=NULL;
 		if(build_path(fname, "", &rpath, NULL))
 		{
-			ret=warn_and_interrupt(asfd, sb, cntr, protocol,
+			ret=warn_and_interrupt(asfd, sb, cntr,
 				"build path failed: %s", fname);
 			goto end;
 		}
@@ -390,7 +378,7 @@ static int restore_link(struct asfd *asfd, struct sbuf *sb,
 			fname, sb->link.buf,
 			sb->link.cmd, restore_desired_dir))
 		{
-			ret=warn_and_interrupt(asfd, sb, cntr, protocol,
+			ret=warn_and_interrupt(asfd, sb, cntr,
 				"could not create link", "");
 			goto end;
 		}
@@ -460,7 +448,7 @@ void strip_from_path(char *path, const char *strip)
 
 // Return 1 for ok, -1 for error, 0 for too many components stripped.
 static int strip_path_components(struct asfd *asfd,
-	struct sbuf *sb, int strip, struct cntr *cntr, enum protocol protocol)
+	struct sbuf *sb, int strip, struct cntr *cntr)
 {
 	int s=0;
 	char *tmp=NULL;
@@ -474,7 +462,7 @@ static int strip_path_components(struct asfd *asfd,
 			snprintf(msg, sizeof(msg),
 				"Stripped too many components: %s",
 				iobuf_to_printable(&sb->path));
-			if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+			if(restore_interrupt(asfd, sb, msg, cntr))
 				return -1;
 			return 0;
 		}
@@ -486,7 +474,7 @@ static int strip_path_components(struct asfd *asfd,
 		snprintf(msg, sizeof(msg),
 			"Stripped too many components: %s",
 			iobuf_to_printable(&sb->path));
-		if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+		if(restore_interrupt(asfd, sb, msg, cntr))
 			return -1;
 		return 0;
 	}
@@ -572,8 +560,7 @@ static enum asl_ret restore_style_func(struct asfd *asfd,
 
 static char *get_restore_style(struct asfd *asfd, struct conf **confs)
 {
-	if(get_protocol(confs)==PROTO_1)
-		return strdup_w(RESTORE_STREAM, __func__);
+	return strdup_w(RESTORE_STREAM, __func__);
 	if(asfd->simple_loop(asfd, confs, NULL, __func__,
 		restore_style_func)) return NULL;
 	return restore_style;
@@ -659,7 +646,6 @@ static int canonicalise(
 	struct asfd *asfd,
 	struct sbuf *sb,
 	struct cntr *cntr,
-	enum protocol protocol,
 	const char *restore_desired_dir,
 	char **fullpath
 ) {
@@ -681,7 +667,7 @@ static int canonicalise(
 			snprintf(msg, sizeof(msg),
 				"%s: Could not get dirname of '%s'",
 				*fullpath, copy);
-			if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+			if(restore_interrupt(asfd, sb, msg, cntr))
 				goto end;
 			ret=1;
 			goto end;
@@ -694,7 +680,7 @@ static int canonicalise(
 			snprintf(msg, sizeof(msg),
 				"%s: Could not get realpath of %s in %s: %s",
 				*fullpath, copy, __func__, strerror(errno));
-			if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+			if(restore_interrupt(asfd, sb, msg, cntr))
 				goto end;
 			ret=1;
 			goto end;
@@ -711,7 +697,7 @@ static int canonicalise(
 			"%s: Is not in a subdir of '%s'",
 			*fullpath,
 			restore_desired_dir);
-		if(restore_interrupt(asfd, sb, msg, cntr, protocol))
+		if(restore_interrupt(asfd, sb, msg, cntr))
 			goto end;
 		ret=1;
 		goto end;
@@ -739,13 +725,11 @@ int do_restore_client(struct asfd *asfd,
 	int ret=-1;
 	char msg[512]="";
 	struct sbuf *sb=NULL;
-	struct blk *blk=NULL;
 	struct BFILE *bfd=NULL;
 	char *fullpath=NULL;
 	char *style=NULL;
 	char *restore_desired_dir=NULL;
 	struct cntr *cntr=get_cntr(confs);
-	enum protocol protocol=get_protocol(confs);
 	int strip=get_int(confs[OPT_STRIP]);
 	int overwrite=get_int(confs[OPT_OVERWRITE]);
 	const char *strip_path=get_string(confs[OPT_STRIP_FROM_PATH]);
@@ -826,8 +810,7 @@ int do_restore_client(struct asfd *asfd,
 	if(!(style=get_restore_style(asfd, confs)))
 		goto error;
 
-	if(!(sb=sbuf_alloc(protocol))
-	  || (protocol==PROTO_2 && !(blk=blk_alloc())))
+	if(!(sb=sbuf_alloc()))
 	{
 		log_and_send_oom(asfd);
 		goto error;
@@ -836,10 +819,9 @@ int do_restore_client(struct asfd *asfd,
 	while(1)
 	{
 		sbuf_free_content(sb);
-		if(protocol==PROTO_1)
-			sb->flags |= SBUF_CLIENT_RESTORE_HACK;
+		sb->flags |= SBUF_CLIENT_RESTORE_HACK;
 
-		switch(sbuf_fill_from_net(sb, asfd, blk, cntr))
+		switch(sbuf_fill_from_net(sb, asfd, cntr))
 		{
 			case 0: break;
 			case 1: if(asfd->write_str(asfd, CMD_GEN,
@@ -847,27 +829,6 @@ int do_restore_client(struct asfd *asfd,
 				goto end; // It was OK.
 			default:
 			case -1: goto error;
-		}
-
-		if(protocol==PROTO_2)
-		{
-			if(blk->data)
-			{
-				int wret=0;
-				if(act==ACTION_VERIFY)
-					cntr_add(cntr, CMD_DATA, 1);
-				else
-					wret=write_protocol2_data(asfd,
-						bfd, blk, vss_restore);
-				blk_free_content(blk);
-				blk->data=NULL;
-				if(wret) goto error;
-				continue;
-			}
-			else if(sb->endfile.buf)
-			{
-				continue;
-			}
 		}
 
 		switch(sb->path.cmd)
@@ -889,7 +850,7 @@ int do_restore_client(struct asfd *asfd,
 				{
 					int s;
 					s=strip_path_components(asfd,
-						sb, strip, cntr, protocol);
+						sb, strip, cntr);
 					if(s<0) goto error;
 					if(s==0)
 					{
@@ -932,7 +893,6 @@ int do_restore_client(struct asfd *asfd,
 						asfd,
 						sb,
 						cntr,
-						protocol,
 						restore_desired_dir,
 						&fullpath
 					)) {
@@ -953,7 +913,7 @@ int do_restore_client(struct asfd *asfd,
 					snprintf(msg, sizeof(msg),
 						"Path exists: %s\n", fullpath);
 					if(restore_interrupt(asfd,
-						sb, msg, cntr, protocol))
+						sb, msg, cntr))
 							goto error;
 					continue;
 				  }
@@ -970,39 +930,28 @@ int do_restore_client(struct asfd *asfd,
 
 		switch(sb->path.cmd)
 		{
-			// These are the same in both protocol1 and protocol2.
 			case CMD_DIRECTORY:
-				if(restore_dir(asfd, sb, fullpath, act, cntr,
-					protocol))
-						goto error;
+				if(restore_dir(asfd, sb, fullpath, act, cntr))
+					goto error;
 				continue;
 			case CMD_SOFT_LINK:
 			case CMD_HARD_LINK:
 				if(restore_link(asfd, sb, fullpath, act, cntr,
-					protocol, restore_desired_dir))
+					restore_desired_dir))
 						goto error;
 				continue;
 			case CMD_SPECIAL:
 				if(restore_special(asfd, sb,
-					fullpath, act, cntr, protocol))
+					fullpath, act, cntr))
 						goto error;
 				continue;
 			default:
 				break;
 		}
 
-		if(protocol==PROTO_2)
-		{
-			if(restore_switch_protocol2(asfd, sb, fullpath, act,
-				bfd, vss_restore, cntr))
-					goto error;
-		}
-		else
-		{
-			if(restore_switch_protocol1(asfd, sb, fullpath, act,
-				bfd, vss_restore, cntr, encryption_password))
-					goto error;
-		}
+		if(restore_switch_protocol1(asfd, sb, fullpath, act,
+			bfd, vss_restore, cntr, encryption_password))
+				goto error;
 	}
 
 end:
@@ -1025,7 +974,6 @@ error:
 	sbuf_free(&sb);
 	free_w(&style);
 	free_w(&fullpath);
-	blk_free(&blk);
 
 	// Cannot use free_w() because it was not allocated by alloc.c, and
 	// I cannot implement realpath() it in alloc.c because I cannot get

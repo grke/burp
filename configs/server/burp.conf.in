@@ -20,13 +20,6 @@ max_children = 5
 directory = @localstatedir@/spool/@name@
 dedup_group = global
 clientconfdir = @sysconfdir@/clientconfdir
-# Choose the protocol to use.
-# 0 to decide automatically, 1 to force protocol1 mode (file level granularity
-# with a pseudo mirrored storage on the server and optional rsync). 2 forces
-# protocol2 mode (inline deduplication with variable length blocks).
-# Like many other settings, this can be set per client in the clientconfdir
-# files.
-# protocol = 0
 pidfile = @runstatedir@/@name@.server.pid
 hardlinked_archive = 0
 working_dir_recovery_method = delete

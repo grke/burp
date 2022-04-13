@@ -23,7 +23,7 @@ static struct ioevent_list writes;
 
 static void do_sdirs_init(struct sdirs *sdirs)
 {
-	fail_unless(!sdirs_init(sdirs, PROTO_1,
+	fail_unless(!sdirs_init(sdirs,
 		BASE, // directory
 		"utestclient", // cname
 		NULL, // client_lockdir
@@ -261,7 +261,7 @@ static void run_test(int expected_ret,
 	if(manio_entries)
 	{
 		slist=build_manifest(sdirs->phase1data,
-				PROTO_1, manio_entries, 1 /*phase*/);
+			manio_entries, 1 /*phase*/);
 	}
 	setup_asfds_callback(asfd, slist);
 
@@ -363,7 +363,7 @@ static void run_test_changed(int expected_ret,
 	{
 		struct sbuf *s;
 		slist=build_manifest(sdirs->cmanifest,
-			PROTO_1, manio_entries, 0 /*phase*/);
+			manio_entries, 0 /*phase*/);
 		for(s=slist->head; s; s=s->next)
 		{
 			char path[256];
@@ -378,8 +378,7 @@ static void run_test_changed(int expected_ret,
 			s->compression=0;
 			attribs_encode(s);
 		}
-		build_manifest_phase1_from_slist(sdirs->phase1data,
-			slist, PROTO_1);
+		build_manifest_phase1_from_slist(sdirs->phase1data, slist);
 		build_file(sdirs->cincexc, NULL);
 	}
 	setup_asfds_callback(asfd, slist);

@@ -69,7 +69,6 @@ pre=0 # Previous backup number.
 res=0 # Restore number. Incremented for each restore.
 test_includes_backup=0
 test_includes_restore=0
-protocol=2
 
 if stat --version 2>/dev/null | grep GNU &>/dev/null ; then
 	# GNU style
@@ -157,8 +156,6 @@ wait_for_backup_to_finish()
 {
 	local waited=0
 	local lockfile="$target/var/spool/burp/testclient/lockfile"
-	[ "$protocol" = "2" ] && \
-	  lockfile="$target/var/spool/burp/global/clients/testclient/lockfile"
 
 	SLEEPTIME=2
 	# Repeatedly check to see whether the server has finished, rather
@@ -249,7 +246,7 @@ add_run_restore()
 	makedir_client "$dir"
 # If vss has been stripped, need to add the '-X' option to the restore.
 	nowinapi=
-	[ -n "$STRIP_VSS" -a "$protocol" = 1 ] && nowinapi='-X'
+	[ -n "$STRIP_VSS" ] && nowinapi='-X'
 cat >> "$clientscript" << EOF
 echo "Starting test client restore of backup $bno"
 rm -rf "$dir" || fail
@@ -269,9 +266,6 @@ add_run_restore_server_initiated()
 	local srestore="$target/var/spool/burp/testclient/restore"
 
 	append_client 'restoreprefix = /'
-
-	[ "$PROTOCOL" = "2" ] && \
-	  srestore="$target/var/spool/burp/global/clients/testclient/restore"
 
 	echo "backup=$bno
 restoreprefix=$dir" > "$srestore"
@@ -307,13 +301,6 @@ add_do_diff_client()
 	# On Windows, /C:/ gets converted to /C_/, so tweak the path for diff.
 	rpath1=$(echo "$1" | sed -e 's/\/C:\//\/C_\//g')
 	rpath2=$(echo "$2" | sed -e 's/\/C:\//\/C_\//g')
-	# Protocol 2 directory permissions are messed up on windows, so
-	# exclude them for now.
-	extra_find_arg=
-	if [ "$protocol" = "2" ] \
-	  && [ "$restoredir" = "C:/Program Files/Burp/restore" ] ; then
-		extra_find_arg="-type f"
-	fi
 
 	# FIX THIS: On windows, the builders directory is being EFS
 	# encrypted. But, for some reason, the permissions come out
@@ -328,12 +315,12 @@ cat >> "$clientscript" << EOF
 diff -ur "$rpath1" "$rpath2" || fail "$3"
 EOF
 
-	# Stripping vss in protocol 1 will of course cause permissions to be
+	# Stripping vss will of course cause permissions to be
 	# wrong on restore on Windows, so do not do this check in that case.
-[ -z "$STRIP_VSS" -o "$protocol" = 2 ] && cat >> "$clientscript" << EOF
+[ -z "$STRIP_VSS" ] && cat >> "$clientscript" << EOF
 diff -u \
-  <( cd "$rpath1" ; find . $extra_find_arg -print0 | xargs -0 stat $stat_args | sort $exclude_dir) \
-  <( cd "$rpath2" ; find . $extra_find_arg -print0 | xargs -0 stat $stat_args | sort $exclude_dir) \
+  <( cd "$rpath1" ; find . -print0 | xargs -0 stat $stat_args | sort $exclude_dir) \
+  <( cd "$rpath2" ; find . -print0 | xargs -0 stat $stat_args | sort $exclude_dir) \
 	|| fail "$3 (permissions)"
 
 	rm -rf "$rpath2"
@@ -454,18 +441,6 @@ add_strip_vss_on()
 {
 	add_strip_vss_off
 	append_client "strip_vss = 1"
-}
-
-add_protocol_off()
-{
-	sed_rep_client '/^protocol = .*/d' "$clientconf"
-}
-
-maybe_add_protocol2_on()
-{
-	add_protocol_off
-	[ "$protocol" = 2 ] && \
-		append_client 'protocol = 2'
 }
 
 add_server_listen_status_off()
@@ -650,7 +625,6 @@ add_normal_settings()
 {
 	start_script_server
 	start_script_client
-	maybe_add_protocol2_on
 	add_compression_on
 	add_encryption_off
 	add_include_on
@@ -680,7 +654,7 @@ add_restore_diff()
 		"client restore differed from the original!"
 }
 
-if [ -z "$NO_CA_GEN" ] ; then
+if [ -z "$NO_CA_GEN" ]; then
 	pre_tweaks_server
 	pre_tweaks_client
 	run_scripts
@@ -695,7 +669,7 @@ echo "More logs can be found in:"
 echo "$target/var/spool/burp/testclient/<backup number>"
 echo
 
-if [ -z "$NO_CA_GEN" ] ; then
+if [ -z "$NO_CA_GEN" ]; then
 	echo "Initialising server certificate authority"
 	# Need to do this outside of the server,
 	# because it might take a long time.
@@ -790,13 +764,8 @@ all_tests()
 	
 	start_test "Complete phase3"
 	add_server_breakpoint_off
-	if [ "$protocol" -eq "1" ] ; then
-		# Client gives an error on protocol1, while the server does
-		# the resume.
-		add_run_backup_expect_fail
-	else
-		add_run_backup
-	fi
+	# Client gives an error, while the server does the resume.
+	add_run_backup_expect_fail
 	test_includes_backup=1
 	run_scripts
 	wait_for_backup_to_finish
@@ -883,11 +852,8 @@ all_tests()
 	comp_enc_change_test on  off off
 	comp_enc_change_test on  off on
 	comp_enc_change_test off off on
-	if [ "$PROTOCOL" != "2" ] ; then
-		# Encryption not supported in protocol 2.
-		comp_enc_change_test off on  on
-		comp_enc_change_test on  on  on
-	fi
+	comp_enc_change_test off on  on
+	comp_enc_change_test on  on  on
 
 	start_test "Permissions"
 	add_chown 755 "$includedir/utest/test_cmd.c"
@@ -898,30 +864,21 @@ all_tests()
 
 run_tests()
 {
-	protocol="$1"
 	num=0
 	bno=0
 	pre=0
 	res=0
 	echo
-	echo "Running protocol $protocol tests"
+	echo "Running test"
 	all_tests
 }
 
 restart_server
 
-if [ "$PROTOCOL" = 1 ] ; then
-	workingdir="$target/var/spool/burp/testclient/working"
-	finishingdir="$target/var/spool/burp/testclient/finishing"
-elif [ "$PROTOCOL" = 2 ] ; then
-	workingdir="$target/var/spool/burp/global/clients/testclient/working"
-	finishingdir="$target/var/spool/burp/global/clients/testclient/finishing"
-else
-	echo "Unknown protocol: $PROTOCOL"
-	exit 1
-fi
+workingdir="$target/var/spool/burp/testclient/working"
+finishingdir="$target/var/spool/burp/testclient/finishing"
 
-run_tests "$PROTOCOL"
+run_tests
 
 echo
 echo "All tests succeeded"

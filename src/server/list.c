@@ -25,7 +25,6 @@ enum list_mode
 static struct asfd *asfd;
 static struct conf **confs;
 static struct cntr *cntr;
-static enum protocol protocol;
 static const char *backup;
 static regex_t *regex=NULL;
 static const char *browsedir;
@@ -37,7 +36,6 @@ int list_server_init(
 	struct asfd *a,
 	struct sdirs *s,
 	struct conf **c,
-	enum protocol p,
 	const char *backup_str,
 	const char *regex_str,
 	const char *browsedir_str)
@@ -45,7 +43,6 @@ int list_server_init(
 	int regex_case_insensitive=0;
 	asfd=a;
 	confs=c;
-	protocol=p;
 	backup=backup_str;
 	browsedir=browsedir_str;
 	if(confs)
@@ -181,10 +178,9 @@ static int list_manifest(const char *fullpath)
 	char *last_bd_match=NULL;
 	size_t bdlen=0;
 
-	if(!(manifest_dir=prepend_s(fullpath,
-		protocol==PROTO_1?"manifest.gz":"manifest"))
-	  || !(manio=manio_open(manifest_dir, "rb", protocol))
-	  || !(sb=sbuf_alloc(protocol)))
+	if(!(manifest_dir=prepend_s(fullpath, "manifest.gz"))
+	  || !(manio=manio_open(manifest_dir, "rb"))
+	  || !(sb=sbuf_alloc()))
 	{
 		log_and_send_oom(asfd);
 		goto error;
@@ -207,8 +203,6 @@ static int list_manifest(const char *fullpath)
 			default: goto error;
 		}
 
-		if(protocol==PROTO_2 && sb->endfile.buf)
-			continue;
 		if(sbuf_is_metadata(sb))
 			continue;
 
@@ -252,7 +246,7 @@ static char *get_extradesc(struct bu *bu)
 	else if(bu->flags & BU_FINISHING)
 		return strdup_w(" (finishing)", __func__);
 	// Protocol2 backups are all deletable, so do not mention it.
-	else if(bu->flags & BU_DELETABLE && protocol==1)
+	else if(bu->flags & BU_DELETABLE)
 		return strdup_w(" (deletable)", __func__);
 	return strdup_w("", __func__);
 }

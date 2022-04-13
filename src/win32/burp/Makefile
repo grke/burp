@@ -39,9 +39,6 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/backup_phase1.o \
 	$(OBJDIR)/client/protocol1/backup_phase2.o \
 	$(OBJDIR)/client/protocol1/restore.o \
-	$(OBJDIR)/client/protocol2/backup_phase2.o \
-	$(OBJDIR)/client/protocol2/rabin_read.o \
-	$(OBJDIR)/client/protocol2/restore.o \
 	$(OBJDIR)/client/ca.o \
 	$(OBJDIR)/client/cvss.o \
 	$(OBJDIR)/client/delete.o \
@@ -83,16 +80,9 @@ CLIENT_OBJS = \
 	$(OBJDIR)/protocol1/msg.o \
 	$(OBJDIR)/protocol1/rs_buf.o \
 	$(OBJDIR)/protocol1/sbuf_protocol1.o \
-	$(OBJDIR)/protocol2/blist.o \
-	$(OBJDIR)/protocol2/blk.o \
-	$(OBJDIR)/protocol2/rabin/rabin.o \
-	$(OBJDIR)/protocol2/rabin/rconf.o \
-	$(OBJDIR)/protocol2/rabin/win.o \
-	$(OBJDIR)/protocol2/sbuf_protocol2.o \
 	$(OBJDIR)/regexp.o \
 	$(OBJDIR)/run_script.o \
 	$(OBJDIR)/sbuf.o \
-	$(OBJDIR)/server/protocol2/champ_chooser/incoming.o \
 	$(OBJDIR)/slist.o \
 	$(OBJDIR)/ssl.o \
 	$(OBJDIR)/strlist.o \

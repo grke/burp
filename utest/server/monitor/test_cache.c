@@ -15,7 +15,7 @@
 
 static void do_sdirs_init(struct sdirs *sdirs)
 {
-	fail_unless(!sdirs_init(sdirs, PROTO_2,
+	fail_unless(!sdirs_init(sdirs,
 		BASE, // directory
 		CLIENTNAME,
 		NULL, // client_lockdir
@@ -50,13 +50,12 @@ START_TEST(test_server_monitor_cache)
 	struct slist *slist;
 	struct manio *manio;
 	unsigned long bno=5;
-	enum protocol protocol=PROTO_2;
 
 	sdirs=setup();
 	slist=build_manifest(sdirs->manifest,
-		protocol, /*manio_enties*/20, /*phase*/0);
-        fail_unless((manio=manio_open(sdirs->manifest, "rb", protocol))!=NULL);
-        fail_unless((sb=sbuf_alloc(protocol))!=NULL);
+		/*manio_enties*/20, /*phase*/0);
+        fail_unless((manio=manio_open(sdirs->manifest, "rb"))!=NULL);
+        fail_unless((sb=sbuf_alloc())!=NULL);
 
 	fail_unless(!cache_loaded(CLIENTNAME, bno));
 	fail_unless(!cache_load(manio, sb, CLIENTNAME, bno));

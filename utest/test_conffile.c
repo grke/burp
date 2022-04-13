@@ -718,7 +718,6 @@ START_TEST(test_clientconfdir_conf)
 		NOTIFY_CONF
 	;
 	const char *buf=MIN_CLIENTCONFDIR_BUF
-		"protocol=1\n"
 		"directory=/another/dir\n"
 		"directory_tree=0\n"
 		"timestamp_format=%H %M %S\n"
@@ -750,7 +749,6 @@ START_TEST(test_clientconfdir_conf)
 
 	clientconfdir_setup(&globalcs, &cconfs, gbuf, buf);
 
-	fail_unless(get_e_protocol(cconfs[OPT_PROTOCOL])==PROTO_1);
 	ck_assert_str_eq(get_string(cconfs[OPT_DIRECTORY]), "/another/dir");
 	fail_unless(get_int(cconfs[OPT_DIRECTORY_TREE])==0);
 	ck_assert_str_eq(get_string(cconfs[OPT_TIMESTAMP_FORMAT]),

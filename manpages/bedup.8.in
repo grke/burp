@@ -9,7 +9,7 @@ bedup \- deduplication program with additional knowledge of @name@
 .br
 
 .LP
-A file deduplication program with additional knowledge of @name@ protocol 1 storage directories. This program comes with the @name@ backup and restore package.
+A file deduplication program with additional knowledge of @name@ storage directories. This program comes with the @name@ backup and restore package.
 
 .SH OPTIONS
 .TP
@@ -40,7 +40,7 @@ Print duplicate paths. Useful if you want to double check the files that would b
 \fB\-V\fR \fB\fR
 Print version and exit.\fR
 .TP
-By default, bedup will read /etc/@name@/@name@.conf and deduplicate protocol 1 client storage directories using special knowledge of the structure.\fR
+By default, bedup will read /etc/@name@/@name@.conf and deduplicate client storage directories using special knowledge of the structure.\fR
 .TP
 With '\-n', this knowledge is turned off and you have to specify the directories to deduplicate on the command line. Running with '\-n' is therefore dangerous if you are deduplicating @name@ storage directories.
 

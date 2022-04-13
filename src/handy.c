@@ -13,7 +13,6 @@
 #include "msg.h"
 #include "prepend.h"
 #include "protocol1/handy.h"
-#include "protocol2/blk.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

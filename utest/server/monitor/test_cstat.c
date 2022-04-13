@@ -23,11 +23,11 @@ static void clean(void)
 	fail_unless(recursive_delete(GLOBAL_CONF)==0);
 }
 
-static struct sdirs *setup_sdirs(enum protocol protocol)
+static struct sdirs *setup_sdirs()
 {
 	struct sdirs *sdirs;
 	fail_unless((sdirs=sdirs_alloc())!=NULL);
-	fail_unless(!sdirs_init(sdirs, protocol,
+	fail_unless(!sdirs_init(sdirs,
 		BASE, // directory
 		CNAME, // cname
 		NULL, // client_lockdir
@@ -37,12 +37,12 @@ static struct sdirs *setup_sdirs(enum protocol protocol)
 	return sdirs;
 }
 
-static struct cstat *setup_cstat(const char *cname, enum protocol protocol)
+static struct cstat *setup_cstat(const char *cname)
 {
 	struct cstat *cstat;
 	struct sdirs *sdirs;
 	clean();
-	sdirs=setup_sdirs(protocol);
+	sdirs=setup_sdirs();
 	fail_unless((cstat=cstat_alloc())!=NULL);
 	fail_unless(!cstat_init(cstat, cname, CLIENTCONFDIR));
 	cstat->sdirs=sdirs;
@@ -76,10 +76,10 @@ static struct sd sd12345[] = {
 	{ "0000005 1970-01-05 00:00:00", 5, 5, BU_CURRENT }
 };
 
-static void do_test_cstat_set_backup_list(enum protocol protocol)
+static void do_test_cstat_set_backup_list()
 {
 	struct cstat *cstat;
-	cstat=setup_cstat(CNAME, protocol);
+	cstat=setup_cstat(CNAME);
 	ck_assert_str_eq(CLIENTCONFDIR "/" CNAME, cstat->conffile);
 
 	cstat->permitted=1;
@@ -111,8 +111,7 @@ static void do_test_cstat_set_backup_list(enum protocol protocol)
 
 START_TEST(test_cstat_set_backup_list)
 {
-	do_test_cstat_set_backup_list(PROTO_1);
-	do_test_cstat_set_backup_list(PROTO_2);
+	do_test_cstat_set_backup_list();
 }
 END_TEST
 
@@ -421,37 +420,37 @@ START_TEST(test_cstat_add_out_of_order)
 }
 END_TEST
 
-static struct cstat *set_run_status_setup(enum protocol protocol, int permitted)
+static struct cstat *set_run_status_setup(int permitted)
 {
 	struct cstat *cstat;
-	cstat=setup_cstat(CNAME, protocol);
+	cstat=setup_cstat(CNAME);
 	fail_unless(cstat->run_status==RUN_STATUS_UNSET);
 	cstat->permitted=permitted;
 	return cstat;
 }
 
-static void test_cstat_set_run_status_not_permitted(enum protocol protocol)
+static void test_cstat_set_run_status_not_permitted()
 {
 	struct cstat *cstat;
-	cstat=set_run_status_setup(protocol, 0 /*not permitted*/);
+	cstat=set_run_status_setup(0 /*not permitted*/);
 	cstat_set_run_status(cstat, RUN_STATUS_RUNNING);
 	fail_unless(cstat->run_status==RUN_STATUS_UNSET);
 	tear_down(&cstat);
 }
 
-static void test_cstat_set_run_status_idle(enum protocol protocol)
+static void test_cstat_set_run_status_idle()
 {
 	struct cstat *cstat;
-	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
+	cstat=set_run_status_setup(1 /*permitted*/);
 	cstat_set_run_status(cstat, RUN_STATUS_IDLE);
 	fail_unless(cstat->run_status==RUN_STATUS_IDLE);
 	tear_down(&cstat);
 }
 
-static void test_cstat_set_run_status_running(enum protocol protocol)
+static void test_cstat_set_run_status_running()
 {
 	struct cstat *cstat;
-	cstat=set_run_status_setup(protocol, 1 /*permitted*/);
+	cstat=set_run_status_setup(1 /*permitted*/);
 	cstat_set_run_status(cstat, RUN_STATUS_RUNNING);
 	fail_unless(cstat->run_status==RUN_STATUS_RUNNING);
 	tear_down(&cstat);
@@ -459,22 +458,19 @@ static void test_cstat_set_run_status_running(enum protocol protocol)
 
 START_TEST(test_cstat_set_run_status)
 {
-	test_cstat_set_run_status_not_permitted(PROTO_1);
-	test_cstat_set_run_status_not_permitted(PROTO_2);
-	test_cstat_set_run_status_idle(PROTO_1);
-	test_cstat_set_run_status_idle(PROTO_2);
-	test_cstat_set_run_status_running(PROTO_1);
-	test_cstat_set_run_status_running(PROTO_2);
+	test_cstat_set_run_status_not_permitted();
+	test_cstat_set_run_status_idle();
+	test_cstat_set_run_status_running();
 }
 END_TEST
 
-static void do_test_cstat_reload_from_client_confs(enum protocol protocol)
+static void do_test_cstat_reload_from_client_confs()
 {
 	struct cstat *c1;
 	struct cstat *c2;
 	struct cstat *clist=NULL;
-	c1=setup_cstat("cli1", protocol);
-	c2=setup_cstat("cli2", protocol);
+	c1=setup_cstat("cli1");
+	c2=setup_cstat("cli2");
 	cstat_add_to_list(&clist, c1);
 	cstat_add_to_list(&clist, c2);
 	c1->permitted=1;
@@ -503,8 +499,7 @@ static void do_test_cstat_reload_from_client_confs(enum protocol protocol)
 
 START_TEST(test_cstat_reload_from_clientdir)
 {
-	do_test_cstat_reload_from_client_confs(PROTO_1);
-	do_test_cstat_reload_from_client_confs(PROTO_2);
+	do_test_cstat_reload_from_client_confs();
 }
 END_TEST
 

@@ -33,7 +33,6 @@ struct cstat
 	time_t clientdir_mtime;
 
 	struct bu *bu; // Backup list.
-	enum protocol protocol;
 
 	struct cstat *prev;
 	struct cstat *next;

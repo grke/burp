@@ -107,7 +107,7 @@ static struct sbuf *setup_sbuf(const char *path, const char *datapth,
 	const char *endfile, int compression)
 {
 	struct sbuf *sb;
-	fail_unless((sb=sbuf_alloc(PROTO_1))!=NULL);
+	fail_unless((sb=sbuf_alloc())!=NULL);
 	if(path)
 	{
 		fail_unless((path=strdup_w(path, __func__))!=NULL);

@@ -11,7 +11,6 @@
 #include "compress.h"
 #include "protocol1/backup_phase4.h"
 #include "protocol1/zlibio.h"
-#include "protocol2/backup_phase4.h"
 #include "rubble.h"
 #include "run_action.h"
 #include "sdirs.h"
@@ -252,7 +251,6 @@ end:
 static int recover_finishing(struct async *as,
 	struct sdirs *sdirs, struct conf **cconfs)
 {
-	int r;
 	char msg[128]="";
 	struct asfd *asfd=as->asfd;
 
@@ -278,17 +276,7 @@ static int recover_finishing(struct async *as,
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 
-	switch(get_protocol(cconfs))
-	{
-		case PROTO_1:
-			r=backup_phase4_server_protocol1(sdirs, cconfs);
-			break;
-		case PROTO_2:
-		default:
-			r=backup_phase4_server_protocol2(sdirs, cconfs);
-			break;
-	}
-	if(r)
+	if(backup_phase4_server_protocol1(sdirs, cconfs))
 	{
 		logp("Problem with prior backup. Please check the client log on the server.");
 		return -1;

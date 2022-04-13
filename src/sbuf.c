@@ -9,9 +9,8 @@
 #include "log.h"
 #include "msg.h"
 #include "pathcmp.h"
-#include "protocol2/blk.h"
 
-struct sbuf *sbuf_alloc(enum protocol protocol)
+struct sbuf *sbuf_alloc()
 {
 	struct sbuf *sb;
 	if(!(sb=(struct sbuf *)calloc_w(1, sizeof(struct sbuf), __func__)))
@@ -22,14 +21,7 @@ struct sbuf *sbuf_alloc(enum protocol protocol)
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->endfile);
 	sb->compression=-1;
-	if(protocol==PROTO_1)
-	{
-		if(!(sb->protocol1=sbuf_protocol1_alloc())) return NULL;
-	}
-	else
-	{
-		if(!(sb->protocol2=sbuf_protocol2_alloc())) return NULL;
-	}
+	if(!(sb->protocol1=sbuf_protocol1_alloc())) return NULL;
 	return sb;
 }
 
@@ -44,7 +36,6 @@ void sbuf_free_content(struct sbuf *sb)
 	sb->winattr=0;
 	sb->flags=0;
 	sbuf_protocol1_free_content(sb->protocol1);
-	sbuf_protocol2_free_content();
 }
 
 void sbuf_free(struct sbuf **sb)
@@ -52,7 +43,6 @@ void sbuf_free(struct sbuf **sb)
 	if(!sb || !*sb) return;
 	sbuf_free_content(*sb);
 	free_v((void **)&((*sb)->protocol1));
-	free_v((void **)&((*sb)->protocol2));
 	free_v((void **)sb);
 }
 
@@ -152,24 +142,15 @@ enum parse_ret
 };
 
 static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
-	struct iobuf *rbuf, struct blk *blk, struct cntr *cntr)
+	struct iobuf *rbuf, struct cntr *cntr)
 {
 	switch(rbuf->cmd)
 	{
 		case CMD_ATTRIBS:
-			if(sb->protocol2)
-				sbuf_free_content(sb);
+			if(sb->protocol1->datapth.buf)
+				iobuf_free_content(&sb->attr);
 			else
-			{
-				if(sb->protocol1->datapth.buf)
-					// protocol 1 phase 2+ file data
-					// starts with datapth.
-					iobuf_free_content(&sb->attr);
-				else
-					// protocol 1 phase 1 or non file data
-					// starts with attribs
-					sbuf_free_content(sb);
-			}
+				sbuf_free_content(sb);
 			iobuf_move(&sb->attr, rbuf);
 			attribs_decode(sb);
 			return PARSE_RET_NEED_MORE;
@@ -234,27 +215,6 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 				}
 				return PARSE_RET_COMPLETE;
 			}
-#ifndef HAVE_WIN32
-		case CMD_SIG:
-			// Fill in the sig/block, if the caller provided
-			// a pointer for one. Server only.
-			if(!blk) return PARSE_RET_NEED_MORE;
-
-			// Just fill in the sig details.
-			if(blk_set_from_iobuf_sig_and_savepath(blk, rbuf))
-				return PARSE_RET_ERROR;
-			blk->got_save_path=1;
-			iobuf_free_content(rbuf);
-			return PARSE_RET_COMPLETE;
-#endif
-		case CMD_DATA:
-			// Need to write the block to disk.
-			// Client only.
-			if(!blk) return PARSE_RET_NEED_MORE;
-			blk->data=rbuf->buf;
-			blk->length=rbuf->len;
-			rbuf->buf=NULL;
-			return PARSE_RET_COMPLETE;
 		case CMD_MESSAGE:
 		case CMD_WARNING:
 			log_recvd(rbuf, cntr, 1);
@@ -269,12 +229,6 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 				return PARSE_RET_FINISHED;
 			iobuf_log_unexpected(rbuf, __func__);
 			return PARSE_RET_ERROR;
-		case CMD_FINGERPRINT:
-			if(blk && blk_set_from_iobuf_fingerprint(blk, rbuf))
-				return PARSE_RET_ERROR;
-			iobuf_free_content(&sb->path);
-			iobuf_move(&sb->path, rbuf);
-			return PARSE_RET_COMPLETE;
 		case CMD_MANIFEST:
 			if(iobuf_relative_path_attack(rbuf))
 				return PARSE_RET_ERROR;
@@ -327,7 +281,7 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 }
 
 static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
-	struct blk *blk, struct cntr *cntr)
+	struct cntr *cntr)
 {
 	static struct iobuf *rbuf;
 	static struct iobuf localrbuf;
@@ -356,7 +310,7 @@ static int sbuf_fill(struct sbuf *sb, struct asfd *asfd, struct fzp *fzp,
 				break;
 			}
 		}
-		switch(parse_cmd(sb, asfd, rbuf, blk, cntr))
+		switch(parse_cmd(sb, asfd, rbuf, cntr))
 		{
 			case PARSE_RET_NEED_MORE:
 				continue;
@@ -377,13 +331,12 @@ end:
 }
 
 int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, struct cntr *cntr)
+	struct cntr *cntr)
 {
-	return sbuf_fill(sb, asfd, NULL, blk, cntr);
+	return sbuf_fill(sb, asfd, NULL, cntr);
 }
 
-int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp,
-	struct blk *blk)
+int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp)
 {
-	return sbuf_fill(sb, NULL, fzp, blk, NULL);
+	return sbuf_fill(sb, NULL, fzp, NULL);
 }

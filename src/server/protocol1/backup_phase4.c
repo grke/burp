@@ -552,21 +552,21 @@ static int maybe_delete_files_from_manifest(const char *manifesttmp,
 	  || !(omzp=fzp_gzopen(fdirs->manifest, "rb"))
 	  || !(nmzp=fzp_gzopen(manifesttmp,
 		comp_level(get_int(cconfs[OPT_COMPRESSION]))))
-	  || !(db=sbuf_alloc(PROTO_1))
-	  || !(mb=sbuf_alloc(PROTO_1)))
+	  || !(db=sbuf_alloc())
+	  || !(mb=sbuf_alloc()))
 		goto end;
 
 	while(omzp || dfp)
 	{
 		if(dfp && !db->path.buf
-		  && (ars=sbuf_fill_from_file(db, dfp, NULL)))
+		  && (ars=sbuf_fill_from_file(db, dfp)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
 			fzp_close(&dfp);
 		}
 		if(omzp && !mb->path.buf
-		  && (ars=sbuf_fill_from_file(mb, omzp, NULL)))
+		  && (ars=sbuf_fill_from_file(mb, omzp)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means it ended ok.
@@ -667,7 +667,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 	if(!(deltabdir=prepend_s(fdirs->currentdup, "deltas.reverse"))
 	  || !(deltafdir=prepend_s(sdirs->finishing, "deltas.forward"))
 	  || !(sigpath=prepend_s(fdirs->currentdup, "sig.tmp"))
-	  || !(sb=sbuf_alloc(PROTO_1)))
+	  || !(sb=sbuf_alloc()))
 	{
 		log_out_of_memory(__func__);
 		goto error;
@@ -677,7 +677,7 @@ static int atomic_data_jiggle(struct sdirs *sdirs, struct fdirs *fdirs,
 
 	while(1)
 	{
-		switch(sbuf_fill_from_file(sb, zp, NULL))
+		switch(sbuf_fill_from_file(sb, zp))
 		{
 			case 0: break;
 			case 1: goto end;

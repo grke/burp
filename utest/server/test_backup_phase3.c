@@ -27,9 +27,9 @@ static void tear_down(struct sdirs **sdirs, struct conf ***confs)
 	alloc_check();
 }
 
-static void do_sdirs_init(struct sdirs *sdirs, enum protocol protocol)
+static void do_sdirs_init(struct sdirs *sdirs)
 {
-	fail_unless(!sdirs_init(sdirs, protocol,
+	fail_unless(!sdirs_init(sdirs,
 		BASE, // directory
 		"utestclient", // cname
 		NULL, // client_lockdir
@@ -85,72 +85,6 @@ static struct mdata x1[] = {
 	{ CMD_END_FILE, "0:4" },
 };
 
-static struct mdata a2[] = {
-	{ CMD_ATTRIBS, " random blah2" },
-	{ CMD_FILE, "/some/path/2" },
-	{ CMD_SIG, "22222222222222222222222222222222" },
-	{ CMD_END_FILE, "0:2" },
-	{ CMD_ATTRIBS, " random blah3" },
-	{ CMD_FILE, "/some/path/3" },
-	{ CMD_SIG, "33333333333333333333333333333333" },
-	{ CMD_END_FILE, "0:3" },
-};
-
-static struct mdata b2[] = {
-	{ CMD_ATTRIBS, " random blah1" },
-	{ CMD_FILE, "/some/path/1" },
-	{ CMD_SIG, "11111111111111111111111111111111" },
-	{ CMD_END_FILE, "0:1" },
-	{ CMD_ATTRIBS, " random blah4" },
-	{ CMD_FILE, "/some/path/4" },
-	{ CMD_SIG, "44444444444444444444444444444444" },
-	{ CMD_END_FILE, "0:4" },
-};
-
-static struct mdata x2[] = {
-	{ CMD_ATTRIBS, " random blah1" },
-	{ CMD_FILE, "/some/path/1" },
-	{ CMD_SIG, "11111111111111111111111111111111" },
-	{ CMD_END_FILE, "0:1" },
-	{ CMD_ATTRIBS, " random blah2" },
-	{ CMD_FILE, "/some/path/2" },
-	{ CMD_SIG, "22222222222222222222222222222222" },
-	{ CMD_END_FILE, "0:2" },
-	{ CMD_ATTRIBS, " random blah3" },
-	{ CMD_FILE, "/some/path/3" },
-	{ CMD_SIG, "33333333333333333333333333333333" },
-	{ CMD_END_FILE, "0:3" },
-	{ CMD_ATTRIBS, " random blah4" },
-	{ CMD_FILE, "/some/path/4" },
-	{ CMD_SIG, "44444444444444444444444444444444" },
-	{ CMD_END_FILE, "0:4" },
-};
-
-static struct mdata a2m[] = {
-};
-
-static struct mdata b2m[] = {
-	{ CMD_ATTRIBS, " random blah1" },
-	{ CMD_FILE, "/some/path/1" },
-	{ CMD_SIG, "11111111111111111111111111111111" },
-	{ CMD_END_FILE, "0:1" },
-	{ CMD_ATTRIBS, " random blah4" },
-	{ CMD_METADATA, "/some/path/1" },
-	{ CMD_SIG, "44444444444444444444444444444444" },
-	{ CMD_END_FILE, "0:4" },
-};
-
-static struct mdata x2m[] = {
-	{ CMD_ATTRIBS, " random blah1" },
-	{ CMD_FILE, "/some/path/1" },
-	{ CMD_SIG, "11111111111111111111111111111111" },
-	{ CMD_END_FILE, "0:1" },
-	{ CMD_ATTRIBS, " random blah4" },
-	{ CMD_METADATA, "/some/path/1" },
-	{ CMD_SIG, "44444444444444444444444444444444" },
-	{ CMD_END_FILE, "0:4" },
-};
-
 static void do_generate_manifest(
 	const char *path, struct mdata *m, size_t mlen, int compressed)
 {
@@ -188,7 +122,7 @@ static void check_manifest(
 	assert_files_compressed_equal(expected, path);
 }
 
-static void build_and_check_phase3(enum protocol protocol,
+static void build_and_check_phase3(
 	struct mdata *a, size_t alen,
 	struct mdata *b, size_t blen,
 	struct mdata *x, size_t xlen)
@@ -201,32 +135,18 @@ static void build_and_check_phase3(enum protocol protocol,
 	struct sdirs *sdirs;
 
 	sdirs=setup();
-	snprintf(buf, sizeof(buf), "%s\nprotocol=%d\ncompression=0\n",
-		MIN_SERVER_CONF, protocol);
-	do_sdirs_init(sdirs, protocol);
+	snprintf(buf, sizeof(buf), "%s\ncompression=0\n", MIN_SERVER_CONF);
+	do_sdirs_init(sdirs);
 	fail_unless((confs=confs_alloc())!=NULL);
 	fail_unless(!confs_init(confs));
 	build_file(GLOBAL_CONF, buf);
 	fail_unless(!conf_load_global_only(GLOBAL_CONF, confs));
-	if(protocol==PROTO_2)
-	{
-		fail_unless(!sdirs_get_real_manifest(sdirs, protocol));
-		snprintf(changed, sizeof(changed),
-			"%s/00000000", sdirs->changed);
-		snprintf(unchanged, sizeof(unchanged),
-			"%s/00000000", sdirs->unchanged);
-		snprintf(final, sizeof(final),
-			"%s/00000000", sdirs->manifest);
-	}
-	else
-	{
-		snprintf(changed, sizeof(changed),
-			"%s", sdirs->changed);
-		snprintf(unchanged, sizeof(unchanged),
-			"%s", sdirs->unchanged);
-		snprintf(final, sizeof(final),
-			"%s", sdirs->manifest);
-	}
+	snprintf(changed, sizeof(changed),
+		"%s", sdirs->changed);
+	snprintf(unchanged, sizeof(unchanged),
+		"%s", sdirs->unchanged);
+	snprintf(final, sizeof(final),
+		"%s", sdirs->manifest);
 	generate_manifest(changed, a, alen);
 	generate_manifest(unchanged, b, blen);
 
@@ -239,35 +159,15 @@ static void build_and_check_phase3(enum protocol protocol,
 
 START_TEST(test_backup_phase3_proto_1)
 {
-	build_and_check_phase3(PROTO_1,
+	build_and_check_phase3(
 		a1, ARR_LEN(a1),
 		b1, ARR_LEN(b1),
 		x1, ARR_LEN(x1)
 	);
-	build_and_check_phase3(PROTO_1,
+	build_and_check_phase3(
 		b1, ARR_LEN(b1),
 		a1, ARR_LEN(a1),
 		x1, ARR_LEN(x1)
-	);
-}
-END_TEST
-
-START_TEST(test_backup_phase3_proto_2)
-{
-	build_and_check_phase3(PROTO_2,
-		a2, ARR_LEN(a2),
-		b2, ARR_LEN(b2),
-		x2, ARR_LEN(x2)
-	);
-	build_and_check_phase3(PROTO_2,
-		b2, ARR_LEN(b2),
-		a2, ARR_LEN(a2),
-		x2, ARR_LEN(x2)
-	);
-	build_and_check_phase3(PROTO_2,
-		b2m, ARR_LEN(b2m),
-		a2m, ARR_LEN(a2m),
-		x2m, ARR_LEN(x2m)
 	);
 }
 END_TEST
@@ -283,7 +183,6 @@ Suite *suite_server_backup_phase3(void)
 	tcase_set_timeout(tc_core, 60);
 
 	tcase_add_test(tc_core, test_backup_phase3_proto_1);
-	tcase_add_test(tc_core, test_backup_phase3_proto_2);
 	suite_add_tcase(s, tc_core);
 
 	return s;

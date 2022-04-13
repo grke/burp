@@ -1,6 +1,5 @@
 #include "burp.h"
 #include "hexmap.h"
-#include "protocol2/blk.h"
 
 // FIX THIS: Should be set in configure somewhere.
 #include <openssl/md5.h>

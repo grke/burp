@@ -350,7 +350,7 @@ static int json_send_client_start(struct cstat *cstat, long peer_version)
 		return -1;
 	if(yajl_gen_str_pair_w("run_status", run_status))
 		return -1;
-	if(yajl_gen_int_pair_w("protocol", cstat->protocol))
+	if(yajl_gen_int_pair_w("protocol", 1))
 		return -1;
 	if(peer_version>version_2_1_8)
 	{

@@ -6,7 +6,6 @@
 #include "conf.h"
 #include "iobuf.h"
 #include "protocol1/sbuf_protocol1.h"
-#include "protocol2/sbuf_protocol2.h"
 
 // Bits in sbuf flags.
 
@@ -52,7 +51,6 @@ struct sbuf
 	uint16_t flags;
 
 	struct protocol1 *protocol1;
-	struct protocol2 *protocol2;
 
 	struct sbuf *next;
 };
@@ -65,7 +63,7 @@ enum cntr_manio
 	CNTR_MANIO_DELETED='d',
 };
 
-extern struct sbuf *sbuf_alloc(enum protocol protocol);
+extern struct sbuf *sbuf_alloc();
 extern void sbuf_free_content(struct sbuf *sb);
 extern void sbuf_free(struct sbuf **sb);
 
@@ -82,9 +80,8 @@ extern int sbuf_to_manifest_cntr(struct sbuf *sb, struct fzp *fzp,
 
 extern int sbuf_pathcmp(struct sbuf *a, struct sbuf *b);
 
-extern int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp,
-	struct blk *blk);
+extern int sbuf_fill_from_file(struct sbuf *sb, struct fzp *fzp);
 extern int sbuf_fill_from_net(struct sbuf *sb, struct asfd *asfd,
-	struct blk *blk, struct cntr *cntr);
+	struct cntr *cntr);
 
 #endif

@@ -13,7 +13,6 @@
 #include "../../server/protocol1/backup_phase4.h"
 #include "../../server/protocol1/link.h"
 #include "../../server/protocol1/zlibio.h"
-#include "../../server/protocol2/restore.h"
 #include "../../sbuf.h"
 #include "../../slist.h"
 #include "../sdirs.h"
@@ -78,7 +77,7 @@ static int do_send_file(struct asfd *asfd, struct sbuf *sb,
 
 	bfile_init(&bfd, 0, cntr);
 	if(bfd.open_for_send(&bfd, asfd, best, sb->winattr,
-		1 /* no O_NOATIME */, cntr, PROTO_1))
+		1 /* no O_NOATIME */, cntr))
 			return SEND_FATAL;
 	if(asfd->write(asfd, &sb->path))
 		ret=SEND_FATAL;

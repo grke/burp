@@ -1,6 +1,5 @@
 #include "test.h"
 #include "../src/alloc.h"
-#include "../src/protocol2/blk.h"
 #include "../src/sbuf.h"
 #include "../src/slist.h"
 
@@ -15,7 +14,6 @@ START_TEST(test_slist_alloc)
 	struct slist *slist;
 	alloc_check_init();
 	fail_unless((slist=slist_alloc())!=NULL);
-	fail_unless(slist->blist!=NULL);
 	tear_down(&slist);
 }
 END_TEST
@@ -32,7 +30,7 @@ END_TEST
 static void alloc_and_add(struct slist *slist, struct sbuf **sb)
 {
 	if(!sb) return;
-	fail_unless((*sb=sbuf_alloc(PROTO_2))!=NULL);
+	fail_unless((*sb=sbuf_alloc())!=NULL);
 	slist_add_sbuf(slist, *sb);
 }
 
@@ -189,22 +187,9 @@ START_TEST(test_slist_del_no_slist)
 	struct sbuf *sb;
 	struct slist *slist=NULL;
 	alloc_check_init();
-	fail_unless((sb=sbuf_alloc(PROTO_2))!=NULL);
+	fail_unless((sb=sbuf_alloc())!=NULL);
 	fail_unless(!slist_del_sbuf(slist, sb));
 	sbuf_free(&sb);
-	tear_down(&slist);
-}
-END_TEST
-
-START_TEST(test_slist_del_sbuf_has_blks)
-{
-	struct blk blk;
-	struct slist *slist;
-	struct sbuf *sb1, *sb2, *sb3;
-	alloc_check_init();
-	slist=setup(&sb1, &sb2, &sb3);
-	sb1->protocol2->bstart=&blk;
-	fail_unless(slist_del_sbuf(slist, sb1)==-1);
 	tear_down(&slist);
 }
 END_TEST
@@ -244,7 +229,6 @@ Suite *suite_slist(void)
 	tcase_add_test(tc_core, test_slist_del_all);
 	tcase_add_test(tc_core, test_slist_del_sb2_adjust_pointers);
 	tcase_add_test(tc_core, test_slist_del_no_slist);
-	tcase_add_test(tc_core, test_slist_del_sbuf_has_blks);
 	tcase_add_test(tc_core, test_slist_advance);
 	suite_add_tcase(s, tc_core);
 

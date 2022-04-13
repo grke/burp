@@ -27,10 +27,9 @@ static void tear_down(struct sdirs **sdirs)
 	alloc_check();
 }
 
-static void do_sdirs_init(struct sdirs *sdirs, enum protocol protocol,
-	const char *client_lockdir)
+static void do_sdirs_init(struct sdirs *sdirs, const char *client_lockdir)
 {
-	fail_unless(!sdirs_init(sdirs, protocol,
+	fail_unless(!sdirs_init(sdirs,
 		BASE, // directory
 		"utestclient", // cname
 		client_lockdir,
@@ -39,8 +38,7 @@ static void do_sdirs_init(struct sdirs *sdirs, enum protocol protocol,
 		));
 }
 
-static void check_dynamic_paths(struct sdirs *sdirs, enum protocol protocol,
-	const char *manifest)
+static void check_dynamic_paths(struct sdirs *sdirs, const char *manifest)
 {
 	char tstmp[128]="";
 	char *rworking=NULL;
@@ -55,7 +53,7 @@ static void check_dynamic_paths(struct sdirs *sdirs, enum protocol protocol,
 
 	fail_unless(sdirs_create_real_working(sdirs, 1,
 		DEFAULT_TIMESTAMP_FORMAT)==0);
-	fail_unless(sdirs_get_real_manifest(sdirs, protocol)==0);
+	fail_unless(sdirs_get_real_manifest(sdirs)==0);
 	fail_unless(timestamp_read(sdirs->timestamp, tstmp, sizeof(tstmp))==0);
 	rworking=prepend_s(sdirs->client, tstmp);
 	ck_assert_str_eq(sdirs->rworking, rworking);
@@ -87,7 +85,7 @@ static void check_dynamic_paths(struct sdirs *sdirs, enum protocol protocol,
 
 static void protocol1_tests(struct sdirs *sdirs)
 {
-	do_sdirs_init(sdirs, PROTO_1, NULL /* client_lockdir */);
+	do_sdirs_init(sdirs, NULL /* client_lockdir */);
 	ck_assert_str_eq(sdirs->base, BASE);
 	fail_unless(sdirs->dedup==NULL);
 	fail_unless(sdirs->champlock==NULL);
@@ -118,7 +116,7 @@ static void protocol1_tests(struct sdirs *sdirs)
 	ck_assert_str_eq(sdirs->cincexc, CURRENT "/incexc");
 	ck_assert_str_eq(sdirs->deltmppath, WORKING "/deltmppath");
 
-	check_dynamic_paths(sdirs, PROTO_1, "manifest.gz");
+	check_dynamic_paths(sdirs, "manifest.gz");
 }
 
 #define DEDUP		BASE "/a_group"
@@ -128,46 +126,6 @@ static void protocol1_tests(struct sdirs *sdirs)
 #define WORKING2	CLIENT2 "/working"
 #define CURRENT2	CLIENT2 "/current"
 
-static void protocol2_tests(struct sdirs *sdirs)
-{
-	do_sdirs_init(sdirs, PROTO_2, NULL /* client_lockdir */);
-	ck_assert_str_eq(sdirs->base, BASE);
-	ck_assert_str_eq(sdirs->dedup, DEDUP);
-	ck_assert_str_eq(sdirs->champlock, DATA "/cc.lock");
-	ck_assert_str_eq(sdirs->champsock, DATA "/cc.sock");
-	ck_assert_str_eq(sdirs->champlog, DATA "/cc.log");
-	ck_assert_str_eq(sdirs->champ_dindex_lock, DATA "/dindex.lock");
-	ck_assert_str_eq(sdirs->data, DATA);
-	ck_assert_str_eq(sdirs->clients, CLIENTS);
-	ck_assert_str_eq(sdirs->client, CLIENT2);
-	ck_assert_str_eq(sdirs->created, CLIENT2 "/.created");
-	ck_assert_str_eq(sdirs->command, CLIENT2 "/.command");
-	ck_assert_str_eq(sdirs->working, WORKING2);
-	ck_assert_str_eq(sdirs->finishing, CLIENT2 "/finishing");
-	ck_assert_str_eq(sdirs->current, CLIENT2 "/current");
-	ck_assert_str_eq(sdirs->currenttmp, CLIENT2 "/current.tmp");
-	ck_assert_str_eq(sdirs->deleteme, CLIENT2 "/deleteme");
-	ck_assert_str_eq(sdirs->dindex, CLIENT2 "/dindex");
-	ck_assert_str_eq(sdirs->dfiles, CLIENT2 "/dfiles");
-	ck_assert_str_eq(sdirs->cfiles, DATA "/cfiles");
-	ck_assert_str_eq(sdirs->global_sparse, DATA "/sparse");
-	ck_assert_str_eq(sdirs->timestamp, WORKING2 "/timestamp");
-	ck_assert_str_eq(sdirs->changed, WORKING2 "/changed");
-	ck_assert_str_eq(sdirs->unchanged, WORKING2 "/unchanged");
-	ck_assert_str_eq(sdirs->manifest, WORKING2 "/manifest");
-	ck_assert_str_eq(sdirs->cmanifest, CURRENT2 "/manifest");
-	ck_assert_str_eq(sdirs->phase1data, WORKING2 "/phase1.gz");
-	ck_assert_str_eq(sdirs->lockdir, CLIENT2);
-	ck_assert_str_eq(sdirs->lock_storage_for_write->path,
-		CLIENT2 "/lockfile");
-	fail_unless(sdirs->currentdata==NULL);
-	fail_unless(sdirs->datadirtmp==NULL);
-	fail_unless(sdirs->cincexc==NULL);
-	fail_unless(sdirs->deltmppath==NULL);
-
-	check_dynamic_paths(sdirs, PROTO_2, "manifest");
-}
-
 START_TEST(test_sdirs)
 {
 	struct sdirs *sdirs;
@@ -175,7 +133,6 @@ START_TEST(test_sdirs)
 
 	protocol1_tests(sdirs);
 	sdirs_free_content(sdirs);
-	protocol2_tests(sdirs);
 
 	tear_down(&sdirs);
 }
@@ -185,7 +142,7 @@ START_TEST(test_lockdirs)
 {
 	struct sdirs *sdirs;
 	sdirs=setup();
-	do_sdirs_init(sdirs, PROTO_2, "/some/other/dir" /* client_lockdir */);
+	do_sdirs_init(sdirs, "/some/other/dir" /* client_lockdir */);
 	ck_assert_str_eq(sdirs->lock_storage_for_write->path,
 		"/some/other/dir/utestclient/lockfile");
 

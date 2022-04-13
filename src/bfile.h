@@ -54,7 +54,7 @@ struct BFILE
 	ssize_t (*write)(struct BFILE *bfd, void *buf, size_t count);
 	int (*open_for_send)(struct BFILE *bfd, struct asfd *asfd,
 		const char *fname, int64_t winattr,
-		int atime, struct cntr *cntr, enum protocol protocol);
+		int atime, struct cntr *cntr);
 #ifdef HAVE_WIN32
 	void (*set_win32_api)(struct BFILE *bfd, int on);
 #endif

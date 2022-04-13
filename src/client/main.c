@@ -19,7 +19,6 @@
 #include "monitor.h"
 #include "find_logic.h"
 #include "monitor/status_client_ncurses.h"
-#include "protocol2/restore.h"
 #include "restore.h"
 #include "main.h"
 

@@ -40,7 +40,6 @@ int main(int argc, char *argv[], char *envp[])
 #endif
 	srunner_add_suite(sr, suite_client_monitor_lline());
 #ifdef HAVE_XATTR
-	srunner_add_suite(sr, suite_client_protocol2_rabin_read());
 	srunner_add_suite(sr, suite_client_xattr());
 #endif
 	srunner_add_suite(sr, suite_cmd());
@@ -50,12 +49,6 @@ int main(int argc, char *argv[], char *envp[])
 	srunner_add_suite(sr, suite_pathcmp());
 	srunner_add_suite(sr, suite_protocol1_handy());
 	srunner_add_suite(sr, suite_protocol1_rs_buf());
-	srunner_add_suite(sr, suite_protocol2_blist());
-	srunner_add_suite(sr, suite_protocol2_blk());
-	srunner_add_suite(sr, suite_protocol2_rabin_rabin());
-	srunner_add_suite(sr, suite_protocol2_rabin_rconf());
-	srunner_add_suite(sr, suite_protocol2_rabin_win());
-	srunner_add_suite(sr, suite_protocol2_sbuf_protocol2());
 	srunner_add_suite(sr, suite_slist());
 	srunner_add_suite(sr, suite_times());
 
@@ -79,7 +72,6 @@ int main(int argc, char *argv[], char *envp[])
 	srunner_add_suite(sr, suite_asfd());
 	srunner_add_suite(sr, suite_client_monitor());
 	srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
-	srunner_add_suite(sr, suite_client_protocol2_backup_phase2());
 	srunner_add_suite(sr, suite_client_restore());
 
 	// These compile for Windows, but have an error.
@@ -108,17 +100,6 @@ int main(int argc, char *argv[], char *envp[])
 	srunner_add_suite(sr, suite_server_protocol1_dpth());
 	srunner_add_suite(sr, suite_server_protocol1_fdirs());
 	srunner_add_suite(sr, suite_server_protocol1_restore());
-	srunner_add_suite(sr, suite_server_protocol2_backup_phase2());
-	srunner_add_suite(sr, suite_server_protocol2_backup_phase4());
-	srunner_add_suite(sr, suite_server_protocol2_bsparse());
-	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_champ_chooser());
-	srunner_add_suite(sr,
-		suite_server_protocol2_champ_chooser_champ_server());
-	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_dindex());
-	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_hash());
-	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_scores());
-	srunner_add_suite(sr, suite_server_protocol2_champ_chooser_sparse());
-	srunner_add_suite(sr, suite_server_protocol2_dpth());
 	srunner_add_suite(sr, suite_server_restore());
 	srunner_add_suite(sr, suite_server_resume());
 	srunner_add_suite(sr, suite_server_run_action());

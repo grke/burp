@@ -34,8 +34,7 @@ enum cmd manifest_cmds[SIZEOF_MANIFEST_CMDS]={
 	CMD_SPECIAL
 };
 
-struct slist *build_slist_phase1(const char *prefix,
-	enum protocol protocol, int entries)
+struct slist *build_slist_phase1(const char *prefix, int entries)
 {
 	int i=0;
 	char **paths;
@@ -46,7 +45,7 @@ struct slist *build_slist_phase1(const char *prefix,
 	paths=build_paths(prefix, entries);
 	for(i=0; i<entries; i++)
 	{
-		sb=build_attribs_reduce(protocol);
+		sb=build_attribs_reduce();
 		attribs_encode(sb);
 		iobuf_from_str(&sb->path, manifest_cmds[0], paths[i]);
 		slist_add_sbuf(slist, sb);
@@ -63,8 +62,7 @@ struct slist *build_slist_phase1(const char *prefix,
 				sb->path.cmd=manifest_cmds[3];
 				break;
 			case 4:
-				if(protocol==PROTO_1)
-					sb->path.cmd=manifest_cmds[4];
+				sb->path.cmd=manifest_cmds[4];
 				break;
 			case 5:
 				sb->path.cmd=manifest_cmds[5];

@@ -9,7 +9,6 @@
 #include "backup_phase1.h"
 #include "cvss.h"
 #include "protocol1/backup_phase2.h"
-#include "protocol2/backup_phase2.h"
 #include "backup.h"
 
 #ifdef HAVE_WIN32
@@ -54,9 +53,8 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 	else
 	{
 		logp("do backup client\n");
-		if(get_protocol(confs)==PROTO_1)
-			logp("Using librsync hash %s\n",
-			  rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
+		logp("Using librsync hash %s\n",
+			rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
 	}
 
 #ifdef HAVE_WIN32
@@ -102,12 +100,8 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 				goto end;
 			}
 
-			if(get_protocol(confs)==PROTO_1)
-				ret=backup_phase2_client_protocol1(asfd,
-					confs, resume);
-			else
-				ret=backup_phase2_client_protocol2(asfd,
-					confs, resume);
+			ret=backup_phase2_client_protocol1(asfd,
+				confs, resume);
 			if(ret) goto end;
 			break;
 	}

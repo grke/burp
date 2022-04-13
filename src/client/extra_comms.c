@@ -192,59 +192,6 @@ int extra_comms_client(struct async *as, struct conf **confs,
 		}
 	}
 
-	if(server_supports(feat, ":csetproto:"))
-	{
-		char msg[128]="";
-		// Use protocol1 if no choice has been made on client side.
-		if(get_protocol(confs)==PROTO_AUTO)
-		{
-			logp("Server has protocol=0 (auto)\n");
-			set_protocol(confs, PROTO_1);
-		}
-		// Send choice to server.
-		snprintf(msg, sizeof(msg), "protocol=%d",
-			get_protocol(confs));
-		if(asfd->write_str(asfd, CMD_GEN, msg))
-			goto end;
-		logp("Using protocol=%d\n",
-			get_protocol(confs));
-	}
-	else if(server_supports(feat, ":forceproto=1:"))
-	{
-		logp("Server is forcing protocol 1\n");
-		if(get_protocol(confs)!=PROTO_AUTO
-		  && get_protocol(confs)!=PROTO_1)
-		{
-			logp("But client has set protocol=%d!\n",
-				get_protocol(confs));
-			goto end;
-		}
-		set_protocol(confs, PROTO_1);
-	}
-	else if(server_supports(feat, ":forceproto=2:"))
-	{
-		logp("Server is forcing protocol 2\n");
-		if(get_protocol(confs)!=PROTO_AUTO
-		  && get_protocol(confs)!=PROTO_2)
-		{
-			logp("But client has set protocol=%d!\n",
-				get_protocol(confs));
-			goto end;
-		}
-		set_protocol(confs, PROTO_2);
-	}
-
-        if(get_protocol(confs)==PROTO_2
-          && get_string(confs[OPT_ENCRYPTION_PASSWORD]))
-	{
-		char msg[64]="";
-		snprintf(msg, sizeof(msg),
-			"%s is not supported in protocol 2",
-				confs[OPT_ENCRYPTION_PASSWORD]->field);
-		log_and_send(asfd, msg);
-		goto end;
-	}
-
 	if(server_supports(feat, ":msg:"))
 	{
 		set_int(confs[OPT_MESSAGE], 1);

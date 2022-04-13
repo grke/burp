@@ -15,9 +15,8 @@ static int read_phase1(struct manio *p1manio, struct conf **cconfs)
 {
 	int ret=-1;
 	struct sbuf *p1b;
-	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
-	if(!(p1b=sbuf_alloc(protocol))) return -1;
+	if(!(p1b=sbuf_alloc())) return -1;
 	while(1)
 	{
 		sbuf_free_content(p1b);
@@ -58,11 +57,11 @@ static int set_higher_datapth(struct sbuf *sb, struct dpth *dpth)
 static
 #endif
 int forward_past_entry(struct manio *manio, struct iobuf *target,
-	enum protocol protocol, man_off_t **pos)
+	man_off_t **pos)
 {
 	struct sbuf *sb=NULL;
 
-	if(!(sb=sbuf_alloc(protocol)))
+	if(!(sb=sbuf_alloc()))
 		goto error;
 
 	man_off_t_free(pos);
@@ -109,40 +108,6 @@ int forward_past_entry(struct manio *manio, struct iobuf *target,
 		{
 			case 0:
 				// Exact match, we want to be past here.
-				if(protocol==PROTO_2
-				  && manio->phase==0
-				  && !sb->endfile.buf)
-				{
-					// This is the current manio, and we
-					// need one more read to get us past
-					// endfile.
-					sbuf_free_content(sb);
-					switch(manio_read(manio, sb))
-					{
-						case 0:
-							break;
-						case 1:
-							logp("End of file finishing up in %s()\n", __func__);
-							goto error;
-						default:
-							logp("Error finishing up in %s()\n", __func__);
-							goto error;
-					}
-					if(sb->path.buf)
-					{
-						logp("Not expecting %s in %s()\n",
-							iobuf_to_printable(&sb->path),
-							__func__);
-						goto error;
-					}
-					if(!sb->endfile.buf)
-					{
-						logp("Was expecting endfile in %s()\n",
-							__func__);
-						goto error;
-					}
-					// Drop through to tell the position.
-				}
 				man_off_t_free(pos);
 				if(!(*pos=manio_tell(manio)))
 				{
@@ -173,13 +138,12 @@ error:
 static
 #endif
 int forward_before_entry(struct manio *manio, struct iobuf *target,
-	struct cntr *cntr, struct dpth *dpth, enum protocol protocol,
-	man_off_t **pos)
+	struct cntr *cntr, struct dpth *dpth, man_off_t **pos)
 {
 	int ars=0;
 	struct sbuf *sb=NULL;
 
-	if(!(sb=sbuf_alloc(protocol)))
+	if(!(sb=sbuf_alloc()))
 		goto error;
 
 	man_off_t_free(pos);
@@ -249,15 +213,14 @@ error:
 static
 #endif
 int get_last_good_entry(struct manio *manio, struct iobuf *result,
-	struct cntr *cntr, struct dpth *dpth, enum protocol protocol,
-	man_off_t **pos)
+	struct cntr *cntr, struct dpth *dpth, man_off_t **pos)
 {
 	int ars=0;
 	int got_vss_start=0;
 	struct sbuf *sb=NULL;
 	struct iobuf lastpath;
 
-	if(!(sb=sbuf_alloc(protocol)))
+	if(!(sb=sbuf_alloc()))
 		goto error;
 
 	iobuf_init(&lastpath);
@@ -506,23 +469,15 @@ static int do_resume_work(
 	struct manio *p1manio=NULL;
 	struct manio *counters_d=NULL;
 	struct manio *counters_n=NULL;
-	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
 	int compression=get_int(cconfs[OPT_COMPRESSION]);
 
-	if(!(cmanio=manio_open(sdirs->cmanifest,
-		MANIO_MODE_READ, protocol))
-	  || !(p1manio=manio_open_phase1(sdirs->phase1data,
-		MANIO_MODE_READ, protocol))
-	  || !(chmanio=manio_open_phase2(sdirs->changed,
-		MANIO_MODE_READ, protocol))
-	  || !(unmanio=manio_open_phase2(sdirs->unchanged,
-		MANIO_MODE_READ, protocol))
-	// The counters are always flat files, which is given by PROTO_1.
-	  || !(counters_d=manio_open_phase2(sdirs->counters_d,
-		MANIO_MODE_READ, PROTO_1))
-	  || !(counters_n=manio_open_phase2(sdirs->counters_n,
-		MANIO_MODE_READ, PROTO_1)))
+	if(!(cmanio=manio_open(sdirs->cmanifest, MANIO_MODE_READ))
+	  || !(p1manio=manio_open_phase1(sdirs->phase1data, MANIO_MODE_READ))
+	  || !(chmanio=manio_open_phase2(sdirs->changed, MANIO_MODE_READ))
+	  || !(unmanio=manio_open_phase2(sdirs->unchanged, MANIO_MODE_READ))
+	  || !(counters_d=manio_open_phase2(sdirs->counters_d, MANIO_MODE_READ))
+	  || !(counters_n=manio_open_phase2(sdirs->counters_n, MANIO_MODE_READ)))
 			goto end;
 
 	if(!(chb=iobuf_alloc()))
@@ -530,7 +485,7 @@ static int do_resume_work(
 
 	logp("Setting up resume positions...\n");
 
-	if(get_last_good_entry(chmanio, chb, cntr, dpth, protocol, &pos)
+	if(get_last_good_entry(chmanio, chb, cntr, dpth, &pos)
 	  || manio_close_and_truncate(&chmanio, pos, compression))
 		goto error;
 
@@ -544,7 +499,7 @@ static int do_resume_work(
 		// and unmanio.
 
 		logp("  setting pos_phase1\n");
-		if(forward_past_entry(p1manio, chb, protocol, pos_phase1))
+		if(forward_past_entry(p1manio, chb, pos_phase1))
 			goto error;
 
 		// This sets pos_current. This manifest may not exist.
@@ -552,14 +507,14 @@ static int do_resume_work(
 		{
 			logp("  setting pos_current\n");
 			if (forward_past_entry(cmanio,
-				chb, protocol, pos_current))
+				chb, pos_current))
 					goto error;
 		}
 
 		// The unchanged manio needs to be positioned just before the
 		// found entry, otherwise it ends up having a duplicated entry.
 		if(forward_before_entry(unmanio,
-			chb, cntr, dpth, protocol, &pos))
+			chb, cntr, dpth, &pos))
 				goto error;
 		if(manio_close_and_truncate(&unmanio, pos, compression))
 			goto error;
@@ -624,20 +579,19 @@ int do_resume(
 	struct manio *p1manio=NULL;
 	struct manio *counters_d=NULL;
 	struct manio *counters_n=NULL;
-	enum protocol protocol=get_protocol(cconfs);
 
 	logp("Begin phase1 (read previous file system scan)\n");
-        if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb", protocol))
+        if(!(p1manio=manio_open_phase1(sdirs->phase1data, "rb"))
 	  || read_phase1(p1manio, cconfs))
 		goto end;
 	manio_close(&p1manio);
 
 	// First, open them in append mode, so that they will be created if
 	// they do not exist.
-	if(!(chmanio=manio_open_phase2(sdirs->changed, "ab", protocol))
-	  || !(unmanio=manio_open_phase2(sdirs->unchanged, "ab", protocol))
-	  || !(counters_d=manio_open_phase2(sdirs->counters_d, "ab", PROTO_1))
-	  || !(counters_n=manio_open_phase2(sdirs->counters_n, "ab", PROTO_1)))
+	if(!(chmanio=manio_open_phase2(sdirs->changed, "ab"))
+	  || !(unmanio=manio_open_phase2(sdirs->unchanged, "ab"))
+	  || !(counters_d=manio_open_phase2(sdirs->counters_d, "ab"))
+	  || !(counters_n=manio_open_phase2(sdirs->counters_n, "ab")))
 		goto end;
 	manio_close(&chmanio);
 	manio_close(&unmanio);

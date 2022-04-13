@@ -13,24 +13,22 @@ static struct manios *manios_alloc(void)
 struct manios *manios_open_phase2(
 	struct sdirs *sdirs,
 	man_off_t *pos_phase1,
-	man_off_t *pos_current,
-	enum protocol p)
+	man_off_t *pos_current)
 {
 	struct manios *m=NULL;
 
 	if(!(m=manios_alloc())
-	  || !(m->phase1=manio_open_phase1(sdirs->phase1data, "rb", p))
-	  || !(m->changed=manio_open_phase2(sdirs->changed, "ab", p))
-	  || !(m->unchanged=manio_open_phase2(sdirs->unchanged, "ab", p))
-	// The counters are always flat files, which is given by PROTO_1.
+	  || !(m->phase1=manio_open_phase1(sdirs->phase1data, "rb"))
+	  || !(m->changed=manio_open_phase2(sdirs->changed, "ab"))
+	  || !(m->unchanged=manio_open_phase2(sdirs->unchanged, "ab"))
 	  || !(m->counters_d=manio_open_phase2(
-		sdirs->counters_d, "ab", PROTO_1))
+		sdirs->counters_d, "ab"))
 	  || !(m->counters_n=manio_open_phase2(
-		sdirs->counters_n, "ab", PROTO_1))
+		sdirs->counters_n, "ab"))
 	  || (pos_phase1 && manio_seek(m->phase1, pos_phase1)))
 		goto error;
 
-	if(!(m->current=manio_open(sdirs->cmanifest, "rb", p)))
+	if(!(m->current=manio_open(sdirs->cmanifest, "rb")))
 	{
 		if(pos_current)
 		{
@@ -38,14 +36,9 @@ struct manios *manios_open_phase2(
 				sdirs->cmanifest);
 			goto error;
 		}
-		if(p==PROTO_1 && is_reg_lstat(sdirs->cmanifest)==1)
+		if(is_reg_lstat(sdirs->cmanifest)==1)
 		{
 			logp("Could not open %s\n", sdirs->cmanifest);
-			goto error;
-		}
-		if(p==PROTO_2 && is_dir_lstat(sdirs->cmanifest)==1)
-		{
-			logp("Could not open dir %s\n", sdirs->cmanifest);
 			goto error;
 		}
 	}

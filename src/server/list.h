@@ -8,7 +8,6 @@ extern int list_server_init(
 	struct asfd *a,
 	struct sdirs *s,
 	struct conf **c,
-	enum protocol p,
 	const char *backup_str,
 	const char *regex_str,
 	const char *browsedir_str);

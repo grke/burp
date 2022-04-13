@@ -25,12 +25,12 @@ static void tear_down(struct asfd **asfd, struct sdirs **sdirs)
 	alloc_check();
 }
 
-static struct sdirs *setup_sdirs(struct sd *s, int slen, enum protocol protocol)
+static struct sdirs *setup_sdirs(struct sd *s, int slen)
 {
 	struct sdirs *sdirs;
 	fail_unless(recursive_delete(BASE)==0);
 	fail_unless((sdirs=sdirs_alloc())!=NULL);
-	fail_unless(!sdirs_init(sdirs, protocol,
+	fail_unless(!sdirs_init(sdirs,
 		BASE, // directory
 		"utestclient", // cname
 		NULL, // client_lockdir
@@ -89,13 +89,6 @@ static void setup_asfd_1del(struct asfd *asfd)
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00 (deletable)");
 }
 
-static void setup_asfd_1(struct asfd *asfd)
-{
-	int w=0;
-	asfd_assert_write(asfd, &w, 0,
-		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00");
-}
-
 static void setup_asfd_2(struct asfd *asfd)
 {
 	int w=0;
@@ -115,17 +108,6 @@ static void setup_asfd_1del_2_3(struct asfd *asfd)
 	int w=0;
 	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00 (deletable)");
-	asfd_assert_write(asfd, &w, 0,
-		CMD_TIMESTAMP, "0000002 1970-01-02 00:00:00");
-	asfd_assert_write(asfd, &w, 0,
-		CMD_TIMESTAMP, "0000003 1970-01-03 00:00:00");
-}
-
-static void setup_asfd_1_2_3(struct asfd *asfd)
-{
-	int w=0;
-	asfd_assert_write(asfd, &w, 0,
-		CMD_TIMESTAMP, "0000001 1970-01-01 00:00:00");
 	asfd_assert_write(asfd, &w, 0,
 		CMD_TIMESTAMP, "0000002 1970-01-02 00:00:00");
 	asfd_assert_write(asfd, &w, 0,
@@ -170,7 +152,6 @@ static int list_server_callback_mock(const char *fullpath)
 static void run_test(int expected_init_ret,
 	int expected_ret,
 	int expected_callback_count,
-	enum protocol protocol,
 	const char *backup_str,
 	const char *regex_str,
 	const char *browsedir_str,
@@ -181,7 +162,7 @@ static void run_test(int expected_init_ret,
 {
 	struct asfd *asfd;
 	struct sdirs *sdirs=NULL;
-	sdirs=setup_sdirs(s, slen, protocol);
+	sdirs=setup_sdirs(s, slen);
 
 	asfd=asfd_mock_setup(&reads, &writes);
 
@@ -193,7 +174,6 @@ static void run_test(int expected_init_ret,
 	fail_unless(list_server_init(asfd,
 		sdirs,
 		NULL /*cntr*/,
-		protocol,
 		backup_str,
 		regex_str,
 		browsedir_str)==expected_init_ret);
@@ -210,196 +190,116 @@ START_TEST(test_do_server_list)
 	list_server_callback_ret=0;
 
 	// No backups.
-	run_test(0,  0, 0, PROTO_1, NULL, NULL, NULL,
-		NULL, 0, NULL,
-		setup_asfd_no_backups);
-	run_test(0,  0, 0, PROTO_2, NULL, NULL, NULL,
+	run_test(0,  0, 0, NULL, NULL, NULL,
 		NULL, 0, NULL,
 		setup_asfd_no_backups);
 
 	// Backup not specified. burp -a l
-	run_test(0, 0, 0, PROTO_1, NULL, NULL, NULL,
+	run_test(0, 0, 0, NULL, NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 0, PROTO_1, NULL, NULL, NULL,
+	run_test(0, 0, 0, NULL, NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 0, PROTO_2, NULL, NULL, NULL,
-		sd1, ARR_LEN(sd1), fp1,
-		setup_asfd_1);
-	run_test(0, 0, 0, PROTO_2, NULL, NULL, NULL,
-		sd123, ARR_LEN(sd123), fp123,
-		setup_asfd_1_2_3);
-	run_test(0, 0, 0, PROTO_1, "", NULL, NULL,
+	run_test(0, 0, 0, "", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 0, PROTO_2, "", NULL, NULL,
-		sd123, ARR_LEN(sd123), fp123,
-		setup_asfd_1_2_3);
 
-	// Have backups, protocol 1. burp -a l -b x
-	run_test(0, 0, 1, PROTO_1, "1", NULL, NULL,
+	// Have backups, burp -a l -b x
+	run_test(0, 0, 1, "1", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "all", NULL, NULL,
+	run_test(0, 0, 1, "all", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "current", NULL, NULL,
+	run_test(0, 0, 1, "current", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "1", NULL, NULL,
+	run_test(0, 0, 1, "1", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "2", NULL, NULL,
+	run_test(0, 0, 1, "2", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp2,
 		setup_asfd_2);
-	run_test(0, 0, 1, PROTO_1, "3", NULL, NULL,
+	run_test(0, 0, 1, "3", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
-	run_test(0, 0, 3, PROTO_1, "all", NULL, NULL,
+	run_test(0, 0, 3, "all", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 1, PROTO_1, "current", NULL, NULL,
-		sd123, ARR_LEN(sd123), fp3,
-		setup_asfd_3);
-
-	// Have backups, protocol 2. burp -a l -b x
-	run_test(0, 0, 1, PROTO_2, "1", NULL, NULL,
-		sd1, ARR_LEN(sd1), fp1,
-		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "all", NULL, NULL,
-		sd1, ARR_LEN(sd1), fp1,
-		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "current", NULL, NULL,
-		sd1, ARR_LEN(sd1), fp1,
-		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "1", NULL, NULL,
-		sd123, ARR_LEN(sd123), fp1,
-		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "2", NULL, NULL,
-		sd123, ARR_LEN(sd123), fp2,
-		setup_asfd_2);
-	run_test(0, 0, 1, PROTO_2, "3", NULL, NULL,
-		sd123, ARR_LEN(sd123), fp3,
-		setup_asfd_3);
-	run_test(0, 0, 3, PROTO_2, "all", NULL, NULL,
-		sd123, ARR_LEN(sd123), fp123,
-		setup_asfd_1_2_3);
-	run_test(0, 0, 1, PROTO_2, "current", NULL, NULL,
+	run_test(0, 0, 1, "current", NULL, NULL,
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
 
 	// Add regex.
 	// burp -a l -r someregex
-	run_test(0, 0, 3, PROTO_1, NULL, "someregex", NULL,
+	run_test(0, 0, 3, NULL, "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 3, PROTO_2, NULL, "someregex", NULL,
-		sd123, ARR_LEN(sd123), fp123,
-		setup_asfd_1_2_3);
 	// burp -a l -b x -r someregex
-	run_test(0, 0, 3, PROTO_1, "all", "someregex", NULL,
+	run_test(0, 0, 3, "all", "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 1, PROTO_1, "1", "someregex", NULL,
+	run_test(0, 0, 1, "1", "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "current", "someregex", NULL,
-		sd123, ARR_LEN(sd123), fp3,
-		setup_asfd_3);
-	run_test(0, 0, 3, PROTO_2, "all", "someregex", NULL,
-		sd123, ARR_LEN(sd123), fp123,
-		setup_asfd_1_2_3);
-	run_test(0, 0, 1, PROTO_2, "1", "someregex", NULL,
-		sd123, ARR_LEN(sd123), fp1,
-		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "current", "someregex", NULL,
+	run_test(0, 0, 1, "current", "someregex", NULL,
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
 
 	// Add browsedir.
 	// burp -a l -d browsedir
-	run_test(0, 0, 3, PROTO_1, NULL, NULL, "browsedir",
+	run_test(0, 0, 3, NULL, NULL, "browsedir",
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 3, PROTO_2, NULL, NULL, "browsedir",
-		sd123, ARR_LEN(sd123), fp123,
-		setup_asfd_1_2_3);
 	// burp -a l -b x -d browsedir
-	run_test(0, 0, 3, PROTO_1, "all", NULL, "browsedir",
+	run_test(0, 0, 3, "all", NULL, "browsedir",
 		sd123, ARR_LEN(sd123), fp123,
 		setup_asfd_1del_2_3);
-	run_test(0, 0, 1, PROTO_1, "1", NULL, "browsedir",
+	run_test(0, 0, 1, "1", NULL, "browsedir",
 		sd123, ARR_LEN(sd123), fp1,
 		setup_asfd_1del);
-	run_test(0, 0, 1, PROTO_1, "current", NULL, "browsedir",
-		sd123, ARR_LEN(sd123), fp3,
-		setup_asfd_3);
-	run_test(0, 0, 3, PROTO_2, "all", NULL, "browsedir",
-		sd123, ARR_LEN(sd123), fp123,
-		setup_asfd_1_2_3);
-	run_test(0, 0, 1, PROTO_2, "1", NULL, "browsedir",
-		sd123, ARR_LEN(sd123), fp1,
-		setup_asfd_1);
-	run_test(0, 0, 1, PROTO_2, "current", NULL, "browsedir",
+	run_test(0, 0, 1, "current", NULL, "browsedir",
 		sd123, ARR_LEN(sd123), fp3,
 		setup_asfd_3);
 
 	// Not found. burp -a l -b y
-	run_test(0, -1, 0, PROTO_1, "4", NULL, NULL,
+	run_test(0, -1, 0, "4", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "4", NULL, NULL,
+	run_test(0, -1, 0, "0", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_1, "0", NULL, NULL,
+	run_test(0, -1, 0, "junk", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "0", NULL, NULL,
-		sd123, ARR_LEN(sd123), NULL,
-		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_1, "junk", NULL, NULL,
-		sd123, ARR_LEN(sd123), NULL,
-		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "junk", NULL, NULL,
-		sd123, ARR_LEN(sd123), NULL,
-		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_1, "-1", NULL, NULL,
-		sd123, ARR_LEN(sd123), NULL,
-		setup_asfd_not_found);
-	run_test(0, -1, 0, PROTO_2, "-1", NULL, NULL,
+	run_test(0, -1, 0, "-1", NULL, NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_not_found);
 
 	// Error from the list_server_callback.
 	list_server_callback_ret=-1;
-	run_test(0, -1, 1, PROTO_1, "1", NULL, NULL,
+	run_test(0, -1, 1, "1", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, -1, 1, PROTO_1, "all", NULL, NULL,
+	run_test(0, -1, 1, "all", NULL, NULL,
 		sd1, ARR_LEN(sd1), fp1,
 		setup_asfd_1del);
-	run_test(0, -1, 1, PROTO_2, "1", NULL, NULL,
-		sd1, ARR_LEN(sd1), fp1,
-		setup_asfd_1);
-	run_test(0, -1, 1, PROTO_2, "all", NULL, NULL,
-		sd1, ARR_LEN(sd1), fp1,
-		setup_asfd_1);
 
 	// Write failure.
-	run_test(0, -1, 0, PROTO_1, NULL, NULL, NULL,
+	run_test(0, -1, 0, NULL, NULL, NULL,
 		sd1, ARR_LEN(sd1), NULL,
 		setup_asfd_1del_write_failure);
-	run_test(0, -1, 0, PROTO_1, "1", NULL, NULL,
+	run_test(0, -1, 0, "1", NULL, NULL,
 		sd1, ARR_LEN(sd1), NULL,
 		setup_asfd_1del_write_failure);
-	run_test(0, -1, 0, PROTO_1, "all", NULL, NULL,
+	run_test(0, -1, 0, "all", NULL, NULL,
 		sd1, ARR_LEN(sd1), NULL,
 		setup_asfd_1del_write_failure);
 
 	// Bad regex.
 	// burp -a l -b x -r '*'
-	run_test(-1, 0, 0, PROTO_1, "1", "*", NULL,
+	run_test(-1, 0, 0, "1", "*", NULL,
 		sd123, ARR_LEN(sd123), NULL,
 		setup_asfd_bad_regex);
 }
@@ -436,13 +336,13 @@ static void run_check_browsedir(const char *browsedir,
 	sbuf_free_content(mb);
 }
 
-static void do_test_check_browsedir(enum protocol protocol)
+static void do_test_check_browsedir()
 {
 	struct sbuf *mb;
 	const char *browsedir;
 	char *last_bd_match=NULL;
 
-	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+	fail_unless((mb=sbuf_alloc())!=NULL);
 
 	browsedir="/path";
 	run_check_browsedir(browsedir, mb, CMD_FILE, "/aaaa/path/file",
@@ -480,18 +380,17 @@ static void do_test_check_browsedir(enum protocol protocol)
 
 START_TEST(test_check_browsedir)
 {
-	do_test_check_browsedir(PROTO_1);
-	do_test_check_browsedir(PROTO_2);
+	do_test_check_browsedir();
 }
 END_TEST
 
-static void do_test_check_browsedir_root(enum protocol protocol)
+static void do_test_check_browsedir_root()
 {
 	struct sbuf *mb;
 	const char *browsedir;
 	char *last_bd_match=NULL;
 
-	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+	fail_unless((mb=sbuf_alloc())!=NULL);
 
 	browsedir="/";
 	run_check_browsedir(browsedir, mb, CMD_FILE, "aaa",
@@ -510,18 +409,16 @@ static void do_test_check_browsedir_root(enum protocol protocol)
 
 START_TEST(test_check_browsedir_root)
 {
-	do_test_check_browsedir_root(PROTO_1);
-	do_test_check_browsedir_root(PROTO_2);
+	do_test_check_browsedir_root();
 }
 END_TEST
 
-static void do_test_check_browsedir_null_or_blank(enum protocol protocol,
-	const char *browsedir)
+static void do_test_check_browsedir_null_or_blank(const char *browsedir)
 {
 	struct sbuf *mb;
 	char *last_bd_match=NULL;
 
-	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+	fail_unless((mb=sbuf_alloc())!=NULL);
 
 	run_check_browsedir(browsedir, mb, CMD_FILE, "aaa",
 		&last_bd_match, "aaa",  1, 0);
@@ -543,20 +440,18 @@ static void do_test_check_browsedir_null_or_blank(enum protocol protocol,
 
 START_TEST(test_check_browsedir_null_or_blank)
 {
-	do_test_check_browsedir_null_or_blank(PROTO_1, NULL);
-	do_test_check_browsedir_null_or_blank(PROTO_2, NULL);
-	do_test_check_browsedir_null_or_blank(PROTO_1, "");
-	do_test_check_browsedir_null_or_blank(PROTO_2, "");
+	do_test_check_browsedir_null_or_blank(NULL);
+	do_test_check_browsedir_null_or_blank("");
 }
 END_TEST
 
-static void do_test_check_browsedir_windows(enum protocol protocol)
+static void do_test_check_browsedir_windows()
 {
 	struct sbuf *mb;
 	const char *browsedir;
 	char *last_bd_match=NULL;
 
-	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+	fail_unless((mb=sbuf_alloc())!=NULL);
 
 	browsedir="C:/aaa";
 	run_check_browsedir(browsedir, mb, CMD_FILE, "A:/aaa",
@@ -577,18 +472,17 @@ static void do_test_check_browsedir_windows(enum protocol protocol)
 
 START_TEST(test_check_browsedir_windows)
 {
-	do_test_check_browsedir_windows(PROTO_1);
-	do_test_check_browsedir_windows(PROTO_2);
+	do_test_check_browsedir_windows();
 }
 END_TEST
 
-static void do_test_check_browsedir_windows_blank(enum protocol protocol)
+static void do_test_check_browsedir_windows_blank()
 {
 	struct sbuf *mb;
 	const char *browsedir;
 	char *last_bd_match=NULL;
 
-	fail_unless((mb=sbuf_alloc(protocol))!=NULL);
+	fail_unless((mb=sbuf_alloc())!=NULL);
 
 	browsedir="";
 	run_check_browsedir(browsedir, mb, CMD_FILE, "A:/aaa",
@@ -609,8 +503,7 @@ static void do_test_check_browsedir_windows_blank(enum protocol protocol)
 
 START_TEST(test_check_browsedir_windows_blank)
 {
-	do_test_check_browsedir_windows_blank(PROTO_1);
-	do_test_check_browsedir_windows_blank(PROTO_2);
+	do_test_check_browsedir_windows_blank();
 }
 END_TEST
 
@@ -622,7 +515,7 @@ START_TEST(test_check_browsedir_alloc_error)
 	const char *browsedir;
 	char *last_bd_match=NULL;
 
-	fail_unless((mb=sbuf_alloc(PROTO_1))!=NULL);
+	fail_unless((mb=sbuf_alloc())!=NULL);
 
 	browsedir="";
 	bdlen=0;
@@ -646,7 +539,7 @@ START_TEST(test_maybe_fake_directory)
 {
 	char *attr;
 	struct sbuf *mb;
-	fail_unless((mb=sbuf_alloc(PROTO_1))!=NULL);
+	fail_unless((mb=sbuf_alloc())!=NULL);
 	fail_unless((attr=strdup_w("120398102938", __func__))!=NULL);
 	iobuf_set(&mb->attr, CMD_ATTRIBS, attr, strlen(attr));
 

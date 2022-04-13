@@ -49,14 +49,8 @@ static void do_build_storage_dirs(struct sdirs *sdirs, struct sd *s, int len,
 			create_file(backup, "restorelog", compressed_logs);
 		if(s[i].flags & BU_LOG_VERIFY)
 			create_file(backup, "verifylog", compressed_logs);
-		if(sdirs->protocol==PROTO_1)
-		{
-			if(s[i].flags & BU_HARDLINKED)
-				create_file(backup, "hardlinked", 0);
-		}
-		// This one is never compressed.
-		if(sdirs->global_sparse)
-			build_file(sdirs->global_sparse, NULL);
+		if(s[i].flags & BU_HARDLINKED)
+			create_file(backup, "hardlinked", 0);
 
 		t+=60*60*24; // Add one day.
 	}

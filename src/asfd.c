@@ -7,7 +7,6 @@
 #include "handy.h"
 #include "iobuf.h"
 #include "log.h"
-#include "server/protocol2/champ_chooser/incoming.h"
 
 // For IPTOS / IPTOS_THROUGHPUT.
 #ifdef HAVE_WIN32
@@ -21,8 +20,6 @@
 #elif HAVE_NCURSES_NCURSES_H
 #include <ncurses/ncurses.h>
 #endif
-
-#include "protocol2/blist.h"
 
 static void truncate_readbuf(struct asfd *asfd)
 {
@@ -686,8 +683,6 @@ static void asfd_free_content(struct asfd *asfd)
 	free_w(&asfd->desc);
 	free_w(&asfd->client);
 	free_w(&asfd->listen);
-	incoming_free(&asfd->in);
-	blist_free(&asfd->blist);
 #ifdef USE_IPACL
 	ipacl_free(&asfd->ipacl);
 #endif

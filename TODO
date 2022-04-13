@@ -2,32 +2,3 @@ The list of things to do is at:
 https://github.com/grke/burp/issues
 
 However, that is mostly relating to protocol1 issues.
-
-
-So, this is a list of important stuff that needs to be done for protocol2,
-roughly in order of most important to least.
-
-* Need to improve restore speed - come up with a way to efficiently read the
-  blocks into memory by looking ahead in the manifests.
-
-* Make the status monitor work.
-
-* Add data compression.
-
-* Add data encryption.
-
-* Make Windows EFS work.
-
-* Make Windows 'image' backups work.
-
-
-List of things that are not recorded as issues on GitHub:
-
-* Add diff with next backup, i.e.
-    burp -a d
-        Report  the  differences  between  the  current backup and the backup
-        that will be made next.
-    burp -a d -b 2 -b n
-        Report  the  differences between backup 1 and the backup that will be
-        made next (use -a D for more verbosity).
-

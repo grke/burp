@@ -503,10 +503,9 @@ static ssize_t bfile_write(struct BFILE *bfd, void *buf, size_t count)
 
 static int bfile_open_for_send(struct BFILE *bfd, struct asfd *asfd,
 	const char *fname, int64_t winattr, int atime,
-	struct cntr *cntr, enum protocol protocol)
+	struct cntr *cntr)
 {
-	if(protocol==PROTO_1
-	  && bfd->mode!=BF_CLOSED)
+	if(bfd->mode!=BF_CLOSED)
 	{
 #ifdef HAVE_WIN32
 		if(bfd->path && !strcmp(bfd->path, fname))

@@ -128,8 +128,6 @@ int cntr_init(struct cntr *cntr, const char *cname, pid_t pid)
 	  || add_cntr_ent(cntr, CNTR_SINGLE_FIELD,
 		CMD_ERROR, "errors", "Errors")
 	  || add_cntr_ent(cntr, CNTR_TABULATE,
-		CMD_DATA, "blocks", "Blocks")
-	  || add_cntr_ent(cntr, CNTR_TABULATE,
 		CMD_EFS_FILE, "efs_files", "EFS files")
 	  || add_cntr_ent(cntr, CNTR_TABULATE,
 		CMD_ENC_VSS_T, "vss_footers_encrypted", "VSS footers (enc)")
@@ -934,7 +932,6 @@ int cntr_send_bu(struct asfd *asfd, struct bu *bu, struct conf **confs,
 		get_string(confs[OPT_CNAME]), NULL/*clientconfdir*/))
 			goto end;
 	cstat->cntrs=get_cntr(confs);
-	cstat->protocol=get_protocol(confs);
 	cstat->cntrs->cntr_status=cntr_status;
 	cstat->run_status=RUN_STATUS_RUNNING;
 

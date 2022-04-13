@@ -7,11 +7,6 @@ password = abcdefgh
 cname = testclient
 # A different port to use for restores - see the man page for more options.
 #port_restore = 5971
-# Choose the protocol to use.
-# 0 to decide automatically, 1 to force protocol1 mode (file level granularity
-# with a pseudo mirrored storage on the server and optional rsync). 2 forces
-# protocol2 mode (inline deduplication with variable length blocks).
-# protocol = 0
 pidfile = @runstatedir@/@name@.client.pid
 syslog = 0
 stdout = 1

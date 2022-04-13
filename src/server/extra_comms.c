@@ -113,7 +113,6 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 {
 	int ret=-1;
 	char *feat=NULL;
-	enum protocol protocol=get_protocol(cconfs);
 	struct strlist *startdir=get_strlist(cconfs[OPT_STARTDIR]);
 	struct strlist *incglob=get_strlist(cconfs[OPT_INCGLOB]);
 
@@ -154,24 +153,6 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 	// We support CMD_MESSAGE.
 	if(append_to_feat(&feat, "msg:"))
 		goto end;
-
-	if(protocol==PROTO_AUTO)
-	{
-		/* If the server is configured to use either protocol, let the
-		   client know that it can choose. */
-		logp("Server is using protocol=0 (auto)\n");
-		if(append_to_feat(&feat, "csetproto:"))
-			goto end;
-	}
-	else
-	{
-		char p[32]="";
-		/* Tell the client what we are going to use. */
-		logp("Server is using protocol=%d\n", (int)protocol);
-		snprintf(p, sizeof(p), "forceproto=%d:", (int)protocol);
-		if(append_to_feat(&feat, p))
-			goto end;
-	}
 
 #ifdef HAVE_BLAKE2
 	if(append_to_feat(&feat, "rshash=blake2:"))
@@ -402,47 +383,6 @@ static int extra_comms_read(struct async *as,
 		{
 			// Removed.
 		}
-		else if(!strncmp_w(rbuf->buf, "protocol="))
-		{
-			char msg[128]="";
-			// Client wants to set protocol.
-			enum protocol protocol;
-			enum protocol cprotocol;
-			const char *cliproto=NULL;
-			protocol=get_protocol(cconfs);
-			cliproto=rbuf->buf+strlen("protocol=");
-			cprotocol=atoi(cliproto);
-
-			if(protocol!=PROTO_AUTO)
-			{
-				if(protocol==cprotocol)
-				{
-					logp("Client is forcing protocol=%d\n", (int)protocol);
-					continue;
-				}
-				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%d but server is set to protocol=%d\n", (int)cprotocol, (int)protocol);
-				log_and_send(asfd, msg);
-				goto end;
-			}
-			else if(cprotocol==PROTO_1)
-			{
-				set_protocol(cconfs, cprotocol);
-				set_protocol(globalcs, cprotocol);
-			}
-			else if(cprotocol==PROTO_2)
-			{
-				set_protocol(cconfs, cprotocol);
-				set_protocol(globalcs, cprotocol);
-			}
-			else
-			{
-				snprintf(msg, sizeof(msg), "Client is trying to use protocol=%s, which is unknown\n", cliproto);
-				log_and_send(asfd, msg);
-				goto end;
-			}
-			logp("Client has set protocol=%d\n",
-				(int)get_protocol(cconfs));
-		}
 		else if(!strncmp_w(rbuf->buf, "rshash=blake2"))
 		{
 #ifdef HAVE_BLAKE2
@@ -544,7 +484,6 @@ int extra_comms(struct async *as,
 	struct asfd *asfd;
 	asfd=as->asfd;
 	//char *restorepath=NULL;
-	const char *peer_version=NULL;
 
 	if(vers_init(&vers, cconfs))
 		goto error;
@@ -585,65 +524,6 @@ int extra_comms(struct async *as,
 
 	if(extra_comms_read(as, &vers, srestore, incexc, confs, cconfs))
 		goto error;
-
-	peer_version=get_string(cconfs[OPT_PEER_VERSION]);
-
-	// This needs to come after extra_comms_read, as the client might
-	// have set PROTO_1 or PROTO_2.
-	switch(get_protocol(cconfs))
-	{
-		case PROTO_AUTO:
-			// The protocol has not been specified. Make a choice.
-			if(vers.cli<vers.burp2)
-			{
-				// Client is burp-1.x.x, use protocol1.
-				set_protocol(confs, PROTO_1);
-				set_protocol(cconfs, PROTO_1);
-				logp("Client is %s-%s - using protocol=%d\n",
-					PACKAGE_TARNAME,
-					peer_version, PROTO_1);
-			}
-			else
-			{
-				// Client is burp-2.x.x, use protocol2.
-				// This will probably never be reached because
-				// the negotiation will take care of it.
-				/*
-				set_protocol(confs, PROTO_2);
-				set_protocol(cconfs, PROTO_2);
-				logp("Client is %s-%s - using protocol=%d\n",
-					PACKAGE_TARNAME,
-					peer_version, PROTO_2);
-				*/
-				// PROTO_1 is safer for now.
-				set_protocol(confs, PROTO_1);
-				set_protocol(cconfs, PROTO_1);
-				logp("Client is %s-%s - using protocol=%d\n",
-					PACKAGE_TARNAME,
-					peer_version, PROTO_1);
-			}
-			break;
-		case PROTO_1:
-			// It is OK for the client to be burp1 and for the
-			// server to be forced to protocol1.
-			break;
-		case PROTO_2:
-			if(vers.cli>=vers.burp2)
-				break;
-			logp("protocol=%d is set server side, "
-			  "but client is %s version %s\n",
-			  PROTO_2, PACKAGE_TARNAME, peer_version);
-			goto error;
-	}
-
-	if(get_protocol(cconfs)==PROTO_1)
-	{
-		if(get_e_rshash(cconfs[OPT_RSHASH])==RSHASH_UNSET)
-		{
-			set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
-			set_e_rshash(cconfs[OPT_RSHASH], RSHASH_MD4);
-		}
-	}
 
 	if(check_seed(asfd, cconfs))
 		goto error;

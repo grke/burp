@@ -14,13 +14,6 @@ enum burp_mode
 	BURP_MODE_CLIENT
 };
 
-enum protocol
-{
-	PROTO_AUTO=0,
-	PROTO_1,
-	PROTO_2
-};
-
 enum recovery_method
 {
 	RECOVERY_METHOD_UNSET=0,
@@ -50,7 +43,6 @@ enum conf_type
 	CT_MODE_T,
 	CT_SSIZE_T,
 	CT_E_BURP_MODE,
-	CT_E_PROTOCOL,
 	CT_E_RECOVERY_METHOD,
 	CT_E_RSHASH,
 	CT_STRLIST,
@@ -67,7 +59,6 @@ struct conf
 		float f;
 		enum burp_mode burp_mode;
 		enum recovery_method recovery_method;
-		enum protocol protocol;
 		enum rshash rshash;
 		mode_t mode;
 		uint64_t uint64;
@@ -101,7 +92,6 @@ enum conf_opt
 	OPT_NETWORK_TIMEOUT,
 	OPT_CLIENT_IS_WINDOWS,
 	OPT_PEER_VERSION,
-	OPT_PROTOCOL,
 	OPT_RSHASH,
 	OPT_MESSAGE,
 	OPT_CNAME_LOWERCASE, // force lowercase cname, client or server option
@@ -346,8 +336,6 @@ extern float get_float(struct conf *conf);
 extern uint64_t get_uint64_t(struct conf *conf);
 extern mode_t get_mode_t(struct conf *conf);
 extern enum burp_mode get_e_burp_mode(struct conf *conf);
-extern enum protocol get_e_protocol(struct conf *conf);
-extern enum protocol get_protocol(struct conf **confs);
 extern enum recovery_method get_e_recovery_method(struct conf *conf);
 extern enum rshash get_e_rshash(struct conf *conf);
 extern struct cntr *get_cntr(struct conf **confs);
@@ -357,8 +345,6 @@ extern int set_string(struct conf *conf, const char *s);
 extern int set_strlist(struct conf *conf, struct strlist *s);
 extern int set_int(struct conf *conf, unsigned int i);
 extern int set_e_burp_mode(struct conf *conf, enum burp_mode bm);
-extern int set_e_protocol(struct conf *conf, enum protocol p);
-extern int set_protocol(struct conf **confs, enum protocol p);
 extern int set_e_rshash(struct conf *conf, enum rshash r);
 extern int set_mode_t(struct conf *conf, mode_t m);
 extern int set_float(struct conf *conf, float f);
@@ -368,7 +354,6 @@ extern int add_to_strlist_sorted_uniq(struct conf *conf,
 	const char *value, int flag);
 
 extern enum burp_mode str_to_burp_mode(const char *str);
-extern enum protocol str_to_protocol(const char *str);
 extern const char *recovery_method_to_str(enum recovery_method r);
 extern enum recovery_method str_to_recovery_method(const char *str);
 extern int set_e_recovery_method(struct conf *conf, enum recovery_method r);

@@ -101,7 +101,7 @@ error:
 	return ret;
 }
 
-static void setup_indices(struct bu *bu_list, enum protocol protocol)
+static void setup_indices(struct bu *bu_list)
 {
 	int i;
 	int tr=0;
@@ -114,18 +114,10 @@ static void setup_indices(struct bu *bu_list, enum protocol protocol)
 		// Enumerate the position of each entry.
 		bu->index=i++;
 
-		if(protocol==PROTO_2)
-		{
-			// All PROTO_2 backups are deletable.
-			bu->flags|=BU_DELETABLE;
-		}
-		else
-		{
-			// Backups that come after hardlinked backups are
-			// deletable.
-			if((bu->flags & BU_HARDLINKED) && bu->next)
-				bu->next->flags|=BU_DELETABLE;
-		}
+		// Backups that come after hardlinked backups are
+		// deletable.
+		if((bu->flags & BU_HARDLINKED) && bu->next)
+			bu->next->flags|=BU_DELETABLE;
 
 		// Also set up reverse linkage.
 		bu->prev=last;
@@ -207,7 +199,7 @@ static int do_bu_get_list(struct sdirs *sdirs,
 			include_working)) goto end;
 	}
 
-	setup_indices(*bu_list, sdirs->protocol);
+	setup_indices(*bu_list);
 
 	ret=0;
 end:

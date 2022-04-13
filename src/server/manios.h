@@ -15,8 +15,7 @@ struct manios
 
 extern struct manios *manios_open_phase2(struct sdirs *sdirs,
 	man_off_t *pos_phase1,
-	man_off_t *pos_current,
-	enum protocol p);
+	man_off_t *pos_current);
 extern int manios_close(struct manios **manios);
 
 #endif

@@ -91,7 +91,7 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 		char msg[256]="";
 		snprintf(msg, sizeof(msg),
 			"Could not transfer file in: %s", rpath);
-		return restore_interrupt(asfd, sb, msg, cntr, PROTO_1);
+		return restore_interrupt(asfd, sb, msg, cntr);
 	}
 	return 0;
 }
@@ -115,7 +115,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 		char msg[256]="";
 		// failed - do a warning
 		snprintf(msg, sizeof(msg), "build path failed: %s", fname);
-		if(restore_interrupt(asfd, sb, msg, cntr, PROTO_1))
+		if(restore_interrupt(asfd, sb, msg, cntr))
 			ret=-1;
 		goto end;
 	}
@@ -127,7 +127,7 @@ static int restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	{
 #endif
 		switch(open_for_restore(asfd,
-			bfd, rpath, sb, vss_restore, cntr, PROTO_1))
+			bfd, rpath, sb, vss_restore, cntr))
 		{
 			case OFR_OK: break;
 			case OFR_CONTINUE: goto end;
@@ -176,7 +176,7 @@ static int restore_metadata(struct asfd *asfd,
 
 	// Create the directory, but do not add to the counts.
 	if(S_ISDIR(sb->statp.st_mode)
-	  && restore_dir(asfd, sb, fname, act, /*cntr*/NULL, PROTO_1))
+	  && restore_dir(asfd, sb, fname, act, /*cntr*/NULL))
 		goto end;
 
 	// Read in the metadata...

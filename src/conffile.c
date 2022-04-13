@@ -318,9 +318,6 @@ static int load_conf_field_and_value(struct conf **c,
 				case CT_E_BURP_MODE:
 					return set_e_burp_mode(c[i],
 						str_to_burp_mode(v));
-				case CT_E_PROTOCOL:
-					return set_e_protocol(c[i],
-						str_to_protocol(v));
 				case CT_E_RECOVERY_METHOD:
 					return set_e_recovery_method(c[i],
 						str_to_recovery_method(v));
@@ -1444,9 +1441,6 @@ static int conf_set_from_global(struct conf **globalc, struct conf **cc)
 				break;
 			case CT_E_BURP_MODE:
 				set_e_burp_mode(cc[i], get_e_burp_mode(globalc[i]));
-				break;
-			case CT_E_PROTOCOL:
-				set_e_protocol(cc[i], get_e_protocol(globalc[i]));
 				break;
 			case CT_E_RECOVERY_METHOD:
 				set_e_recovery_method(cc[i], get_e_recovery_method(globalc[i]));

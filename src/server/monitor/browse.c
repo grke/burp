@@ -33,9 +33,6 @@ static int do_browse_manifest(
 			break;
 		}
 
-		if(manio->protocol==PROTO_2 && sb->endfile.buf)
-			continue;
-
 		if(sb->path.cmd!=CMD_DIRECTORY
 		  && sb->path.cmd!=CMD_FILE
 		  && sb->path.cmd!=CMD_ENC_FILE
@@ -67,10 +64,9 @@ static int browse_manifest_start(struct cstat *cstat,
 	struct sbuf *sb=NULL;
 	struct manio *manio=NULL;
 
-	if(!(manifest=prepend_s(bu->path,
-		cstat->protocol==PROTO_1?"manifest.gz":"manifest"))
-	  || !(manio=manio_open(manifest, "rb", cstat->protocol))
-	  || !(sb=sbuf_alloc(cstat->protocol)))
+	if(!(manifest=prepend_s(bu->path, "manifest.gz"))
+	  || !(manio=manio_open(manifest, "rb"))
+	  || !(sb=sbuf_alloc()))
 		goto end;
 	if(use_cache)
 		ret=cache_load(manio, sb, cstat->name, bu->bno);

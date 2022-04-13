@@ -30,7 +30,7 @@ static void tear_down(
 
 static void do_sdirs_init(struct sdirs *sdirs)
 {
-	fail_unless(!sdirs_init(sdirs, PROTO_1,
+	fail_unless(!sdirs_init(sdirs,
 		BASE, // directory
 		"utestclient", // cname
 		NULL, // client_lockdir
@@ -180,7 +180,6 @@ static void run_test(
 	build_storage_dirs(sdirs, sd1, ARR_LEN(sd1));
 	slist=build_manifest(
 		fdirs->manifest,
-		PROTO_1,
 		entries,
 		/*phase*/ 3);
 

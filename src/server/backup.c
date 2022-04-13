@@ -20,15 +20,12 @@
 #include "sdirs.h"
 #include "protocol1/backup_phase2.h"
 #include "protocol1/backup_phase4.h"
-#include "protocol2/backup_phase2.h"
-#include "protocol2/backup_phase4.h"
 #include "backup.h"
 #include "rubble.h"
 #include "timer.h"
 
 static void log_rshash(struct conf **confs)
 {
-	if(get_protocol(confs)!=PROTO_1) return;
 	logp("Using librsync hash %s\n",
 		rshash_to_str(get_e_rshash(confs[OPT_RSHASH])));
 }
@@ -51,7 +48,6 @@ static int open_log(struct asfd *asfd,
 
 	logp("Backup %s\n", resume?"resumed":"started");
 	logp("Client version: %s\n", peer_version?:"");
-	logp("Protocol: %d\n", (int)get_protocol(cconfs));
 	log_rshash(cconfs);
 	if(get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
 		logp("Client is Windows\n");
@@ -114,15 +110,8 @@ static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	if(breaking==2)
 		return breakpoint(breaking, __func__);
 
-	switch(get_protocol(cconfs))
-	{
-		case PROTO_1:
-			return backup_phase2_server_protocol1(as, sdirs,
-				incexc, resume, cconfs);
-		default:
-			return backup_phase2_server_protocol2(as, sdirs,
-				resume, cconfs);
-	}
+	return backup_phase2_server_protocol1(as, sdirs,
+		incexc, resume, cconfs);
 }
 
 static int backup_phase3_server(struct sdirs *sdirs, struct conf **cconfs)
@@ -142,13 +131,7 @@ static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 
 	log_fzp_set(NULL, cconfs);
 	// Phase4 will open logfp again (in case it is resuming).
-	switch(get_protocol(cconfs))
-	{
-		case PROTO_1:
-			return backup_phase4_server_protocol1(sdirs, cconfs);
-		default:
-			return backup_phase4_server_protocol2(sdirs, cconfs);
-	}
+	return backup_phase4_server_protocol1(sdirs, cconfs);
 }
 
 static int get_bno_from_sdirs(struct sdirs *sdirs)
@@ -188,13 +171,12 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	int ret=0;
 	int do_phase2=1;
 	struct asfd *asfd=as->asfd;
-	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
 
 	if(resume)
 	{
 		if(sdirs_get_real_working_from_symlink(sdirs)
-		  || sdirs_get_real_manifest(sdirs, protocol))
+		  || sdirs_get_real_manifest(sdirs))
 			goto error;
 
 		if(open_log(asfd, sdirs, cconfs, resume))
@@ -212,7 +194,7 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 		cntr->bno=bno_new;
 		if(sdirs_create_real_working(sdirs, bno_new,
 			get_string(cconfs[OPT_TIMESTAMP_FORMAT]))
-		  || sdirs_get_real_manifest(sdirs, protocol))
+		  || sdirs_get_real_manifest(sdirs))
 			goto error;
 
 		if(open_log(asfd, sdirs, cconfs, resume))
@@ -287,15 +269,6 @@ static int do_backup_server(struct async *as, struct sdirs *sdirs,
 	}
 
 	cntr_print(cntr, ACTION_BACKUP);
-
-	if(protocol==PROTO_2)
-	{
-		// Regenerate dindex before the symlink is renamed, so that the
-		// champ chooser cleanup does not try to remove data files
-		// whilst the dindex regeneration is happening.
-		if(regenerate_client_dindex(sdirs))
-			goto error;
-	}
 
 	// Move the symlink to indicate that we are now in the end phase. The
 	// rename() race condition is automatically recoverable here.

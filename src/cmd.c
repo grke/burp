@@ -10,16 +10,6 @@ char *cmd_to_text(enum cmd cmd)
 	{
 		case CMD_ATTRIBS:
 			snprintf(buf, len, "File attribute information"); break;
-		case CMD_ATTRIBS_SIGS:
-			snprintf(buf, len, "File attribute information preceding block signatures"); break;
-		case CMD_SIG:
-			snprintf(buf, len, "Block signature"); break;
-		case CMD_DATA_REQ:
-			snprintf(buf, len, "Request for block of data"); break;
-		case CMD_DATA:
-			snprintf(buf, len, "Block data"); break;
-		case CMD_WRAP_UP:
-			snprintf(buf, len, "Control packet"); break;
 		case CMD_FILE:
 			snprintf(buf, len, "Plain file"); break;
 		case CMD_ENC_FILE:
@@ -60,8 +50,6 @@ char *cmd_to_text(enum cmd cmd)
 			snprintf(buf, len, "Timestamp now/end"); break;
 		case CMD_MANIFEST:
 			snprintf(buf, len, "Path to a manifest"); break;
-		case CMD_FINGERPRINT:
-			snprintf(buf, len, "Fingerprint part of a signature"); break;
 		case CMD_SAVE_PATH:
 			snprintf(buf, len, "Save path part of a signature"); break;
 

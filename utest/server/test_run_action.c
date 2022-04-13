@@ -149,13 +149,6 @@ static int async_rw_simple(struct async *as)
 	return as->asfd->read(as->asfd);
 }
 
-static void setup_could_not_mkpath(struct asfd *asfd)
-{
-	int w=0;
-	asfd_assert_write(asfd, &w, 0, CMD_ERROR,
-		"could not mkpath " BASE "/directory/a_group/clients/utestclient/current");
-}
-
 static void build_directory_path(void)
 {
 	char path[256]="";
@@ -287,7 +280,6 @@ static void run_test(
 
 START_TEST(test_run_action)
 {
-	run_test(-1, setup_could_not_mkpath);
 	run_test(-1, setup_unknown_command);
 	run_test(-1, setup_unknown_command_gen);
 	run_test(0, setup_list);

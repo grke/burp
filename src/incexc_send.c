@@ -81,7 +81,6 @@ static int do_sends(struct asfd *asfd, struct conf **confs, int flag)
 			case CT_FLOAT:
 			case CT_MODE_T:
 			case CT_E_BURP_MODE:
-			case CT_E_PROTOCOL:
 			case CT_E_RECOVERY_METHOD:
 			case CT_E_RSHASH:
 			case CT_CNTR:

@@ -25,7 +25,6 @@ int backup_phase1_server_all(struct async *as,
 	char *phase1tmp=NULL;
 	struct asfd *asfd=as->asfd;
 	struct manio *manio=NULL;
-	enum protocol protocol=get_protocol(confs);
 	struct cntr *cntr;
 	int fail_on_warning=0;
 	struct cntr_ent *warn_ent=NULL;
@@ -39,8 +38,8 @@ int backup_phase1_server_all(struct async *as,
 
 	if(!(phase1tmp=get_tmp_filename(sdirs->phase1data))
 	  || !(manio=manio_open_phase1(phase1tmp,
-		comp_level(get_int(confs[OPT_COMPRESSION])), protocol))
-	  || !(sb=sbuf_alloc(protocol)))
+		comp_level(get_int(confs[OPT_COMPRESSION]))))
+	  || !(sb=sbuf_alloc()))
 		goto error;
 
 	while(1)
@@ -50,7 +49,7 @@ int backup_phase1_server_all(struct async *as,
 		if(check_fail_on_warning(fail_on_warning, warn_ent))
 			goto error;
 
-		switch(sbuf_fill_from_net(sb, asfd, NULL, cntr))
+		switch(sbuf_fill_from_net(sb, asfd, cntr))
 		{
 			case 0: break;
 			case 1: // Last thing the client sends is

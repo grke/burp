@@ -35,9 +35,9 @@ static void tear_down(struct strlist **klist, struct sdirs **sdirs)
 	alloc_check();
 }
 
-static void do_sdirs_init(struct sdirs *sdirs, enum protocol protocol)
+static void do_sdirs_init(struct sdirs *sdirs)
 {
-	fail_unless(!sdirs_init(sdirs, protocol,
+	fail_unless(!sdirs_init(sdirs,
 		BASE, // directory
 		CNAME,
 		NULL, // client_lockdir
@@ -59,14 +59,14 @@ static struct strlist *build_keep_strlist(long keep[], size_t len)
 	return list;
 }
 
-static void build_and_autodelete(enum protocol protocol,
+static void build_and_autodelete(
 	long keep[], size_t klen, // Keep settings.
 	struct sd *s, size_t slen, // Starting backups.
 	struct sd *e, size_t elen) // Expected backups.
 {
 	struct strlist *klist;
 	struct sdirs *sdirs=setup();
-	do_sdirs_init(sdirs, protocol);
+	do_sdirs_init(sdirs);
 	klist=build_keep_strlist(keep, klen);
 	build_storage_dirs(sdirs, s, slen);
 	fail_unless(!delete_backups(sdirs, CNAME, klist,
@@ -103,18 +103,6 @@ static struct sd ex3[] = {
 	{ "0000003 1970-01-03 00:00:00", 3, 2, 0 },
 	{ "0000004 1970-01-04 00:00:00", 4, 3, 0 },
 	{ "0000005 1970-01-05 00:00:00", 5, 4, BU_CURRENT },
-};
-static struct sd ex3ud2p2[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, 0 },
-	{ "0000003 1970-01-03 00:00:00", 3, 2, 0 },
-	{ "0000004 1970-01-04 00:00:00", 4, 3, 0 },
-	{ "0000005 1970-01-05 00:00:00", 5, 4, BU_CURRENT },
-};
-static struct sd ex3ud5p2[] = {
-	{ "0000001 1970-01-01 00:00:00", 1, 1, BU_DELETABLE },
-	{ "0000002 1970-01-02 00:00:00", 2, 2, 0 },
-	{ "0000003 1970-01-03 00:00:00", 3, 3, 0 },
-	{ "0000004 1970-01-04 00:00:00", 4, 4, BU_CURRENT },
 };
 
 static struct sd sd4[] = {
@@ -164,14 +152,6 @@ static struct sd ex5[] = {
 	{ "0000012 1970-01-12 00:00:00", 12, 10, 0 },
 	{ "0000013 1970-01-13 00:00:00", 13, 11, 0 },
 	{ "0000014 1970-01-14 00:00:00", 14, 12, BU_CURRENT },
-};
-static struct sd ex5p2[] = {
-	{ "0000003 1970-01-03 00:00:00",  3,  1, 0 },
-	{ "0000006 1970-01-06 00:00:00",  6,  2, 0 },
-	{ "0000009 1970-01-09 00:00:00",  9,  3, 0 },
-	{ "0000012 1970-01-12 00:00:00", 12,  4, 0 },
-	{ "0000013 1970-01-13 00:00:00", 13,  5, 0 },
-	{ "0000014 1970-01-14 00:00:00", 14,  6, BU_CURRENT },
 };
 
 static struct sd sd6[] = {
@@ -246,14 +226,6 @@ static struct sd ex8[] = {
 	{ "0000017 1970-01-17 00:00:00", 17,  6, 0 },
 	{ "0000018 1970-01-18 00:00:00", 18,  7, BU_HARDLINKED|BU_CURRENT },
 };
-static struct sd ex8p2[] = {
-	{ "0000003 1970-01-03 00:00:00",  3,  1, 0 },
-	{ "0000011 1970-01-11 00:00:00", 11,  2, 0 },
-	{ "0000015 1970-01-15 00:00:00", 15,  3, 0 },
-	{ "0000016 1970-01-16 00:00:00", 16,  4, 0 },
-	{ "0000017 1970-01-17 00:00:00", 17,  5, 0 },
-	{ "0000018 1970-01-18 00:00:00", 18,  6, BU_CURRENT },
-};
 
 static struct sd sd9[] = {
 	{ "0000003 1970-01-03 00:00:00",  3,  1, BU_HARDLINKED|BU_DELETABLE },
@@ -291,14 +263,6 @@ static struct sd ex10[] = {
 	{ "0000019 1970-01-19 00:00:00", 19,  5, BU_DELETABLE },
 	{ "0000020 1970-01-20 00:00:00", 20,  6, BU_CURRENT },
 };
-static struct sd ex10p2[] = {
-	{ "0000011 1970-01-11 00:00:00", 11,  1, 0 },
-	{ "0000016 1970-01-16 00:00:00", 16,  2, 0 },
-	{ "0000017 1970-01-17 00:00:00", 17,  3, 0 },
-	{ "0000018 1970-01-18 00:00:00", 18,  4, 0 },
-	{ "0000019 1970-01-19 00:00:00", 19,  5, 0 },
-	{ "0000020 1970-01-20 00:00:00", 20,  6, BU_CURRENT },
-};
 
 static struct sd sd11[] = {
 	{ "0000012 1970-01-12 00:00:00", 12,  1, BU_HARDLINKED|BU_DELETABLE },
@@ -316,14 +280,6 @@ static struct sd ex11[] = {
 	{ "0000019 1970-01-19 00:00:00", 19,  4, BU_DELETABLE },
 	{ "0000020 1970-01-20 00:00:00", 20,  5, 0 },
 	{ "0000021 1970-01-21 00:00:00", 21,  6, BU_HARDLINKED|BU_CURRENT },
-};
-static struct sd ex11p2[] = {
-	{ "0000012 1970-01-12 00:00:00", 12,  1, 0 },
-	{ "0000016 1970-01-16 00:00:00", 16,  2, 0 },
-	{ "0000018 1970-01-18 00:00:00", 18,  3, 0 },
-	{ "0000019 1970-01-19 00:00:00", 19,  4, 0 },
-	{ "0000020 1970-01-20 00:00:00", 20,  5, 0 },
-	{ "0000021 1970-01-21 00:00:00", 21,  6, BU_CURRENT },
 };
 
 static struct sd sd12[] = {
@@ -343,14 +299,6 @@ static struct sd ex12[] = {
 	{ "0000021 1970-01-21 00:00:00", 21,  5, BU_HARDLINKED },
 	{ "0000022 1970-01-22 00:00:00", 22,  6, BU_DELETABLE|BU_CURRENT },
 };
-static struct sd ex12p2[] = {
-	{ "0000012 1970-01-12 00:00:00", 12,  1, 0 },
-	{ "0000017 1970-01-17 00:00:00", 17,  2, 0 },
-	{ "0000019 1970-01-19 00:00:00", 19,  3, 0 },
-	{ "0000020 1970-01-20 00:00:00", 20,  4, 0 },
-	{ "0000021 1970-01-21 00:00:00", 21,  5, 0 },
-	{ "0000022 1970-01-22 00:00:00", 22,  6, BU_CURRENT },
-};
 
 static struct sd sd13[] = {
 	{ "0000012 1970-01-12 00:00:00", 12,  1, BU_HARDLINKED|BU_DELETABLE },
@@ -360,57 +308,39 @@ static struct sd ex13[] = {
 	{ "0000012 1970-01-12 00:00:00", 12,  1, BU_CURRENT|BU_HARDLINKED|BU_DELETABLE },
 };
 
-static void do_autodelete_tests_shared(enum protocol protocol)
+static void do_autodelete_tests_shared()
 {
-	build_and_autodelete(protocol, keep4, ARR_LEN(keep4),
+	build_and_autodelete(keep4, ARR_LEN(keep4),
 		sd1, ARR_LEN(sd1), sd1, ARR_LEN(sd1));
-	build_and_autodelete(protocol, keep4, ARR_LEN(keep4),
+	build_and_autodelete(keep4, ARR_LEN(keep4),
 		sd2, ARR_LEN(sd2), sd2, ARR_LEN(sd2));
-	build_and_autodelete(protocol, keep4, ARR_LEN(keep4),
+	build_and_autodelete(keep4, ARR_LEN(keep4),
 		sd3, ARR_LEN(sd3), ex3, ARR_LEN(ex3));
-	build_and_autodelete(protocol, keep4, ARR_LEN(keep4),
+	build_and_autodelete(keep4, ARR_LEN(keep4),
 		sd4, ARR_LEN(sd4), ex4, ARR_LEN(ex4));
 
-	build_and_autodelete(protocol, keep34, ARR_LEN(keep34),
+	build_and_autodelete(keep34, ARR_LEN(keep34),
 		sd6, ARR_LEN(sd6), ex6, ARR_LEN(ex6));
-	build_and_autodelete(protocol, keep42, ARR_LEN(keep42),
+	build_and_autodelete(keep42, ARR_LEN(keep42),
 		sd7, ARR_LEN(sd7), ex7, ARR_LEN(ex7));
 
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(keep422, ARR_LEN(keep422),
 		sd9, ARR_LEN(sd9), ex9, ARR_LEN(ex9));
 }
 
 START_TEST(test_autodelete_proto_1)
 {
-	enum protocol protocol=PROTO_1;
-	do_autodelete_tests_shared(protocol);
-	build_and_autodelete(protocol, keep34, ARR_LEN(keep34),
+	do_autodelete_tests_shared();
+	build_and_autodelete(keep34, ARR_LEN(keep34),
 		sd5, ARR_LEN(sd5), ex5, ARR_LEN(ex5));
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(keep422, ARR_LEN(keep422),
 		sd8, ARR_LEN(sd8), ex8, ARR_LEN(ex8));
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(keep422, ARR_LEN(keep422),
 		sd10, ARR_LEN(sd10), ex10, ARR_LEN(ex10));
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(keep422, ARR_LEN(keep422),
 		sd11, ARR_LEN(sd11), ex11, ARR_LEN(ex11));
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
+	build_and_autodelete(keep422, ARR_LEN(keep422),
 		sd12, ARR_LEN(sd12), ex12, ARR_LEN(ex12));
-}
-END_TEST
-
-START_TEST(test_autodelete_proto_2)
-{
-	enum protocol protocol=PROTO_2;
-	do_autodelete_tests_shared(protocol);
-	build_and_autodelete(protocol, keep34, ARR_LEN(keep34),
-		sd5, ARR_LEN(sd5), ex5p2, ARR_LEN(ex5p2));
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
-		sd8, ARR_LEN(sd8), ex8p2, ARR_LEN(ex8p2));
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
-		sd10, ARR_LEN(sd10), ex10p2, ARR_LEN(ex10p2));
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
-		sd11, ARR_LEN(sd11), ex11p2, ARR_LEN(ex11p2));
-	build_and_autodelete(protocol, keep422, ARR_LEN(keep422),
-		sd12, ARR_LEN(sd12), ex12p2, ARR_LEN(ex12p2));
 }
 END_TEST
 
@@ -437,7 +367,6 @@ static void setup_asfd_not_deletable(struct asfd *asfd)
 
 static void build_and_userdelete(
 	int expected_ret,
-	enum protocol protocol,
 	const char *backup_str,
 	struct sd *s, size_t slen, // Starting backups.
 	struct sd *e, size_t elen, // Expected backups.
@@ -448,7 +377,7 @@ static void build_and_userdelete(
 	sdirs=setup();
 	asfd=asfd_mock_setup(&areads, &awrites);
 	setup_asfd_callback(asfd);
-	do_sdirs_init(sdirs, protocol);
+	do_sdirs_init(sdirs);
 	build_storage_dirs(sdirs, s, slen);
 	fail_unless(do_delete_server(asfd,
 		sdirs,
@@ -463,38 +392,26 @@ static void build_and_userdelete(
 	tear_down(NULL, &sdirs);
 }
 
-static void do_userdelete_tests_shared(enum protocol protocol)
+static void do_userdelete_tests_shared()
 {
-	build_and_userdelete( 0, protocol, "1",
+	build_and_userdelete( 0, "1",
 		sd1, ARR_LEN(sd1), ex0, ARR_LEN(ex0), setup_asfd_ok);
-	build_and_userdelete( 0, protocol, "22",
+	build_and_userdelete( 0, "22",
 		sd13, ARR_LEN(sd13), ex13, ARR_LEN(ex13), setup_asfd_ok);
-	build_and_userdelete(-1, protocol, "2",
+	build_and_userdelete(-1, "2",
 		sd1, ARR_LEN(sd1), sd1, ARR_LEN(sd1), setup_asfd_not_found);
 
-	build_and_userdelete(-1, protocol, "junk",
+	build_and_userdelete(-1, "junk",
 		sd3, ARR_LEN(sd3), sd3, ARR_LEN(sd3), setup_asfd_not_found);
 }
 
 START_TEST(test_userdelete_proto_1)
 {
-	enum protocol protocol=PROTO_1;
-	do_userdelete_tests_shared(protocol);
-	build_and_userdelete(-1, protocol, "2",
+	do_userdelete_tests_shared();
+	build_and_userdelete(-1, "2",
 		sd3, ARR_LEN(sd3), sd3, ARR_LEN(sd3), setup_asfd_not_deletable);
-	build_and_userdelete(-1, protocol, "5",
+	build_and_userdelete(-1, "5",
 		sd3, ARR_LEN(sd3), sd3, ARR_LEN(sd3), setup_asfd_not_deletable);
-}
-END_TEST
-
-START_TEST(test_userdelete_proto_2)
-{
-	enum protocol protocol=PROTO_2;
-	do_userdelete_tests_shared(protocol);
-	build_and_userdelete(0, protocol, "2",
-		sd3, ARR_LEN(sd3), ex3ud2p2, ARR_LEN(ex3ud2p2), setup_asfd_ok);
-	build_and_userdelete(0, protocol, "5",
-		sd3, ARR_LEN(sd3), ex3ud5p2, ARR_LEN(ex3ud5p2), setup_asfd_ok);
 }
 END_TEST
 
@@ -508,9 +425,7 @@ Suite *suite_server_delete(void)
 	tc_core=tcase_create("Core");
         tcase_set_timeout(tc_core, 20);
 	tcase_add_test(tc_core, test_autodelete_proto_1);
-	tcase_add_test(tc_core, test_autodelete_proto_2);
 	tcase_add_test(tc_core, test_userdelete_proto_1);
-	tcase_add_test(tc_core, test_userdelete_proto_2);
 	suite_add_tcase(s, tc_core);
 
 	return s;

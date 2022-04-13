@@ -41,7 +41,4 @@ do_run()
 		"localhost" || exit 1
 }
 
-PROTOCOL=1 do_run
-PROTOCOL=2 NO_CA_GEN=1 do_run
-
-exit 0
+do_run

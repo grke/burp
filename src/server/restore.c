@@ -13,7 +13,6 @@
 #include "../log.h"
 #include "../pathcmp.h"
 #include "../prepend.h"
-#include "../protocol2/blk.h"
 #include "../regexp.h"
 #include "../slist.h"
 #include "../strlist.h"
@@ -22,10 +21,6 @@
 #include "compress.h"
 #include "manio.h"
 #include "protocol1/restore.h"
-#include "protocol2/dpth.h"
-#include "protocol2/rblk.h"
-#include "protocol2/restore.h"
-#include "../protocol2/rabin/rabin.h"
 #include "rubble.h"
 #include "sdirs.h"
 
@@ -184,13 +179,10 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	if(!cntr) return 0;
 	cntr->bno=(int)bu->bno;
 
-// FIX THIS: this is only trying to work for protocol1.
-	if(get_protocol(cconfs)!=PROTO_1) return 0;
-
 	if(maybe_open_restore_list(cconfs, &rl_fzp, &rl_iobuf, sdirs))
 		goto end;
 
-	if(!(sb=sbuf_alloc(PROTO_1))) goto end;
+	if(!(sb=sbuf_alloc())) goto end;
 	if(!(fzp=fzp_gzopen(manifest, "rb")))
 	{
 		log_and_send(asfd, "could not open manifest");
@@ -198,7 +190,7 @@ static int setup_cntr(struct asfd *asfd, const char *manifest,
 	}
 	while(1)
 	{
-		if((ars=sbuf_fill_from_file(sb, fzp, NULL)))
+		if((ars=sbuf_fill_from_file(sb, fzp)))
 		{
 			if(ars<0) goto end;
 			// ars==1 means end ok
@@ -231,18 +223,8 @@ end:
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
-	struct conf **cconfs, struct sbuf *need_data, const char *manifest,
+	struct conf **cconfs, const char *manifest,
 	struct slist *slist);
-
-static void log_missing_block(struct asfd *asfd, struct cntr *cntr,
-	struct blk *blk, struct sbuf *need_data)
-{
-	uint16_t datno=0;
-	char *savepathstr;
-	savepathstr=uint64_to_savepathstr_with_sig_uint(blk->savepath, &datno);
-	logw(asfd, cntr, "%s: Missing block %s:%d\n",
-		iobuf_to_printable(&need_data->path), savepathstr, datno);
-}
 
 // Used when restoring a hard link that we have not restored the destination
 // for. Read through the manifest from the beginning and substitute the path
@@ -254,64 +236,21 @@ static int hard_link_substitution(struct asfd *asfd,
 	const char *manifest, struct slist *slist)
 {
 	int ret=-1;
-	struct sbuf *need_data=NULL;
-	int last_ent_was_dir=0;
 	struct sbuf *hb=NULL;
 	struct manio *manio=NULL;
-	struct blk *blk=NULL;
 	int pcmp;
-	enum protocol protocol=get_protocol(cconfs);
-	struct cntr *cntr=get_cntr(cconfs);
 
-	if(!(manio=manio_open(manifest, "rb", protocol))
-	  || !(need_data=sbuf_alloc(protocol))
-	  || !(hb=sbuf_alloc(protocol)))
+	if(!(manio=manio_open(manifest, "rb"))
+	  || !(hb=sbuf_alloc()))
 		goto end;
-
-	if(protocol==PROTO_2)
-	{
-		  if(!(blk=blk_alloc()))
-			goto end;
-	}
 
 	while(1)
 	{
-		if(blk)
-			blk->got_save_path=0;
-		switch(manio_read_with_blk(manio,
-			hb, need_data->path.buf?blk:NULL))
+		switch(manio_read(manio, hb))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
 			default: goto end; // Error;
-		}
-
-		if(protocol==PROTO_2)
-		{
-			if(hb->endfile.buf)
-			{
-				sbuf_free_content(hb);
-				continue;
-			}
-			if(blk->got_save_path)
-			{
-				blk->got_save_path=0;
-				if(rblk_retrieve_data(asfd, cntr,
-					blk, sdirs->data))
-				{
-					log_missing_block(asfd, cntr,
-						blk, need_data);
-					continue;
-				}
-			}
-			if(blk->data)
-			{
-				if(protocol2_extra_restore_stream_bits(asfd,
-					blk, slist, act, need_data,
-					last_ent_was_dir, cntr)) goto end;
-				continue;
-			}
-			sbuf_free_content(need_data);
 		}
 
 		pcmp=pathcmp(lp->name, hb->path.buf);
@@ -326,9 +265,7 @@ static int hard_link_substitution(struct asfd *asfd,
 			// Should now be able to restore the original data
 			// to the new location.
 			ret=restore_sbuf(asfd, hb, bu, act, sdirs,
-			  cntr_status, cconfs, need_data, manifest, slist);
-			// May still need to get protocol2 data.
-			if(!ret && need_data->path.buf) continue;
+			  cntr_status, cconfs, manifest, slist);
 			break;
 		}
 
@@ -338,7 +275,6 @@ static int hard_link_substitution(struct asfd *asfd,
 		if(pcmp<0) break;
 	}
 end:
-	blk_free(&blk);
 	sbuf_free(&hb);
 	manio_close(&manio);
 	return ret;
@@ -346,7 +282,7 @@ end:
 
 static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 	enum action act, struct sdirs *sdirs, enum cntr_status cntr_status,
-	struct conf **cconfs, struct sbuf *need_data, const char *manifest,
+	struct conf **cconfs, const char *manifest,
 	struct slist *slist)
 {
 	//printf("%s: %s\n", act==ACTION_RESTORE?"restore":"verify",
@@ -375,16 +311,7 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		}
 	}
 
-	if(get_protocol(cconfs)==PROTO_1)
-	{
-		return restore_sbuf_protocol1(asfd, sb, bu,
-		  act, sdirs, cconfs);
-	}
-	else
-	{
-		return restore_sbuf_protocol2(asfd, sb,
-		  act, get_cntr(cconfs), need_data);
-	}
+	return restore_sbuf_protocol1(asfd, sb, bu, act, sdirs, cconfs);
 }
 
 static int restore_ent(struct asfd *asfd,
@@ -395,7 +322,6 @@ static int restore_ent(struct asfd *asfd,
 	struct sdirs *sdirs,
 	enum cntr_status cntr_status,
 	struct conf **cconfs,
-	struct sbuf *need_data,
 	int *last_ent_was_dir,
 	const char *manifest)
 {
@@ -421,17 +347,9 @@ static int restore_ent(struct asfd *asfd,
 			// Can now restore xb because nothing else is fiddling
 			// in a subdirectory.
 			if(restore_sbuf(asfd, xb, bu,
-			  act, sdirs, cntr_status, cconfs, need_data, manifest,
+			  act, sdirs, cntr_status, cconfs, manifest,
 			  slist))
 				goto end;
-			if(get_protocol(cconfs)==PROTO_2
-			  && sbuf_is_filedata(xb)
-			  && get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
-			{
-				// Windows directories need endfile to be sent.
-				if(asfd->write(asfd, &xb->endfile))
-					goto end;
-			}
 			slist->head=xb->next;
 			sbuf_free(&xb);
 		}
@@ -455,13 +373,13 @@ static int restore_ent(struct asfd *asfd,
 		*last_ent_was_dir=1;
 
 		// Allocate a new sb.
-		if(!(*sb=sbuf_alloc(get_protocol(cconfs)))) goto end;
+		if(!(*sb=sbuf_alloc())) goto end;
 	}
 	else
 	{
 		*last_ent_was_dir=0;
 		if(restore_sbuf(asfd, *sb, bu,
-		  act, sdirs, cntr_status, cconfs, need_data, manifest,
+		  act, sdirs, cntr_status, cconfs, manifest,
 		  slist))
 			goto end;
 	}
@@ -476,34 +394,14 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 {
 	int ret=-1;
 	struct sbuf *sb;
-	struct sbuf *need_data=NULL;
-	if(!(need_data=sbuf_alloc(get_protocol(cconfs)))) goto end;
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
-		if(get_protocol(cconfs)==PROTO_1)
-		{
-			if(restore_sbuf_protocol1(asfd, sb, bu, act,
-				sdirs, cconfs))
-					goto end;
-		}
-		else
-		{
-			if(restore_sbuf_protocol2(asfd, sb, act,
-				get_cntr(cconfs), NULL))
-					goto end;
-			if(sbuf_is_filedata(sb)
-			  && get_int(cconfs[OPT_CLIENT_IS_WINDOWS]))
-			{
-				// Windows directories need endfile to be sent.
-				if(asfd->write(asfd, &sb->endfile))
-					goto end;
-			}
-		}
+		if(restore_sbuf_protocol1(asfd, sb, bu, act, sdirs, cconfs))
+				goto end;
 	}
 	ret=0;
 end:
-	sbuf_free(&need_data);
 	return ret;
 }
 
@@ -514,13 +412,9 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 {
 	int ret=-1;
 	int last_ent_was_dir=0;
-	int last_ent_was_skipped=0;
 	struct sbuf *sb=NULL;
 	struct iobuf *rbuf=asfd->rbuf;
 	struct manio *manio=NULL;
-	struct blk *blk=NULL;
-	struct sbuf *need_data=NULL;
-	enum protocol protocol=get_protocol(cconfs);
 	struct cntr *cntr=get_cntr(cconfs);
 	struct iobuf interrupt;
 	struct fzp *rl_fzp=NULL;
@@ -528,28 +422,11 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 
 	iobuf_init(&interrupt);
 
-	if(protocol==PROTO_2)
-	{
-		static int rs_sent=0;
-		if(!(blk=blk_alloc()))
-			goto end;
-		if(!rs_sent)
-		{
-			rs_sent=1;
-			if(asfd->write_str(asfd,
-				CMD_GEN, "restore_stream")
-			  || asfd_read_expect(asfd,
-				CMD_GEN, "restore_stream_ok"))
-					goto end;
-		}
-	}
-
 	if(maybe_open_restore_list(cconfs, &rl_fzp, &rl_iobuf, sdirs))
 		goto end;
 
-	if(!(manio=manio_open(manifest, "rb", protocol))
-	  || !(need_data=sbuf_alloc(protocol))
-	  || !(sb=sbuf_alloc(protocol)))
+	if(!(manio=manio_open(manifest, "rb"))
+	  || !(sb=sbuf_alloc()))
 		goto end;
 
 	while(1)
@@ -569,12 +446,6 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				continue;
 			}
 			case CMD_INTERRUPT:
-				if(protocol==PROTO_2)
-				{
-					iobuf_free_content(&interrupt);
-					iobuf_move(&interrupt, rbuf);
-				}
-				// PROTO_1:
 				// Client wanted to interrupt the
 				// sending of a file. But if we are
 				// here, we have already moved on.
@@ -585,88 +456,23 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 				goto end;
 		}
 
-		if(blk)
-			blk->got_save_path=0;
-		switch(manio_read_with_blk(manio,
-			sb, need_data->path.buf?blk:NULL))
+		switch(manio_read(manio, sb))
 		{
 			case 0: break; // Keep going.
 			case 1: ret=0; goto end; // Finished OK.
 			default: goto end; // Error;
 		}
 
-		if(protocol==PROTO_2)
-		{
-			if(sb->endfile.buf)
-			{
-				if(act==ACTION_RESTORE && !last_ent_was_skipped)
-				{
-					if(last_ent_was_dir)
-					{
-						// Delay sending endfile until
-						// we actually send the
-						// directory.
-						struct sbuf *xb=slist->head;
-						iobuf_free_content(&xb->endfile);
-						iobuf_move(&xb->endfile,
-							&sb->endfile);
-					}
-					else
-					{
-						if(asfd->write(asfd,
-							&sb->endfile))
-								goto end;
-					}
-				}
-				sbuf_free_content(sb);
-				iobuf_free_content(&interrupt);
-				continue;
-			}
-			if(interrupt.buf)
-			{
-				if(!need_data->path.buf)
-				{
-					iobuf_free_content(&interrupt);
-				}
-				else if(!iobuf_pathcmp(&need_data->path,
-					&interrupt))
-				{
-					continue;
-				}
-			}
-			if(blk->got_save_path)
-			{
-				blk->got_save_path=0;
-				if(rblk_retrieve_data(asfd, cntr,
-					blk, sdirs->data))
-				{
-					log_missing_block(asfd, cntr,
-						blk, need_data);
-					continue;
-				}
-			}
-			if(blk->data)
-			{
-				if(protocol2_extra_restore_stream_bits(asfd,
-					blk, slist, act, need_data,
-					last_ent_was_dir, cntr)) goto end;
-				continue;
-			}
-			sbuf_free_content(need_data);
-		}
-
 		if(want_to_restore(asfd, srestore, rl_fzp, rl_iobuf,
 			sb, regex, act, cconfs))
 		{
-			last_ent_was_skipped=0;
 			if(restore_ent(asfd, &sb, slist,
 				bu, act, sdirs, cntr_status, cconfs,
-				need_data, &last_ent_was_dir, manifest))
+				&last_ent_was_dir, manifest))
 					goto end;
 		}
 		else
 		{
-			last_ent_was_skipped=1;
 			if(sbuf_is_filedata(sb) || sbuf_is_vssdata(sb))
 			{
 				// Add it to the list of filedata that was not
@@ -683,9 +489,7 @@ static int restore_stream(struct asfd *asfd, struct sdirs *sdirs,
 end:
 	iobuf_free(&rl_iobuf);
 	fzp_close(&rl_fzp);
-	blk_free(&blk);
 	sbuf_free(&sb);
-	sbuf_free(&need_data);
 	iobuf_free_content(rbuf);
 	iobuf_free_content(&interrupt);
 	manio_close(&manio);
@@ -706,9 +510,6 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 	  || !(slist=slist_alloc()))
 		goto end;
 
-	if(get_protocol(cconfs)==PROTO_2)
-		rblks_init(get_uint64_t(cconfs[OPT_RBLK_MEMORY_MAX]));
-
 	if(restore_stream(asfd, sdirs, slist,
 		bu, manifest, regex,
 		srestore, cconfs, act, cntr_status))
@@ -726,7 +527,6 @@ static int actual_restore(struct asfd *asfd, struct bu *bu,
 end:
 	slist_free(&slist);
 	linkhash_free();
-	rblks_free();
 	return ret;
 }
 
@@ -740,7 +540,7 @@ static int get_logpaths(struct bu *bu, const char *file,
 }
 
 static void parallelism_warnings(struct asfd *asfd, struct conf **cconfs,
-	struct sdirs *sdirs, struct bu *bu, enum protocol protocol)
+	struct sdirs *sdirs, struct bu *bu)
 {
 	struct bu *b;
 
@@ -757,8 +557,6 @@ static void parallelism_warnings(struct asfd *asfd, struct conf **cconfs,
 	{
 		if(b->flags & BU_CURRENT)
 			break; // Warning.
-		if(protocol==PROTO_2)
-			return; // No warning.
 		if(b->flags & BU_HARDLINKED)
 			return; // No warning.
 	}
@@ -775,16 +573,10 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 	char *manifest=NULL;
 	char *logpath=NULL;
 	char *logpathz=NULL;
-	enum protocol protocol;
 	enum cntr_status cntr_status;
 	struct lock *lock=NULL;
 	char *lockfile=NULL;
 	static int manifest_count=0;
-
-	protocol=get_protocol(cconfs);
-	if(protocol==PROTO_2
-	  && blks_generate_init())
-		goto end;
 
 	if(!(lockfile=prepend_s(bu->path, "lockfile.read"))
 	  || !(lock=lock_alloc_and_init(lockfile)))
@@ -808,9 +600,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 		&logpath, &logpathz))
 	  || (act==ACTION_VERIFY && get_logpaths(bu, "verifylog",
 		&logpath, &logpathz))
-	  || !(manifest=prepend_s(bu->path,
-		get_protocol(cconfs)==PROTO_1?
-			"manifest.gz":"manifest")))
+	  || !(manifest=prepend_s(bu->path, "manifest.gz")))
 	{
 		log_and_send_oom(asfd);
 		goto end;
@@ -848,7 +638,7 @@ static int restore_manifest(struct asfd *asfd, struct bu *bu,
 			goto end;
 	}
 
-	parallelism_warnings(asfd, cconfs, sdirs, bu, protocol);
+	parallelism_warnings(asfd, cconfs, sdirs, bu);
 
 	// Now, do the actual restore.
 	ret=actual_restore(asfd, bu, manifest,
@@ -861,8 +651,6 @@ end:
 	free_w(&manifest);
 	free_w(&logpath);
 	free_w(&logpathz);
-	if(protocol==PROTO_2)
-		blks_generate_free();
 	free_w(&lockfile);
 	lock_release(lock);
 	lock_free(&lock);

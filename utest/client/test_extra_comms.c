@@ -347,75 +347,6 @@ static void setup_uname(struct asfd *asfd, struct conf **confs)
 	setup_extra_comms_end(asfd, &r, &w);
 }
 
-static void setup_csetproto(struct asfd *asfd, struct conf **confs,
-	enum protocol current_proto, enum protocol send_proto)
-{
-	char msg[64];
-	int r=0; int w=0;
-	set_protocol(confs, current_proto);
-	snprintf(msg, sizeof(msg), "protocol=%d", (int)send_proto);
-	setup_extra_comms_begin(asfd, &r, &w, "csetproto");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, msg);
-	setup_extra_comms_end(asfd, &r, &w);
-}
-
-static void setup_csetproto_auto(struct asfd *asfd, struct conf **confs)
-{
-	setup_csetproto(asfd, confs, PROTO_AUTO, PROTO_1);
-}
-
-static void setup_csetproto_proto1(struct asfd *asfd, struct conf **confs)
-{
-	setup_csetproto(asfd, confs, PROTO_1, PROTO_1);
-}
-
-static void setup_csetproto_proto2(struct asfd *asfd, struct conf **confs)
-{
-	setup_csetproto(asfd, confs, PROTO_2, PROTO_2);
-}
-
-static void check_proto1(struct conf **confs,
-	enum action action, const char *incexc)
-{
-	fail_unless(get_protocol(confs)==PROTO_1);
-}
-
-static void check_proto2(struct conf **confs,
-	enum action action, const char *incexc)
-{
-	fail_unless(get_protocol(confs)==PROTO_2);
-}
-
-static void setup_forceproto1(struct asfd *asfd, struct conf **confs)
-{
-	int r=0; int w=0;
-	set_protocol(confs, PROTO_1);
-	setup_extra_comms_begin(asfd, &r, &w, "forceproto=1");
-	setup_extra_comms_end(asfd, &r, &w);
-}
-
-static void setup_forceproto1_proto2(struct asfd *asfd, struct conf **confs)
-{
-	int r=0; int w=0;
-	set_protocol(confs, PROTO_2);
-	setup_extra_comms_begin(asfd, &r, &w, "forceproto=1");
-}
-
-static void setup_forceproto2(struct asfd *asfd, struct conf **confs)
-{
-	int r=0; int w=0;
-	set_protocol(confs, PROTO_2);
-	setup_extra_comms_begin(asfd, &r, &w, "forceproto=2");
-	setup_extra_comms_end(asfd, &r, &w);
-}
-
-static void setup_forceproto2_proto1(struct asfd *asfd, struct conf **confs)
-{
-	int r=0; int w=0;
-	set_protocol(confs, PROTO_1);
-	setup_extra_comms_begin(asfd, &r, &w, "forceproto=2");
-}
-
 static void check_msg(struct conf **confs,
 	enum action action, const char *incexc)
 {
@@ -474,13 +405,6 @@ START_TEST(test_client_extra_comms)
 	run_test(0,  ACTION_BACKUP, setup_sincexc, check_sincexc);
 	run_test(0,  ACTION_BACKUP, setup_counters, check_counters);
 	run_test(0,  ACTION_BACKUP, setup_uname, NULL);
-	run_test(0,  ACTION_BACKUP, setup_csetproto_auto, check_proto1);
-	run_test(0,  ACTION_BACKUP, setup_csetproto_proto1, check_proto1);
-	run_test(0,  ACTION_BACKUP, setup_csetproto_proto2, check_proto2);
-	run_test(0,  ACTION_BACKUP, setup_forceproto1, check_proto1);
-	run_test(-1, ACTION_BACKUP, setup_forceproto1_proto2, NULL);
-	run_test(0,  ACTION_BACKUP, setup_forceproto2, check_proto2);
-	run_test(-1, ACTION_BACKUP, setup_forceproto2_proto1, NULL);
 	run_test(0,  ACTION_BACKUP, setup_msg, check_msg);
 	run_test(0,  ACTION_BACKUP, setup_rshash, check_rshash);
 }

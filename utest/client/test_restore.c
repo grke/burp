@@ -164,7 +164,6 @@ static struct conf **setup_conf(void)
 
 static void run_test(int expected_ret,
 	int slist_entries,
-	enum protocol protocol,
 	void setup_callback(struct asfd *asfd, struct slist *slist))
 {
 	int result;
@@ -174,10 +173,7 @@ static void run_test(int expected_ret,
 	struct conf **confs;
 	char buf[4096];
 
-	snprintf(buf, sizeof(buf), MIN_CLIENT_CONF
-		"protocol=%d\n"
-		"restoreprefix=/\n",
-			protocol==PROTO_1?1:2);
+	snprintf(buf, sizeof(buf), MIN_CLIENT_CONF "restoreprefix=/\n");
 
 	base64_init();
 
@@ -190,7 +186,7 @@ static void run_test(int expected_ret,
 	fail_unless(!conf_load_global_only(conffile, confs));
 
 	if(slist_entries)
-		slist=build_slist_phase1(BASE, protocol, slist_entries);
+		slist=build_slist_phase1(BASE, slist_entries);
 
 	setup_callback(asfd, slist);
 
@@ -203,175 +199,31 @@ static void run_test(int expected_ret,
 
 START_TEST(test_restore_proto1_bad_read)
 {
-	run_test(-1, 0, PROTO_1, setup_bad_read);
+	run_test(-1, 0, setup_bad_read);
 }
 END_TEST
 
 START_TEST(test_restore_proto1_no_files)
 {
-	run_test( 0, 0, PROTO_1, setup_proto1_no_files);
+	run_test( 0, 0, setup_proto1_no_files);
 }
 END_TEST
 
 START_TEST(test_restore_proto1_no_datapth)
 {
-	run_test(-1, 0, PROTO_1, setup_proto1_no_datapth);
+	run_test(-1, 0, setup_proto1_no_datapth);
 }
 END_TEST
 
 START_TEST(test_restore_proto1_no_attribs)
 {
-	run_test(-1, 0, PROTO_1, setup_proto1_no_attribs);
+	run_test(-1, 0, setup_proto1_no_attribs);
 }
 END_TEST
 
 START_TEST(test_restore_proto1_some_things)
 {
-	run_test(0, 10, PROTO_1, setup_proto1_some_things);
-}
-END_TEST
-
-static void setup_proto2_some_things(struct asfd *asfd, struct slist *slist)
-{
-	struct sbuf *s;
-	struct stat statp_dir;
-	struct stat statp_file;
-	int r=0; int w=0;
-	fail_unless(!lstat(BASE, &statp_dir));
-	fail_unless(!lstat(BASE "/burp.conf", &statp_file));
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restore_stream");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore_stream_ok");
-	for(s=slist->head; s; s=s->next)
-	{
-		s->winattr=0;
-		s->compression=0;
-		if(s->path.cmd==CMD_DIRECTORY)
-		{
-			memcpy(&s->statp, &statp_dir, sizeof(statp_dir));
-			attribs_encode(s);
-		}
-		if(sbuf_is_link(s))
-		{
-			char path[256];
-			if(s->path.cmd==CMD_HARD_LINK)
-				snprintf(path, sizeof(path), "%s", s->link.buf);
-			else
-			{
-				char *cp;
-				snprintf(path, sizeof(path), "%s", s->path.buf);
-				fail_unless((cp=strrchr(path, '/'))!=NULL);
-				cp++;
-				snprintf(cp, strlen(s->link.buf)+1, "%s",
-					s->link.buf);
-			}
-			build_file(path, NULL);
-			
-			memcpy(&s->statp, &statp_file, sizeof(statp_file));
-			attribs_encode(s);
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->link);
-		}
-		else if(sbuf_is_filedata(s))
-		{
-			memcpy(&s->statp, &statp_file, sizeof(statp_file));
-			attribs_encode(s);
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
-			asfd_mock_read_iobuf(asfd, &r,
-				0, &s->path);
-			asfd_mock_read(asfd, &r, 0, CMD_DATA, "data");
-		}
-	}
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend ok");
-}
-
-static void setup_proto2_interrupt(struct asfd *asfd, struct slist *slist)
-{
-	struct sbuf *s;
-	struct stat statp_dir;
-	struct stat statp_file;
-	int r=0; int w=0;
-	fail_unless(!lstat(BASE, &statp_dir));
-	fail_unless(!lstat(BASE "/burp.conf", &statp_file));
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restore_stream");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore_stream_ok");
-	for(s=slist->head; s; s=s->next)
-	{
-		s->winattr=0;
-		s->compression=0;
-		if(s->path.cmd==CMD_DIRECTORY)
-		{
-			memcpy(&s->statp, &statp_dir, sizeof(statp_dir));
-			attribs_encode(s);
-		}
-		if(sbuf_is_link(s))
-		{
-			char path[256];
-			if(s->path.cmd==CMD_HARD_LINK)
-				snprintf(path, sizeof(path), "%s", s->link.buf);
-			else
-			{
-				char *cp;
-				snprintf(path, sizeof(path), "%s", s->path.buf);
-				fail_unless((cp=strrchr(path, '/'))!=NULL);
-				cp++;
-				snprintf(cp, strlen(s->link.buf)+1, "%s",
-					s->link.buf);
-			}
-			build_file(path, NULL);
-			
-			memcpy(&s->statp, &statp_file, sizeof(statp_file));
-			attribs_encode(s);
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->path);
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->link);
-		}
-		else if(sbuf_is_filedata(s))
-		{
-			memcpy(&s->statp, &statp_file, sizeof(statp_file));
-			attribs_encode(s);
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
-			asfd_mock_read_iobuf(asfd, &r,
-				0, &s->path);
-			asfd_mock_read(asfd, &r, 0, CMD_DATA, "data");
-
-			// Try to restore to the same place, to generate an
-			// interrupt.
-			asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
-			asfd_mock_read_iobuf(asfd, &r,
-				0, &s->path);
-			asfd_mock_read(asfd, &r, 0, CMD_DATA, "data");
-			asfd_assert_write(asfd, &w, 0, CMD_INTERRUPT,
-				s->path.buf);
-			for(int i=0; i<100; i++)
-				asfd_mock_read(asfd, &r, 0, CMD_DATA, "data");
-			asfd_mock_read(asfd, &r, 0, CMD_END_FILE, "0:0");
-		}
-	}
-	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend");
-	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend ok");
-}
-
-START_TEST(test_restore_proto2_bad_read)
-{
-	run_test(-1, 0, PROTO_2, setup_bad_read);
-}
-END_TEST
-
-START_TEST(test_restore_proto2_some_things)
-{
-	run_test(0, 10, PROTO_2, setup_proto2_some_things);
-}
-END_TEST
-
-START_TEST(test_restore_proto2_interrupt)
-{
-	run_test(0, 10, PROTO_2, setup_proto2_interrupt);
+	run_test(0, 10, setup_proto1_some_things);
 }
 END_TEST
 
@@ -420,11 +272,7 @@ Suite *suite_client_restore(void)
 	tcase_add_test(tc_core, test_restore_proto1_no_attribs);
 	tcase_add_test(tc_core, test_restore_proto1_some_things);
 
-	tcase_add_test(tc_core, test_restore_proto2_bad_read);
-	tcase_add_test(tc_core, test_restore_proto2_some_things);
 	tcase_add_test(tc_core, test_strip_from_path);
-
-	tcase_add_test(tc_core, test_restore_proto2_interrupt);
 
 	suite_add_tcase(s, tc_core);
 

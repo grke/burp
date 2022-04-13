@@ -261,7 +261,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	{
 		if(bfd->open_for_send(bfd, asfd,
 			sb->path.buf, sb->winattr,
-			get_int(confs[OPT_ATIME]), cntr, PROTO_1))
+			get_int(confs[OPT_ATIME]), cntr))
 		{
 			forget++;
 			goto end;
@@ -434,7 +434,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	rbuf=asfd->rbuf;
 
 	if(!(bfd=bfile_alloc())
-	  || !(sb=sbuf_alloc(PROTO_1)))
+	  || !(sb=sbuf_alloc()))
 		goto end;
 	bfile_init(bfd, 0, cntr);
 

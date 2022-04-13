@@ -293,7 +293,7 @@ static void run_test(int expected_ret,
 	as->write=async_write_simple;
 
 	if(slist_entries)
-		slist=build_slist_phase1(BASE, PROTO_1, slist_entries);
+		slist=build_slist_phase1(BASE, slist_entries);
 	setup_asfds_callback(asfd, slist);
 
 	fail_unless(backup_phase2_client_protocol1(asfd,

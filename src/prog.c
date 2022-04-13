@@ -11,9 +11,6 @@
 #include "strlist.h"
 #include "server/main.h"
 #include "server/protocol1/bedup.h"
-#include "server/protocol2/bsigs.h"
-#include "server/protocol2/bsparse.h"
-#include "server/protocol2/champ_chooser/champ_server.h"
 
 static void usage_server(void)
 {
@@ -22,7 +19,6 @@ static void usage_server(void)
 	printf("\nServer usage: %s [options]\n", progname());
 	printf("\n");
 	printf(" Options:\n");
-	printf("  -a c          Run as a stand-alone champion chooser.\n");
 	printf("  -c <path>     Path to conf file (default: %s).\n", config_default_path());
 	printf("  -d <path>     a single client in the status monitor.\n");
 	printf("  -o <option>   Override a given configuration option\n");
@@ -183,8 +179,6 @@ static int parse_action(enum action *act, const char *optarg,
 	// used accidently.
 	else if(!strncmp_w(optarg, "delete"))
 		*act=ACTION_DELETE;
-	else if(!strncmp(optarg, "champchooser", 1))
-		*act=ACTION_CHAMP_CHOOSER;
 	else if(!strncmp(optarg, "diff", 1))
 		*act=ACTION_DIFF;
 	else if(!strncmp(optarg, "Diff", 1))
@@ -198,33 +192,6 @@ static int parse_action(enum action *act, const char *optarg,
 	}
 	return 0;
 }
-
-#ifndef HAVE_WIN32
-static int run_champ_chooser(struct conf **confs)
-{
-	const char *orig_client=get_string(confs[OPT_ORIG_CLIENT]);
-	if(orig_client && *orig_client)
-		return champ_chooser_server_standalone(confs);
-	logp("No client name given for standalone champion chooser process.\n");
-	logp("Try using the '-C' option.\n");
-	return 1;
-}
-
-static int server_modes(enum action act,
-	const char *conffile, struct lock *lock, int generate_ca_only,
-	struct conf **confs)
-{
-	switch(act)
-	{
-		case ACTION_CHAMP_CHOOSER:
-			// We are running on the server machine, wanting to
-			// be a standalone champion chooser process.
-			return run_champ_chooser(confs);
-		default:
-			return server(confs, conffile, lock, generate_ca_only);
-	}
-}
-#endif
 
 static void random_delay(struct conf **confs)
 {
@@ -331,10 +298,6 @@ int real_main(int argc, char *argv[])
 #ifndef HAVE_WIN32
 	if(!strcmp(prog, "bedup"))
 		return run_bedup(argc, argv);
-	if(!strcmp(prog, "bsigs"))
-		return run_bsigs(argc, argv);
-	if(!strcmp(prog, "bsparse"))
-		return run_bsparse(argc, argv);
 #endif
 
 	while((option=getopt(argc, argv, "a:b:C:c:d:o:Ffghijl:nQq:R:r:s:tVvXxz:?"))!=-1)
@@ -572,8 +535,7 @@ int real_main(int argc, char *argv[])
 #ifdef HAVE_WIN32
 		logp("Sorry, server mode is not implemented for Windows.\n");
 #else
-		ret=server_modes(act,
-			conffile, lock, generate_ca_only, confs);
+		return server(confs, conffile, lock, generate_ca_only);
 #endif
 	}
 	else

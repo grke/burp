@@ -146,11 +146,11 @@ static struct sd sd1[] = {
 	{ "0000001 1971-01-01 10:00:00 +1000", 1, 1, BU_DELETABLE|BU_CURRENT },
 };
 
-static struct sdirs *setup_sdirs(enum protocol protocol, const char *cname)
+static struct sdirs *setup_sdirs(const char *cname)
 {
 	struct sdirs *sdirs;
 	fail_unless((sdirs=sdirs_alloc())!=NULL);
-	fail_unless(!sdirs_init(sdirs, protocol,
+	fail_unless(!sdirs_init(sdirs,
 		SDIRS, // directory
 		cname, // cname
 		NULL, // client_lockdir
@@ -183,8 +183,7 @@ static void do_test_json_send_clients_with_backup(const char *path,
 	for(c=clist; c; c=c->next)
 	{
 		c->permitted=1;
-		c->protocol=PROTO_1;
-		fail_unless((c->sdirs=setup_sdirs(c->protocol, c->name))!=NULL);
+		fail_unless((c->sdirs=setup_sdirs(c->name))!=NULL);
 		build_storage_dirs((struct sdirs *)c->sdirs, sd, s);
 		fail_unless(!cstat_set_backup_list(c));
 		fail_unless(c->bu!=NULL);

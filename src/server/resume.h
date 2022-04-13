@@ -17,15 +17,13 @@ extern int do_resume(
 #ifdef UTEST
 // For changed manifest.
 extern int get_last_good_entry(struct manio *manio, struct iobuf *result,
-	struct cntr *cntr, struct dpth *dpth, enum protocol protocol,
-	man_off_t **pos);
+	struct cntr *cntr, struct dpth *dpth, man_off_t **pos);
 // For phase 1 manifest.
 extern int forward_past_entry(struct manio *manio, struct iobuf *target,
-	enum protocol protocol, man_off_t **pos);
+	man_off_t **pos);
 // For unchanged manifest.
 extern int forward_before_entry(struct manio *manio, struct iobuf *target,
-	struct cntr *cntr, struct dpth *dpth, enum protocol protocol,
-	man_off_t **pos);
+	struct cntr *cntr, struct dpth *dpth, man_off_t **pos);
 #endif
 
 #endif

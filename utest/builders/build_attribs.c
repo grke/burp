@@ -18,11 +18,11 @@ static void memcpy_a(void *dest, size_t s)
 	memcpy(dest, &u, s/reduce);
 }
 
-static struct sbuf *do_build_attribs(enum protocol protocol)
+static struct sbuf *do_build_attribs()
 {
 	struct sbuf *sbuf;
 	struct stat *statp;
-	fail_unless((sbuf=sbuf_alloc(protocol))!=NULL);
+	fail_unless((sbuf=sbuf_alloc())!=NULL);
 	statp=&sbuf->statp;
 	memcpy_a(&statp->st_dev, sizeof(statp->st_dev));
 	memcpy_a(&statp->st_ino, sizeof(statp->st_ino));
@@ -42,24 +42,17 @@ static struct sbuf *do_build_attribs(enum protocol protocol)
 #endif
 	memcpy_a(&sbuf->winattr, sizeof(sbuf->winattr));
 	memcpy_a(&sbuf->compression, sizeof(sbuf->compression));
-	if(protocol==PROTO_2)
-	{
-		memcpy_a(&sbuf->protocol2->index,
-			sizeof(sbuf->protocol2->index));
-		memcpy_a(&sbuf->encryption,
-			sizeof(sbuf->encryption));
-	}
 	return sbuf;
 }
 
-struct sbuf *build_attribs(enum protocol protocol)
+struct sbuf *build_attribs()
 {
 	reduce=1;
-	return do_build_attribs(protocol);
+	return do_build_attribs();
 }
 
-struct sbuf *build_attribs_reduce(enum protocol protocol)
+struct sbuf *build_attribs_reduce()
 {
 	reduce=4;
-	return do_build_attribs(protocol);
+	return do_build_attribs();
 }

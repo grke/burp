@@ -142,7 +142,7 @@ int do_list_client(struct asfd *asfd, enum action act, struct conf **confs)
 	  || asfd_read_expect(asfd, CMD_GEN, "ok"))
 		goto end;
 
-	if(!(sb=sbuf_alloc(get_protocol(confs)))) goto end;
+	if(!(sb=sbuf_alloc())) goto end;
 	iobuf_init(&sb->path);
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->attr);

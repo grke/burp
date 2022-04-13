@@ -15,9 +15,6 @@ BackUp and Restore Program.
 
 .SH SERVER OPTIONS
 .TP
-\fB\-a c\fR \fB\fR
-Run as a stand-alone champion chooser process (useful for debugging protocol2 style backups).
-.TP
 \fB\-c\fR \fB[path]\fR
 Short for 'config file'. The argument is a path to the config file. The default
 is /etc/@name@/@name@.conf.
@@ -39,7 +36,7 @@ Print an index table of symbols that humans may see @name@ produce, and exit.
 .TP
 \fB\-n\fR \fB\fR
 No forking mode. The program will accept a single query, deal with it, and then
-exit. This is useful for debugging. Implies '\-F'. If you intend to debug a protocol2 session, you will also want to run a separate champion chooser process ('\-a c' below).
+exit. This is useful for debugging. Implies '\-F'.
 .TP
 \fB\-o\fR \fB[option=value]\fR
 Override a given option. You can use this flag several times to override multiple options.
@@ -283,9 +280,6 @@ Allows you to turn client password checking on or off. The default is on. SSL ce
 \fBclientconfdir=[path]\fR
 Path to the directory that contains client configuration files.
 .TP
-\fBprotocol=[0|1|2]\fR
-Choose which style of backups and restores to use. 0 (the default) automatically decides based on the client version and which protocol is set on the client side. 1 forces protocol1 style (file level granularity with a pseudo mirrored storage on the server and optional rsync). 2 forces protocol2 style (inline deduplication with variable length blocks). If you choose a forced setting, it will be an error if the client also chooses a forced setting. This option can be overridden by the client configuration files in clientconfdir on the server.
-.TP
 \fBlockfile=[path]\fR
 Path to the lockfile that ensures that two server processes cannot run
 simultaneously.
@@ -318,7 +312,7 @@ When set to 0, delta differencing will not take place. That is, when a file chan
 Only use librsync when a file is less than the given size. Both the most recently backed up version of a file and the version to be backed up are checked. The default is 0, which means the option is off. This option can be overridden by the client configuration files in clientconfdir on the server.
 .TP
 \fBcompression=zlib[0-9] (or gzip[0-9])\fR
-Choose the level of zlib compression for files stored in backups. Setting 0 or zlib0 turns compression off. The default is zlib9. This option can be overridden by the client configuration files in clientconfdir on the server. 'gzip' is a synonym of 'zlib'. \fBThis option is applicable to protocol version 1 only.\fR
+Choose the level of zlib compression for files stored in backups. Setting 0 or zlib0 turns compression off. The default is zlib9. This option can be overridden by the client configuration files in clientconfdir on the server. 'gzip' is a synonym of 'zlib'.
 .TP
 \fBhard_quota=[B/KB/MB/GB]\fR
 Do not back up the client if the estimated size of all files is greater than the specified size. Example: 'hard_quota = 100GB'. Set to 0 (the default) to have no limit.
@@ -529,12 +523,6 @@ You can have multiple labels, and they can be overridden in the client configura
 \fBenabled=[0|1]\fR
 Set this to 0 if you want to disable all clients. The default is 1. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
 .TP
-\fBrblk_memory_max=[B/KB/MB/GB]\fR
-The maximum amount of data from the disk cached in server memory during a protocol2 restore/verify. The default is 256MB. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
-.TP
-\fBsparse_size_max=[B/KB/MB/GB]\fR
-The maximum (uncompressed) size of the sparse file of each protocol 2 dedup_group. The default is 256MB. If the sparse file grows beyond this size, entries will be removed starting with the oldest, unless it is the only one left for a client.
-.TP
 \fBfail_on_warning=[0|1]\fR
 If a warning is generated during a backup, fail the backup. The default is 0. This option can be overridden per-client in the client configuration files in clientconfdir on the server.
 
@@ -585,9 +573,6 @@ Whether to force lowercase cname when detecting cname automatically (ie. no cnam
 .TP
 \fBcname_fqdn=[0|1]\fR
 Whether to keep fqdn cname (like 'testclient.example.com') when detecting cname automatically (ie. no cname provided above). The default is 1. When set to 0, the fqdn returned by the get_fqdn function will be stripped ('testclient.example.com' becomes 'testclient').
-.TP
-\fBprotocol=[0|1|2]\fR
-Choose which style of backups and restores to use. 0 (the default) automatically decides based on the server version and which protocol is set on the server side. 1 forces protocol1 style (file level granularity with a pseudo mirrored storage on the server and optional rsync). 2 forces protocol2 style (inline deduplication with variable length blocks). If you choose a forced setting, it will be an error if the server also chooses a forced setting.
 .TP
 \fBpassword=[password]\fR
 Defines the password to send to the server.
@@ -663,7 +648,7 @@ To prevent the server from initiating restores, set this to 0. The default is 1.
 When restoring, this path will be prefixed to the restore path. The '-d' command line option overrides this setting. This setting is required if you are using server initiated restores.
 .TP
 \fBencryption_password=[password]\fR
-Set this to enable client side file Blowfish encryption. If you do not want encryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring an encryption_password renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. Take care when copying and pasting special characters between client conf files, as the encoding of the config file matters. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). @human_name@ will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem. \fBThis option is applicable to protocol version 1 only.\fR
+Set this to enable client side file Blowfish encryption. If you do not want encryption, leave this field out of your config file. \fBIMPORTANT:\fR Configuring an encryption_password renders delta differencing pointless, since the smallest real change to a file will make the whole file look different. Therefore, activating this option turns off delta differencing so that whenever a client file changes, the whole new file will be uploaded on the next backup. \fBALSO IMPORTANT:\fR If you manage to lose your encryption password, you will not be able to unencrypt your files. You should therefore think about having a copy of the encryption password somewhere off-box, in case of your client hard disk failing. Take care when copying and pasting special characters between client conf files, as the encoding of the config file matters. \fBFINALLY:\fR If you change your encryption password, you will end up with a mixture of files on the server with different encryption and it may become tricky to restore more than one file at a time. For this reason, if you change your encryption password, you may want to start a fresh chain of backups (by moving the original set aside, for example). @human_name@ will cope fine with turning the same encryption password on and off between backups, and will restore a backup of mixed encrypted and unencrypted files without a problem.
 .TP
 \fBglob_after_script_pre=[0|1]\fR
 Set this to 0 if you do not want include_glob settings to be evaluated after the pre script is run. The default is 1.
@@ -796,10 +781,10 @@ Do not back up the given block device itself, but open it for reading and back u
 Open all block devices for reading and back up the contents as if they were regular files.
 .TP
 \fBsplit_vss=[0|1]\fR
-When backing up Windows computers with @name@ protocol 1, this option allows you to save the VSS header data separate from the file data. The default is off, which means that the VSS header data is saved prepended to the file data. This option has no effect in protocol 2.
+When backing up Windows computers, this option allows you to save the VSS header data separate from the file data. The default is off, which means that the VSS header data is saved prepended to the file data.
 .TP
 \fBstrip_vss=[0|1]\fR
-When backing up Windows computers with @name@ protocol 1, this option allows you to prevent the VSS header data being backed up. The default is off. To restore a backup that has no VSS information on Windows, you need to give the client the '\-x' command line option. This option has no effect in protocol 2.
+When backing up Windows computers, this option allows you to prevent the VSS header data being backed up. The default is off. To restore a backup that has no VSS information on Windows, you need to give the client the '\-x' command line option.
 .TP
 \fBvss_drives=[list of drive letters]\fR
 When backing up Windows computers, this option allows you to specify which drives have VSS snapshots taken of them. If you omit this option, @name@ will automatically decide based on the 'include' options. If you want no drives to have snapshots taken of them, you can specify '0'.
@@ -857,7 +842,6 @@ Additionally, the following options can be overridden here for each client:
 \fBnotify_success_warnings_only\fR
 \fBpassword_check\fR
 \fBpath_length_warn\fR
-\fBprotocol\fR
 \fBrblk_memory_max\fR
 \fBrestore_client\fR
 \fBserver_script_arg\fR

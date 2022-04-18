@@ -344,8 +344,6 @@ int win32_mkdir(const char *buf);
 int win32_unlink(const char *filename);
 int win32_chmod(const char *, mode_t, int64_t);
 
-char* win32_cgets (char* buffer, int len);
-
 int WSA_Init(void);
 void Win32ConvCleanupCache();
 

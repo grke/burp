@@ -4,7 +4,6 @@ EXPORTS
 ; compat.o
 _Z11win32_utimePKcP4stat
 _Z11strncasecmpPKcS0_i
-_Z11win32_cgetsPci
 _Z11win32_chdirPKc
 _Z11win32_chmodPKctx
 _Z11win32_mkdirPKc

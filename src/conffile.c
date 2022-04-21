@@ -845,7 +845,6 @@ static int finalise_incexc_dirs(struct conf **c)
 	}
 
 	if((dupe=sanity_check_no_dupes(get_strlist(c[OPT_INCEXCDIR])))) {
-printf("xxx\n");
 		logp("ERROR: Duplicate include/exclude path: %s\n", dupe);
 		return -1;
 	}

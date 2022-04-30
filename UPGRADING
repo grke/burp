@@ -1,5 +1,11 @@
 Things to watch out for when upgrading.
 
+3.1.0
+-----
+Protocol 2 has been removed.
+It hasn't been progressing for a long time, and is mostly just a distraction.
+So, I have made the decision to remove it.
+
 2.5.0
 -----
 The Windows installer sets Administrator and SYSTEM full access permissions

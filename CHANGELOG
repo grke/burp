@@ -1,3 +1,9 @@
+2022-05-01 burp-3.1.0
+  * Remove protocol 2:
+    - It hasn't been progressing for a long time, and is mostly just a
+      distraction. So, I have made the decision to remove it.
+  * Remove some unused Windows functions.
+
 2021-08-31 burp-2.5.4
   * Windows cross-tools/depkgs:
      - Update to mingw-w64-v5.0.4

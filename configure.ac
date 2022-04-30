@@ -3,7 +3,7 @@ dnl Process this file with autoconf to produce a configure script.
 dnl require a recent autoconf
 AC_PREREQ([2.61])
 
-AC_INIT([Burp],[2.5.5],[https://github.com/grke/burp/issues],[burp],[http://burp.grke.net/])
+AC_INIT([Burp],[3.1.0],[https://github.com/grke/burp/issues],[burp],[http://burp.grke.net/])
 AC_CONFIG_AUX_DIR([autoconf])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])

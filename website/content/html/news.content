@@ -1,5 +1,9 @@
 <p>
 2022-05-01 burp-3.1.0 is released.
+<BR>
+Protocol 2 has been removed. It has not been progressing for a long time, and
+is mostly just a distraction. So, I have made the decision to remove it.
+</BR>
 </p>
 
 <p>

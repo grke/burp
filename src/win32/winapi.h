@@ -46,8 +46,6 @@
 #include "burpconfig.h"
 
 int wchar_2_UTF8(char *pszUTF, const WCHAR *pszUCS, int cchChar = MAX_PATH_UTF8);
-int UTF8_2_wchar(char **pszUCS, const char *pszUTF);
-int make_win32_path_UTF8_2_wchar(char **pszUCS, const char *pszUTF, BOOL* pBIsRawPath = NULL);
 char *make_win32_path_UTF8_2_wchar_w(const char *pszUTF);
 
 // init with win9x, but maybe set to NT in InitWinAPI

@@ -316,8 +316,7 @@ int attribs_set(struct asfd *asfd, const char *path,
 	win32_chmod(path, statp->st_mode, winattr);
 	attribs_set_file_times(asfd, path, statp, cntr);
 	return 0;
-#endif
-
+#else
 	if(lchown(path, statp->st_uid, statp->st_gid)<0)
 	{
 		struct berrno be;
@@ -390,4 +389,5 @@ int attribs_set(struct asfd *asfd, const char *path,
 	}
 
 	return 0;
+#endif
 }

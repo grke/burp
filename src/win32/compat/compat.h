@@ -159,7 +159,6 @@ typedef void DIR;
 #endif
 
 int strcasecmp(const char*, const char *);
-int gettimeofday(struct timeval *, struct timezone *);
 
 #ifndef EETXTBUSY
 	#define EETXTBUSY 26
@@ -250,8 +249,6 @@ typedef  BOOL (*t_pVSSPathConvertW)(const wchar_t  *szFilePath, wchar_t  *szShad
 
 void SetVSSPathConvert(t_pVSSPathConvert pPathConvert, t_pVSSPathConvertW pPathConvertW);
 
-int lchown(const char *, uid_t uid, gid_t gid);
-int chown(const char *, uid_t uid, gid_t gid);
 #define O_NONBLOCK 04000
 #define F_GETFL    3
 #define F_SETFL    4
@@ -325,12 +322,6 @@ extern "C" void syslog(int type, const char *fmt, ...);
 #ifndef LOG_DAEMON
 	#define LOG_DAEMON 0
 #endif
-
-#define getpid _getpid
-
-#define getppid() 0
-#define getuid() 0
-#define getgid() 0
 
 #define getcwd win32_getcwd
 #define chdir win32_chdir

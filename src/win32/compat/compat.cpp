@@ -87,9 +87,6 @@ void Win32ConvCleanupCache(void)
 	g_dwWin32ConvUTF8strlen=0;
 }
 
-//#define USE_WIN32_COMPAT_IO 1
-#define USE_WIN32_32KPATHCONVERSION 1
-
 extern DWORD g_platform_id;
 extern DWORD g_MinorVersion;
 
@@ -98,8 +95,11 @@ extern DWORD g_MinorVersion;
 
 #define WIN32_FILETIME_SCALE 10000000 // 100ns/second
 
-void conv_unix_to_win32_path(const char *name, char *win32_name, DWORD dwSize)
-{
+static void conv_unix_to_win32_path(
+	const char *name,
+	char *win32_name,
+	DWORD dwSize
+) {
 	char *tname=win32_name;
 	const char *fname=name;
 
@@ -168,13 +168,8 @@ void conv_unix_to_win32_path(const char *name, char *win32_name, DWORD dwSize)
    will complete the input path to an absolue path of the form \\?\c:\path\file
 
    With this trick, it is possible to have 32K characters long paths.
-
-   Optionally one can use pBIsRawPath to determine id pszUCSPath contains a
-   path to a raw windows partition. */
-char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
-{
-	if(pBIsRawPath) *pBIsRawPath=FALSE;
-
+*/
+static char *make_wchar_win32_path(char *pszUCSPath) {
 	if(!p_GetCurrentDirectoryW) return pszUCSPath;
 
 	wchar_t *name=(wchar_t *)pszUCSPath;
@@ -222,7 +217,6 @@ char *make_wchar_win32_path(char *pszUCSPath, BOOL *pBIsRawPath)
 		bAddDrive=FALSE;
 		bAddCurrentPath=FALSE;
 		bAddPrefix=FALSE;
-		if(pBIsRawPath) *pBIsRawPath=TRUE;
 	}
 
 	int nParseOffset=0;
@@ -368,7 +362,7 @@ int wchar_2_UTF8(char *pszUTF, const wchar_t *pszUCS, int cchChar)
 /* The return value is the number of wide characters written to the buffer.
    Convert null terminated string from utf-8 to ucs2, enlarge buffer if
    necessary. */
-int UTF8_2_wchar(char **ppszUCS, const char *pszUTF)
+static int UTF8_2_wchar(char **ppszUCS, const char *pszUTF)
 {
 	int ret=0;
 	DWORD cchSize;
@@ -395,10 +389,9 @@ static bool bstrcmp(const char *s1, const char *s2)
 /* If we find the utf8 string in cache, we use the cached ucs2 version.
    We compare the stringlength first (quick check) and then compare the
    content.            */
-int make_win32_path_UTF8_2_wchar(
+static int make_win32_path_UTF8_2_wchar(
 	char **pszUCS,
-	const char *pszUTF,
-	BOOL *pBIsRawPath
+	const char *pszUTF
 ) {
 	if(!g_pWin32ConvUTF8Cache)
 		Win32ConvInitCache();
@@ -419,12 +412,8 @@ int make_win32_path_UTF8_2_wchar(
 	   path syntax */
 	int nRet=UTF8_2_wchar(pszUCS, pszUTF);
 
-#ifdef USE_WIN32_32KPATHCONVERSION
 	// Add \\?\ to support 32K long filepaths.
-	*pszUCS=make_wchar_win32_path(*pszUCS, pBIsRawPath);
-#else
-	if(pBIsRawPath) *pBIsRawPath=FALSE;
-#endif
+	*pszUCS=make_wchar_win32_path(*pszUCS);
 
 	// Populate cache.
 	g_pWin32ConvUCS2Cache=sm_check_pool_memory_size(g_pWin32ConvUCS2Cache,
@@ -501,16 +490,6 @@ char *dlerror(void)
 }
 
 int fcntl(int fd, int cmd)
-{
-	return 0;
-}
-
-int chown(const char *k, uid_t, gid_t)
-{
-	return 0;
-}
-
-int lchown(const char *k, uid_t, gid_t)
 {
 	return 0;
 }
@@ -994,35 +973,6 @@ int strncasecmp(const char *s1, const char *s2, int len)
 	}
 
 	return (ch1-ch2);
-}
-
-int gettimeofday(struct timeval *tv, struct timezone *)
-{
-	SYSTEMTIME now;
-	FILETIME tmp;
-
-	GetSystemTime(&now);
-
-	if(!tv)
-	{
-		errno=EINVAL;
-		return -1;
-	}
-	if(!SystemTimeToFileTime(&now, &tmp))
-	{
-		errno=b_errno_win32;
-		return -1;
-	}
-
-	int64_t _100nsec=tmp.dwHighDateTime;
-	_100nsec<<=32;
-	_100nsec|=tmp.dwLowDateTime;
-	_100nsec-=WIN32_FILETIME_ADJUST;
-
-	tv->tv_sec=(long)(_100nsec / 10000000);
-	tv->tv_usec=(long)((_100nsec % 10000000)/10);
-	return 0;
-
 }
 
 // For apcupsd this is in src/lib/wincompat.c.

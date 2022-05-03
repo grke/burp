@@ -7,31 +7,23 @@ _Z11strncasecmpPKcS0_i
 _Z11win32_chdirPKc
 _Z11win32_chmodPKctx
 _Z11win32_mkdirPKc
-_Z12UTF8_2_wcharPPcPKc
-_Z12gettimeofdayP7timevalP8timezone
 _Z12wchar_2_UTF8PcPKwi
 _Z12win32_getcwdPci
 _Z12win32_unlinkPKc
 _Z15init_stack_dumpv
 _Z15win32_ftruncateix
 _Z17SetVSSPathConvertPFiPKcPciEPFiPKwPwiE
-; _Z18cvt_utime_to_ftimeRKxR9_FILETIME
 _Z21Win32ConvCleanupCachev
-_Z21make_wchar_win32_pathPcPi
-_Z23conv_unix_to_win32_pathPKcPcm
 _Z30make_win32_path_UTF8_2_wchar_wPKc
 _Z4forkv
 _Z4pipePi
 _Z11win32_lstatPKcP4statPy
 _Z4statPKcP4stat
-_Z5chownPKcjj
 _Z5fcntlii
 _Z5fcntliil
-;_Z5fstatxP4stat
 _Z5lstatPKcP4stat
 _Z5sleepi
 _Z6execvpPKcPPc
-_Z6lchownPKcjj
 _Z7opendirPKc
 _Z7openlogPKcii
 _Z7waitpidiPii
@@ -54,10 +46,7 @@ _Z16get_fixed_drivesv
 
 ; print.o
 _Z10__vsprintfPcPKcS_
-; _Z11__vsnprintfPcyPKcS_
-; _Z10__snprintfPcyPKcz
 _Z9__sprintfPcPKcz
-; _Z4doprPcyPKcS_PFvS_PyyiE
 
 ; winapi.o
 _Z17InitWinAPIWrapperv

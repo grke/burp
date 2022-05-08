@@ -318,11 +318,6 @@ struct sigaction
 #define mkdir(p, m) win32_mkdir(p)
 #define unlink win32_unlink
 #define chdir win32_chdir
-extern "C" void syslog(int type, const char *fmt, ...);
-#ifndef LOG_DAEMON
-	#define LOG_DAEMON 0
-#endif
-
 #define getcwd win32_getcwd
 #define chdir win32_chdir
 char *win32_getcwd(char *buf, int maxlen);
@@ -333,9 +328,6 @@ int win32_chmod(const char *, mode_t, int64_t);
 
 int WSA_Init(void);
 void Win32ConvCleanupCache();
-
-void closelog();
-void openlog(const char *ident, int option, int facility);
 
 #ifndef INVALID_FILE_ATTRIBUTES
 	#define INVALID_FILE_ATTRIBUTES ((DWORD)-1)

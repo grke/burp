@@ -10,7 +10,6 @@ _Z11win32_mkdirPKc
 _Z12wchar_2_UTF8PcPKwi
 _Z12win32_getcwdPci
 _Z12win32_unlinkPKc
-_Z15init_stack_dumpv
 _Z15win32_ftruncateix
 _Z17SetVSSPathConvertPFiPKcPciEPFiPKwPwiE
 _Z21Win32ConvCleanupCachev
@@ -25,17 +24,14 @@ _Z5lstatPKcP4stat
 _Z5sleepi
 _Z6execvpPKcPPc
 _Z7opendirPKc
-_Z7openlogPKcii
 _Z7waitpidiPii
 _Z8WSA_Initv
 _Z8closedirPv
-_Z8closelogv
 _Z8getgrgidj
 _Z8getpwuidj
 _Z8pathconfPKci
 _Z8readlinkPKcPci
 _Z7readdirPv
-syslog
 umask
 utime
 _Z9forkchildPP3fzpS1_S1_PKcPKPc

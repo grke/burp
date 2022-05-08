@@ -43,7 +43,11 @@ void logp(const char *fmt, ...)
 	else
 	{
 		if(do_syslog)
+		{
+#ifndef HAVE_WIN32
 			syslog(LOG_INFO, "%s", buf);
+#endif
+		}
 		if(do_stdout)
 		{
 			if(json)
@@ -154,12 +158,16 @@ int log_fzp_set(const char *path, struct conf **confs)
 
 	if(syslog_opened)
 	{
+#ifndef HAVE_WIN32
 		closelog();
+#endif
 		syslog_opened=0;
 	}
 	if(do_syslog)
 	{
+#ifndef HAVE_WIN32
 		openlog(prog, LOG_PID, LOG_USER);
+#endif
 		syslog_opened++;
 	}
 	return 0;

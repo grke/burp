@@ -975,15 +975,6 @@ int strncasecmp(const char *s1, const char *s2, int len)
 	return (ch1-ch2);
 }
 
-// For apcupsd this is in src/lib/wincompat.c.
-extern "C" void syslog(int type, const char *fmt, ...)
-{
-}
-
-void closelog()
-{
-}
-
 struct passwd *getpwuid(uid_t)
 {
 	return NULL;
@@ -1145,10 +1136,6 @@ struct dirent *readdir(DIR *dirp)
 err:
 	errno=b_errno_win32;
 	return NULL;
-}
-
-void init_stack_dump(void)
-{
 }
 
 long pathconf(const char *path, int name)
@@ -1376,11 +1363,6 @@ int win32_unlink(const char *filename)
 		sm_free_pool_memory(pwszBuf);
 	}
 	return nRetCode;
-}
-
-// syslog function, added by Nicolas Boichat.
-void openlog(const char *ident, int option, int facility)
-{
 }
 
 static pid_t do_forkchild(struct fzp **sin,

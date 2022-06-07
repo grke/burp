@@ -27,13 +27,12 @@ void assert_sbuf(struct sbuf *a, struct sbuf *b)
 	fail_unless(a->winattr==b->winattr);
 	fail_unless(a->compression==b->compression);
 	fail_unless(a->encryption==b->encryption);
-	fail_unless(a->protocol1 && b->protocol1);
-	assert_iobuf(&a->protocol1->datapth, &b->protocol1->datapth);
+	assert_iobuf(&a->datapth, &b->datapth);
 	assert_iobuf(&a->endfile, &b->endfile);
 	assert_iobuf(&a->attr, &b->attr);
 }
 
-static void test_attribs()
+START_TEST(test_attribs)
 {
 	int i=0;
 	prng_init(0);
@@ -57,14 +56,9 @@ static void test_attribs()
 	}
 	tear_down();
 }
-
-START_TEST(test_attribs_protocol1)
-{
-	test_attribs();
-}
 END_TEST
 
-static void test_attribs_bad_decode()
+START_TEST(test_attribs_bad_decode)
 {
 	const char *bad_attr="bad attr";
 	struct sbuf *decode;
@@ -76,11 +70,6 @@ static void test_attribs_bad_decode()
 	attribs_decode(decode);
 	sbuf_free(&decode);
 	tear_down();
-}
-
-START_TEST(test_attribs_bad_decode_protocol1)
-{
-	test_attribs_bad_decode();
 }
 END_TEST
 
@@ -95,8 +84,8 @@ Suite *suite_attribs(void)
 
 	tcase_set_timeout(tc_core, 20);
 
-	tcase_add_test(tc_core, test_attribs_protocol1);
-	tcase_add_test(tc_core, test_attribs_bad_decode_protocol1);
+	tcase_add_test(tc_core, test_attribs);
+	tcase_add_test(tc_core, test_attribs_bad_decode);
 	suite_add_tcase(s, tc_core);
 
 	return s;

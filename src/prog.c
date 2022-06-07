@@ -9,8 +9,8 @@
 #include "lock.h"
 #include "log.h"
 #include "strlist.h"
+#include "server/bedup.h"
 #include "server/main.h"
-#include "server/protocol1/bedup.h"
 
 static void usage_server(void)
 {

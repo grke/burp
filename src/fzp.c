@@ -7,7 +7,7 @@
 #include "prepend.h"
 #ifndef HAVE_WIN32
 #include "server/compress.h"
-#include "server/protocol1/zlibio.h"
+#include "server/zlibio.h"
 #endif
 
 static struct fzp *fzp_alloc(void)

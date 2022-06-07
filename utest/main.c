@@ -45,10 +45,10 @@ int main(int argc, char *argv[], char *envp[])
 	srunner_add_suite(sr, suite_cmd());
 	srunner_add_suite(sr, suite_conf());
 	srunner_add_suite(sr, suite_fzp());
+	srunner_add_suite(sr, suite_handy_extra());
 	srunner_add_suite(sr, suite_hexmap());
 	srunner_add_suite(sr, suite_pathcmp());
-	srunner_add_suite(sr, suite_protocol1_handy());
-	srunner_add_suite(sr, suite_protocol1_rs_buf());
+	srunner_add_suite(sr, suite_rs_buf());
 	srunner_add_suite(sr, suite_slist());
 	srunner_add_suite(sr, suite_times());
 
@@ -70,8 +70,8 @@ int main(int argc, char *argv[], char *envp[])
 	// These compile for Windows, but do not run correctly and the whole
 	// utest process crashes out.
 	srunner_add_suite(sr, suite_asfd());
+	srunner_add_suite(sr, suite_client_backup_phase2());
 	srunner_add_suite(sr, suite_client_monitor());
-	srunner_add_suite(sr, suite_client_protocol1_backup_phase2());
 	srunner_add_suite(sr, suite_client_restore());
 
 	// These compile for Windows, but have an error.
@@ -82,10 +82,16 @@ int main(int argc, char *argv[], char *envp[])
 	srunner_add_suite(sr, suite_server_auth());
 	srunner_add_suite(sr, suite_server_autoupgrade());
 	srunner_add_suite(sr, suite_server_ca());
+	srunner_add_suite(sr, suite_server_backup_phase2());
 	srunner_add_suite(sr, suite_server_backup_phase3());
+	srunner_add_suite(sr, suite_server_backup_phase4());
+	srunner_add_suite(sr, suite_server_bedup());
+	srunner_add_suite(sr, suite_server_blocklen());
 	srunner_add_suite(sr, suite_server_bu_get());
 	srunner_add_suite(sr, suite_server_delete());
+	srunner_add_suite(sr, suite_server_dpth());
 	srunner_add_suite(sr, suite_server_extra_comms());
+	srunner_add_suite(sr, suite_server_fdirs());
 	srunner_add_suite(sr, suite_server_list());
 	srunner_add_suite(sr, suite_server_manio());
 	srunner_add_suite(sr, suite_server_monitor_browse());
@@ -93,14 +99,8 @@ int main(int argc, char *argv[], char *envp[])
 	srunner_add_suite(sr, suite_server_monitor_cstat());
 	srunner_add_suite(sr, suite_server_monitor_json_output());
 	srunner_add_suite(sr, suite_server_monitor_status_server());
-	srunner_add_suite(sr, suite_server_protocol1_backup_phase2());
-	srunner_add_suite(sr, suite_server_protocol1_backup_phase4());
-	srunner_add_suite(sr, suite_server_protocol1_bedup());
-	srunner_add_suite(sr, suite_server_protocol1_blocklen());
-	srunner_add_suite(sr, suite_server_protocol1_dpth());
-	srunner_add_suite(sr, suite_server_protocol1_fdirs());
-	srunner_add_suite(sr, suite_server_protocol1_restore());
 	srunner_add_suite(sr, suite_server_restore());
+	srunner_add_suite(sr, suite_server_restore_sbuf());
 	srunner_add_suite(sr, suite_server_resume());
 	srunner_add_suite(sr, suite_server_run_action());
 	srunner_add_suite(sr, suite_server_sdirs());

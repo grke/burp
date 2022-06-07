@@ -9,7 +9,7 @@
 #include "../../src/lock.h"
 #include "../../src/prepend.h"
 #include "../../src/server/bu_get.h"
-#include "../../src/server/protocol1/fdirs.h"
+#include "../../src/server/fdirs.h"
 #include "../../src/server/sdirs.h"
 #include "../../src/server/timestamp.h"
 
@@ -206,7 +206,7 @@ static void do_tests()
 	build_and_check(sd12, ARR_LEN(sd12), sd11, ARR_LEN(sd11));
 }
 
-START_TEST(test_bu_get_proto_1)
+START_TEST(test_bu_get)
 {
 	do_tests();
 }
@@ -263,7 +263,7 @@ static void do_tests_with_working()
 	build_and_check_working_same(sd12, ARR_LEN(sd12));
 }
 
-START_TEST(test_bu_get_with_working_proto_1)
+START_TEST(test_bu_get_with_working)
 {
 	run_status=RUN_STATUS_IDLE;
 	cntr_status=CNTR_STATUS_UNSET;
@@ -303,7 +303,7 @@ static void do_tests_with_running()
 	build_and_check_working_same(rn3, ARR_LEN(rn3));
 }
 
-START_TEST(test_bu_get_with_running_proto_1)
+START_TEST(test_bu_get_with_running)
 {
 	do_tests_with_running();
 }
@@ -340,7 +340,7 @@ static void do_tests_current()
 	build_and_check_current(sd4, ARR_LEN(sd4), c1, ARR_LEN(c1));
 }
 
-START_TEST(test_bu_get_current_proto_1)
+START_TEST(test_bu_get_current)
 {
 	do_tests_current();
 }
@@ -380,7 +380,7 @@ static void do_tests_deleteme()
 	build_and_check_deleteme(sd3, ARR_LEN(sd3), dm1, ARR_LEN(dm1));
 }
 
-START_TEST(test_bu_get_deleteme_proto_1)
+START_TEST(test_bu_get_deleteme)
 {
 	do_tests_deleteme();
 }
@@ -396,11 +396,11 @@ Suite *suite_server_bu_get(void)
 	tc_core=tcase_create("Core");
 	tcase_set_timeout(tc_core, 60);
 
-	tcase_add_test(tc_core, test_bu_get_proto_1);
-	tcase_add_test(tc_core, test_bu_get_with_working_proto_1);
-	tcase_add_test(tc_core, test_bu_get_with_running_proto_1);
-	tcase_add_test(tc_core, test_bu_get_current_proto_1);
-	tcase_add_test(tc_core, test_bu_get_deleteme_proto_1);
+	tcase_add_test(tc_core, test_bu_get);
+	tcase_add_test(tc_core, test_bu_get_with_working);
+	tcase_add_test(tc_core, test_bu_get_with_running);
+	tcase_add_test(tc_core, test_bu_get_current);
+	tcase_add_test(tc_core, test_bu_get_deleteme);
 	suite_add_tcase(s, tc_core);
 
 	return s;

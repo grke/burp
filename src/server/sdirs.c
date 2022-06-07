@@ -147,8 +147,7 @@ static int do_common_dirs(struct sdirs *sdirs, const char *manual_delete)
 	return 0;
 }
 
-// Maybe should be in a protocol1 directory.
-static int do_protocol1_dirs(struct sdirs *sdirs, const char *cname,
+static int do_dirs(struct sdirs *sdirs, const char *cname,
 	const char *manual_delete)
 {
 	if(!(sdirs->clients=strdup_w(sdirs->base, __func__))
@@ -206,7 +205,7 @@ int sdirs_init(struct sdirs *sdirs,
 	if(!(sdirs->base=strdup_w(directory, __func__)))
 		goto error;
 
-	if(do_protocol1_dirs(sdirs, cname, manual_delete))
+	if(do_dirs(sdirs, cname, manual_delete))
 		goto error;
 
 	if(do_lock_dirs(sdirs, cname, conf_lockdir)) goto error;

@@ -97,19 +97,19 @@ static void test_manifest(int phase)
 	tear_down();
 }
 
-START_TEST(test_man_protocol1)
+START_TEST(test_man)
 {
 	test_manifest(0 /* phase - final manifest */);
 }
 END_TEST
 
-START_TEST(test_man_protocol1_phase1)
+START_TEST(test_man_phase1)
 {
 	test_manifest(1 /* phase */);
 }
 END_TEST
 
-START_TEST(test_man_protocol1_phase2)
+START_TEST(test_man_phase2)
 {
 	test_manifest(2 /* phase */);
 }
@@ -149,19 +149,19 @@ static void test_manifest_tell_seek(int phase)
 	tear_down();
 }
 
-START_TEST(test_man_protocol1_tell_seek)
+START_TEST(test_man_tell_seek)
 {
 	test_manifest_tell_seek(0 /* phase */);
 }
 END_TEST
 
-START_TEST(test_man_protocol1_phase1_tell_seek)
+START_TEST(test_man_phase1_tell_seek)
 {
 	test_manifest_tell_seek(1 /* phase */);
 }
 END_TEST
 
-START_TEST(test_man_protocol1_phase2_tell_seek)
+START_TEST(test_man_phase2_tell_seek)
 {
 	test_manifest_tell_seek(2 /* phase */);
 }
@@ -177,14 +177,14 @@ Suite *suite_server_manio(void)
 	tc_core=tcase_create("Core");
 	tcase_set_timeout(tc_core, 30);
 
-	tcase_add_test(tc_core, test_man_protocol1);
+	tcase_add_test(tc_core, test_man);
 
-	tcase_add_test(tc_core, test_man_protocol1_phase1);
-	tcase_add_test(tc_core, test_man_protocol1_phase2);
+	tcase_add_test(tc_core, test_man_phase1);
+	tcase_add_test(tc_core, test_man_phase2);
 
-	tcase_add_test(tc_core, test_man_protocol1_tell_seek);
-	tcase_add_test(tc_core, test_man_protocol1_phase1_tell_seek);
-	tcase_add_test(tc_core, test_man_protocol1_phase2_tell_seek);
+	tcase_add_test(tc_core, test_man_tell_seek);
+	tcase_add_test(tc_core, test_man_phase1_tell_seek);
+	tcase_add_test(tc_core, test_man_phase2_tell_seek);
 
 	suite_add_tcase(s, tc_core);
 

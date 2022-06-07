@@ -45,4 +45,13 @@ extern int dpth_incr(struct dpth *dpth);
 extern int dpth_release_and_move_to_next_in_list(struct dpth *dpth);
 extern int dpth_release_all(struct dpth *dpth);
 
+extern int dpth_init(struct dpth *dpth, const char *basepath,
+	int max_storage_subdirs);
+
+extern int dpth_set_from_string(struct dpth *dpth,
+	const char *datapath);
+
+extern char *dpth_mk(struct dpth *dpth,
+	int compression, enum cmd cmd);
+
 #endif

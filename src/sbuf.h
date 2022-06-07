@@ -5,7 +5,10 @@
 #include "bfile.h"
 #include "conf.h"
 #include "iobuf.h"
-#include "protocol1/sbuf_protocol1.h"
+#include "rs_buf.h"
+#include "fzp.h"
+#include "iobuf.h"
+#include "sbuf.h"
 
 // Bits in sbuf flags.
 
@@ -50,7 +53,17 @@ struct sbuf
 
 	uint16_t flags;
 
-	struct protocol1 *protocol1;
+	rs_buffers_t rsbuf;
+	rs_job_t *sigjob;
+	rs_filebuf_t *infb;
+	rs_filebuf_t *outfb;
+	struct fzp *sigfzp;
+	uint64_t salt;
+
+	// Used when saving stuff on the server.
+	struct fzp *fzp;
+
+	struct iobuf datapth;
 
 	struct sbuf *next;
 };

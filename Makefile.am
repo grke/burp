@@ -39,8 +39,8 @@ dist_doc_DATA = \
 	docs/timer_script.txt \
 	docs/working_dir.txt \
 	docs/backup_tool_script.txt \
-	src/protocol1/backup_phases.txt \
-	src/protocol1/readwrite.txt
+	src/backup_phases.txt \
+	src/readwrite.txt
 
 dist_man8_MANS = \
 	manpages/bedup.8 \
@@ -98,7 +98,7 @@ EXTRA_scriptdir = $(scriptdir)
 
 CLEANFILES+= $(sbin_SCRIPTS) $(EXTRA_script_SCRIPTS)
 
-vss_strip_SOURCES = src/server/protocol1/vss_strip.c
+vss_strip_SOURCES = src/server/vss_strip.c
 
 vss_strip_CPPFLAGS = \
 	$(AM_CPPFLAGS) \
@@ -144,6 +144,7 @@ main_SOURCES = \
 	src/fsops.c src/fsops.h \
 	src/fzp.c src/fzp.h \
 	src/handy.c src/handy.h \
+	src/handy_extra.c src/handy_extra.h \
 	src/hexmap.c src/hexmap.h \
 	src/incexc_recv.c \
 	src/incexc_send.c \
@@ -159,18 +160,21 @@ main_SOURCES = \
 	src/prepend.c src/prepend.h \
 	src/prog.c \
 	src/regexp.c src/regexp.h \
+	src/rs_buf.c src/rs_buf.h \
 	src/run_script.c src/run_script.h \
 	src/sbuf.c src/sbuf.h \
 	src/slist.c src/slist.h \
 	src/ssl.c src/ssl.h \
 	src/strlist.c src/strlist.h \
 	src/times.c src/times.h \
+	src/transfer.c src/transfer.h \
 	src/yajl_gen_w.c src/yajl_gen_w.h \
 	src/client/acl.c src/client/acl.h \
 	src/client/auth.c src/client/auth.h \
 	src/client/autoupgrade.c src/client/autoupgrade.h \
 	src/client/backup.c src/client/backup.h \
 	src/client/backup_phase1.c src/client/backup_phase1.h \
+	src/client/backup_phase2.c src/client/backup_phase2.h \
 	src/client/ca.c src/client/ca.h \
 	src/client/cvss.c src/client/cvss.h \
 	src/client/delete.c src/client/delete.h \
@@ -188,52 +192,46 @@ main_SOURCES = \
 	src/client/monitor/lline.c src/client/monitor/lline.h \
 	src/client/monitor/sel.c src/client/monitor/sel.h \
 	src/client/monitor/status_client_ncurses.c src/client/monitor/status_client_ncurses.h \
-	src/client/protocol1/backup_phase2.c src/client/protocol1/backup_phase2.h \
-	src/client/protocol1/restore.c src/client/protocol1/restore.h \
-	src/protocol1/handy.c src/protocol1/handy.h \
-	src/protocol1/msg.c src/protocol1/msg.h \
-	src/protocol1/rs_buf.c src/protocol1/rs_buf.h \
-	src/protocol1/sbuf_protocol1.c src/protocol1/sbuf_protocol1.h \
+	src/client/restore_switch.c src/client/restore_switch.h \
 	src/server/auth.c src/server/auth.h \
 	src/server/autoupgrade.c src/server/autoupgrade.h \
 	src/server/backup.c src/server/backup.h \
 	src/server/backup_phase1.c src/server/backup_phase1.h \
+	src/server/backup_phase2.c src/server/backup_phase2.h \
 	src/server/backup_phase3.c src/server/backup_phase3.h \
+	src/server/backup_phase4.c src/server/backup_phase4.h \
+	src/server/bedup.c src/server/bedup.h \
+	src/server/blocklen.c src/server/blocklen.h \
 	src/server/bu_get.c src/server/bu_get.h \
 	src/server/ca.c src/server/ca.h \
 	src/server/child.c src/server/child.h \
 	src/server/compress.c src/server/compress.h \
 	src/server/delete.c src/server/delete.h \
+	src/server/deleteme.c src/server/deleteme.h \
 	src/server/diff.c src/server/diff.h \
 	src/server/dpth.c src/server/dpth.h \
 	src/server/extra_comms.c src/server/extra_comms.h \
+	src/server/fdirs.c src/server/fdirs.h \
+	src/server/link.c src/server/link.h \
 	src/server/list.c src/server/list.h \
 	src/server/main.c src/server/main.h \
 	src/server/manio.c src/server/manio.h \
 	src/server/manios.c src/server/manios.h \
 	src/server/quota.c src/server/quota.h \
 	src/server/restore.c src/server/restore.h \
+	src/server/restore_sbuf.c src/server/restore_sbuf.h \
 	src/server/resume.c src/server/resume.h \
 	src/server/rubble.c src/server/rubble.h \
 	src/server/run_action.c src/server/run_action.h \
 	src/server/sdirs.c src/server/sdirs.h \
 	src/server/timer.c src/server/timer.h \
 	src/server/timestamp.c src/server/timestamp.h \
+	src/server/zlibio.c src/server/zlibio.h \
 	src/server/monitor/browse.c src/server/monitor/browse.h \
 	src/server/monitor/cache.c src/server/monitor/cache.h \
 	src/server/monitor/cstat.c src/server/monitor/cstat.h \
 	src/server/monitor/json_output.c src/server/monitor/json_output.h \
 	src/server/monitor/status_server.c src/server/monitor/status_server.h \
-	src/server/protocol1/backup_phase2.c src/server/protocol1/backup_phase2.h \
-	src/server/protocol1/backup_phase4.c src/server/protocol1/backup_phase4.h \
-	src/server/protocol1/bedup.c src/server/protocol1/bedup.h \
-	src/server/protocol1/blocklen.c src/server/protocol1/blocklen.h \
-	src/server/protocol1/deleteme.c src/server/protocol1/deleteme.h \
-	src/server/protocol1/dpth.c src/server/protocol1/dpth.h \
-	src/server/protocol1/fdirs.c src/server/protocol1/fdirs.h \
-	src/server/protocol1/link.c src/server/protocol1/link.h \
-	src/server/protocol1/restore.c src/server/protocol1/restore.h \
-	src/server/protocol1/zlibio.c src/server/protocol1/zlibio.h \
 	src/yajl/yajl.c \
 	src/yajl/yajl_alloc.c src/yajl/yajl_alloc.h \
 	src/yajl/yajl_buf.c src/yajl/yajl_buf.h \
@@ -266,14 +264,12 @@ runner_SOURCES = \
 	utest/builders/server/build_storage_dirs.c utest/builders/server/build_storage_dirs.h \
 	utest/main.c \
 	utest/prng.c utest/prng.h \
-	utest/protocol1/test_handy.c \
-	utest/protocol1/test_rs_buf.c \
 	utest/client/monitor/test_json_input.c \
 	utest/client/monitor/test_lline.c \
 	utest/client/monitor/test_status_client_ncurses.c \
-	utest/client/protocol1/test_backup_phase2.c \
 	utest/client/test_acl.c \
 	utest/client/test_auth.c \
+	utest/client/test_backup_phase2.c \
 	utest/client/test_delete.c \
 	utest/client/test_extra_comms.c \
 	utest/client/test_extrameta.c \
@@ -286,24 +282,24 @@ runner_SOURCES = \
 	utest/server/monitor/test_cstat.c \
 	utest/server/monitor/test_json_output.c \
 	utest/server/monitor/test_status_server.c \
-	utest/server/protocol1/test_backup_phase2.c \
-	utest/server/protocol1/test_backup_phase4.c \
-	utest/server/protocol1/test_bedup.c \
-	utest/server/protocol1/test_blocklen.c \
-	utest/server/protocol1/test_dpth.c \
-	utest/server/protocol1/test_fdirs.c \
-	utest/server/protocol1/test_restore.c \
 	utest/server/test_auth.c \
 	utest/server/test_autoupgrade.c \
+	utest/server/test_bedup.c \
+	utest/server/test_blocklen.c \
 	utest/server/test_ca.c \
+	utest/server/test_backup_phase2.c \
 	utest/server/test_backup_phase3.c \
+	utest/server/test_backup_phase4.c \
 	utest/server/test_bu_get.c \
 	utest/server/test_delete.c \
+	utest/server/test_dpth.c \
 	utest/server/test_extra_comms.c \
+	utest/server/test_fdirs.c \
 	utest/server/test_list.c \
 	utest/server/test_manio.c \
 	utest/server/test_resume.c \
 	utest/server/test_restore.c \
+	utest/server/test_restore_sbuf.c \
 	utest/server/test_run_action.c \
 	utest/server/test_sdirs.c \
 	utest/server/test_timer.c \
@@ -316,9 +312,11 @@ runner_SOURCES = \
 	utest/test_conf.c \
 	utest/test_conffile.c \
 	utest/test_fzp.c \
+	utest/test_handy_extra.c \
 	utest/test_hexmap.c \
 	utest/test_lock.c \
 	utest/test_pathcmp.c \
+	utest/test_rs_buf.c \
 	utest/test_slist.c \
 	utest/test_times.c \
 	utest/test.h

@@ -7,7 +7,7 @@
 #include "../../src/conffile.h"
 #include "../../src/fsops.h"
 #include "../../src/prepend.h"
-#include "../../src/server/protocol1/link.h"
+#include "../../src/server/link.h"
 
 #define BASE		"utest_find"
 #define CONFBASE	"utest_find_conf"

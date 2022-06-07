@@ -272,7 +272,7 @@ static void do_test_man_phase2_get_last_good_entry()
 	last_good_entry(build_slist_long);
 }
 
-static void test_man_phase2_get_last_good_entry()
+START_TEST(test_man_phase2_get_last_good_entry)
 {
 	set_cmds();
 	short_write=0; do_test_man_phase2_get_last_good_entry();
@@ -280,11 +280,6 @@ static void test_man_phase2_get_last_good_entry()
 	set_cmds_encoded();
 	short_write=0; do_test_man_phase2_get_last_good_entry();
 	short_write=1; do_test_man_phase2_get_last_good_entry();
-}
-
-START_TEST(test_man_protocol1_phase2_get_last_good_entry)
-{
-	test_man_phase2_get_last_good_entry();
 }
 END_TEST
 
@@ -480,17 +475,12 @@ static void do_test_man_phase2_forward_past_entry()
 	go_past_entry(build_slist_past_long);
 }
 
-static void test_man_phase2_forward_past_entry()
+START_TEST(test_man_phase2_forward_past_entry)
 {
 	set_cmds();
 	do_test_man_phase2_forward_past_entry();
 	set_cmds_encoded();
 	do_test_man_phase2_forward_past_entry();
-}
-
-START_TEST(test_man_protocol1_phase2_forward_past_entry)
-{
-	test_man_phase2_forward_past_entry();
 }
 END_TEST
 
@@ -669,7 +659,7 @@ static void do_test_man_phase2_forward_before_entry()
 	go_before_entry(build_slist_before_long);
 }
 
-static void test_man_phase2_forward_before_entry()
+START_TEST(test_man_phase2_forward_before_entry)
 {
 	set_cmds();
 	short_write=0; do_test_man_phase2_forward_before_entry();
@@ -677,11 +667,6 @@ static void test_man_phase2_forward_before_entry()
 	set_cmds_encoded();
 	short_write=0; do_test_man_phase2_forward_before_entry();
 	short_write=9; do_test_man_phase2_forward_before_entry();
-}
-
-START_TEST(test_man_protocol1_phase2_forward_before_entry)
-{
-	test_man_phase2_forward_before_entry();
 }
 END_TEST
 
@@ -696,11 +681,9 @@ Suite *suite_server_resume(void)
 
 	tcase_set_timeout(tc_core, 120);
 
-	tcase_add_test(tc_core, test_man_protocol1_phase2_get_last_good_entry);
-
-	tcase_add_test(tc_core, test_man_protocol1_phase2_forward_past_entry);
-
-	tcase_add_test(tc_core, test_man_protocol1_phase2_forward_before_entry);
+	tcase_add_test(tc_core, test_man_phase2_get_last_good_entry);
+	tcase_add_test(tc_core, test_man_phase2_forward_past_entry);
+	tcase_add_test(tc_core, test_man_phase2_forward_before_entry);
 
 	suite_add_tcase(s, tc_core);
 

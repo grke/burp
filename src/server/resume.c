@@ -8,7 +8,6 @@
 #include "dpth.h"
 #include "resume.h"
 #include "backup_phase1.h"
-#include "protocol1/dpth.h"
 
 // Used on resume, this just reads the phase1 file and sets up cntr.
 static int read_phase1(struct manio *p1manio, struct conf **cconfs)
@@ -40,14 +39,14 @@ end:
 static int set_higher_datapth(struct sbuf *sb, struct dpth *dpth)
 {
 	// Make sure we end up with the highest datapth we can possibly
-	// find - dpth_protocol1_set_from_string() will only set it if
+	// find - dpth_set_from_string() will only set it if
 	// it is higher.
-	if(sb->protocol1 && sb->protocol1->datapth.buf
-	  && dpth_protocol1_set_from_string(dpth,
-		sb->protocol1->datapth.buf))
+	if(sb && sb->datapth.buf
+	  && dpth_set_from_string(dpth,
+		sb->datapth.buf))
 	{
 		logp("unable to set datapath: %s\n",
-			iobuf_to_printable(&sb->protocol1->datapth));
+			iobuf_to_printable(&sb->datapth));
 		return -1;
 	}
 	return 0;

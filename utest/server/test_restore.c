@@ -202,7 +202,7 @@ static unsigned char get_gzip_os_type(void)
 	return buf[9];
 }
 
-static void setup_asfds_proto1_stuff(struct asfd *asfd, struct slist *slist)
+static void setup_asfds_stuff(struct asfd *asfd, struct slist *slist)
 {
 	int r=0; int w=0;
 	struct sbuf *s;
@@ -232,8 +232,7 @@ static void setup_asfds_proto1_stuff(struct asfd *asfd, struct slist *slist)
 				0x4b, 0x49, 0x2c, 0x49, 0x04, 0x00, 0x63,
 				0xf3, 0xf3, 0xad, 0x04, 0x00, 0x00, 0x00
 			};
-			asfd_assert_write_iobuf(asfd, &w,
-				0, &s->protocol1->datapth);
+			asfd_assert_write_iobuf(asfd, &w, 0, &s->datapth);
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->attr);
 			asfd_assert_write_iobuf(asfd, &w, 0, &s->path);
 			if(sbuf_is_encrypted(s))
@@ -266,9 +265,9 @@ static void setup_asfds_proto1_stuff(struct asfd *asfd, struct slist *slist)
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "restoreend ok");
 }
 
-START_TEST(test_proto1_stuff)
+START_TEST(test_stuff)
 {
-	run_test(0, 10, 0, setup_asfds_proto1_stuff);
+	run_test(0, 10, 0, setup_asfds_stuff);
 }
 END_TEST
 
@@ -282,7 +281,7 @@ Suite *suite_server_restore(void)
 	tc_core=tcase_create("Core");
 	tcase_set_timeout(tc_core, 60);
 
-	tcase_add_test(tc_core, test_proto1_stuff);
+	tcase_add_test(tc_core, test_stuff);
 	tcase_add_test(tc_core, test_send_regex_failure);
 
 	suite_add_tcase(s, tc_core);

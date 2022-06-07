@@ -28,7 +28,7 @@ ssh_opts=
 
 ssh $ssh_opts "$host" "rm -rf $tarfile $directory /tmp/burp_ca.lock" \
 	|| fail "cleaning linux-i386 machine"
-ssh $ssh_opts "$host" "rm -rf burp-2.*" \
+ssh $ssh_opts "$host" "rm -rf burp-3.*" \
         || fail "cleaning linux-i386 machine"
 scp $ssh_opts "$tarfile" "$host:" \
 	|| fail "scp $tarfile to linux-386 machine"

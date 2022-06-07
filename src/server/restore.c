@@ -20,7 +20,7 @@
 #include "child.h"
 #include "compress.h"
 #include "manio.h"
-#include "protocol1/restore.h"
+#include "restore_sbuf.h"
 #include "rubble.h"
 #include "sdirs.h"
 
@@ -311,7 +311,7 @@ static int restore_sbuf(struct asfd *asfd, struct sbuf *sb, struct bu *bu,
 		}
 	}
 
-	return restore_sbuf_protocol1(asfd, sb, bu, act, sdirs, cconfs);
+	return restore_sbuf_all(asfd, sb, bu, act, sdirs, cconfs);
 }
 
 static int restore_ent(struct asfd *asfd,
@@ -397,7 +397,7 @@ static int restore_remaining_dirs(struct asfd *asfd, struct bu *bu,
 	// Restore any directories that are left in the list.
 	for(sb=slist->head; sb; sb=sb->next)
 	{
-		if(restore_sbuf_protocol1(asfd, sb, bu, act, sdirs, cconfs))
+		if(restore_sbuf_all(asfd, sb, bu, act, sdirs, cconfs))
 				goto end;
 	}
 	ret=0;

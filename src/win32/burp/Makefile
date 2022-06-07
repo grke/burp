@@ -37,32 +37,33 @@ CLIENT_OBJS = \
 	$(OBJDIR)/client/autoupgrade.o \
 	$(OBJDIR)/client/backup.o \
 	$(OBJDIR)/client/backup_phase1.o \
-	$(OBJDIR)/client/protocol1/backup_phase2.o \
-	$(OBJDIR)/client/protocol1/restore.o \
+	$(OBJDIR)/client/backup_phase2.o \
 	$(OBJDIR)/client/ca.o \
 	$(OBJDIR)/client/cvss.o \
 	$(OBJDIR)/client/delete.o \
 	$(OBJDIR)/client/extra_comms.o \
 	$(OBJDIR)/client/extrameta.o \
-	$(OBJDIR)/client/find.o \
 	$(OBJDIR)/client/find_logic.o \
+	$(OBJDIR)/client/find.o \
 	$(OBJDIR)/client/glob_windows.o \
 	$(OBJDIR)/client/list.o \
 	$(OBJDIR)/client/main.o \
-	$(OBJDIR)/client/monitor.o \
-	$(OBJDIR)/client/monitor/lline.o \
-	$(OBJDIR)/client/monitor/sel.o \
 	$(OBJDIR)/client/monitor/json_input.o \
+	$(OBJDIR)/client/monitor/lline.o \
+	$(OBJDIR)/client/monitor.o \
+	$(OBJDIR)/client/monitor/sel.o \
 	$(OBJDIR)/client/restore.o \
+	$(OBJDIR)/client/restore_switch.o \
 	$(OBJDIR)/client/xattr.o \
 	$(OBJDIR)/cmd.o \
 	$(OBJDIR)/cntr.o \
-	$(OBJDIR)/conf.o \
 	$(OBJDIR)/conffile.o \
+	$(OBJDIR)/conf.o \
 	$(OBJDIR)/cstat.o \
 	$(OBJDIR)/forkchild.o \
 	$(OBJDIR)/fsops.o \
 	$(OBJDIR)/fzp.o \
+	$(OBJDIR)/handy_extra.o \
 	$(OBJDIR)/handy.o \
 	$(OBJDIR)/hexmap.o \
 	$(OBJDIR)/incexc_recv.o \
@@ -76,21 +77,19 @@ CLIENT_OBJS = \
 	$(OBJDIR)/pathcmp.o \
 	$(OBJDIR)/prepend.o \
 	$(OBJDIR)/prog.o \
-	$(OBJDIR)/protocol1/handy.o \
-	$(OBJDIR)/protocol1/msg.o \
-	$(OBJDIR)/protocol1/rs_buf.o \
-	$(OBJDIR)/protocol1/sbuf_protocol1.o \
 	$(OBJDIR)/regexp.o \
+	$(OBJDIR)/rs_buf.o \
 	$(OBJDIR)/run_script.o \
 	$(OBJDIR)/sbuf.o \
 	$(OBJDIR)/slist.o \
 	$(OBJDIR)/ssl.o \
 	$(OBJDIR)/strlist.o \
 	$(OBJDIR)/times.o \
+	$(OBJDIR)/transfer.o \
 	$(OBJDIR)/vss.o \
-	$(OBJDIR)/vss_XP.o \
-	$(OBJDIR)/vss_W2K3.o \
 	$(OBJDIR)/vss_Vista.o \
+	$(OBJDIR)/vss_W2K3.o \
+	$(OBJDIR)/vss_XP.o \
 	$(OBJDIR)/yajl_gen_w.o \
 
 ALL_OBJS = $(CLIENT_OBJS)

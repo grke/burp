@@ -104,17 +104,12 @@ int attribs_encode(struct sbuf *sb)
 
 	p += to_base64(sb->winattr, p);
 
-	if(sb->protocol1)
-	{
-		// Protocol1 puts compression/encryption at the end.
-		*p++ = ' ';
-		p += to_base64(sb->compression, p);
-		*p++ = ' ';
-		p += to_base64(sb->encryption, p);
-		*p++ = ' ';
-		p += to_base64(sb->protocol1->salt, p);
-	}
-
+	*p++ = ' ';
+	p += to_base64(sb->compression, p);
+	*p++ = ' ';
+	p += to_base64(sb->encryption, p);
+	*p++ = ' ';
+	p += to_base64(sb->salt, p);
 	*p = 0;
 
 	sb->attr.len=p-sb->attr.buf;
@@ -226,29 +221,23 @@ void attribs_decode(struct sbuf *sb)
 	p+=eaten;
 	sb->winattr=val;
 
-	if(sb->protocol1)
-	{
-		sb->compression=-1;
-		sb->encryption=ENCRYPTION_UNSET;
+	sb->compression=-1;
+	sb->encryption=ENCRYPTION_UNSET;
 
-		// Compression for protocol1.
-		if(!(eaten=from_base64(&val, p)))
-			return;
-		p+=eaten;
-		sb->compression=val;
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
+	sb->compression=val;
 
-		// Encryption for protocol1.
-		if(!(eaten=from_base64(&val, p)))
-			return;
-		p+=eaten;
-		sb->encryption=val;
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
+	sb->encryption=val;
 
-		// Salt for protocol1.
-		if(!(eaten=from_base64(&val, p)))
-			return;
-		p+=eaten;
-		sb->protocol1->salt=val;
-	}
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
+	sb->salt=val;
 }
 
 int attribs_set_file_times(struct asfd *asfd,

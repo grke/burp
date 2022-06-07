@@ -8,7 +8,7 @@
 #include "../log.h"
 #include "backup_phase1.h"
 #include "cvss.h"
-#include "protocol1/backup_phase2.h"
+#include "backup_phase2.h"
 #include "backup.h"
 
 #ifdef HAVE_WIN32
@@ -100,7 +100,7 @@ int do_backup_client(struct asfd *asfd, struct conf **confs, enum action action,
 				goto end;
 			}
 
-			ret=backup_phase2_client_protocol1(asfd,
+			ret=backup_phase2_client(asfd,
 				confs, resume);
 			if(ret) goto end;
 			break;

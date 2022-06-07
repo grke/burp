@@ -5,7 +5,7 @@
 #include "../../src/fsops.h"
 #include "../../src/lock.h"
 #include "../../src/prepend.h"
-#include "../../src/server/protocol1/fdirs.h"
+#include "../../src/server/fdirs.h"
 #include "../../src/server/sdirs.h"
 #include "../../src/server/timestamp.h"
 #include "../../src/times.h"
@@ -83,7 +83,7 @@ static void check_dynamic_paths(struct sdirs *sdirs, const char *manifest)
 #define WORKING		CLIENT "/working"
 #define CURRENT		CLIENT "/current"
 
-static void protocol1_tests(struct sdirs *sdirs)
+static void all_tests(struct sdirs *sdirs)
 {
 	do_sdirs_init(sdirs, NULL /* client_lockdir */);
 	ck_assert_str_eq(sdirs->base, BASE);
@@ -131,7 +131,7 @@ START_TEST(test_sdirs)
 	struct sdirs *sdirs;
 	sdirs=setup();
 
-	protocol1_tests(sdirs);
+	all_tests(sdirs);
 	sdirs_free_content(sdirs);
 
 	tear_down(&sdirs);

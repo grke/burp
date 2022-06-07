@@ -284,11 +284,11 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 			copy1.len=strlen(copy1.buf);
 			copy1.cmd=sb->path.cmd;
 
-			if(sb->protocol1->datapth.buf
-			  && !strncmp(sb->protocol1->datapth.buf,
+			if(sb->datapth.buf
+			  && !strncmp(sb->datapth.buf,
 				TREE_DIR, strlen(TREE_DIR)))
 			{
-				tmp=sb->protocol1->datapth.buf
+				tmp=sb->datapth.buf
 					+strlen(TREE_DIR)
 					+strlen(seed_src);
 				if(*tmp=='/')
@@ -303,7 +303,7 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 				  || astrcat(&copy2.buf, tmp, __func__))
 					goto error;
 				copy2.len=strlen(copy2.buf);
-				copy2.cmd=sb->protocol1->datapth.cmd;
+				copy2.cmd=sb->datapth.cmd;
 			}
 
 			save1=sb->path;
@@ -311,8 +311,8 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 
 			if(copy2.buf)
 			{
-				save2=sb->protocol1->datapth;
-				sb->protocol1->datapth=copy2;
+				save2=sb->datapth;
+				sb->datapth=copy2;
 			}
 		}
 		e=manio_write_sbuf(dstmanio, sb);
@@ -323,7 +323,7 @@ int manio_copy_entry(struct sbuf *csb, struct sbuf *sb,
 		}
 		if(copy2.buf)
 		{
-			sb->protocol1->datapth=save2;
+			sb->datapth=save2;
 			iobuf_free_content(&copy2);
 		}
 		if(e)

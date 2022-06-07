@@ -42,7 +42,7 @@ done
 
 ssh $ssh_opts "$host" "rm -rf $tarfile $directory /tmp/burp_ca.lock" \
 	|| fail "cleaning netbsd machine"
-ssh $ssh_opts "$host" "rm -rf burp-2.*" \
+ssh $ssh_opts "$host" "rm -rf burp-3.*" \
 	|| fail "cleaning netbsd machine"
 scp $ssh_opts "$tarfile" "$host:" \
 	|| fail "scp $tarfile to netbsd machine"

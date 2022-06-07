@@ -38,7 +38,7 @@ static int append_to_feat(char **feat, const char *str)
 // restore paths here instead of setting it in a struct sdirs.
 // But doing the extra_comms needs to come before setting the sdirs, because
 // extra_comms sets up a bunch of settings that sdirs need to know.
-static char *get_restorepath_proto1(struct conf **cconfs)
+static char *get_restorepath(struct conf **cconfs)
 {
 	char *tmp=NULL;
 	char *restorepath=NULL;
@@ -49,51 +49,21 @@ static char *get_restorepath_proto1(struct conf **cconfs)
 	return restorepath;
 }
 
-static char *get_restorepath_proto2(struct conf **cconfs)
-{
-	char *tmp1=NULL;
-	char *tmp2=NULL;
-	char *restorepath=NULL;
-	if(!(tmp1=prepend_s(get_string(cconfs[OPT_DIRECTORY]),
-		get_string(cconfs[OPT_DEDUP_GROUP]))))
-			goto error;
-	if(!(tmp2=prepend_s(tmp1, "clients")))
-		goto error;
-	free_w(&tmp1);
-	if(!(tmp1=prepend_s(tmp2, get_string(cconfs[OPT_CNAME]))))
-		goto error;
-	if(!(restorepath=prepend_s(tmp1, "restore")))
-		goto error;
-	goto end;
-error:
-	free_w(&restorepath);
-end:
-	free_w(&tmp1);
-	free_w(&tmp2);
-	return restorepath;
-}
-
 static int set_restore_path(struct conf **cconfs, char **feat)
 {
 	int ret=-1;
-	char *restorepath1=NULL;
-	char *restorepath2=NULL;
-	if(!(restorepath1=get_restorepath_proto1(cconfs))
-	  || !(restorepath2=get_restorepath_proto2(cconfs)))
+	char *restorepath=NULL;
+	if(!(restorepath=get_restorepath(cconfs)))
 		goto end;
-	if(is_reg_lstat(restorepath1)==1
-	  && set_string(cconfs[OPT_RESTORE_PATH], restorepath1))
-		goto end;
-	else if(is_reg_lstat(restorepath2)==1
-	  && set_string(cconfs[OPT_RESTORE_PATH], restorepath2))
+	if(is_reg_lstat(restorepath)==1
+	  && set_string(cconfs[OPT_RESTORE_PATH], restorepath))
 		goto end;
 	if(get_string(cconfs[OPT_RESTORE_PATH])
 	  && append_to_feat(feat, "srestore:"))
 		goto end;
 	ret=0;
 end:
-	free_w(&restorepath1);
-	free_w(&restorepath2);
+	free_w(&restorepath);
 	return ret;
 }
 

@@ -8,13 +8,13 @@
 #include "../lock.h"
 #include "../log.h"
 #include "../prepend.h"
+#include "backup_phase4.h"
 #include "compress.h"
-#include "protocol1/backup_phase4.h"
-#include "protocol1/zlibio.h"
 #include "rubble.h"
 #include "run_action.h"
 #include "sdirs.h"
 #include "timestamp.h"
+#include "zlibio.h"
 
 static char *get_resume_path(const char *path)
 {
@@ -276,7 +276,7 @@ static int recover_finishing(struct async *as,
 	as->asfd_remove(as, asfd);
 	asfd_close(asfd);
 
-	if(backup_phase4_server_protocol1(sdirs, cconfs))
+	if(backup_phase4_server_all(sdirs, cconfs))
 	{
 		logp("Problem with prior backup. Please check the client log on the server.");
 		return -1;

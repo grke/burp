@@ -11,7 +11,7 @@
 #include "../../src/prepend.h"
 #include "../../src/server/bu_get.h"
 #include "../../src/server/delete.h"
-#include "../../src/server/protocol1/fdirs.h"
+#include "../../src/server/fdirs.h"
 #include "../../src/server/sdirs.h"
 #include "../../src/server/timestamp.h"
 #include "../builders/build_asfd_mock.h"
@@ -328,7 +328,7 @@ static void do_autodelete_tests_shared()
 		sd9, ARR_LEN(sd9), ex9, ARR_LEN(ex9));
 }
 
-START_TEST(test_autodelete_proto_1)
+START_TEST(test_autodelete)
 {
 	do_autodelete_tests_shared();
 	build_and_autodelete(keep34, ARR_LEN(keep34),
@@ -405,7 +405,7 @@ static void do_userdelete_tests_shared()
 		sd3, ARR_LEN(sd3), sd3, ARR_LEN(sd3), setup_asfd_not_found);
 }
 
-START_TEST(test_userdelete_proto_1)
+START_TEST(test_userdelete)
 {
 	do_userdelete_tests_shared();
 	build_and_userdelete(-1, "2",
@@ -424,8 +424,8 @@ Suite *suite_server_delete(void)
 
 	tc_core=tcase_create("Core");
         tcase_set_timeout(tc_core, 20);
-	tcase_add_test(tc_core, test_autodelete_proto_1);
-	tcase_add_test(tc_core, test_userdelete_proto_1);
+	tcase_add_test(tc_core, test_autodelete);
+	tcase_add_test(tc_core, test_userdelete);
 	suite_add_tcase(s, tc_core);
 
 	return s;

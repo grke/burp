@@ -6,10 +6,10 @@
 #include "../../../src/fsops.h"
 #include "../../../src/fzp.h"
 #include "../../../src/handy.h"
+#include "../../../src/handy_extra.h"
 #include "../../../src/hexmap.h"
 #include "../../../src/msg.h"
 #include "../../../src/pathcmp.h"
-#include "../../../src/protocol1/handy.h"
 #include "../../../src/sbuf.h"
 #include "../../../src/slist.h"
 #include "../../../src/server/manio.h"
@@ -62,8 +62,8 @@ static void set_sbuf(struct sbuf *sb)
 	{
 		char *datapth;
 		fail_unless((datapth=prepend_s(TREE_DIR, sb->path.buf))!=NULL);
-		iobuf_free_content(&sb->protocol1->datapth);
-		iobuf_from_str(&sb->protocol1->datapth, CMD_DATAPTH, datapth);
+		iobuf_free_content(&sb->datapth);
+		iobuf_from_str(&sb->datapth, CMD_DATAPTH, datapth);
 	}
 }
 
@@ -189,14 +189,14 @@ void build_manifest_phase1_from_slist(const char *path, struct slist *slist)
 	{
 		// Might be given an slist that has datapth or endfile set,
 		// which should not go into a phase1 scan. Deal with it.
-		if(sb->protocol1
-		  && sb->protocol1->datapth.buf)
-			iobuf_move(&datapth, &sb->protocol1->datapth);
+		if(sb
+		  && sb->datapth.buf)
+			iobuf_move(&datapth, &sb->datapth);
 		if(sb->endfile.buf)
 			iobuf_move(&endfile, &sb->endfile);
 		fail_unless(!manio_write_sbuf(manio, sb));
 		if(datapth.buf)
-			iobuf_move(&sb->protocol1->datapth, &datapth);
+			iobuf_move(&sb->datapth, &datapth);
 		if(endfile.buf)
 			iobuf_move(&sb->endfile, &endfile);
 	}

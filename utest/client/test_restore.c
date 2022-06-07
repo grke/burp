@@ -48,7 +48,7 @@ static void setup_bad_read(struct asfd *asfd, struct slist *slist)
 	asfd_mock_read(asfd, &r, -1, CMD_GEN, "blah");
 }
 
-static void setup_proto1_no_files(struct asfd *asfd, struct slist *slist)
+static void setup_no_files(struct asfd *asfd, struct slist *slist)
 {
 	int r=0; int w=0;
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
@@ -57,7 +57,7 @@ static void setup_proto1_no_files(struct asfd *asfd, struct slist *slist)
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restoreend ok");
 }
 
-static void setup_proto1_no_datapth(struct asfd *asfd, struct slist *slist)
+static void setup_no_datapth(struct asfd *asfd, struct slist *slist)
 {
 	int r=0; int w=0;
 	uint32_t l;
@@ -66,7 +66,7 @@ static void setup_proto1_no_datapth(struct asfd *asfd, struct slist *slist)
 	path=absolute("afile");
 	l=(uint32_t)strlen(path);
 	char expected[512];
-	snprintf(expected, sizeof(expected), "datapth not supplied for f:%04X:%s in restore_switch_protocol1\n", l, path);
+	snprintf(expected, sizeof(expected), "datapth not supplied for f:%04X:%s in restore_switch\n", l, path);
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
 	asfd_mock_read(asfd, &r, 0, CMD_GEN, "ok");
 	asfd_mock_read(asfd, &r, 0, CMD_ATTRIBS, "attribs");
@@ -74,7 +74,7 @@ static void setup_proto1_no_datapth(struct asfd *asfd, struct slist *slist)
 	asfd_assert_write(asfd, &w, 0, CMD_ERROR, expected);
 }
 
-static void setup_proto1_no_attribs(struct asfd *asfd, struct slist *slist)
+static void setup_no_attribs(struct asfd *asfd, struct slist *slist)
 {
 	int r=0; int w=0;
 	asfd_assert_write(asfd, &w, 0, CMD_GEN, "restore :");
@@ -84,7 +84,7 @@ static void setup_proto1_no_attribs(struct asfd *asfd, struct slist *slist)
 	asfd_assert_write(asfd, &w, 0, CMD_ERROR, "read cmd with no attribs");
 }
 
-static void setup_proto1_some_things(struct asfd *asfd, struct slist *slist)
+static void setup_some_things(struct asfd *asfd, struct slist *slist)
 {
 	struct sbuf *s;
 	struct stat statp_dir;
@@ -197,33 +197,33 @@ static void run_test(int expected_ret,
 	tear_down(&asfd, &confs);
 }
 
-START_TEST(test_restore_proto1_bad_read)
+START_TEST(test_restore_bad_read)
 {
 	run_test(-1, 0, setup_bad_read);
 }
 END_TEST
 
-START_TEST(test_restore_proto1_no_files)
+START_TEST(test_restore_no_files)
 {
-	run_test( 0, 0, setup_proto1_no_files);
+	run_test( 0, 0, setup_no_files);
 }
 END_TEST
 
-START_TEST(test_restore_proto1_no_datapth)
+START_TEST(test_restore_no_datapth)
 {
-	run_test(-1, 0, setup_proto1_no_datapth);
+	run_test(-1, 0, setup_no_datapth);
 }
 END_TEST
 
-START_TEST(test_restore_proto1_no_attribs)
+START_TEST(test_restore_no_attribs)
 {
-	run_test(-1, 0, setup_proto1_no_attribs);
+	run_test(-1, 0, setup_no_attribs);
 }
 END_TEST
 
-START_TEST(test_restore_proto1_some_things)
+START_TEST(test_restore_some_things)
 {
-	run_test(0, 10, setup_proto1_some_things);
+	run_test(0, 10, setup_some_things);
 }
 END_TEST
 
@@ -266,11 +266,11 @@ Suite *suite_client_restore(void)
 	tc_core=tcase_create("Core");
 	tcase_set_timeout(tc_core, 60);
 
-	tcase_add_test(tc_core, test_restore_proto1_bad_read);
-	tcase_add_test(tc_core, test_restore_proto1_no_files);
-	tcase_add_test(tc_core, test_restore_proto1_no_datapth);
-	tcase_add_test(tc_core, test_restore_proto1_no_attribs);
-	tcase_add_test(tc_core, test_restore_proto1_some_things);
+	tcase_add_test(tc_core, test_restore_bad_read);
+	tcase_add_test(tc_core, test_restore_no_files);
+	tcase_add_test(tc_core, test_restore_no_datapth);
+	tcase_add_test(tc_core, test_restore_no_attribs);
+	tcase_add_test(tc_core, test_restore_some_things);
 
 	tcase_add_test(tc_core, test_strip_from_path);
 

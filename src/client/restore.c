@@ -12,7 +12,7 @@
 #include "../log.h"
 #include "../prepend.h"
 #include "cvss.h"
-#include "protocol1/restore.h"
+#include "restore_switch.h"
 #include "restore.h"
 
 int restore_interrupt(struct asfd *asfd,
@@ -41,7 +41,7 @@ int restore_interrupt(struct asfd *asfd,
 	// If it is file data, get the server
 	// to interrupt the flow and move on.
 
-	path=sb->protocol1->datapth.buf;
+	path=sb->datapth.buf;
 
 	if(!path)
 	{
@@ -949,7 +949,7 @@ int do_restore_client(struct asfd *asfd,
 				break;
 		}
 
-		if(restore_switch_protocol1(asfd, sb, fullpath, act,
+		if(restore_switch(asfd, sb, fullpath, act,
 			bfd, vss_restore, cntr, encryption_password))
 				goto error;
 	}

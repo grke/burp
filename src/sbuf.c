@@ -21,7 +21,8 @@ struct sbuf *sbuf_alloc()
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->endfile);
 	sb->compression=-1;
-	if(!(sb->protocol1=sbuf_protocol1_alloc())) return NULL;
+	sb->datapth.cmd=CMD_DATAPTH;
+
 	return sb;
 }
 
@@ -35,14 +36,22 @@ void sbuf_free_content(struct sbuf *sb)
 	sb->compression=-1;
 	sb->winattr=0;
 	sb->flags=0;
-	sbuf_protocol1_free_content(sb->protocol1);
+
+	memset(&sb->rsbuf, 0, sizeof(sb->rsbuf));
+	if(sb->sigjob) { rs_job_free(sb->sigjob); sb->sigjob=NULL; }
+	rs_filebuf_free(&sb->infb);
+	rs_filebuf_free(&sb->outfb);
+	fzp_close(&sb->sigfzp);
+	fzp_close(&sb->fzp);
+	sb->salt=0;
+	iobuf_free_content(&sb->datapth);
+	sb->datapth.cmd=CMD_DATAPTH;
 }
 
 void sbuf_free(struct sbuf **sb)
 {
 	if(!sb || !*sb) return;
 	sbuf_free_content(*sb);
-	free_v((void **)&((*sb)->protocol1));
 	free_v((void **)sb);
 }
 
@@ -80,32 +89,12 @@ int sbuf_to_manifest(struct sbuf *sb, struct fzp *fzp)
 {
 	if(!sb->path.buf) return 0;
 
-	if(sb->protocol1)
-	{
-		if(sb->protocol1->datapth.buf
-        	  && iobuf_send_msg_fzp(&(sb->protocol1->datapth), fzp))
-			return -1;
+	if(sb->datapth.buf
+          && iobuf_send_msg_fzp(&(sb->datapth), fzp))
+		return -1;
 
-		if(iobuf_send_msg_fzp(&sb->attr, fzp))
-			return -1;
-	}
-	else
-	{
-		// Hackity hack: Strip the file index from the beginning of
-		// the attribs so that manifests where nothing changed are
-		// identical to each other. Better would be to preserve the
-		// index.
-		char *cp;
-		if(!(cp=strchr(sb->attr.buf, ' ')))
-		{
-			logp("Strange attributes: %s\n",
-				iobuf_to_printable(&sb->attr));
-			return -1;
-		}
-		if(send_msg_fzp(fzp, CMD_ATTRIBS,
-			cp, sb->attr.len-(cp-sb->attr.buf)))
-				return -1;
-	}
+	if(iobuf_send_msg_fzp(&sb->attr, fzp))
+		return -1;
 	if(iobuf_send_msg_fzp(&sb->path, fzp))
 		return -1;
 	if(sb->link.buf
@@ -147,7 +136,7 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 	switch(rbuf->cmd)
 	{
 		case CMD_ATTRIBS:
-			if(sb->protocol1->datapth.buf)
+			if(sb->datapth.buf)
 				iobuf_free_content(&sb->attr);
 			else
 				sbuf_free_content(sb);
@@ -202,12 +191,11 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 					sb->flags |= SBUF_NEED_LINK;
 					return PARSE_RET_NEED_MORE;
 				}
-				else if(sb->protocol1
-				  && sb->protocol1->datapth.buf)
+				else if(sb->datapth.buf)
 				{
-					// Protocol1 client restore reads
-					// CMD_APPEND and CMD_END_FILE in the
-					// calling function, so pretend it is
+					// Restore reads CMD_APPEND and
+					// CMD_END_FILE in the calling
+					// function, so pretend it is
 					// complete if we have the hack flag.
 					if(sb->flags & SBUF_CLIENT_RESTORE_HACK)
 						return PARSE_RET_COMPLETE;
@@ -223,7 +211,6 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			if(!strcmp(rbuf->buf, "restoreend")
 			  || !strcmp(rbuf->buf, "phase1end")
 			  || !strcmp(rbuf->buf, "backupphase2")
-			// Think these are protocol1 things.
                 	  || !strcmp(rbuf->buf, "backupend")
 			  || !strcmp(rbuf->buf, "estimateend"))
 				return PARSE_RET_FINISHED;
@@ -242,11 +229,6 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			if(iobuf_relative_path_attack(rbuf))
 				return PARSE_RET_ERROR;
 
-			if(!sb->protocol1)
-			{
-				iobuf_log_unexpected(rbuf, __func__);
-				return PARSE_RET_ERROR;
-			}
 			if(sb->flags & SBUF_CLIENT_RESTORE_HACK)
 			{
 				sbuf_free_content(sb);
@@ -255,21 +237,18 @@ static enum parse_ret parse_cmd(struct sbuf *sb, struct asfd *asfd,
 			else
 				sbuf_free_content(sb);
 			
-			iobuf_move(&sb->protocol1->datapth, rbuf);
+			iobuf_move(&sb->datapth, rbuf);
 			return PARSE_RET_NEED_MORE;
 		case CMD_END_FILE:
 			iobuf_free_content(&sb->endfile);
 			iobuf_move(&sb->endfile, rbuf);
-			if(sb->protocol1)
+			if(!sb->attr.buf
+			  || !sb->datapth.buf
+			  || (!sbuf_is_filedata(sb)
+				&& !sbuf_is_vssdata(sb)))
 			{
-				if(!sb->attr.buf
-				  || !sb->protocol1->datapth.buf
-				  || (!sbuf_is_filedata(sb)
-					&& !sbuf_is_vssdata(sb)))
-				{
-					logp("got unexpected cmd_endfile");
-					return PARSE_RET_ERROR;
-				}
+				logp("got unexpected cmd_endfile");
+				return PARSE_RET_ERROR;
 			}
 			return PARSE_RET_COMPLETE;
 		default:

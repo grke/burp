@@ -7,12 +7,12 @@
 #include "fsops.h"
 #include "fzp.h"
 #include "handy.h"
+#include "handy_extra.h"
 #include "hexmap.h"
 #include "iobuf.h"
 #include "log.h"
 #include "msg.h"
 #include "prepend.h"
-#include "protocol1/handy.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -462,7 +462,7 @@ err:
 }
 
 // Not in dpth.c so that Windows client can see it.
-int dpth_protocol1_is_compressed(int compressed, const char *datapath)
+int dpth_is_compressed(int compressed, const char *datapath)
 {
 	const char *dp=NULL;
 

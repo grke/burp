@@ -157,7 +157,7 @@ static void build_and_check_phase3(
 	tear_down(&sdirs, &confs);
 }
 
-START_TEST(test_backup_phase3_proto_1)
+START_TEST(test_backup_phase3)
 {
 	build_and_check_phase3(
 		a1, ARR_LEN(a1),
@@ -182,7 +182,7 @@ Suite *suite_server_backup_phase3(void)
 	tc_core=tcase_create("Core");
 	tcase_set_timeout(tc_core, 60);
 
-	tcase_add_test(tc_core, test_backup_phase3_proto_1);
+	tcase_add_test(tc_core, test_backup_phase3);
 	suite_add_tcase(s, tc_core);
 
 	return s;

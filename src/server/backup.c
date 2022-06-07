@@ -13,13 +13,13 @@
 #include "../run_script.h"
 #include "auth.h"
 #include "backup_phase1.h"
+#include "backup_phase2.h"
 #include "backup_phase3.h"
+#include "backup_phase4.h"
 #include "bu_get.h"
 #include "compress.h"
 #include "delete.h"
 #include "sdirs.h"
-#include "protocol1/backup_phase2.h"
-#include "protocol1/backup_phase4.h"
 #include "backup.h"
 #include "rubble.h"
 #include "timer.h"
@@ -110,7 +110,7 @@ static int backup_phase2_server(struct async *as, struct sdirs *sdirs,
 	if(breaking==2)
 		return breakpoint(breaking, __func__);
 
-	return backup_phase2_server_protocol1(as, sdirs,
+	return backup_phase2_server_all(as, sdirs,
 		incexc, resume, cconfs);
 }
 
@@ -131,7 +131,7 @@ static int backup_phase4_server(struct sdirs *sdirs, struct conf **cconfs)
 
 	log_fzp_set(NULL, cconfs);
 	// Phase4 will open logfp again (in case it is resuming).
-	return backup_phase4_server_protocol1(sdirs, cconfs);
+	return backup_phase4_server_all(sdirs, cconfs);
 }
 
 static int get_bno_from_sdirs(struct sdirs *sdirs)

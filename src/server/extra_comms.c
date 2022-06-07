@@ -495,6 +495,13 @@ int extra_comms(struct async *as,
 	if(extra_comms_read(as, &vers, srestore, incexc, confs, cconfs))
 		goto error;
 
+		
+	if(get_e_rshash(cconfs[OPT_RSHASH])==RSHASH_UNSET)
+	{
+		set_e_rshash(confs[OPT_RSHASH], RSHASH_MD4);
+		set_e_rshash(cconfs[OPT_RSHASH], RSHASH_MD4);
+	}
+
 	if(check_seed(asfd, cconfs))
 		goto error;
 

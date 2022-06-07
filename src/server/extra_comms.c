@@ -124,6 +124,10 @@ static int send_features(struct asfd *asfd, struct conf **cconfs,
 	if(append_to_feat(&feat, "msg:"))
 		goto end;
 
+	// We only support protocol1.
+	if(append_to_feat(&feat, "forceproto=1:"))
+		goto end;
+
 #ifdef HAVE_BLAKE2
 	if(append_to_feat(&feat, "rshash=blake2:"))
 		goto end;

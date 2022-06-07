@@ -153,7 +153,7 @@ static const char *get_features(int srestore, const char *version)
 	if(version && !strcmp(version, "1.4.40"))
 		old_version=1;
 
-	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:failover:vss_restore:regex_icase:%s%smsg:%sseed:", srestore?"srestore:":"", old_version?"":"counters_json:", rshash);
+	snprintf(features, sizeof(features), "extra_comms_begin ok:autoupgrade:incexc:orig_client:uname:failover:vss_restore:regex_icase:%s%smsg:forceproto=1:%sseed:", srestore?"srestore:":"", old_version?"":"counters_json:", rshash);
 	return features;
 }
 

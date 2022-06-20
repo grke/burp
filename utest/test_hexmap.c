@@ -4,17 +4,21 @@
 #include <stdio.h>
 #include <openssl/md5.h>
 #include "test.h"
+#include "../src/alloc.h"
 #include "../src/hexmap.h"
 
 START_TEST(test_md5sum_of_empty_string)
 {
-	MD5_CTX md5;
+	MD5_CTX *md5=NULL;
 	uint8_t checksum[MD5_DIGEST_LENGTH];
 
-	MD5_Init(&md5);
-	MD5_Final(checksum, &md5);
+	md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__);
+	fail_unless(md5!=NULL);
+	MD5_Init(md5);
+	MD5_Final(checksum, md5);
 	hexmap_init();
-	fail_unless(!memcmp(md5sum_of_empty_string, &md5, MD5_DIGEST_LENGTH));
+	fail_unless(!memcmp(md5sum_of_empty_string, md5, MD5_DIGEST_LENGTH));
+	free_v((void **)&md5);
 }
 END_TEST
 

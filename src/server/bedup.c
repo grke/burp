@@ -181,7 +181,8 @@ static int full_match(struct file *o, struct file *n,
 
 static int get_part_cksum(struct file *f, struct fzp **fzp)
 {
-	MD5_CTX md5;
+	MD5_CTX *md5=NULL;
+	int ret=-1;
 	int got=0;
 	static char buf[PART_CHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
@@ -193,24 +194,26 @@ static int get_part_cksum(struct file *f, struct fzp **fzp)
 		return 0;
 	}
 
-	if(!MD5_Init(&md5))
+	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__)))
+		goto end;
+	if(!MD5_Init(md5))
 	{
 		logp("MD5_Init() failed\n");
-		return -1;
+		goto end;
 	}
 
 	got=fzp_read(*fzp, buf, PART_CHUNK);
 
-	if(!MD5_Update(&md5, buf, got))
+	if(!MD5_Update(md5, buf, got))
 	{
 		logp("MD5_Update() failed\n");
-		return -1;
+		goto end;
 	}
 
-	if(!MD5_Final(checksum, &md5))
+	if(!MD5_Final(checksum, md5))
 	{
 		logp("MD5_Final() failed\n");
-		return -1;
+		goto end;
 	}
 
 	memcpy(&(f->part_cksum), checksum, sizeof(unsigned));
@@ -219,13 +222,17 @@ static int get_part_cksum(struct file *f, struct fzp **fzp)
 	// again if we already read the whole file.
 	if(got<PART_CHUNK) f->full_cksum=f->part_cksum;
 
-	return 0;
+	ret=0;
+end:
+	free_v((void **)&md5);
+	return ret;
 }
 
 static int get_full_cksum(struct file *f, struct fzp **fzp)
 {
 	size_t s=0;
-	MD5_CTX md5;
+	int ret=-1;
+	MD5_CTX *md5=NULL;
 	static char buf[FULL_CHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
@@ -236,30 +243,35 @@ static int get_full_cksum(struct file *f, struct fzp **fzp)
 		return 0;
 	}
 
-	if(!MD5_Init(&md5))
+	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__)))
+		goto end;
+	if(!MD5_Init(md5))
 	{
 		logp("MD5_Init() failed\n");
-		return -1;
+		goto end;
 	}
 
 	while((s=fzp_read(*fzp, buf, FULL_CHUNK))>0)
 	{
-		if(!MD5_Update(&md5, buf, s))
+		if(!MD5_Update(md5, buf, s))
 		{
 			logp("MD5_Update() failed\n");
-			return -1;
+			goto end;
 		}
 		if(s<FULL_CHUNK) break;
 	}
 
-	if(!MD5_Final(checksum, &md5))
+	if(!MD5_Final(checksum, md5))
 	{
 		logp("MD5_Final() failed\n");
-		return -1;
+		goto end;
 	}
 
 	memcpy(&(f->full_cksum), checksum, sizeof(unsigned));
 
+	ret=0;
+end:
+	free_v((void **)&md5);
 	return 0;
 }
 

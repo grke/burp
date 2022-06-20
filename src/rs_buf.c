@@ -57,7 +57,8 @@ rs_filebuf_t *rs_filebuf_new(struct BFILE *bfd,
 	rs_filebuf_t *pf=NULL;
 	if(!(pf=(struct rs_filebuf *)calloc_w(1,
 		sizeof(struct rs_filebuf), __func__))
-	  || !(pf->buf=(char *)calloc_w(1, buf_len, __func__)))
+	  || !(pf->buf=(char *)calloc_w(1, buf_len, __func__))
+	  || !(pf->md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__)))
 		goto error;
 	pf->buf_len=buf_len;
 	pf->fzp=fzp;
@@ -68,7 +69,7 @@ rs_filebuf_t *rs_filebuf_new(struct BFILE *bfd,
 		pf->do_known_byte_count=1;
 	else
 		pf->do_known_byte_count=0;
-	if(!MD5_Init(&(pf->md5)))
+	if(!MD5_Init(pf->md5))
 	{
 		logp("MD5_Init() failed\n");
 		goto error;
@@ -84,7 +85,8 @@ void rs_filebuf_free(rs_filebuf_t **fb)
 {
 	if(!fb || !*fb) return;
 	free_w(&((*fb)->buf));
-        free_v((void **)fb);
+	free_v((void **)&((*fb)->md5));
+	free_v((void **)fb);
 }
 
 /*
@@ -196,7 +198,7 @@ rs_result rs_infilebuf_fill(__attribute__ ((unused)) rs_job_t *job,
 		}
 		//logp("bread: ok: %d\n", len);
 		fb->bytes+=len;
-		if(!MD5_Update(&(fb->md5), fb->buf, len))
+		if(!MD5_Update(fb->md5, fb->buf, len))
 		{
 			logp("rs_infilebuf_fill: MD5_Update() failed\n");
 			return RS_IO_ERROR;
@@ -220,7 +222,7 @@ rs_result rs_infilebuf_fill(__attribute__ ((unused)) rs_job_t *job,
 			}
 		}
 		fb->bytes+=len;
-		if(!MD5_Update(&(fb->md5), fb->buf, len))
+		if(!MD5_Update(fb->md5, fb->buf, len))
 		{
 			logp("rs_infilebuf_fill: MD5_Update() failed\n");
 			return RS_IO_ERROR;

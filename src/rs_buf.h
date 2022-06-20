@@ -44,7 +44,7 @@ struct rs_filebuf
 	uint64_t bytes;
 	size_t data_len;
 	int do_known_byte_count;
-	MD5_CTX md5;
+	MD5_CTX *md5;
 	struct asfd *asfd;
 };
 

@@ -82,16 +82,6 @@ static int do_inflate(struct asfd *asfd,
 
 		if(do_write(asfd, bfd, out, have, metadata, sent))
 			return -1;
-/*
-		if(md5)
-		{
-			if(!MD5_Update(md5, out, have))
-			{
-				logp("MD5 update error\n");
-				return -1;
-			}
-		}
-*/
 	} while(!zstrm->avail_out);
 	return 0;
 }
@@ -181,7 +171,6 @@ int transfer_gzfile_inl(struct asfd *asfd,
 	int ret=-1;
 	uint8_t out[ZCHUNK];
 	int doutlen=0;
-	//uint8_t doutbuf[1000+EVP_MAX_BLOCK_LENGTH];
 	uint8_t doutbuf[ZCHUNK-EVP_MAX_BLOCK_LENGTH];
 	struct iobuf *rbuf=asfd->rbuf;
 
@@ -189,20 +178,10 @@ int transfer_gzfile_inl(struct asfd *asfd,
 
 	EVP_CIPHER_CTX *enc_ctx=NULL;
 
-	// Checksum stuff
-	//MD5_CTX md5;
-	//uint8_t checksum[MD5_DIGEST_LENGTH];
-
 #ifdef HAVE_WIN32
 	if(sb && sb->path.cmd==CMD_EFS_FILE)
 		return transfer_efs_in(asfd, bfd, rcvd, sent, cntr);
 #endif
-
-	//if(!MD5_Init(&md5))
-	//{
-	//	logp("MD5_Init() failed");
-	//	return -1;
-	//}
 
 	zstrm.zalloc=Z_NULL;
 	zstrm.zfree=Z_NULL;
@@ -253,29 +232,12 @@ int transfer_gzfile_inl(struct asfd *asfd,
 				{
 					size_t lentouse;
 					uint8_t *buftouse=NULL;
-/*
-					if(!MD5_Update(&md5, rbuf->buf, rbuf->len))
-					{
-						logp("MD5 update enc error\n");
-						quit++; ret=-1;
-						break;
-					}
-*/
 					// If doing decryption, it needs
 					// to be done before uncompressing.
 					if(enc_ctx)
 					{
 					  // updating our checksum needs to
 					  // be done first
-/*
-					  if(!MD5_Update(&md5, rbuf->buf, rbuf->len))
-					  {
-						logp("MD5 update enc error\n");
-						quit++; ret=-1;
-						break;
-					  }
-					  else 
-*/
 					  if(!EVP_CipherUpdate(enc_ctx,
 						doutbuf, &doutlen,
 						(uint8_t *)rbuf->buf,
@@ -327,26 +289,6 @@ int transfer_gzfile_inl(struct asfd *asfd,
 						break;
 					}
 				}
-/*
-				if(MD5_Final(checksum, &md5))
-				{
-					char *oldsum=NULL;
-					const char *newsum=NULL;
-
-					if((oldsum=strchr(buf, ':')))
-					{
-						oldsum++;
-						newsum=bytes_to_md5str(checksum);
-						// log if the checksum differed
-						if(strcmp(newsum, oldsum))
-							logw(asfd, cntr, "md5sum for '%s' did not match! (%s!=%s)\n", path, newsum, oldsum);
-					}
-				}
-				else
-				{
-					logp("MD5_Final() failed\n");
-				}
-*/
 				quit++;
 				ret=0;
 				break;

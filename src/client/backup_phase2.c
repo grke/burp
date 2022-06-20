@@ -115,7 +115,7 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 			case RS_DONE:
 				*bytes=infb->bytes;
 				*sentbytes=outfb->bytes;
-				if(!MD5_Final(checksum, &(infb->md5)))
+				if(!MD5_Final(checksum, infb->md5))
 				{
 					logp("MD5_Final() failed\n");
 					goto end;

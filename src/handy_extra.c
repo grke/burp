@@ -144,7 +144,7 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 {
 	enum send_e ret=SEND_OK;
 	int zret=0;
-	MD5_CTX md5;
+	MD5_CTX *md5=NULL;
 	size_t metalen=0;
 	const char *metadata=NULL;
 	struct iobuf wbuf;
@@ -170,9 +170,14 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	  && !(enc_ctx=enc_setup(1, encpassword, key_deriv, salt)))
 		return SEND_FATAL;
 
-	if(!MD5_Init(&md5))
+	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__))) {
+		return SEND_FATAL;
+	}
+
+	if(!MD5_Init(md5))
 	{
 		logp("MD5_Init() failed\n");
+		free_v((void **)&md5);
 		return SEND_FATAL;
 	}
 
@@ -188,8 +193,10 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
 	if((zret=deflateInit2(&strm, compression, Z_DEFLATED, (15+16),
-		8, Z_DEFAULT_STRATEGY))!=Z_OK)
+		8, Z_DEFAULT_STRATEGY))!=Z_OK) {
+			free_v((void **)&md5);
 			return SEND_FATAL;
+	}
 
 	do
 	{
@@ -242,7 +249,7 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 		// The checksum needs to be later if encryption is being used.
 		if(!enc_ctx)
 		{
-			if(!MD5_Update(&md5, in, strm.avail_in))
+			if(!MD5_Update(md5, in, strm.avail_in))
 			{
 				logp("MD5_Update() failed\n");
 				ret=SEND_FATAL;
@@ -286,7 +293,7 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 			if(enc_ctx)
 			{
 				if(do_encryption(asfd, enc_ctx, out, have,
-					eoutbuf, &eoutlen, &md5))
+					eoutbuf, &eoutlen, md5))
 				{
 					ret=SEND_FATAL;
 					break;
@@ -349,7 +356,7 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 					(char *)eoutbuf, (size_t)eoutlen);
 				if(asfd->write(asfd, &wbuf))
 					ret=SEND_FATAL;
-				else if(!MD5_Update(&md5, eoutbuf, eoutlen))
+				else if(!MD5_Update(md5, eoutbuf, eoutlen))
 				{
 					logp("MD5_Update() failed\n");
 					ret=SEND_FATAL;
@@ -371,14 +378,16 @@ cleanup:
 	if(ret==SEND_OK)
 	{
 		uint8_t checksum[MD5_DIGEST_LENGTH];
-		if(!MD5_Final(checksum, &md5))
+		if(!MD5_Final(checksum, md5))
 		{
 			logp("MD5_Final() failed\n");
+			free_v((void **)&md5);
 			return SEND_FATAL;
 		}
 		if(write_endfile(asfd, *bytes, checksum))
 			return SEND_FATAL;
 	}
+	free_v((void **)&md5);
 	return ret;
 }
 
@@ -432,7 +441,7 @@ enum send_e send_whole_filel(struct asfd *asfd,
 {
 	enum send_e ret=SEND_OK;
 	ssize_t s=0;
-	MD5_CTX md5;
+	MD5_CTX *md5=NULL;
 	char buf[4096]="";
 	struct iobuf wbuf;
 
@@ -442,9 +451,13 @@ enum send_e send_whole_filel(struct asfd *asfd,
 		return SEND_FATAL;
 	}
 
-	if(!MD5_Init(&md5))
+	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__))) {
+		return SEND_FATAL;
+	}
+	if(!MD5_Init(md5))
 	{
 		logp("MD5_Init() failed\n");
+		free_v((void **)&md5);
 		return SEND_FATAL;
 	}
 
@@ -462,7 +475,7 @@ enum send_e send_whole_filel(struct asfd *asfd,
 			if(metalen>ZCHUNK) s=ZCHUNK;
 			else s=metalen;
 
-			if(!MD5_Update(&md5, metadata, s))
+			if(!MD5_Update(md5, metadata, s))
 			{
 				logp("MD5_Update() failed\n");
 				ret=SEND_FATAL;
@@ -483,7 +496,7 @@ enum send_e send_whole_filel(struct asfd *asfd,
 		if(ret==SEND_OK && cmd==CMD_EFS_FILE)
 		{
 			struct winbuf mybuf;
-			mybuf.md5=&md5;
+			mybuf.md5=md5;
 			mybuf.quick_read=quick_read;
 			mybuf.datapth=datapth;
 			mybuf.cntr=cntr;
@@ -539,7 +552,7 @@ enum send_e send_whole_filel(struct asfd *asfd,
 			}
 
 			*bytes+=s;
-			if(!MD5_Update(&md5, buf, s))
+			if(!MD5_Update(md5, buf, s))
 			{
 				logp("MD5_Update() failed\n");
 				ret=SEND_FATAL;
@@ -576,13 +589,15 @@ enum send_e send_whole_filel(struct asfd *asfd,
 	if(ret!=SEND_FATAL)
 	{
 		uint8_t checksum[MD5_DIGEST_LENGTH];
-		if(!MD5_Final(checksum, &md5))
+		if(!MD5_Final(checksum, md5))
 		{
 			logp("MD5_Final() failed\n");
+			free_v((void **)&md5);
 			return SEND_FATAL;
 		}
 		if(write_endfile(asfd, *bytes, checksum))
 			return SEND_FATAL;
 	}
+	free_v((void **)&md5);
 	return ret;
 }

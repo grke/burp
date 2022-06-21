@@ -36,7 +36,6 @@ static struct sdirs *setup(void)
 	struct sdirs *sdirs;
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 	fail_unless(!recursive_delete(BASE));
 	fail_unless((sdirs=sdirs_alloc())!=NULL);
 	do_sdirs_init(sdirs);

@@ -248,7 +248,6 @@ static void run_test(int expected_ret,
 	struct slist *slist=NULL;
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 	setup(&as, &sdirs, &confs);
 	asfd=asfd_mock_setup(&reads, &writes);
 	as->asfd_add(as, asfd);
@@ -349,7 +348,6 @@ static void run_test_changed(int expected_ret,
 	struct slist *slist=NULL;
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 	setup(&as, &sdirs, &confs);
 	asfd=asfd_mock_setup(&reads, &writes);
 	as->asfd_add(as, asfd);

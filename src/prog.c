@@ -528,7 +528,6 @@ int real_main(int argc, char *argv[])
 		goto end;
 
 	base64_init();
-	hexmap_init();
 
 	if(mode==BURP_MODE_SERVER)
 	{

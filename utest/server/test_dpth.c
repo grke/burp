@@ -26,7 +26,6 @@ static void assert_components(struct dpth *dpth,
 static struct dpth *setup(void)
 {
 	struct dpth *dpth;
-	hexmap_init();
 	fail_unless(recursive_delete(basepath)==0);
 	fail_unless((dpth=dpth_alloc())!=NULL);
 	assert_components(dpth, 0, 0, 0);

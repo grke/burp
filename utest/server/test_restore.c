@@ -137,7 +137,6 @@ static void run_test(int expected_ret,
 	char *dir_for_notify=NULL;
         prng_init(0);
         base64_init();
-        hexmap_init();
         setup(&as, &sdirs, &confs);
 	set_string(confs[OPT_BACKUP], "1");
         asfd=asfd_mock_setup(&reads, &writes);

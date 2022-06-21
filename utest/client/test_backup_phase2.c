@@ -282,7 +282,6 @@ static void run_test(int expected_ret,
 
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 
 	as=setup_async();
 	confs=setup_conf();

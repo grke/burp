@@ -216,7 +216,6 @@ static void last_good_entry(void setup_slist(struct slist *, int *))
 
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 	fail_unless(!recursive_delete(path));
 
 	fail_unless((slist=slist_alloc())!=NULL);
@@ -430,7 +429,6 @@ static void go_past_entry(void setup_slist(struct slist *, int *))
 
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 	fail_unless(!recursive_delete(path));
 
 	fail_unless((slist=slist_alloc())!=NULL);
@@ -616,7 +614,6 @@ static void go_before_entry(
 
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 	fail_unless(!recursive_delete(path));
 
 	fail_unless((slist=slist_alloc())!=NULL);

@@ -80,7 +80,6 @@ static void test_manifest(int phase)
 	int entries=1000;
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 	recursive_delete(path);
 
 	slist=build_manifest(path, entries, phase);
@@ -124,7 +123,6 @@ static void test_manifest_tell_seek(int phase)
 	int entries=1000;
 	prng_init(0);
 	base64_init();
-	hexmap_init();
 	recursive_delete(path);
 
 	slist=build_manifest(path, entries, phase);

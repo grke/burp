@@ -7,6 +7,7 @@
 #include "../fzp.h"
 #include "../lock.h"
 #include "../log.h"
+#include "../md5.h"
 #include "../prepend.h"
 #include "../strlist.h"
 #include "bedup.h"
@@ -181,7 +182,7 @@ static int full_match(struct file *o, struct file *n,
 
 static int get_part_cksum(struct file *f, struct fzp **fzp)
 {
-	MD5_CTX *md5=NULL;
+	struct md5 *md5=NULL;
 	int ret=-1;
 	int got=0;
 	static char buf[PART_CHUNK];
@@ -194,25 +195,25 @@ static int get_part_cksum(struct file *f, struct fzp **fzp)
 		return 0;
 	}
 
-	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__)))
+	if(!(md5=md5_alloc(__func__)))
 		goto end;
-	if(!MD5_Init(md5))
+	if(!md5_init(md5))
 	{
-		logp("MD5_Init() failed\n");
+		logp("md5_init() failed\n");
 		goto end;
 	}
 
 	got=fzp_read(*fzp, buf, PART_CHUNK);
 
-	if(!MD5_Update(md5, buf, got))
+	if(!md5_update(md5, buf, got))
 	{
-		logp("MD5_Update() failed\n");
+		logp("md5_update() failed\n");
 		goto end;
 	}
 
-	if(!MD5_Final(checksum, md5))
+	if(!md5_final(md5, checksum))
 	{
-		logp("MD5_Final() failed\n");
+		logp("md5_final() failed\n");
 		goto end;
 	}
 
@@ -224,7 +225,7 @@ static int get_part_cksum(struct file *f, struct fzp **fzp)
 
 	ret=0;
 end:
-	free_v((void **)&md5);
+	md5_free(&md5);
 	return ret;
 }
 
@@ -232,7 +233,7 @@ static int get_full_cksum(struct file *f, struct fzp **fzp)
 {
 	size_t s=0;
 	int ret=-1;
-	MD5_CTX *md5=NULL;
+	struct md5 *md5=NULL;
 	static char buf[FULL_CHUNK];
 	unsigned char checksum[MD5_DIGEST_LENGTH+1];
 
@@ -243,27 +244,27 @@ static int get_full_cksum(struct file *f, struct fzp **fzp)
 		return 0;
 	}
 
-	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__)))
+	if(!(md5=md5_alloc(__func__)))
 		goto end;
-	if(!MD5_Init(md5))
+	if(!md5_init(md5))
 	{
-		logp("MD5_Init() failed\n");
+		logp("md5_init() failed\n");
 		goto end;
 	}
 
 	while((s=fzp_read(*fzp, buf, FULL_CHUNK))>0)
 	{
-		if(!MD5_Update(md5, buf, s))
+		if(!md5_update(md5, buf, s))
 		{
-			logp("MD5_Update() failed\n");
+			logp("md5_update() failed\n");
 			goto end;
 		}
 		if(s<FULL_CHUNK) break;
 	}
 
-	if(!MD5_Final(checksum, md5))
+	if(!md5_final(md5, checksum))
 	{
-		logp("MD5_Final() failed\n");
+		logp("md5_final() failed\n");
 		goto end;
 	}
 
@@ -271,8 +272,8 @@ static int get_full_cksum(struct file *f, struct fzp **fzp)
 
 	ret=0;
 end:
-	free_v((void **)&md5);
-	return 0;
+	md5_free(&md5);
+	return ret;
 }
 
 /* Make it atomic by linking to a temporary file, then moving it into place. */

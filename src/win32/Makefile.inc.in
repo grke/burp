@@ -85,6 +85,13 @@ LIBS_SSL := \
 LIBS_CRYPTO := \
 	$(DEPKGS)/lib/libcrypto.dll.a
 
+# Not ready yet
+#LIBS_SSL := \
+#	$(DEPKGS)/lib64/libssl.dll.a
+#
+#LIBS_CRYPTO := \
+#	$(DEPKGS)/lib64/libcrypto.dll.a
+
 LIBS_RSYNC := \
 	$(DEPKGS)/lib/librsync.a
 

@@ -314,6 +314,8 @@ Function InstallCommonFiles
 		File "${SRC_DIR}\bin\${PACKAGE_TARNAME}_ca.bat"
 		File "${SRC_DIR}\bin\${PACKAGE_TARNAME}.exe"
 		File "${SRC_DIR}\bin\${SSL_DLL}"
+; Not ready yet
+;		File "${SRC_DIR}\bin\ossl-modules\${SSL_LEGACY_DLL}"
 		File "${SRC_DIR}\bin\utest.exe"
 		File "${SRC_DIR}\bin\zlib1.dll"
 		StrCpy $CommonFilesDone 1

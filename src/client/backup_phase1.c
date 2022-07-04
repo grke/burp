@@ -223,7 +223,7 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs)
 
 	if(get_string(confs[OPT_ENCRYPTION_PASSWORD]))
 	{
-		encryption=ENCRYPTION_KEY_DERIVED;
+		encryption=ENCRYPTION_KEY_DERIVED_AES_CBC_256;
 		filesymbol=CMD_ENC_FILE;
 		metasymbol=CMD_ENC_METADATA;
 #ifdef HAVE_WIN32

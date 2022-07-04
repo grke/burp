@@ -31,8 +31,8 @@ static int do_restore_file_or_get_meta(struct asfd *asfd, struct BFILE *bfd,
 	if(sbuf_is_encrypted(sb))
 	{
 		encpassword=encryption_password;
-		if(sb->encryption==ENCRYPTION_KEY_DERIVED)
-			key_deriv=1;
+		if(sb->encryption>ENCRYPTION_NONE)
+			key_deriv=sb->encryption;
 	}
 	enccompressed=dpth_is_compressed(sb->compression,
 		sb->datapth.buf);

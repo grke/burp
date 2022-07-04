@@ -1,5 +1,4 @@
-IMPORTANT: Run the script 'test_self' whilst standing in the same directory as
-the script.
+Run the script 'test_self'.
 
 It will copy the source from the parent directory into 'build', and then
 install it into 'target'.

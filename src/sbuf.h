@@ -33,9 +33,10 @@
 #define SBUF_RECV_DELTA			0x1000
 #define SBUF_CLIENT_RESTORE_HACK	0x2000
 
-#define ENCRYPTION_UNSET	-1 // Also legacy
-#define ENCRYPTION_NONE		0
-#define ENCRYPTION_KEY_DERIVED	1
+#define ENCRYPTION_UNSET			-1 // Also legacy
+#define ENCRYPTION_NONE				0
+#define ENCRYPTION_KEY_DERIVED_BF_CBC		1 // Legacy
+#define ENCRYPTION_KEY_DERIVED_AES_CBC_256	2
 
 typedef struct sbuf sbuf_t;
 

@@ -8,11 +8,19 @@
 #include "hexmap.h"
 #include "iobuf.h"
 #include "log.h"
+#include "md5.h"
 #include "handy_extra.h"
+#include "sbuf.h"
+
+/* Not ready yet
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/provider.h>
+#endif
+*/
 
 static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	uint8_t *inbuf, int inlen, uint8_t *outbuf, int *outlen,
-	MD5_CTX *md5)
+	struct md5 *md5)
 {
 	if(!inlen) return 0;
 	if(!EVP_CipherUpdate(ctx, outbuf, outlen, inbuf, inlen))
@@ -26,9 +34,9 @@ static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 		iobuf_set(&wbuf, CMD_APPEND, (char *)outbuf, *outlen);
 		if(asfd->write(asfd, &wbuf))
 			return -1;
-		if(!MD5_Update(md5, outbuf, *outlen))
+		if(!md5_update(md5, outbuf, *outlen))
 		{
-			logp("MD5_Update() failed\n");
+			logp("md5_update() failed\n");
 			return -1;
 		}
 	}
@@ -41,9 +49,22 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
 	uint8_t enc_iv[9];
 	uint8_t enc_key[256];
 	EVP_CIPHER_CTX *ctx=NULL;
-	const EVP_CIPHER *cipher=EVP_bf_cbc();
+	const EVP_CIPHER *cipher=NULL;
 	int key_len;
-	
+
+	switch(key_deriv)
+	{
+		case ENCRYPTION_KEY_DERIVED_BF_CBC:
+			cipher=EVP_bf_cbc();
+			break;
+		case ENCRYPTION_KEY_DERIVED_AES_CBC_256:
+			cipher=EVP_aes_256_cbc();
+			break;
+		default:
+			logp("Could not determine cipher from: %d\n", key_deriv);
+			break;
+	}
+
 	if(!encryption_password)
 	{
 		logp("No encryption password in %s()\n", __func__);
@@ -80,7 +101,10 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
 	}
 
 	if(!(ctx=(EVP_CIPHER_CTX *)EVP_CIPHER_CTX_new()))
+	{
+		logp("EVP_CIPHER_CTX_new() failed\n");
 		goto error;
+	}
 
 	// Don't set key or IV because we will modify the parameters.
 	EVP_CIPHER_CTX_init(ctx);
@@ -144,7 +168,7 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 {
 	enum send_e ret=SEND_OK;
 	int zret=0;
-	MD5_CTX *md5=NULL;
+	struct md5 *md5=NULL;
 	size_t metalen=0;
 	const char *metadata=NULL;
 	struct iobuf wbuf;
@@ -170,14 +194,13 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	  && !(enc_ctx=enc_setup(1, encpassword, key_deriv, salt)))
 		return SEND_FATAL;
 
-	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__))) {
+	if(!(md5=md5_alloc(__func__)))
 		return SEND_FATAL;
-	}
 
-	if(!MD5_Init(md5))
+	if(!md5_init(md5))
 	{
-		logp("MD5_Init() failed\n");
-		free_v((void **)&md5);
+		logp("md5_init() failed\n");
+		md5_free(&md5);
 		return SEND_FATAL;
 	}
 
@@ -194,7 +217,7 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 	strm.opaque = Z_NULL;
 	if((zret=deflateInit2(&strm, compression, Z_DEFLATED, (15+16),
 		8, Z_DEFAULT_STRATEGY))!=Z_OK) {
-			free_v((void **)&md5);
+			md5_free(&md5);
 			return SEND_FATAL;
 	}
 
@@ -249,9 +272,9 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 		// The checksum needs to be later if encryption is being used.
 		if(!enc_ctx)
 		{
-			if(!MD5_Update(md5, in, strm.avail_in))
+			if(!md5_update(md5, in, strm.avail_in))
 			{
-				logp("MD5_Update() failed\n");
+				logp("md5_update() failed\n");
 				ret=SEND_FATAL;
 				break;
 			}
@@ -356,9 +379,9 @@ enum send_e send_whole_file_gzl(struct asfd *asfd, const char *datapth,
 					(char *)eoutbuf, (size_t)eoutlen);
 				if(asfd->write(asfd, &wbuf))
 					ret=SEND_FATAL;
-				else if(!MD5_Update(md5, eoutbuf, eoutlen))
+				else if(!md5_update(md5, eoutbuf, eoutlen))
 				{
-					logp("MD5_Update() failed\n");
+					logp("md5_update() failed\n");
 					ret=SEND_FATAL;
 				}
 			}
@@ -378,23 +401,23 @@ cleanup:
 	if(ret==SEND_OK)
 	{
 		uint8_t checksum[MD5_DIGEST_LENGTH];
-		if(!MD5_Final(checksum, md5))
+		if(!md5_final(md5, checksum))
 		{
-			logp("MD5_Final() failed\n");
-			free_v((void **)&md5);
+			logp("md5_final() failed\n");
+			md5_free(&md5);
 			return SEND_FATAL;
 		}
 		if(write_endfile(asfd, *bytes, checksum))
 			return SEND_FATAL;
 	}
-	free_v((void **)&md5);
+	md5_free(&md5);
 	return ret;
 }
 
 #ifdef HAVE_WIN32
 struct winbuf
 {
-	MD5_CTX *md5;
+	struct md5 *md5;
 	int quick_read;
 	const char *datapth;
 	struct cntr *cntr;
@@ -408,9 +431,9 @@ static DWORD WINAPI write_efs(PBYTE pbData,
 	struct iobuf wbuf;
 	struct winbuf *mybuf=(struct winbuf *)pvCallbackContext;
 	(*(mybuf->bytes))+=ulLength;
-	if(!MD5_Update(mybuf->md5, pbData, ulLength))
+	if(!md5_update(mybuf->md5, pbData, ulLength))
 	{
-		logp("MD5_Update() failed\n");
+		logp("md5_update() failed\n");
 		return ERROR_FUNCTION_FAILED;
 	}
 	iobuf_set(&wbuf, CMD_APPEND, (char *)pbData, (size_t)ulLength);
@@ -441,7 +464,7 @@ enum send_e send_whole_filel(struct asfd *asfd,
 {
 	enum send_e ret=SEND_OK;
 	ssize_t s=0;
-	MD5_CTX *md5=NULL;
+	struct md5 *md5=NULL;
 	char buf[4096]="";
 	struct iobuf wbuf;
 
@@ -451,13 +474,12 @@ enum send_e send_whole_filel(struct asfd *asfd,
 		return SEND_FATAL;
 	}
 
-	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__))) {
+	if(!(md5=md5_alloc(__func__)))
 		return SEND_FATAL;
-	}
-	if(!MD5_Init(md5))
+	if(!md5_init(md5))
 	{
-		logp("MD5_Init() failed\n");
-		free_v((void **)&md5);
+		logp("md5_init() failed\n");
+		md5_free(&md5);
 		return SEND_FATAL;
 	}
 
@@ -475,9 +497,9 @@ enum send_e send_whole_filel(struct asfd *asfd,
 			if(metalen>ZCHUNK) s=ZCHUNK;
 			else s=metalen;
 
-			if(!MD5_Update(md5, metadata, s))
+			if(!md5_update(md5, metadata, s))
 			{
-				logp("MD5_Update() failed\n");
+				logp("md5_update() failed\n");
 				ret=SEND_FATAL;
 			}
 			iobuf_set(&wbuf, CMD_APPEND, (char *)metadata, s);
@@ -552,9 +574,9 @@ enum send_e send_whole_filel(struct asfd *asfd,
 			}
 
 			*bytes+=s;
-			if(!MD5_Update(md5, buf, s))
+			if(!md5_update(md5, buf, s))
 			{
-				logp("MD5_Update() failed\n");
+				logp("md5_update() failed\n");
 				ret=SEND_FATAL;
 				break;
 			}
@@ -589,15 +611,15 @@ enum send_e send_whole_filel(struct asfd *asfd,
 	if(ret!=SEND_FATAL)
 	{
 		uint8_t checksum[MD5_DIGEST_LENGTH];
-		if(!MD5_Final(checksum, md5))
+		if(!md5_final(md5, checksum))
 		{
-			logp("MD5_Final() failed\n");
-			free_v((void **)&md5);
+			logp("md5_final() failed\n");
+			md5_free(&md5);
 			return SEND_FATAL;
 		}
 		if(write_endfile(asfd, *bytes, checksum))
 			return SEND_FATAL;
 	}
-	free_v((void **)&md5);
+	md5_free(&md5);
 	return ret;
 }

@@ -74,6 +74,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/src/linkhash.o \
 	$(OBJDIR)/src/lock.o \
 	$(OBJDIR)/src/log.o \
+	$(OBJDIR)/src/md5.o \
 	$(OBJDIR)/src/msg.o \
 	$(OBJDIR)/src/pathcmp.o \
 	$(OBJDIR)/src/prepend.o \

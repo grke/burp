@@ -7,6 +7,10 @@ include ../Makefile.inc
 ifeq ($(WIN64),yes)
   SSL_DLL := libssl-1_1-x64.dll
   CRYPTO_DLL := libcrypto-1_1-x64.dll
+# Not ready yet
+#  SSL_DLL := libssl-3-x64.dll
+#  SSL_LEGACY_DLL := legacy.dll
+#  CRYPTO_DLL := libcrypto-3-x64.dll
   LIBGCC_DLL := libgcc_s_seh-1.dll
 else
   SSL_DLL := libssl-1_1.dll
@@ -24,7 +28,9 @@ DEFINES := \
 	-DBITS=$(BITS) \
 	-DSSL_DLL=$(SSL_DLL) \
 	-DCRYPTO_DLL=$(CRYPTO_DLL) \
-	-DLIBGCC_DLL=$(LIBGCC_DLL) \
+	-DLIBGCC_DLL=$(LIBGCC_DLL)
+# Not ready yet
+#	-DSSL_LEGACY_DLL=$(SSL_LEGACY_DLL)
 
 INSTALL_EXE := $(BUILDDIR)/release$(BITS)/$(PACKAGE_TARNAME)-win$(BITS)-installer-$(PACKAGE_VERSION).exe
 
@@ -111,6 +117,9 @@ $(INSTALL_EXE): winburp.nsi $(addprefix release$(BITS)/,$(BURP_BINARIES) $(DEPKG
 	mv release$(BITS)/* bin
 	mv bin/*.conf release$(BITS)
 	mv bin release$(BITS)
+# Not ready yet
+#	cp -r /burp/burp-depkgs/mingw-w64-x86_64/lib64/ossl-modules release$(BITS)
+#	$(STAB2CV) release$(BITS)/ossl-modules/$(SSL_LEGACY_DLL)
 	NSISDIR=$(NSIS_DIR) $(NSIS_DIR)/makensis -V3 $(DEFINES) winburp.nsi
 
 include $(BUILDDIR)/Makefile.rules

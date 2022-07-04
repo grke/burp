@@ -73,6 +73,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/lock.o \
 	$(OBJDIR)/log.o \
 	$(OBJDIR)/main.o \
+	$(OBJDIR)/md5.o \
 	$(OBJDIR)/msg.o \
 	$(OBJDIR)/pathcmp.o \
 	$(OBJDIR)/prepend.o \

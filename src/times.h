@@ -3,11 +3,11 @@
 
 #define DEFAULT_TIMESTAMP_FORMAT_OLD	"%Y-%m-%d %H:%M:%S"
 
-// Windows does not seem to support %z.
-#ifdef HAVE_WIN32
-#define DEFAULT_TIMESTAMP_FORMAT DEFAULT_TIMESTAMP_FORMAT_OLD
-#else
+#ifdef __GLIBC__
 #define DEFAULT_TIMESTAMP_FORMAT	"%Y-%m-%d %H:%M:%S %z"
+#else
+// Only glibc supports %z in strptime.
+#define DEFAULT_TIMESTAMP_FORMAT DEFAULT_TIMESTAMP_FORMAT_OLD
 #endif
 
 extern const char *getdatestr(const time_t t);

@@ -162,13 +162,20 @@ static struct sd sd1[] = {
 
 static void assert_bu_minimal(struct bu *bu, struct sd *s)
 {
-	const char *sd_timestamp;
+	const char *cp;
+	const char *cp_end;
 	fail_unless(bu!=NULL);
 	fail_unless(s->bno==bu->bno);
 	fail_unless(s->flags==bu->flags);
-	fail_unless((sd_timestamp=strchr(s->timestamp, ' '))!=NULL);
-	sd_timestamp++;
-	ck_assert_str_eq(sd_timestamp, bu->timestamp);
+	fail_unless((cp=strchr(s->timestamp, ' '))!=NULL);
+	cp++;
+#ifdef __GLIBC__
+	cp_end=s->timestamp+strlen(s->timestamp)-1;
+#else
+	// Only glibc supports %z in strptime.
+	fail_unless((cp_end=strrchr(s->timestamp, ' '))!=NULL);
+#endif
+	fail_unless(strncmp(cp, bu->timestamp, cp_end-cp)==0);
 }
 
 static void do_test_json_clients_with_backup(const char *path,

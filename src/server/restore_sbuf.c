@@ -9,6 +9,7 @@
 #include "../handy_extra.h"
 #include "../hexmap.h"
 #include "../log.h"
+#include "../md5.h"
 #include "../prepend.h"
 #include "../server/backup_phase4.h"
 #include "../server/link.h"
@@ -166,7 +167,7 @@ static
 int verify_file(struct asfd *asfd, struct sbuf *sb,
 	int patches, const char *best, struct cntr *cntr)
 {
-	MD5_CTX *md5=NULL;
+	struct md5 *md5=NULL;
 	int b=0;
 	const char *cp=NULL;
 	const char *newsum=NULL;
@@ -184,13 +185,12 @@ int verify_file(struct asfd *asfd, struct sbuf *sb,
 		return 0;
 	}
 	cp++;
-	if(!(md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__))) {
+	if(!(md5=md5_alloc(__func__)))
 		return -1;
-	}
-	if(!MD5_Init(md5))
+	if(!md5_init(md5))
 	{
-		logp("MD5_Init() failed\n");
-		free_v((void **)&md5);
+		logp("md5_init() failed\n");
+		md5_free(&md5);
 		return -1;
 	}
 	if(patches
@@ -207,17 +207,17 @@ int verify_file(struct asfd *asfd, struct sbuf *sb,
 	if(!fzp)
 	{
 		logw(asfd, cntr, "could not open %s\n", best);
-		free_v((void **)&md5);
+		md5_free(&md5);
 		return 0;
 	}
 	while((b=fzp_read(fzp, in, ZCHUNK))>0)
 	{
 		cbytes+=b;
-		if(!MD5_Update(md5, in, b))
+		if(!md5_update(md5, in, b))
 		{
-			logp("MD5_Update() failed\n");
+			logp("md5_update() failed\n");
 			fzp_close(&fzp);
-			free_v((void **)&md5);
+			md5_free(&md5);
 			return -1;
 		}
 	}
@@ -225,18 +225,18 @@ int verify_file(struct asfd *asfd, struct sbuf *sb,
 	{
 		logw(asfd, cntr, "error while reading %s\n", best);
 		fzp_close(&fzp);
-		free_v((void **)&md5);
+		md5_free(&md5);
 		return 0;
 	}
 	fzp_close(&fzp);
-	if(!MD5_Final(checksum, md5))
+	if(!md5_final(md5, checksum))
 	{
-		logp("MD5_Final() failed\n");
-		free_v((void **)&md5);
+		logp("md5_final() failed\n");
+		md5_free(&md5);
 		return -1;
 	}
 	newsum=bytes_to_md5str(checksum);
-	free_v((void **)&md5);
+	md5_free(&md5);
 
 	if(strcmp(newsum, cp))
 	{

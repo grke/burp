@@ -3,11 +3,8 @@
 # Test a burp client on the same machine as the server, but interact with the
 # client over ssh.
 
-myscript=$(basename $0)
-if [ ! -f "$myscript" ] ; then
-	echo "Please run $myscript whilst standing in the same directory" 1>&2
-	exit 1
-fi
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$DIR"
 
 path="$PWD"
 build="$path/build"

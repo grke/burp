@@ -1,5 +1,12 @@
 Things to watch out for when upgrading.
 
+3.1.2
+-----
+Blowfish has been deprecated by openssl.
+Burp will now encrypt new files with AES-CBC-256, but will still be able
+to decrypt files encrypted with blowfish as long as your openssl library
+supports it.
+
 3.1.0
 -----
 Protocol 2 has been removed.

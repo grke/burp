@@ -155,6 +155,7 @@ main_SOURCES = \
 	src/linkhash.c src/linkhash.h \
 	src/lock.c src/lock.h \
 	src/log.c src/log.h \
+	src/md5.c src/md5.h \
 	src/msg.c src/msg.h \
 	src/pathcmp.c src/pathcmp.h \
 	src/prepend.c src/prepend.h \

@@ -3,11 +3,8 @@
 # Uncomment to get core dumps if segfaults are happening.
 ulimit -c unlimited
 
-myscript=$(basename $0)
-if [ ! -f "$myscript" ] ; then
-	echo "Please run $myscript whilst standing in the same directory" 1>&2
-	exit 1
-fi
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$DIR"
 
 target="$1"
 burpbin="$2"

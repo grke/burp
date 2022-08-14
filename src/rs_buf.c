@@ -42,6 +42,7 @@
 #include "handy.h"
 #include "iobuf.h"
 #include "log.h"
+#include "md5.h"
 
 /* use fseeko instead of fseek for long file support if we have it */
 #ifdef HAVE_FSEEKO
@@ -58,7 +59,7 @@ rs_filebuf_t *rs_filebuf_new(struct BFILE *bfd,
 	if(!(pf=(struct rs_filebuf *)calloc_w(1,
 		sizeof(struct rs_filebuf), __func__))
 	  || !(pf->buf=(char *)calloc_w(1, buf_len, __func__))
-	  || !(pf->md5=(MD5_CTX *)calloc_w(1, sizeof(MD5_CTX), __func__)))
+	  || !(pf->md5=md5_alloc(__func__)))
 		goto error;
 	pf->buf_len=buf_len;
 	pf->fzp=fzp;
@@ -69,9 +70,9 @@ rs_filebuf_t *rs_filebuf_new(struct BFILE *bfd,
 		pf->do_known_byte_count=1;
 	else
 		pf->do_known_byte_count=0;
-	if(!MD5_Init(pf->md5))
+	if(!md5_init(pf->md5))
 	{
-		logp("MD5_Init() failed\n");
+		logp("md5_init() failed\n");
 		goto error;
 	}
 	pf->asfd=asfd;
@@ -84,8 +85,8 @@ error:
 void rs_filebuf_free(rs_filebuf_t **fb) 
 {
 	if(!fb || !*fb) return;
+	md5_free(&((*fb)->md5));
 	free_w(&((*fb)->buf));
-	free_v((void **)&((*fb)->md5));
 	free_v((void **)fb);
 }
 
@@ -198,9 +199,9 @@ rs_result rs_infilebuf_fill(__attribute__ ((unused)) rs_job_t *job,
 		}
 		//logp("bread: ok: %d\n", len);
 		fb->bytes+=len;
-		if(!MD5_Update(fb->md5, fb->buf, len))
+		if(!md5_update(fb->md5, fb->buf, len))
 		{
-			logp("rs_infilebuf_fill: MD5_Update() failed\n");
+			logp("rs_infilebuf_fill: md5_update() failed\n");
 			return RS_IO_ERROR;
 		}
 	}
@@ -222,9 +223,9 @@ rs_result rs_infilebuf_fill(__attribute__ ((unused)) rs_job_t *job,
 			}
 		}
 		fb->bytes+=len;
-		if(!MD5_Update(fb->md5, fb->buf, len))
+		if(!md5_update(fb->md5, fb->buf, len))
 		{
-			logp("rs_infilebuf_fill: MD5_Update() failed\n");
+			logp("rs_infilebuf_fill: md5_update() failed\n");
 			return RS_IO_ERROR;
 		}
 	}

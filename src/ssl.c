@@ -34,6 +34,10 @@ int ssl_do_accept(SSL *ssl)
 	}
 }
 
+/* Not ready yet
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+*/
+#if 1
 int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 {
 	DH *ret=0;
@@ -55,6 +59,51 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 	}
 	return 0;
 }
+#else
+#include <openssl/decoder.h>
+int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
+{
+	BIO *bio=NULL;
+	EVP_PKEY *pkey=NULL;
+	OSSL_DECODER_CTX *dctx=NULL;
+	const char *ssl_dhfile=get_string(confs[OPT_SSL_DHFILE]);
+
+	if(!(bio=BIO_new_file(ssl_dhfile, "r")))
+	{
+		logp_ssl_err("Couldn't open ssl_dhfile: %s\n", ssl_dhfile);
+		return -1;
+	}
+	if(!(dctx=OSSL_DECODER_CTX_new_for_pkey(
+		&pkey, "PEM", NULL, "DH",
+		OSSL_KEYMGMT_SELECT_KEYPAIR,
+		NULL, NULL)))
+	{
+		logp_ssl_err("No suitable decoders found for: %s\n", ssl_dhfile);
+		BIO_free(bio);
+		OSSL_DECODER_CTX_free(dctx);
+		return -1;
+	}
+
+	if(!OSSL_DECODER_from_bio(dctx, bio))
+	{
+		logp_ssl_err("Decoding failure for: %s\n", ssl_dhfile);
+		BIO_free(bio);
+		OSSL_DECODER_CTX_free(dctx);
+		return -1;
+
+	}
+
+	if(SSL_CTX_set_tmp_dh(ctx, pkey)<0)
+	{
+		logp_ssl_err("Couldn't set DH parameters");
+		OSSL_DECODER_CTX_free(dctx);
+		return -1;
+	}
+
+	OSSL_DECODER_CTX_free(dctx);
+	return 0;
+}
+#endif
 
 static int password_cb(char *buf, int num,
 	__attribute__ ((unused)) int rwflag,

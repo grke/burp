@@ -27,9 +27,9 @@
 #include "burp.h"
 #include "conf.h"
 #include "bfile.h"
+#include "md5.h"
 
 #include <librsync.h>
-#include <openssl/md5.h>
 
 extern size_t block_len;
 extern size_t strong_len;
@@ -44,7 +44,7 @@ struct rs_filebuf
 	uint64_t bytes;
 	size_t data_len;
 	int do_known_byte_count;
-	MD5_CTX *md5;
+	struct md5 *md5;
 	struct asfd *asfd;
 };
 

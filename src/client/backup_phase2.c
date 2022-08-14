@@ -9,6 +9,7 @@
 #include "../conf.h"
 #include "../handy_extra.h"
 #include "../log.h"
+#include "../md5.h"
 #include "../transfer.h"
 #include "extrameta.h"
 #include "find.h"
@@ -115,9 +116,9 @@ static int load_signature_and_send_delta(struct asfd *asfd,
 			case RS_DONE:
 				*bytes=infb->bytes;
 				*sentbytes=outfb->bytes;
-				if(!MD5_Final(checksum, infb->md5))
+				if(!md5_final(infb->md5, checksum))
 				{
-					logp("MD5_Final() failed\n");
+					logp("md5_final() failed\n");
 					goto end;
 				}
 				if(write_endfile(asfd, *bytes, checksum))
@@ -153,8 +154,7 @@ static enum send_e send_whole_file_w(struct asfd *asfd,
 {
 	if((compression || encpassword) && sb->path.cmd!=CMD_EFS_FILE)
 	{
-		int key_deriv=sb->encryption==ENCRYPTION_KEY_DERIVED;
-
+		int key_deriv=sb->encryption;
 		return send_whole_file_gzl(asfd, datapth, quick_read, bytes,
 		  encpassword, cntr, compression, bfd, extrameta, elen,
 		  key_deriv, sb->salt);
@@ -223,7 +223,7 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	sb->compression=conf_compression;
 	if(enc_password)
 	{
-		sb->encryption=ENCRYPTION_KEY_DERIVED;
+		sb->encryption=ENCRYPTION_KEY_DERIVED_AES_CBC_256;
 		if(!RAND_bytes((uint8_t *)&sb->salt, 8))
 		{
 			logp("RAND_bytes() failed\n");

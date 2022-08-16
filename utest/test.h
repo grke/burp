@@ -85,6 +85,7 @@ Suite *suite_fzp(void);
 Suite *suite_handy_extra(void);
 Suite *suite_hexmap(void);
 Suite *suite_lock(void);
+Suite *suite_md5(void);
 Suite *suite_pathcmp(void);
 Suite *suite_rs_buf(void);
 Suite *suite_server_auth(void);

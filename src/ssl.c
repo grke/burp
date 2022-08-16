@@ -34,10 +34,7 @@ int ssl_do_accept(SSL *ssl)
 	}
 }
 
-/* Not ready yet
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
-*/
-#if 1
 int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 {
 	DH *ret=0;
@@ -84,7 +81,7 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 		return -1;
 	}
 
-	if(!OSSL_DECODER_from_bio(dctx, bio))
+	if(OSSL_DECODER_from_bio(dctx, bio))
 	{
 		logp_ssl_err("Decoding failure for: %s\n", ssl_dhfile);
 		BIO_free(bio);

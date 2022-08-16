@@ -3,10 +3,7 @@
 
 #include <openssl/md5.h>
 
-/* Not ready yet
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
-*/
-#if 1
 struct md5 {
 	MD5_CTX *ctx;
 };

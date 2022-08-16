@@ -4,10 +4,7 @@
 #include "log.h"
 #include "md5.h"
 
-/* Not ready yet
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
-*/
-#if 1
 
 struct md5 *md5_alloc(
 	const char *func
@@ -58,7 +55,7 @@ struct md5 *md5_alloc(
 	struct md5 *md5;
 	if(!(md5=(struct md5 *)calloc_w(1, sizeof(struct md5), func)))
 		return NULL;
-	if((md5->ctx=EVP_MD_CTX_new()))
+	if((md5->ctx=EVP_MD_CTX_create()))
 	{
 #ifdef UTEST
 		alloc_count++;
@@ -75,8 +72,9 @@ void md5_free(
 ) {
 	if(!md5 || !*md5)
 		return;
-	free_v((void **)&(*md5)->ctx);
-	EVP_MD_CTX_free((*md5)->ctx);
+	if ((*md5)->ctx)
+		EVP_MD_CTX_free((*md5)->ctx);
+	free_v((void **)md5);
 #ifdef UTEST
 	alloc_count--;
 #endif
@@ -86,7 +84,7 @@ void md5_free(
 int md5_init(
 	struct md5 *md5
 ) {
-	return EVP_MD_CTX_init(md5->ctx);
+	return EVP_DigestInit_ex(md5->ctx, EVP_md5(), NULL);
 }
 
 int md5_update(

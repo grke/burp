@@ -316,6 +316,7 @@ runner_SOURCES = \
 	utest/test_handy_extra.c \
 	utest/test_hexmap.c \
 	utest/test_lock.c \
+	utest/test_md5.c \
 	utest/test_pathcmp.c \
 	utest/test_rs_buf.c \
 	utest/test_slist.c \

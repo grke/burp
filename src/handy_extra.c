@@ -12,11 +12,9 @@
 #include "handy_extra.h"
 #include "sbuf.h"
 
-/* Not ready yet
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
 #include <openssl/provider.h>
 #endif
-*/
 
 static int do_encryption(struct asfd *asfd, EVP_CIPHER_CTX *ctx,
 	uint8_t *inbuf, int inlen, uint8_t *outbuf, int *outlen,

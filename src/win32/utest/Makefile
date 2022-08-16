@@ -111,6 +111,7 @@ CLIENT_OBJS = \
 	$(OBJDIR)/utest/test_fzp.o \
 	$(OBJDIR)/utest/test_handy_extra.o \
 	$(OBJDIR)/utest/test_hexmap.o \
+	$(OBJDIR)/utest/test_md5.o \
 	$(OBJDIR)/utest/test_pathcmp.o \
 	$(OBJDIR)/utest/test_rs_buf.o \
 	$(OBJDIR)/utest/test_slist.o \

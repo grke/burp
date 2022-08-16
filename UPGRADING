@@ -6,6 +6,8 @@ Blowfish has been deprecated by openssl.
 Burp will now encrypt new files with AES-CBC-256, but will still be able
 to decrypt files encrypted with blowfish as long as your openssl library
 supports it.
+The Windows installer will continue to come with openssl-1.1 for a few months,
+to allow time for people to switch from blowfish.
 
 3.1.0
 -----

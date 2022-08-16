@@ -47,6 +47,7 @@ int main(int argc, char *argv[], char *envp[])
 	srunner_add_suite(sr, suite_fzp());
 	srunner_add_suite(sr, suite_handy_extra());
 	srunner_add_suite(sr, suite_hexmap());
+	srunner_add_suite(sr, suite_md5());
 	srunner_add_suite(sr, suite_pathcmp());
 	srunner_add_suite(sr, suite_rs_buf());
 	srunner_add_suite(sr, suite_slist());

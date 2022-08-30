@@ -1,3 +1,11 @@
+2022-09-01 burp-3.1.2
+  * 904: openssl3 support
+    - And switch to aes-cbc instead of blowfish, which is deprecated, for
+      file encryption
+  * 908: Only glibc supports %z in strptime()
+  * Fix 2.x clients talking to 3.x servers.
+  * Delete heaps more unused code
+
 2022-05-01 burp-3.1.0
   * Remove protocol 2:
     - It hasn't been progressing for a long time, and is mostly just a

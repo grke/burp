@@ -72,9 +72,10 @@ struct FF_PKT
 	char *fname;		/* full filename */
 	long flen;		/* length of name component */
 	char *link;		/* link if file linked */
-	struct stat statp;	/* stat packet */
-	uint64_t winattr;	/* windows attributes */
-	int type;		/* FT_ type from above */
+	struct stat statp;
+	uint8_t type;		/* FT_ type from above */
+	uint8_t use_winapi;
+	uint64_t winattr;
 };
 
 struct asfd;

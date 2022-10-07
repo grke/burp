@@ -254,7 +254,6 @@ void sdirs_free_content(struct sdirs *sdirs)
 	free_w(&sdirs->lockdir);
 	lock_free(&sdirs->lock_storage_for_write);
 
-	// Protocol1 directories.
 	free_w(&sdirs->currentdata);
 	free_w(&sdirs->datadirtmp);
 	free_w(&sdirs->cincexc);

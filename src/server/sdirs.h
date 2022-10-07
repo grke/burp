@@ -48,7 +48,6 @@ struct sdirs
 	// backups/deletes.
 	struct lock *lock_storage_for_write;
 
-	// Protocol1 directories.
 	char *currentdata;
 	char *datadirtmp;
 	char *cincexc;

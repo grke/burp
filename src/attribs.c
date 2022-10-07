@@ -110,6 +110,9 @@ int attribs_encode(struct sbuf *sb)
 	p += to_base64(sb->encryption, p);
 	*p++ = ' ';
 	p += to_base64(sb->salt, p);
+	*p++ = ' ';
+	// 0 means winapi is enabled, 1 means it is disabled.
+	p += to_base64(!sb->use_winapi, p);
 	*p = 0;
 
 	sb->attr.len=p-sb->attr.buf;
@@ -238,6 +241,12 @@ void attribs_decode(struct sbuf *sb)
 		return;
 	p+=eaten;
 	sb->salt=val;
+
+	if(!(eaten=from_base64(&val, p)))
+		return;
+	p+=eaten;
+	// 0 means winapi is enabled, 1 means it is disabled.
+	sb->use_winapi=!val;
 }
 
 int attribs_set_file_times(struct asfd *asfd,

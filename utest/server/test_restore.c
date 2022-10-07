@@ -243,7 +243,7 @@ static void setup_asfds_stuff(struct asfd *asfd, struct slist *slist)
 					"4:8d777f385d3dfec8815d20f7496026dc");
 				continue;
 			}
-			// Protocol1 always sends it gzipped.
+			// It is always sent gzipped.
 			iobuf_set(&wbuf, CMD_APPEND,
 				(char *)gzipped_data1, sizeof(gzipped_data1));
 			asfd_assert_write_iobuf(asfd, &w, 0, &wbuf);

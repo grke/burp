@@ -1,3 +1,12 @@
+2022-11-02 burp-3.1.4
+  * Experimental: Turn off windows api on remote drives
+    - record whether the windows api was used for a file in the manifest
+    - allows burp to backup from a remote drive as long as it is visible
+      + caution: if the drive is not always available, you will back up
+        the same files over and over again
+  * From tassilo:
+    - libressl>3.5 has X509_REVOKED_get0_serialNumber
+
 2022-09-01 burp-3.1.2
   * 904: openssl3 support
     - And switch to aes-cbc instead of blowfish, which is deprecated, for

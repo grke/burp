@@ -48,7 +48,6 @@
 
 static int encryption=ENCRYPTION_NONE;
 static enum cmd filesymbol=CMD_FILE;
-static enum cmd dirsymbol=CMD_DIRECTORY;
 #ifdef HAVE_WIN32
 static enum cmd metasymbol=CMD_VSS;
 static enum cmd vss_trail_symbol=CMD_VSS_T;
@@ -111,12 +110,13 @@ static int do_to_server(struct asfd *asfd,
 	int strip_vss=0;
 	split_vss=get_int(confs[OPT_SPLIT_VSS]);
 	strip_vss=get_int(confs[OPT_STRIP_VSS]);
+	sb->use_winapi=ff->use_winapi;
+	sb->winattr=ff->winattr;
 #endif
 	struct cntr *cntr=get_cntr(confs);
 	sb->compression=compression;
 	sb->encryption=encryption;
 	sb->statp=ff->statp;
-	sb->winattr=ff->winattr;
 	attribs_encode(sb);
 
 #ifdef HAVE_WIN32
@@ -160,6 +160,9 @@ static int my_send_file(struct asfd *asfd, struct FF_PKT *ff, struct conf **conf
 {
 	static struct sbuf *sb=NULL;
 	struct cntr *cntr=get_cntr(confs);
+#ifdef HAVE_WIN32
+	enum cmd dirsymbol=filesymbol;
+#endif
 
 	if(!sb && !(sb=sbuf_alloc())) return -1;
 
@@ -186,7 +189,13 @@ static int my_send_file(struct asfd *asfd, struct FF_PKT *ff, struct conf **conf
 		case FT_DIR:
 		case FT_REPARSE:
 		case FT_JUNCTION:
+#ifdef HAVE_WIN32
+			if (!ff->use_winapi || get_int(confs[OPT_STRIP_VSS]))
+				dirsymbol=CMD_DIRECTORY;
 			return to_server(asfd, confs, ff, sb, dirsymbol);
+#else
+			return to_server(asfd, confs, ff, sb, CMD_DIRECTORY);
+#endif
 		case FT_LNK_S:
 			return to_server(asfd, confs, ff, sb, CMD_SOFT_LINK);
 		case FT_LNK_H:
@@ -231,15 +240,12 @@ int backup_phase1_client(struct asfd *asfd, struct conf **confs)
 		vss_trail_symbol=CMD_ENC_VSS_T;
 #endif
 	}
-#ifdef HAVE_WIN32
-	dirsymbol=filesymbol;
-	if(get_int(confs[OPT_STRIP_VSS]))
-		dirsymbol=CMD_DIRECTORY;
-#endif
 
 	if(!(ff=find_files_init(my_send_file))) goto end;
-	for(l=get_strlist(confs[OPT_STARTDIR]); l; l=l->next) if(l->flag)
-		if(find_files_begin(asfd, ff, confs, l->path)) goto end;
+	for(l=get_strlist(confs[OPT_STARTDIR]); l; l=l->next) {
+		if(l->flag && find_files_begin(asfd, ff, confs, l->path))
+			goto end;
+	}
 	ret=0;
 end:
 	cntr_print_end_phase1(get_cntr(confs));

@@ -21,6 +21,7 @@ struct sbuf *sbuf_alloc()
 	iobuf_init(&sb->link);
 	iobuf_init(&sb->endfile);
 	sb->compression=-1;
+	sb->use_winapi=1;
 	sb->datapth.cmd=CMD_DATAPTH;
 
 	return sb;
@@ -35,6 +36,7 @@ void sbuf_free_content(struct sbuf *sb)
 	memset(&(sb->statp), 0, sizeof(sb->statp));
 	sb->compression=-1;
 	sb->winattr=0;
+	sb->use_winapi=1;
 	sb->flags=0;
 
 	memset(&sb->rsbuf, 0, sizeof(sb->rsbuf));

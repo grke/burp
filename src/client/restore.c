@@ -163,7 +163,7 @@ enum ofr_e open_for_restore(struct asfd *asfd,
 		sb->winattr |= FILE_ATTRIBUTE_DIRECTORY;
 #endif
 
-	bfile_init(bfd, sb->winattr, cntr);
+	bfile_init(bfd, sb->use_winapi, sb->winattr, cntr);
 	bfd->set_attribs_on_close=1;
 	switch(vss_restore)
 	{
@@ -181,7 +181,7 @@ enum ofr_e open_for_restore(struct asfd *asfd,
 			break;
 		case VSS_RESTORE_ON:
 #ifdef HAVE_WIN32
-			bfd->set_win32_api(bfd, 1);
+			bfd->set_win32_api(bfd, sb->use_winapi);
 #endif
 			bfd->set_vss_strip(bfd, 0);
 			break;
@@ -712,7 +712,7 @@ static int canonicalise(
 	ret=0;
 end:
 	// Cannot use free_w() because it was not allocated by alloc.c, and
-	// I cannot implement realpath() it in alloc.c because I cannot get
+	// I cannot implement realpath() in alloc.c because I cannot get
 	// Windows code to use alloc.c.
 	if(canonical) free(canonical);
 	free_w(&copy);
@@ -766,7 +766,7 @@ int do_restore_client(struct asfd *asfd,
 	if(!(bfd=bfile_alloc()))
 		goto error;
 
-	bfile_init(bfd, 0, cntr);
+	bfile_init(bfd, 0, 0, cntr);
 	bfd->set_attribs_on_close=1;
 
 	snprintf(msg, sizeof(msg), "%s%s %s:%s",

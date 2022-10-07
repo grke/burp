@@ -142,7 +142,7 @@ static void setup_some_things(struct asfd *asfd, struct slist *slist)
 			asfd_mock_read_iobuf(asfd, &r, 0, &s->attr);
 			asfd_mock_read_iobuf(asfd, &r,
 				0, &s->path);
-			// Protocol1 always sends it gzipped.
+			// It is always sent gzipped.
 			iobuf_set(&rbuf, CMD_APPEND,
 				(char *)gzipped_data, sizeof(gzipped_data));
 			asfd_mock_read_iobuf(asfd, &r, 0, &rbuf);

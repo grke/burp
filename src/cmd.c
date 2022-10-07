@@ -68,7 +68,6 @@ char *cmd_to_text(enum cmd cmd)
 		case CMD_BYTES_SENT:
 			snprintf(buf, len, "Bytes sent"); break;
 
-		// Protocol1 only.
 		case CMD_DATAPTH:
 			snprintf(buf, len, "Path to data on the server"); break;
 		case CMD_VSS:

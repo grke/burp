@@ -11,6 +11,7 @@
 #include "../log.h"
 #include "../md5.h"
 #include "../transfer.h"
+#include "cvss.h"
 #include "extrameta.h"
 #include "find.h"
 #include "backup_phase2.h"
@@ -235,6 +236,10 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	iobuf_init(asfd->rbuf);
 
 #ifdef HAVE_WIN32
+	sb->use_winapi=get_use_winapi(
+		get_string(confs[OPT_REMOTE_DRIVES]),
+		sb->path.buf[0]
+	);
 	if(win32_lstat(sb->path.buf, &sb->statp, &sb->winattr))
 #else
 	if(lstat(sb->path.buf, &sb->statp))
@@ -259,10 +264,15 @@ static int deal_with_data(struct asfd *asfd, struct sbuf *sb,
 	if(sb->path.cmd!=CMD_METADATA
 	  && sb->path.cmd!=CMD_ENC_METADATA)
 	{
-		if(bfd->open_for_send(bfd, asfd,
-			sb->path.buf, sb->winattr,
-			get_int(confs[OPT_ATIME]), cntr))
-		{
+		if(bfd->open_for_send(
+			bfd,
+			asfd,
+			sb->path.buf,
+			sb->use_winapi,
+			sb->winattr,
+			get_int(confs[OPT_ATIME]),
+			cntr
+		)) {
 			forget++;
 			goto end;
 		}
@@ -436,7 +446,7 @@ static int do_backup_phase2_client(struct asfd *asfd,
 	if(!(bfd=bfile_alloc())
 	  || !(sb=sbuf_alloc()))
 		goto end;
-	bfile_init(bfd, 0, cntr);
+	bfile_init(bfd, 0, 0, cntr);
 
 	if(!resume)
 	{

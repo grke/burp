@@ -165,7 +165,7 @@ static void conv_unix_to_win32_path(
 
 /* Created 02/27/2006 Thorsten Engel.
    This function expects an UCS-encoded standard wchar_t in pszUCSPath and
-   will complete the input path to an absolue path of the form \\?\c:\path\file
+   will complete the input path to an absolute path of the form \\?\c:\path\file
 
    With this trick, it is possible to have 32K characters long paths.
 */
@@ -1605,7 +1605,7 @@ end:
 	return ret;
 }
 
-char *get_fixed_drives(void)
+static char *get_drives(uint64_t type)
 {
 	static char ret[256]="";
 	size_t r=0;
@@ -1626,7 +1626,7 @@ char *get_fixed_drives(void)
 		int l;
 		char u[8];
 		l=wchar_2_UTF8(u, (const wchar_t *)drive, sizeof(u));
-		if(GetDriveTypeW((const wchar_t *)drive)==DRIVE_FIXED)
+		if(GetDriveTypeW((const wchar_t *)drive)==type)
 		{
 			if(isalpha(*u))
 				ret[r++]=toupper(*u);
@@ -1635,4 +1635,14 @@ char *get_fixed_drives(void)
 	}
 
 	return ret;
+}
+
+char *get_fixed_drives(void)
+{
+	return get_drives(DRIVE_FIXED);
+}
+
+char *get_remote_drives(void)
+{
+	return get_drives(DRIVE_REMOTE);
 }

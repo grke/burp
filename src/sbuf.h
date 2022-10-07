@@ -12,18 +12,9 @@
 
 // Bits in sbuf flags.
 
-// Protocol2 stuff.
-// Keep track of what has been sent.
-#define SBUF_SENT_STAT			0x0001
-#define SBUF_SENT_PATH			0x0002
-#define SBUF_SENT_LINK			0x0004
 // Keep track of what needs to be received.
-#define SBUF_NEED_LINK			0x0010
-#define SBUF_NEED_DATA			0x0020
-#define SBUF_HEADER_WRITTEN_TO_MANIFEST	0x0040
-#define SBUF_END_WRITTEN_TO_MANIFEST	0x0080
+#define SBUF_NEED_LINK                  0x0010
 
-// Protocol1 stuff.
 // Keep track of what needs to be sent.
 #define SBUF_SEND_STAT			0x0100
 #define SBUF_SEND_PATH			0x0200
@@ -48,9 +39,10 @@ struct sbuf
         struct iobuf endfile; // End file marker.
 
 	struct stat statp;
-	uint64_t winattr;
 	int32_t compression;
 	int32_t encryption;
+	uint64_t winattr;
+	int8_t use_winapi;
 
 	uint16_t flags;
 

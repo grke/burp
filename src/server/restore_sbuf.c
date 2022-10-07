@@ -76,8 +76,9 @@ static int do_send_file(struct asfd *asfd, struct sbuf *sb,
 	struct BFILE bfd;
 	uint64_t bytes=0; // Unused.
 
-	bfile_init(&bfd, 0, cntr);
-	if(bfd.open_for_send(&bfd, asfd, best, sb->winattr,
+	bfile_init(&bfd, 0, 0, cntr);
+	if(bfd.open_for_send(&bfd, asfd, best,
+		sb->use_winapi, sb->winattr,
 		1 /* no O_NOATIME */, cntr))
 			return SEND_FATAL;
 	if(asfd->write(asfd, &sb->path))

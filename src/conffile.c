@@ -938,6 +938,20 @@ static int finalise_fschg_dirs(struct conf **c)
 	return 0;
 }
 
+#ifdef HAVE_WIN32
+static void finalise_remote_drives(struct conf **c) {
+	char *drives=NULL;
+	if((drives=get_string(c[OPT_REMOTE_DRIVES])) && *drives) {
+		logp("remote drives configured: %s\n", drives);
+		return;
+	}
+	if((drives=get_remote_drives()) && *drives) {
+		logp("remote drives detected: %s\n", drives);
+		set_string(c[OPT_REMOTE_DRIVES], drives);
+	}
+}
+#endif
+
 // The glob stuff should only run on the client side.
 static int finalise_glob(struct conf **c)
 {
@@ -1187,6 +1201,9 @@ static int conf_finalise(struct conf **c)
 	if(burp_mode==BURP_MODE_CLIENT
 	  && finalise_glob(c))
 		return -1;
+#ifdef HAVE_WIN32
+	finalise_remote_drives(c);
+#endif
 
 	if(finalise_incexc_dirs(c)
 	  || finalise_start_dirs(c)

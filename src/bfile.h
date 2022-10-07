@@ -29,7 +29,6 @@ struct BFILE
 	char *path;
 	struct cntr *cntr;
 	// Windows VSS headers tell us how much file data to expect.
-	// Protocol1 only for now.
 	size_t datalen;
 #ifdef HAVE_WIN32
 	uint8_t use_backup_api; /* set if using BackupRead/Write */
@@ -52,9 +51,15 @@ struct BFILE
 	int (*close)(struct BFILE *bfd, struct asfd *asfd);
 	ssize_t (*read)(struct BFILE *bfd, void *buf, size_t count);
 	ssize_t (*write)(struct BFILE *bfd, void *buf, size_t count);
-	int (*open_for_send)(struct BFILE *bfd, struct asfd *asfd,
-		const char *fname, int64_t winattr,
-		int atime, struct cntr *cntr);
+	int (*open_for_send)(
+		struct BFILE *bfd,
+		struct asfd *asfd,
+		const char *fname,
+		int use_backup_api,
+		int64_t winattr,
+		int atime,
+		struct cntr *cntr
+	);
 #ifdef HAVE_WIN32
 	void (*set_win32_api)(struct BFILE *bfd, int on);
 #endif
@@ -65,7 +70,12 @@ extern struct BFILE *bfile_alloc(void);
 extern void bfile_free(struct BFILE **bfd);
 // FIX THIS: should be possible to have this as a function pointer too.
 // Need to sort out the bfd in sbuf.
-extern void bfile_init(struct BFILE *bfd, int64_t winattr, struct cntr *cntr);
+extern void bfile_init(
+	struct BFILE *bfd,
+	int use_backup_api,
+	int64_t winattr,
+	struct cntr *cntr
+);
 extern void bfile_setup_funcs(struct BFILE *bfd);
 
 #ifdef HAVE_WIN32

@@ -67,6 +67,7 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_N_FAILURE_SCRIPT:
 		case OPT_DEDUP_GROUP:
 		case OPT_VSS_DRIVES:
+		case OPT_REMOTE_DRIVES:
 		case OPT_REGEX:
 		case OPT_SUPER_CLIENT:
 		case OPT_MONITOR_EXE:

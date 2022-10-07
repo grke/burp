@@ -54,6 +54,7 @@
 #include "../prepend.h"
 #include "../regexp.h"
 #include "../strlist.h"
+#include "cvss.h"
 #include "find.h"
 #include "find_logic.h"
 
@@ -636,13 +637,22 @@ static int found_other(struct asfd *asfd, struct FF_PKT *ff_pkt,
 	return my_send_file_w(asfd, ff_pkt, top_level, confs);
 }
 
-static int find_files(struct asfd *asfd, struct FF_PKT *ff_pkt, struct conf **confs,
-	char *fname, dev_t parent_device, bool top_level)
-{
+static int find_files(
+	struct asfd *asfd,
+	struct FF_PKT *ff_pkt,
+	struct conf **confs,
+	char *fname,
+	dev_t parent_device,
+	bool top_level
+) {
 	ff_pkt->fname=fname;
 	ff_pkt->link=fname;
 
 #ifdef HAVE_WIN32
+	ff_pkt->use_winapi=get_use_winapi(
+		get_string(confs[OPT_REMOTE_DRIVES]),
+		ff_pkt->fname[0]
+	);
 	if(win32_lstat(fname, &ff_pkt->statp, &ff_pkt->winattr))
 #else
 	if(lstat(fname, &ff_pkt->statp))

@@ -509,7 +509,7 @@ int receive_a_file(struct asfd *asfd, const char *path, struct cntr *cntr)
 	uint64_t sentbytes=0;
 
 	if(!(bfd=bfile_alloc())) goto end;
-	bfile_init(bfd, 0, cntr);
+	bfile_init(bfd, 0, 0, cntr);
 #ifdef HAVE_WIN32
 	bfd->set_win32_api(bfd, 0);
 #else

@@ -28,11 +28,28 @@ BOOL CtrlHandler(DWORD fdwCtrlType)
 	}
 }
 
+static int in_remote_drives(const char *remote_drives, char letter)
+{
+	int d;
+	for(d=0; remote_drives && remote_drives[d]; d++) {
+		if(toupper(letter)==toupper(remote_drives[d])) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int get_use_winapi(const char *remote_drives, char letter)
+{
+	return !in_remote_drives(remote_drives, letter);
+}
+
 int win32_start_vss(struct asfd *asfd, struct conf **confs)
 {
 	int errors=0;
 	struct cntr *cntr=get_cntr(confs);
 	const char *drives_vss=get_string(confs[OPT_VSS_DRIVES]);
+	const char *drives_remote=get_string(confs[OPT_REMOTE_DRIVES]);
 
 	if(SetConsoleCtrlHandler((PHANDLER_ROUTINE) CtrlHandler, TRUE))
 		logp("Control handler registered.\n");
@@ -45,14 +62,14 @@ int win32_start_vss(struct asfd *asfd, struct conf **confs)
 
 	if(g_pVSSClient->InitializeForBackup(asfd, cntr))
 	{
-		char szWinDriveLetters[27];
+		char drive_letters[27];
 		// Tell vss which drives to snapshot.
 		if(drives_vss)
 		{
 			unsigned int i=0;
 			for(i=0; i<strlen(drives_vss) && i<26; i++)
-			  szWinDriveLetters[i]=toupper(drives_vss[i]);
-			szWinDriveLetters[i]='\0';
+			  drive_letters[i]=toupper(drives_vss[i]);
+			drive_letters[i]='\0';
 		}
 		else
 		{
@@ -70,21 +87,27 @@ int win32_start_vss(struct asfd *asfd, struct conf **confs)
 				  && isalpha(path[0]) && path[1]==':')
 				{
 					int x=0;
+					char letter=toupper(path[0]);
 					// Try not to add the same letter twice.
 					for(x=0; x<j; x++)
-					  if(toupper(path[0])==szWinDriveLetters[x])
+					  if(letter==drive_letters[x])
 						break;
 					if(x<j) continue;
-					szWinDriveLetters[j++]=toupper(path[0]);
+
+					if(in_remote_drives(
+						drives_remote,
+						letter
+					)) continue;
+					drive_letters[j++]=letter;
 				}
 			}
-			szWinDriveLetters[j]='\0';
+			drive_letters[j]='\0';
 		}
 		logp("Generate VSS snapshots.\n");
 		logp("Driver=\"%s\", Drive(s)=\"%s\"\n",
 			g_pVSSClient->GetDriverName(),
-			szWinDriveLetters);
-		if(!g_pVSSClient->CreateSnapshots(szWinDriveLetters))
+			drive_letters);
+		if(!g_pVSSClient->CreateSnapshots(drive_letters))
 		{
 			berrno be;
 			berrno_init(&be);
@@ -96,12 +119,11 @@ int win32_start_vss(struct asfd *asfd, struct conf **confs)
 		else
 		{
 			int i;
-			for(i=0; i<(int)strlen(szWinDriveLetters); i++)
+			for(i=0; i<(int)strlen(drive_letters); i++)
 			{
-			  logp("VSS drive letters: %d\n", i);
-			  if(islower(szWinDriveLetters[i]))
+			  if(islower(drive_letters[i]))
 			  {
-				logw(asfd, cntr, "Generate VSS snapshot of drive \"%c:\\\" failed.\n", szWinDriveLetters[i]);
+				logw(asfd, cntr, "Generate VSS snapshot of drive \"%c:\\\" failed.\n", drive_letters[i]);
 				errors++;
 			  }
 			}

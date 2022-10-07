@@ -501,10 +501,15 @@ static ssize_t bfile_write(struct BFILE *bfd, void *buf, size_t count)
 
 #endif
 
-static int bfile_open_for_send(struct BFILE *bfd, struct asfd *asfd,
-	const char *fname, int64_t winattr, int atime,
-	struct cntr *cntr)
-{
+static int bfile_open_for_send(
+	struct BFILE *bfd,
+	struct asfd *asfd,
+	const char *fname,
+	int use_backup_api,
+	int64_t winattr,
+	int atime,
+	struct cntr *cntr
+) {
 	if(bfd->mode!=BF_CLOSED)
 	{
 #ifdef HAVE_WIN32
@@ -525,7 +530,7 @@ static int bfile_open_for_send(struct BFILE *bfd, struct asfd *asfd,
 #endif
 	}
 
-	bfile_init(bfd, winattr, cntr);
+	bfile_init(bfd, use_backup_api, winattr, cntr);
 	if(bfile_open(bfd, asfd, fname, O_RDONLY|O_BINARY
 #ifdef O_NOFOLLOW
 		|O_NOFOLLOW
@@ -563,15 +568,19 @@ void bfile_setup_funcs(struct BFILE *bfd)
 	bfd->set_vss_strip=bfile_set_vss_strip;
 }
 
-void bfile_init(struct BFILE *bfd, int64_t winattr, struct cntr *cntr)
-{
+void bfile_init(
+	struct BFILE *bfd,
+	int use_backup_api,
+	int64_t winattr,
+	struct cntr *cntr
+) {
 	memset(bfd, 0, sizeof(struct BFILE));
 	bfd->mode=BF_CLOSED;
 	bfd->winattr=winattr;
 	bfd->cntr=cntr;
 	if(!bfd->open) bfile_setup_funcs(bfd);
 #ifdef HAVE_WIN32
-	bfile_set_win32_api(bfd, 1);
+	bfile_set_win32_api(bfd, use_backup_api);
 #else
 	bfd->fd=-1;
 #endif

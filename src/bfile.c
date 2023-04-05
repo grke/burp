@@ -47,7 +47,7 @@ static ssize_t bfile_write_vss_strip(struct BFILE *bfd, void *buf, size_t count)
 			size_t sidlen=bsidsize-mysid->needed_s;
 			int got=min(mysid->needed_s, mycount);
 
-			memcpy(sid+sidlen, cp, got);
+			memcpy((char *)sid+sidlen, cp, got);
 
 			cp+=got;
 			mycount-=got;

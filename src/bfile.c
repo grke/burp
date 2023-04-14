@@ -47,14 +47,19 @@ static ssize_t bfile_write_vss_strip(struct BFILE *bfd, void *buf, size_t count)
 			size_t sidlen=bsidsize-mysid->needed_s;
 			int got=min(mysid->needed_s, mycount);
 
-			memcpy(sid+sidlen, cp, got);
+			memcpy((char *)sid+sidlen, cp, got);
 
 			cp+=got;
 			mycount-=got;
 			mysid->needed_s-=got;
 
-			if(!mysid->needed_s)
+			if(!mysid->needed_s) {
 				mysid->needed_d=sid->Size+sid->dwStreamNameSize;
+				// If the stream is completely empty, start
+				// reading a new VSS header.
+				if (!mysid->needed_d)
+					mysid->needed_s=bsidsize;
+			}
 		}
 		if(mysid->needed_d)
 		{

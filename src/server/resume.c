@@ -97,7 +97,8 @@ int forward_past_entry(struct manio *manio, struct iobuf *target,
 					return 0;
 				}
 				logp("End of file in %s()\n", __func__);
-				goto error;
+				sbuf_free(&sb);
+				return 0;
 			default:
 				logp("Error in %s()\n", __func__);
 				goto error;

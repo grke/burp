@@ -1,0 +1,4 @@
+Embedded yajl taken from https://github.com/robohack/yajl/
+release-2.2, commit 29ecc48fddf93d2fa53fcef91da7ffd0f56af5c4
+
+Yes, it would be nicer to use a build dependency.

@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "../burp.h"
 #include "yajl_buf.h"
 
 #include <assert.h>
@@ -34,41 +33,55 @@ static
 void yajl_buf_ensure_available(yajl_buf buf, size_t want)
 {
     size_t need;
-    
+
     assert(buf != NULL);
 
     /* first call */
     if (buf->data == NULL) {
+        assert(buf->used == 0);
+        assert(buf->len == 0);
         buf->len = YAJL_BUF_INIT_SIZE;
         buf->data = (unsigned char *) YA_MALLOC(buf->alloc, buf->len);
+#if 0
+        memset((void *) buf->data, 0, buf->len);
+#else  /* it's really just a string, albiet UTF-8.... */
         buf->data[0] = 0;
+#endif
     }
 
     need = buf->len;
 
-    while (want >= (need - buf->used)) need <<= 1;
-
+    while (need > 0 && want >= (need - buf->used)) {
+        /* XXX <<=1 is too aggressive!  but it "wraps" nicely to zero... */
+        need <<= 1;
+    }
+    assert(need >= buf->len);
     if (need != buf->len) {
         buf->data = (unsigned char *) YA_REALLOC(buf->alloc, buf->data, need);
         buf->len = need;
     }
 }
 
+/*+ allocate a new buffer +*/
 yajl_buf yajl_buf_alloc(yajl_alloc_funcs * alloc)
 {
-    yajl_buf b = (yajl_buf)YA_MALLOC(alloc, sizeof(struct yajl_buf_t));
+    yajl_buf b = YA_MALLOC(alloc, sizeof(struct yajl_buf_t));
     memset((void *) b, 0, sizeof(struct yajl_buf_t));
     b->alloc = alloc;
     return b;
 }
 
+/*+ free the buffer +*/
 void yajl_buf_free(yajl_buf buf)
 {
     assert(buf != NULL);
-    if (buf->data) YA_FREE(buf->alloc, buf->data);
+    if (buf->data) {
+        YA_FREE(buf->alloc, buf->data);
+    }
     YA_FREE(buf->alloc, buf);
 }
 
+/*+ append a number of bytes to the buffer +*/
 void yajl_buf_append(yajl_buf buf, const void * data, size_t len)
 {
     yajl_buf_ensure_available(buf, len);
@@ -80,22 +93,28 @@ void yajl_buf_append(yajl_buf buf, const void * data, size_t len)
     }
 }
 
+/*+ empty the buffer +*/
 void yajl_buf_clear(yajl_buf buf)
 {
     buf->used = 0;
-    if (buf->data) buf->data[buf->used] = 0;
+    if (buf->data) {
+        buf->data[buf->used] = 0;
+    }
 }
 
+/*+ get a pointer to the beginning of the buffer +*/
 const unsigned char * yajl_buf_data(yajl_buf buf)
 {
     return buf->data;
 }
 
+/*+ get the length of the buffer +*/
 size_t yajl_buf_len(yajl_buf buf)
 {
     return buf->used;
 }
 
+/*+ truncate the buffer +*/
 void
 yajl_buf_truncate(yajl_buf buf, size_t len)
 {

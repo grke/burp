@@ -17,7 +17,7 @@
 #ifndef __YAJL_PARSER_H__
 #define __YAJL_PARSER_H__
 
-#include "api/yajl_parse.h"
+#include "yajl/yajl_parse.h"
 #include "yajl_bytestack.h"
 #include "yajl_buf.h"
 #include "yajl_lex.h"
@@ -36,7 +36,7 @@ typedef enum {
     yajl_state_array_start,
     yajl_state_array_got_val,
     yajl_state_array_need_val,
-    yajl_state_got_value,
+    yajl_state_got_value
 } yajl_state;
 
 struct yajl_handle_t {
@@ -54,7 +54,7 @@ struct yajl_handle_t {
     yajl_bytestack stateStack;
     /* memory allocation routines */
     yajl_alloc_funcs alloc;
-    /* bitfield */
+    /* half-assed bitfield */
     unsigned int flags;
 };
 
@@ -72,7 +72,7 @@ yajl_render_error_string(yajl_handle hand, const unsigned char * jsonText,
 /* A little built in integer parsing routine with the same semantics as strtol
  * that's unaffected by LOCALE. */
 long long
-yajl_parse_integer(const unsigned char *number, unsigned int length);
+yajl_parse_integer(const unsigned char *number, size_t length);
 
 
 #endif

@@ -242,12 +242,10 @@ main_SOURCES = \
 	src/yajl/yajl_lex.c src/yajl/yajl_lex.h \
 	src/yajl/yajl_parser.c src/yajl/yajl_parser.h \
 	src/yajl/yajl_tree.c \
-	src/yajl/yajl_version.c \
 	src/yajl/api/yajl_common.h \
 	src/yajl/api/yajl_gen.h \
 	src/yajl/api/yajl_parse.h \
-	src/yajl/api/yajl_tree.h \
-	src/yajl/api/yajl_version.h
+	src/yajl/api/yajl_tree.h
 
 TESTS = $(check_PROGRAMS)
 

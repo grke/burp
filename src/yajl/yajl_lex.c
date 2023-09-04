@@ -14,7 +14,12 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "../burp.h"
+/**
+ * A JSON text lexical analyzer.
+ *
+ * The implementation.
+ **/
+
 #include "yajl_lex.h"
 #include "yajl_buf.h"
 
@@ -47,9 +52,10 @@ tokToStr(yajl_tok tok)
 }
 #endif
 
-/* Impact of the stream parsing feature on the lexer:
+/*
+ * Impact of the stream parsing feature on the lexer:
  *
- * YAJL support stream parsing.  That is, the ability to parse the first
+ * YAJL supports parsing of streams.  That is, the ability to parse the first
  * bits of a chunk of JSON before the last bits are available (still on
  * the network or disk).  This makes the lexer more complex.  The
  * responsibility of the lexer is to handle transparently the case where
@@ -66,31 +72,34 @@ tokToStr(yajl_tok tok)
  * before pulling chars from input text
  */
 
+/*+ the (private) lexer context +*/
 struct yajl_lexer_t {
-    /* the overal line and char offset into the data */
+    /*+ the current line count +*/
     size_t lineOff;
+    /* the current character offset into the current line (i.e. since the last '\r' or '\n') */
     size_t charOff;
 
-    /* error */
+    /*+ error +*/
     yajl_lex_error error;
 
-    /* a input buffer to handle the case where a token is spread over
-     * multiple chunks */
+    /*+ a input buffer to handle the case where a token is spread over
+     * multiple chunks +*/
     yajl_buf buf;
 
-    /* in the case where we have data in the lexBuf, bufOff holds
-     * the current offset into the lexBuf. */
+    /*+ in the case where we have data in the lexBuf, bufOff holds
+     * the current offset into the lexBuf. +*/
     size_t bufOff;
 
-    /* are we using the lex buf? */
-    unsigned int bufInUse;
+    /*+ are we using the lex buf? +*/
+    /* bool */ int bufInUse;
 
-    /* shall we allow comments? */
-    unsigned int allowComments;
+    /*+ shall we allow comments? +*/
+    /* bool */ int allowComments;
 
-    /* shall we validate utf8 inside strings? */
-    unsigned int validateUTF8;
+    /*+ shall we validate utf8 inside strings? +*/
+    /* bool */ int validateUTF8;
 
+    /* the allocator functions being used by this lexer */
     yajl_alloc_funcs * alloc;
 };
 
@@ -101,9 +110,17 @@ struct yajl_lexer_t {
 
 #define unreadChar(lxr, off) ((*(off) > 0) ? (*(off))-- : ((lxr)->bufOff--))
 
+/*+
+ * allocate a lexer context
+ *
+ * Returns a lexer context object that must be passed to calls to
+ * yajl_lex_lex(), etc., and which must be passed to yajl_lex_free() when lexing
+ * is complete (successfully or not).
+ +*/
 yajl_lexer
-yajl_lex_alloc(yajl_alloc_funcs * alloc,
-               unsigned int allowComments, unsigned int validateUTF8)
+yajl_lex_alloc(yajl_alloc_funcs * alloc, /*+ allocator functions, e.g. from yajl_set_default_alloc_funcs() +*/
+               /* bool */ int allowComments, /*+ should this lexer handle comments embedded in the JSON text? +*/
+               /* bool */ int validateUTF8)  /*+ should this lexer validate UTF8 characters? +*/
 {
     yajl_lexer lxr = (yajl_lexer) YA_MALLOC(alloc, sizeof(struct yajl_lexer_t));
     memset((void *) lxr, 0, sizeof(struct yajl_lexer_t));
@@ -114,28 +131,36 @@ yajl_lex_alloc(yajl_alloc_funcs * alloc,
     return lxr;
 }
 
+/*+ free a lexer context +*/
 void
-yajl_lex_free(yajl_lexer lxr)
+yajl_lex_free(yajl_lexer lxr)           /*+ the lexer context to free +*/
 {
     yajl_buf_free(lxr->buf);
     YA_FREE(lxr->alloc, lxr);
     return;
 }
 
-/* a lookup table which lets us quickly determine three things:
- * VEC - valid escaped control char
- * note.  the solidus '/' may be escaped or not.
- * IJC - invalid json char
- * VHC - valid hex char
- * NFP - needs further processing (from a string scanning perspective)
- * NUC - needs utf8 checking when enabled (from a string scanning perspective)
- */
 #define VEC 0x01
 #define IJC 0x02
 #define VHC 0x04
 #define NFP 0x08
 #define NUC 0x10
 
+/*+
+ * a lookup table which lets us quickly determine three things:
+ *
+ * VEC - valid escaped control char
+ *
+ * IJC - invalid json char
+ *
+ * VHC - valid hex char
+ *
+ * NFP - needs further processing (from a string scanning perspective)
+ *
+ * NUC - needs utf8 checking when enabled (from a string scanning perspective)
+ *
+ * note.  the solidus '/' may be escaped or not.
+ +*/
 static const char charLookupTable[256] =
 {
 /*00*/ IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    , IJC    ,
@@ -179,23 +204,30 @@ static const char charLookupTable[256] =
        NUC    , NUC    , NUC    , NUC    , NUC    , NUC    , NUC    , NUC
 };
 
-/** process a variable length utf8 encoded codepoint.
+#define UTF8_CHECK_EOF if (*offset >= jsonTextLen) { return yajl_tok_eof; }
+
+/*+
+ *  process a variable length utf8 encoded codepoint.
  *
  *  returns:
+ *
  *    yajl_tok_string - if valid utf8 char was parsed and offset was
  *                      advanced
+ *
  *    yajl_tok_eof - if end of input was hit before validation could
  *                   complete
+ *
  *    yajl_tok_error - if invalid utf8 was encountered
  *
  *  NOTE: on error the offset will point to the first char of the
- *  invalid utf8 */
-#define UTF8_CHECK_EOF if (*offset >= jsonTextLen) { return yajl_tok_eof; }
-
+ *  invalid utf8
+ +*/
 static yajl_tok
-yajl_lex_utf8_char(yajl_lexer lexer, const unsigned char * jsonText,
-                   size_t jsonTextLen, size_t * offset,
-                   unsigned char curChar)
+yajl_lex_utf8_char(yajl_lexer lexer,
+                   const unsigned char * jsonText,
+                   size_t jsonTextLen,
+                   size_t * offset,
+                   unsigned int curChar)
 {
     if (curChar <= 0x7f) {
         /* single byte */
@@ -232,28 +264,22 @@ yajl_lex_utf8_char(yajl_lexer lexer, const unsigned char * jsonText,
     return yajl_tok_error;
 }
 
-/* lex a string.  input is the lexer, pointer to beginning of
- * json text, and start of string (offset).
- * a token is returned which has the following meanings:
- * yajl_tok_string: lex of string was successful.  offset points to
- *                  terminating '"'.
- * yajl_tok_eof: end of text was encountered before we could complete
- *               the lex.
- * yajl_tok_error: embedded in the string were unallowable chars.  offset
- *               points to the offending char
- */
 #define STR_CHECK_EOF \
 if (*offset >= jsonTextLen) { \
    tok = yajl_tok_eof; \
    goto finish_string_lex; \
 }
 
-/** scan a string for interesting characters that might need further
- *  review.  return the number of chars that are uninteresting and can
- *  be skipped.
- * (lth) hi world, any thoughts on how to make this routine faster? */
+/*+
+ *  scan a string for interesting characters that might need further
+ *  review.
+ *
+ *  returns the number of chars that are uninteresting and can be skipped.
+ *
+ * (lth) hi world, any thoughts on how to make this routine faster?
+ +*/
 static size_t
-yajl_string_scan(const unsigned char * buf, size_t len, int utf8check)
+yajl_string_scan(const unsigned char * buf, size_t len, /* bool */ int utf8check)
 {
     unsigned char mask = IJC|NFP|(utf8check ? NUC : 0);
     size_t skip = 0;
@@ -265,9 +291,25 @@ yajl_string_scan(const unsigned char * buf, size_t len, int utf8check)
     return skip;
 }
 
+/*+
+ * lex a string.
+ *
+ * a token is returned which has the following meanings:
+ *
+ * yajl_tok_string: lex of string was successful.  offset points to
+ *                  terminating '"'.
+ *
+ * yajl_tok_eof: end of text was encountered before we could complete
+ *               the lex.
+ *
+ * yajl_tok_error: embedded in the string were unallowable chars.  offset
+ *               points to the offending char
+ +*/
 static yajl_tok
-yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
-                size_t jsonTextLen, size_t * offset)
+yajl_lex_string(yajl_lexer lexer,       /*+ the current lexer context +*/
+                const unsigned char * jsonText, /*+ a pointer to the beginning of the JSON text +*/
+                size_t jsonTextLen,             /*+ length of the JSON text +*/
+                size_t * offset)                /*+ offset of the string to be lexed +*/
 {
     yajl_tok tok = yajl_tok_error;
     int hasEscapes = 0;
@@ -344,7 +386,7 @@ yajl_lex_string(yajl_lexer lexer, const unsigned char * jsonText,
         /* when in validate UTF8 mode we need to do some extra work */
         else if (lexer->validateUTF8) {
             yajl_tok t = yajl_lex_utf8_char(lexer, jsonText, jsonTextLen,
-                                            offset, curChar);
+                                            offset, (unsigned int) curChar);
 
             if (t == yajl_tok_eof) {
                 tok = yajl_tok_eof;
@@ -372,9 +414,11 @@ static yajl_tok
 yajl_lex_number(yajl_lexer lexer, const unsigned char * jsonText,
                 size_t jsonTextLen, size_t * offset)
 {
-    /** XXX: numbers are the only entities in json that we must lex
+    /*
+     * XXX:  numbers are the only entities in json that we must lex
      *       _beyond_ in order to know that they are complete.  There
-     *       is an ambiguous case for integers at EOF. */
+     *       is an ambiguous case for integers at EOF.
+     */
 
     unsigned char c;
 
@@ -496,10 +540,45 @@ yajl_lex_comment(yajl_lexer lexer, const unsigned char * jsonText,
     return tok;
 }
 
+/*+
+ * Begin or continue a lexer.
+ *
+ * Returns a JSON lexical token for the parser.
+ *
+ * When you pass the next chunk of data, context should be reinitialized to
+ * zero.  xxx ???
+ +*/
 yajl_tok
-yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
-             size_t jsonTextLen, size_t * offset,
-             const unsigned char ** outBuf, size_t * outLen)
+yajl_lex_lex(yajl_lexer lexer,          /*+ the current lexer context +*/
+             const unsigned char * jsonText, /*+ a chunk of JSON text to be analysed +*/
+             size_t jsonTextLen,             /*+ length of this chunk +*/
+             size_t * offset,           /*+ Offset is both input & output!  It
+                                         * should be initialized to zero for a
+                                         * new chunk of target text, and upon
+                                         * subsetquent calls with the same
+                                         * target text should passed with the
+                                         * value of the previous invocation.
+                                         *
+                                         * The caller may be interested in the
+                                         * value of offset when an error is
+                                         * returned from the lexer.  This allows
+                                         * the caller to render useful error
+                                         * messages.
+                                         +*/
+             const unsigned char ** outBuf, /*+ Finally, the output buffer is
+                                             * usually just a pointer into the
+                                             * jsonText, however in cases where
+                                             * the entity being lexed spans
+                                             * multiple chunks, the lexer will
+                                             * buffer the entity and the data
+                                             * returned will be a pointer into
+                                             * that buffer. +*/
+             size_t * outLen)           /*+ This behavior is abstracted from
+                                         * client code except for the
+                                         * performance implications which
+                                         * require that the client choose a
+                                         * reasonable chunk size to get adequate
+                                         * performance. +*/
 {
     yajl_tok tok = yajl_tok_error;
     unsigned char c;
@@ -680,7 +759,7 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
         printf("EOF hit\n");
     } else {
         printf("lexed %s: '", tokToStr(tok));
-        fwrite(*outBuf, 1, *outLen, stdout);
+        fwrite(*outBuf, (size_t) 1, *outLen, stdout);
         printf("'\n");
     }
 #endif
@@ -688,8 +767,12 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
     return tok;
 }
 
+/*+
+ *  convert a lexer error value returned by yajl_lex_get_error() to a
+ *  descriptive string
+ +*/
 const char *
-yajl_lex_error_to_string(yajl_lex_error error)
+yajl_lex_error_to_string(yajl_lex_error error) /*+ lexer error value +*/
 {
     switch (error) {
         case yajl_lex_e_ok:
@@ -720,37 +803,64 @@ yajl_lex_error_to_string(yajl_lex_error error)
             return "probable comment found in input text, comments are "
                    "not enabled.";
     }
+    /* NOTREACHED */
     return "unknown error code";
 }
 
 
-/** allows access to more specific information about the lexical
- *  error when yajl_lex_lex returns yajl_tok_error. */
+/*+
+ *  allows access to more specific information about the lexical
+ *  error when yajl_lex_lex() returns yajl_tok_error.
+ *
+ *  Retunrs a value that may be passed to yajl_lex_error_to_string() to convert
+ *  it into descriptive error message text.
+ +*/
 yajl_lex_error
-yajl_lex_get_error(yajl_lexer lexer)
+yajl_lex_get_error(yajl_lexer lexer)    /*+ the current lexer context +*/
 {
     if (lexer == NULL) return (yajl_lex_error) -1;
     return lexer->error;
 }
 
-size_t yajl_lex_current_line(yajl_lexer lexer)
+/*+
+ *  A helper for finding the line number of error in the input.
+ *
+ *  Returns the number of lines lexed by this lexer instance
+ +*/
+size_t
+yajl_lex_current_line(yajl_lexer lexer) /*+ the current lexer context +*/
 {
     return lexer->lineOff;
 }
 
-size_t yajl_lex_current_char(yajl_lexer lexer)
+/*+
+ *  A helper for finding the exact context of an error in the input.
+ *
+ *  get the number of chars lexed by this lexer instance since the last
+ *  \n or \r
+ +*/
+size_t
+yajl_lex_current_char(yajl_lexer lexer) /*+ the current lexer context +*/
 {
     return lexer->charOff;
 }
 
-yajl_tok yajl_lex_peek(yajl_lexer lexer, const unsigned char * jsonText,
-                       size_t jsonTextLen, size_t offset)
+/*+
+ * have a peek at the next token, but don't move the lexer forward
+ *
+ * Returns the next token yagl_lex_lex() will return.
+ +*/
+yajl_tok
+yajl_lex_peek(yajl_lexer lexer, /*+ the current lexer context +*/
+                       const unsigned char * jsonText,
+                       size_t jsonTextLen,
+                       size_t offset)
 {
     const unsigned char * outBuf;
     size_t outLen;
     size_t bufLen = yajl_buf_len(lexer->buf);
     size_t bufOff = lexer->bufOff;
-    unsigned int bufInUse = lexer->bufInUse;
+    /* bool */ int bufInUse = lexer->bufInUse;
     yajl_tok tok;
 
     tok = yajl_lex_lex(lexer, jsonText, jsonTextLen, &offset,

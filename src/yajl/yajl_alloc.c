@@ -15,20 +15,29 @@
  */
 
 /**
- * \file yajl_alloc.h
- * default memory allocation routines for yajl which use malloc/realloc and
- * free
- */
+ * default memory allocation routines for yajl which use malloc(3), realloc(3),
+ * and free(3)
+ *
+ * Serious users of YAJL should replace these with error checking and handling
+ * variants.  Implementations of yaf->realloc should check for sz==0 and fault
+ * on that as well.
+ **/
 
-#include "../burp.h"
 #include "yajl_alloc.h"
+#include <stdlib.h>
 
+/*+
+ * a private wrapper around malloc(3)
+ +*/
 static void * yajl_internal_malloc(void *ctx, size_t sz)
 {
     (void)ctx;
     return malloc(sz);
 }
 
+/*+
+ * a private wrapper around realloc(3)
+ +*/
 static void * yajl_internal_realloc(void *ctx, void * previous,
                                     size_t sz)
 {
@@ -36,12 +45,19 @@ static void * yajl_internal_realloc(void *ctx, void * previous,
     return realloc(previous, sz);
 }
 
+/*+
+ * a private wrapper around free(3)
+ +*/
 static void yajl_internal_free(void *ctx, void * ptr)
 {
     (void)ctx;
     free(ptr);
 }
 
+/*+
+ * Set the allocator function pointers in <yaf> to private functions which call
+ * the default malloc(3), realloc(3), and free(3) functions.
+ +*/
 void yajl_set_default_alloc_funcs(yajl_alloc_funcs * yaf)
 {
     yaf->malloc = yajl_internal_malloc;

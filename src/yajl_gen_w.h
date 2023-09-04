@@ -4,7 +4,7 @@
 #ifdef HAVE_WIN32
 #include <yajl/yajl_gen.h>
 #else
-#include "yajl/api/yajl_gen.h"
+#include "yajl/yajl/yajl_gen.h"
 #endif
 
 // Functions for making working with yajl_gen a little easier.

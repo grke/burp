@@ -19,7 +19,7 @@ fi
 path="$PWD"
 build="$path/build"
 target="$path/target"
-ssh_opts="-o StrictHostKeyChecking=no"
+ssh_opts="-o StrictHostKeyChecking=no -o PubkeyAcceptedKeyTypes=+ssh-rsa"
 
 fail()
 {

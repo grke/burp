@@ -10,6 +10,7 @@ static void tear_down(void)
 
 START_TEST(test_enc_setup_no_password)
 {
+	alloc_counters_reset();
 	fail_unless(enc_setup(1 /*encrypt*/, NULL, 1, /*salt*/0)==NULL);
 	tear_down();
 }
@@ -20,6 +21,8 @@ START_TEST(test_enc_setup_ok)
 	uint64_t salt=12389123;
 	EVP_CIPHER_CTX *ctx;
 	int key_deriv=ENCRYPTION_KEY_DERIVED_AES_CBC_256;
+
+	alloc_counters_reset();
 	fail_unless((ctx=enc_setup(1 /*encrypt*/, "somepass", key_deriv, salt))!=NULL);
 	EVP_CIPHER_CTX_cleanup(ctx);
 	EVP_CIPHER_CTX_free(ctx);

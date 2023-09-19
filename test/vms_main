@@ -44,7 +44,7 @@ ssh $ssh_opts "$host" "tar -xvf $tarfile -C burp --strip-components=1"
 
 function docker_run()
 {
-	ssh $ssh_opts "$host" "docker run --name burp --rm -v ~/burp:/burp -v ~/.ssh:/root/.ssh --expose 4998-4999 -p 4998:4998 -p 4999:4999 -w /burp burp-cross-tools $@"
+	ssh $ssh_opts "$host" "docker run --name burp --rm -v ~/burp:/burp -v ~/.ssh:/root/.ssh --expose 4998-4999 -p 4998:4998 -p 4999:4999 -w /burp fortmap/burp-cross-tools:3.1.6c $@"
 }
 
 docker_run "./configure --prefix=/usr --sysconfdir=/etc/burp --localstatedir=/var --with-coverage"

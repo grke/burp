@@ -73,11 +73,13 @@ void md5_free(
 	if(!md5 || !*md5)
 		return;
 	if ((*md5)->ctx)
+	{
 		EVP_MD_CTX_free((*md5)->ctx);
-	free_v((void **)md5);
 #ifdef UTEST
-	alloc_count--;
+		free_count++;
 #endif
+	}
+	free_v((void **)md5);
 	*md5=NULL;
 }
 

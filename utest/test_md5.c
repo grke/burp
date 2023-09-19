@@ -10,6 +10,8 @@ START_TEST(test_md5)
 {
 	uint8_t checksum[MD5_DIGEST_LENGTH];
 	struct md5 *md5;
+
+	alloc_counters_reset();
 	fail_unless((md5=md5_alloc(__func__))!=NULL);
 	fail_unless(md5_init(md5));
 

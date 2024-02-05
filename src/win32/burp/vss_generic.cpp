@@ -384,7 +384,12 @@ BOOL VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
 	// szDriveLetters.
 	// http://msdn.microsoft.com/library/default.asp?url=/library/en-us/vss/base/ivssbackupcomponents_startsnapshotset.asp
 
-	if(!m_pVssObject || m_bBackupIsInitialized) return bsystem_error();
+	if(m_bBackupIsInitialized) return true;
+
+	if(!m_pVssObject) {
+		logp("!m_pVssObject\n");
+		return bsystem_error();
+	}
 
 	m_uidCurrentSnapshotSet=GUID_NULL;
 
@@ -415,13 +420,22 @@ BOOL VSSClientGeneric::CreateSnapshots(char* szDriveLetters)
 			szDriveLetters[i]=tolower(szDriveLetters[i]);
 	}
 
-	if(FAILED(pVss->PrepareForBackup(&pAsync1.p))) return set_errno();
+	if(FAILED(pVss->PrepareForBackup(&pAsync1.p))) {
+		logp("Failed PrepareForBackup\n");
+		return set_errno();
+	}
 
 	WaitAndCheckForAsyncOperation(pAsync1.p);
 
-	if(!CheckWriterStatus()) return set_errno();
+	if(!CheckWriterStatus()) {
+		logp("Failed CheckWriterStatus\n");
+		return set_errno();
+	}
 
-	if(FAILED(pVss->DoSnapshotSet(&pAsync2.p))) return set_errno();
+	if(FAILED(pVss->DoSnapshotSet(&pAsync2.p))) {
+		logp("Failed DoSnapshotSet\n");
+		return set_errno();
+	}
 
 	WaitAndCheckForAsyncOperation(pAsync2.p); 
 
@@ -557,14 +571,20 @@ BOOL VSSClientGeneric::CheckWriterStatus()
 	CComPtr<IVssAsync> pAsync;
 
 	HRESULT hr=pVss->GatherWriterStatus(&pAsync.p);
-	if(FAILED(hr)) return set_errno();
+	if(FAILED(hr)) {
+		logp("Failed GatherWriterStatus\n");
+		return set_errno();
+	}
 
 	WaitAndCheckForAsyncOperation(pAsync.p);
 
 	unsigned cWriters=0;
 
 	hr=pVss->GetWriterStatusCount(&cWriters);
-	if(FAILED(hr)) return set_errno();
+	if(FAILED(hr)) {
+		logp("Failed GetWriterStatusCount\n");
+		return set_errno();
+	}
 
 	int nState;
 
@@ -627,7 +647,10 @@ BOOL VSSClientGeneric::CheckWriterStatus()
 
 	hr=pVss->FreeWriterStatus();
 
-	if(FAILED(hr)) return set_errno();
+	if(FAILED(hr)) {
+		logp("Failed FreeWriterStatus\n");
+		return set_errno();
+	}
 
 	errno=0;
 	return TRUE;

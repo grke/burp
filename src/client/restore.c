@@ -865,7 +865,7 @@ int do_restore_client(struct asfd *asfd,
 					strip_from_path(sb->path.buf,
 						strip_path);
 					// Strip links if their path is absolute
-					if(sb->link.buf && !is_absolute(sb->link.buf))
+					if(sb->link.buf && is_absolute(sb->link.buf))
 						strip_from_path(sb->link.buf,
 							strip_path);
 				}

@@ -52,6 +52,7 @@ EVP_CIPHER_CTX *enc_setup(int encrypt, const char *encryption_password,
 
 	switch(key_deriv)
 	{
+		case ENCRYPTION_NONE:
 		case ENCRYPTION_KEY_DERIVED_BF_CBC:
 			cipher=EVP_bf_cbc();
 			break;

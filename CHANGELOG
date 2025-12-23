@@ -1,3 +1,6 @@
+2025-25-12 burp-3.2.0
+  * New stable version, based on 3.1.4
+
 2022-11-02 burp-3.1.4
   * Experimental: Turn off windows api on remote drives
     - record whether the windows api was used for a file in the manifest

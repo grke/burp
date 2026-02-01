@@ -13,6 +13,7 @@
 #include "log.h"
 #include "msg.h"
 #include "prepend.h"
+#include "gai_rand.c"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -265,10 +266,12 @@ int set_keepalive(int fd, int value)
 	return 0;
 }
 
-int init_client_socket(const char *host, const char *port)
+int init_client_socket(const char *host, const char *port, struct conf **confs)
 {
 	int rfd=-1;
 	int gai_ret;
+	addr_pref_t server_prefferred_address;
+	char ipstring[INET6_ADDRSTRLEN]; // in this length can fit v4 address too
 	struct addrinfo hints;
 	struct addrinfo *result;
 	struct addrinfo *rp;
@@ -287,12 +290,48 @@ int init_client_socket(const char *host, const char *port)
 		return -1;
 	}
 
+	// Randomize addrinfo array if enabled with the preferredd address order
+	if (get_int(confs[OPT_SERVER_RANDOMIZE])) {
+	    switch (get_int(confs[OPT_SERVER_RANDOMIZE_PREFER])) {
+		case 6:
+		    logp("Server randomization enabled (IPv6 preferred)\n");
+		    server_prefferred_address = ADDR_PREF_IPV6;
+		    break;
+		case 4:
+		    logp("Server randomization enabled (IPv4 preferred)\n");
+		    server_prefferred_address = ADDR_PREF_IPV4;
+		    break;
+		default:
+		    server_prefferred_address = ADDR_PREF_EQUAL;
+		    logp("Server randomization enabled\n");
+		    break;
+	    }
+	    shuffle_addrinfo(&result,server_prefferred_address);
+	}
+
 	for(rp=result; rp; rp=rp->ai_next)
 	{
 		rfd=socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 		if(rfd<0) continue;
 		set_keepalive(rfd, 1);
-		if(connect(rfd, rp->ai_addr, rp->ai_addrlen) != -1) break;
+
+		if (rp->ai_family == AF_INET) {
+		    struct sockaddr_in *psai = (struct sockaddr_in*)rp->ai_addr;
+		    // converting address to char (string)
+		    inet_ntop(rp->ai_family, &(psai->sin_addr), ipstring, INET_ADDRSTRLEN);
+		} else if (rp->ai_family == AF_INET6) {
+    		    struct sockaddr_in6 *psai = (struct sockaddr_in6*)rp->ai_addr;
+		    // converting address to char (string)
+		    inet_ntop(rp->ai_family, &(psai->sin6_addr), ipstring, INET6_ADDRSTRLEN);
+    		} else {
+    		    logp("Don't know how to convert family %d addresses\n", rp->ai_family);
+		}
+		logp("Trying to connect to %s:%s\n", ipstring, port);
+
+		if(connect(rfd, rp->ai_addr, rp->ai_addrlen) != -1) {
+    		    logp("Connected to %s:%s\n", ipstring, port);
+		    break;
+		}
 		close_fd(&rfd);
 	}
 	freeaddrinfo(result);

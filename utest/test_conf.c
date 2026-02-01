@@ -213,6 +213,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_MAX_CHILDREN:
 		case OPT_MAX_STATUS_CHILDREN:
 		case OPT_SERVER_FAILOVER:
+		case OPT_SERVER_RANDOMIZE:
+		case OPT_SERVER_RANDOMIZE_PREFER:
 		case OPT_NETWORK_ALLOW:
 		case OPT_NETWORK_ALLOW_STATUS:
 			fail_unless(get_strlist(c[o])==NULL);

@@ -28,6 +28,7 @@
 #define ENCRYPTION_NONE				0
 #define ENCRYPTION_KEY_DERIVED_BF_CBC		1 // Legacy
 #define ENCRYPTION_KEY_DERIVED_AES_CBC_256	2
+#define ENCRYPTION_LATEST ENCRYPTION_KEY_DERIVED_AES_CBC_256 // For force_update_encryption
 
 typedef struct sbuf sbuf_t;
 

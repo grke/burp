@@ -714,7 +714,7 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	case OPT_SERVER_CAN_RESTORE:
 	  return sc_int(c[o], 1,
 		CONF_FLAG_CC_OVERRIDE, "server_can_restore");
-   case OPT_FORCE_UPDATE_ENCRYPTION:
+	case OPT_FORCE_UPDATE_ENCRYPTION:
 	  return sc_int(c[o], 0,
 		CONF_FLAG_CC_OVERRIDE, "force_update_encryption");
 	case OPT_WORKING_DIR_RECOVERY_METHOD:

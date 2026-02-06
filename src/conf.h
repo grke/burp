@@ -264,6 +264,8 @@ enum conf_opt
 
 	OPT_LABEL,
 
+	OPT_FORCE_UPDATE_ENCRYPTION,
+
 	// Notify scripts
 	OPT_N_SUCCESS_SCRIPT,
 	OPT_N_SUCCESS_ARG,
@@ -288,8 +290,6 @@ enum conf_opt
 	OPT_CLIENT_CAN_RESTORE,
 	OPT_CLIENT_CAN_VERIFY,
 	OPT_SERVER_CAN_RESTORE,
-
-	OPT_FORCE_UPDATE_ENCRYPTION,
 
 	// Set to 1 on both client and server when the server is able to send
 	// counters on resume/verify/restore.

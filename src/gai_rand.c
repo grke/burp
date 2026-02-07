@@ -5,8 +5,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-// only required for seeding srand
-// #include <time.h>
+#include <time.h>
 #include <stdlib.h>
 #include <netdb.h>
 
@@ -32,14 +31,24 @@ static void fisher_yates(struct addrinfo **arr, size_t n)
 
 static int is_preferred(const struct addrinfo *ai, addr_pref_t pref)
 {
+    /* -1 means unknown address type */
+    int preferred = -1;
+
     if (pref == ADDR_PREF_IPV4) {
-        return (ai->ai_family == AF_INET);
-    } else if (pref == ADDR_PREF_IPV6) {
-        return (ai->ai_family == AF_INET6);
-    } else {
-	/* Other, unknown address types */
-        return -1;
+	if (ai->ai_family == AF_INET)
+	    preferred = 1;
+	else if (ai->ai_family == AF_INET6)
+	    preferred = 0;
     }
+    
+    if (pref == ADDR_PREF_IPV6) {
+	if (ai->ai_family == AF_INET6)
+	    preferred = 1;
+	else if (ai->ai_family == AF_INET)
+	    preferred = 0;
+    }
+
+    return preferred;
 }
 
 /*
@@ -77,8 +86,8 @@ void shuffle_addrinfo(struct addrinfo **res, addr_pref_t pref)
     if (n < 2)
         return;
 
-    // srand is already seeded in prog.c
-    // srand((unsigned)time(NULL));
+    /* Initialize srand() function */
+    srand((unsigned)time(NULL));
 
     /* v4 and v6 addresses are equals, shuffle all */
     if (pref == ADDR_PREF_EQUAL) {
@@ -105,9 +114,9 @@ void shuffle_addrinfo(struct addrinfo **res, addr_pref_t pref)
     size_t n_pref = 0, n_other = 0;
 
     for (cur = *res; cur; cur = cur->ai_next) {
-        if (is_preferred(cur, pref))
+        if (is_preferred(cur, pref)==1)
             n_pref++;
-        else
+        else if (is_preferred(cur, pref)==0)
             n_other++;
     }
 
@@ -152,7 +161,7 @@ void shuffle_addrinfo(struct addrinfo **res, addr_pref_t pref)
     }
 
     if (tail)
-        tail->ai_next = NULL;
+	tail->ai_next = NULL;
 
     *res = head;
 

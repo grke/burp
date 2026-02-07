@@ -290,7 +290,7 @@ int init_client_socket(const char *host, const char *port, struct conf **confs)
 		return -1;
 	}
 
-	// Randomize addrinfo array if enabled with the preferredd address order
+	// Randomize addrinfo array if enabled with the preferred address order
 	if (get_int(confs[OPT_SERVER_RANDOMIZE])) {
 	    switch (get_int(confs[OPT_SERVER_RANDOMIZE_PREFER])) {
 		case 6:
@@ -320,16 +320,16 @@ int init_client_socket(const char *host, const char *port, struct conf **confs)
 		    // converting address to char (string)
 		    inet_ntop(rp->ai_family, &(psai->sin_addr), ipstring, INET_ADDRSTRLEN);
 		} else if (rp->ai_family == AF_INET6) {
-    		    struct sockaddr_in6 *psai = (struct sockaddr_in6*)rp->ai_addr;
+		    struct sockaddr_in6 *psai = (struct sockaddr_in6*)rp->ai_addr;
 		    // converting address to char (string)
 		    inet_ntop(rp->ai_family, &(psai->sin6_addr), ipstring, INET6_ADDRSTRLEN);
-    		} else {
-    		    logp("Don't know how to convert family %d addresses\n", rp->ai_family);
+		} else {
+		    logp("Don't know how to convert family %d addresses\n", rp->ai_family);
 		}
 		logp("Trying to connect to %s:%s\n", ipstring, port);
 
 		if(connect(rfd, rp->ai_addr, rp->ai_addrlen) != -1) {
-    		    logp("Connected to %s:%s\n", ipstring, port);
+		    logp("Connected to %s:%s\n", ipstring, port);
 		    break;
 		}
 		close_fd(&rfd);

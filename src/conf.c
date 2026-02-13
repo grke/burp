@@ -462,6 +462,10 @@ static int reset_conf(struct conf **c, enum conf_opt o)
 	  return sc_str(c[o], 0, 0, "passwd");
 	case OPT_SERVER:
 	  return sc_str(c[o], 0, 0, "server");
+	case OPT_SERVER_RANDOMIZE:
+	  return sc_int(c[o], 0, 0, "server_randomize");
+	case OPT_SERVER_RANDOMIZE_PREFER:
+	  return sc_int(c[o], 0, 0, "server_randomize_prefer");
 	case OPT_SERVER_FAILOVER:
 	  return sc_lst(c[o], 0, 0, "server_failover");
 	case OPT_FAILOVER_ON_BACKUP_ERROR:

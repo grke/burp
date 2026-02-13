@@ -24,6 +24,16 @@ progress_counter = 1
 # contacting the server on a timed backup.
 # randomise = 1200
 
+# If 'server' is a dns name with multipe ip address, with this option you can
+# shuffle it to randomize the connection regardless of the order what you got
+# from the DNS. The default is 0 (not enabled). To enable, change it to 1.
+# server_randomize = 0
+
+# If server_randomize is enabled, here you can specify what address type you
+# prefer. These type of addressess will be prior others.
+# The default is 0 (no prior), it can be 4 if you prefer IPv4, or 6 if IPv6.
+# server_randomize_prefer = 0
+
 # Set server_can_restore to 0 if you do not want the server to be able to
 # initiate a restore (setting it to 1 also requires 'restoreprefix').
 server_can_restore = 0

@@ -9,6 +9,11 @@
 #include <stdlib.h>
 #include <netdb.h>
 
+#ifdef HAVE_WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 typedef enum {
     ADDR_PREF_EQUAL = 0,  // no preference, shuffle all
     ADDR_PREF_IPV4,       // IPv4 first (random inside group), then others

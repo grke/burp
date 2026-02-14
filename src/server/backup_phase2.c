@@ -491,6 +491,16 @@ static enum processed_e maybe_do_delta_stuff(struct asfd *asfd,
 		return process_new(cconfs, p1b, manios);
 	}
 
+	// file is encrypted with an outdated scheme
+	// and should be backed up again to update encryption
+	if(get_int(cconfs[OPT_FORCE_UPDATE_ENCRYPTION])
+	  && cb->path.cmd!=CMD_EFS_FILE
+	  && sbuf_is_encrypted(cb)
+	  && cb->encryption<ENCRYPTION_LATEST)
+	{
+		return process_new(cconfs, p1b, manios);
+	}
+
 	// mtime is the actual file data.
 	// ctime is the attributes or meta data.
 	if(cb->statp.st_mtime==p1b->statp.st_mtime

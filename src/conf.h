@@ -266,6 +266,8 @@ enum conf_opt
 
 	OPT_LABEL,
 
+	OPT_FORCE_UPDATE_ENCRYPTION,
+
 	// Notify scripts
 	OPT_N_SUCCESS_SCRIPT,
 	OPT_N_SUCCESS_ARG,

@@ -43,6 +43,11 @@ client_can_verify = 1
 # Network timeout defaults to 7200 seconds (2 hours).
 # network_timeout = 7200
 
+# When force_update_encryption is set to 1, existing files that are encrypted
+# with outdated encryption schemes are backed up again for re-encryption with
+# the current scheme. This will not update the encryption in previous backups.
+# force_update_encryption = 0
+
 # Server storage compression. Default is zlib9. Set to zlib0 to turn it off.
 #compression = zlib9
 

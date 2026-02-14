@@ -386,6 +386,9 @@ A client that is permitted to list, verify, restore, delete, and diff files belo
 \fBrestore_client=[client]\fR
 A client that is permitted to list, verify, restore, delete, and diff files belonging to any other client, according to the client_can permissions on both the restore_client and the original_client (eg, 'client_can_list'). You may specify multiple restore_clients. If this is too permissive, you may set a restore_client for individual original clients in the individual clientconfdir files.
 .TP
+\fBforce_update_encryption=[0|1]\fR
+Turn this on to force a backup of existing files with outdated encryption schemes, so they are re-encrypted with the current scheme. This does not update the encryption of files in existing backups.
+.TP
 \fBssl_cert_ca=[path]\fR
 The path to the SSL CA certificate. This file will probably be the same on both the server and the client. The file should contain just the certificate in PEM format. For more information on this, and the other ssl_* options, please see docs/@name@_ca.txt.
 .TP

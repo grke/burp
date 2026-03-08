@@ -62,7 +62,6 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 {
 	BIO *bio=NULL;
 	EVP_PKEY *pkey=NULL;
-	OSSL_DECODER_CTX *dctx=NULL;
 	const char *ssl_dhfile=get_string(confs[OPT_SSL_DHFILE]);
 
 	if(!(bio=BIO_new_file(ssl_dhfile, "r")))
@@ -70,34 +69,27 @@ int ssl_load_dh_params(SSL_CTX *ctx, struct conf **confs)
 		logp_ssl_err("Couldn't open ssl_dhfile: %s\n", ssl_dhfile);
 		return -1;
 	}
-	if(!(dctx=OSSL_DECODER_CTX_new_for_pkey(
-		&pkey, "PEM", NULL, "DH",
-		OSSL_KEYMGMT_SELECT_KEYPAIR,
-		NULL, NULL)))
+
+	// Modern way - read as EVP_PKEY directly (preferred in 3.x).
+	pkey=PEM_read_bio_Parameters(bio, NULL);
+	BIO_free(bio);
+	if(!pkey)
 	{
-		logp_ssl_err("No suitable decoders found for: %s\n", ssl_dhfile);
-		BIO_free(bio);
-		OSSL_DECODER_CTX_free(dctx);
+		logp_ssl_err("Couldn't read DH parameters from %s\n",
+			ssl_dhfile);
 		return -1;
 	}
 
-	if(OSSL_DECODER_from_bio(dctx, bio))
+	// Transfer ownership to OpenSSL.
+	if(SSL_CTX_set0_tmp_dh_pkey(ctx, pkey)<=0)
 	{
-		logp_ssl_err("Decoding failure for: %s\n", ssl_dhfile);
-		BIO_free(bio);
-		OSSL_DECODER_CTX_free(dctx);
-		return -1;
-
-	}
-
-	if(SSL_CTX_set_tmp_dh(ctx, pkey)<0)
-	{
-		logp_ssl_err("Couldn't set DH parameters");
-		OSSL_DECODER_CTX_free(dctx);
+		logp_ssl_err("Couldn't set DH parameters from %s\n",
+			ssl_dhfile);
+		EVP_PKEY_free(pkey);
 		return -1;
 	}
 
-	OSSL_DECODER_CTX_free(dctx);
+	// Success, openssl now owns pkey, do not free it here.
 	return 0;
 }
 #endif

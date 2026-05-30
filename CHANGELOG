@@ -1,3 +1,14 @@
+2026-05-30 burp-3.3.0:
+  * New latest version, based on 3.2.0.
+  * Fix ssl_load_dh_params
+    - Return code from OSSL_DECODER_from_bio() was being mishandled.
+      Rewrote the code to manage it properly.
+  * From moenoel:
+    - 941: New config option 'force_update_encryption'. Set to 1 to have
+      existing files with outdated encryption be treated as 'new' in the
+      next backup, thereby re-encrypting them. Does not affect existing
+      backups.
+
 2025-25-12 burp-3.2.0
   * New stable version, based on 3.1.4
 

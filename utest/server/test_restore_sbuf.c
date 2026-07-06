@@ -59,14 +59,6 @@ static void setup_md5sum_match(struct asfd *asfd, struct sbuf *sb)
 	asfd_assert_write(asfd, &w, 0, CMD_FILE, sb->path.buf);
 }
 
-static void setup_error_while_reading(struct asfd *asfd, const char *path)
-{
-	int w=0;
-	char msg[256]="";
-	snprintf(msg, sizeof(msg), "error while reading %s\n", path);
-	asfd_assert_write(asfd, &w, 0, CMD_WARNING, msg);
-}
-
 static void clean(void)
 {
 	fail_unless(recursive_delete(BASE)==0);
@@ -196,7 +188,7 @@ START_TEST(test_verify_file_md5sum_match)
 }
 END_TEST
 
-START_TEST(test_verify_file_gzip_read_failure)
+START_TEST(test_verify_file_gzip_corrupt)
 {
 	struct asfd *asfd;
 	struct cntr *cntr;
@@ -225,7 +217,7 @@ START_TEST(test_verify_file_gzip_read_failure)
 	fail_unless(!fzp_close(&fzp));
 
 	asfd=asfd_mock_setup(&areads, &awrites);
-	setup_error_while_reading(asfd, best);
+	setup_md5sum_no_match(asfd, sb);
 
 	// Returns 0 so that the parent process continues.
 	fail_unless(!verify_file(asfd, sb, 0 /*patches*/, best, cntr));
@@ -279,7 +271,7 @@ Suite *suite_server_restore_sbuf(void)
 	tcase_add_test(tc_core, test_verify_file_no_md5sum);
 	tcase_add_test(tc_core, test_verify_file_md5sum_no_match);
 	tcase_add_test(tc_core, test_verify_file_md5sum_match);
-	tcase_add_test(tc_core, test_verify_file_gzip_read_failure);
+	tcase_add_test(tc_core, test_verify_file_gzip_corrupt);
 	tcase_add_test(tc_core, test_restore_file_not_found);
 	suite_add_tcase(s, tc_core);
 

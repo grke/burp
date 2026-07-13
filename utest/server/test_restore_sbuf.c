@@ -59,6 +59,16 @@ static void setup_md5sum_match(struct asfd *asfd, struct sbuf *sb)
 	asfd_assert_write(asfd, &w, 0, CMD_FILE, sb->path.buf);
 }
 
+#if ZLIB_VERNUM < 0x1320
+static void setup_error_while_reading(struct asfd *asfd, const char *path)
+{
+	int w=0;
+	char msg[256]="";
+	snprintf(msg, sizeof(msg), "error while reading %s\n", path);
+	asfd_assert_write(asfd, &w, 0, CMD_WARNING, msg);
+}
+#endif
+
 static void clean(void)
 {
 	fail_unless(recursive_delete(BASE)==0);
@@ -217,7 +227,13 @@ START_TEST(test_verify_file_gzip_corrupt)
 	fail_unless(!fzp_close(&fzp));
 
 	asfd=asfd_mock_setup(&areads, &awrites);
+#if ZLIB_VERNUM < 0x1320
+	// Old zlib returns a read error.
+	setup_error_while_reading(asfd, best);
+#else
+	// New zlib treats it as an early EOF, and therefore reads zero bytes.
 	setup_md5sum_no_match(asfd, sb);
+#endif
 
 	// Returns 0 so that the parent process continues.
 	fail_unless(!verify_file(asfd, sb, 0 /*patches*/, best, cntr));

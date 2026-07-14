@@ -122,6 +122,8 @@ static void check_default(struct conf **c, enum conf_opt o)
 		case OPT_MAX_PARALLEL_BACKUPS:
 		case OPT_TIMER_REPEAT_INTERVAL:
 		case OPT_REGEX_CASE_INSENSITIVE:
+		case OPT_SERVER_RANDOMIZE:
+		case OPT_SERVER_RANDOMIZE_PREFER:
 		case OPT_FORCE_UPDATE_ENCRYPTION:
 			fail_unless(get_int(c[o])==0);
 			break;

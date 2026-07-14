@@ -299,7 +299,7 @@ static int ssl_setup(int *rfd, SSL **ssl, SSL_CTX **ctx,
 	}
 
 	snprintf(portstr, sizeof(portstr), "%d", port);
-	if((*rfd=init_client_socket(server_copy, portstr))<0)
+	if((*rfd=init_client_socket(server_copy, portstr, confs))<0)
 		goto end;
 
 	if(!(*ssl=SSL_new(*ctx))

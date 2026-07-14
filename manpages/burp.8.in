@@ -541,6 +541,12 @@ Required to run in client mode.
 \fBserver=[host:port]\fR
 Defines the server to connect to. If you don't specify a port here, you will need to specify it separately.
 .TP
+\fBserver_randomize=[0|1]\fR
+If server host is a hostname (i.e. backup.company.com) with multiple IP addresses, with this option you can shuffle the result what give getaddrinfo(). Default is 0 - disabled.
+.TP
+\fBserver_randomize_preferred=[0|4|6]\fR
+When server_randomize enabled, you can define which address type you prefer. 4 - IPv4, 6 - IPv6. Default is 0, which means v4 and v6 address are with equal weight, so it shuffle the elements regardless to the address type. Example: If you have 3 IPv6 and 3 IPv4 address behind the server hostname, and you prefer IPv4, that means in the first 3 place the IPv4 addressess will be (in random order), and then in the next 3 place the IPv6 address (in random order).
+.TP
 \fBserver_failover=[host:port]\fR
 Defines a failover server to connect to. You can provide more than one 'server_failover' entry. The client will try the next failover server if it fails to connect. IMPORTANT: The burp client currently does not have the capability to have a different SSL profile for each server, so for this to work for you, you will need to have the same CA and certificates on each server.
 .TP
